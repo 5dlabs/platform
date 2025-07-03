@@ -1,0 +1,492 @@
+{{- if .Values.claudeCodeChart.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "orchestrator.fullname" . }}-claude-code-helm-chart
+  labels:
+    {{- include "orchestrator.labels" . | nindent 4 }}
+    component: claude-code-chart
+data:
+  _helpers.tpl: |
+    {{`{{/*
+    Expand the name of the chart.
+    */}}
+    {{- define "claude-code.name" -}}
+    {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+    {{- end }}
+
+    {{/*
+    Create a default fully qualified app name.
+    We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+    If release name contains chart name it will be used as a full name.
+    */}}
+    {{- define "claude-code.fullname" -}}
+    {{- if .Values.fullnameOverride }}
+    {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+    {{- else }}
+    {{- $name := default .Chart.Name .Values.nameOverride }}
+    {{- if contains $name .Release.Name }}
+    {{- .Release.Name | trunc 63 | trimSuffix "-" }}
+    {{- else }}
+    {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+
+    {{/*
+    Create chart name and version as used by the chart label.
+    */}}
+    {{- define "claude-code.chart" -}}
+    {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+    {{- end }}
+
+    {{/*
+    Common labels
+    */}}
+    {{- define "claude-code.labels" -}}
+    helm.sh/chart: {{ include "claude-code.chart" . }}
+    {{ include "claude-code.selectorLabels" . }}
+    {{- if .Chart.AppVersion }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    {{- end }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    {{- end }}
+
+    {{/*
+    Selector labels
+    */}}
+    {{- define "claude-code.selectorLabels" -}}
+    app.kubernetes.io/name: {{ include "claude-code.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- end }}
+
+    {{/*
+    Create the name of the service account to use
+    */}}
+    {{- define "claude-code.serviceAccountName" -}}
+    {{- if .Values.serviceAccount.create }}
+    {{- default (include "claude-code.fullname" .) .Values.serviceAccount.name }}
+    {{- else }}
+    {{- default "default" .Values.serviceAccount.name }}
+    {{- end }}
+    {{- end }}`}}
+
+  Chart.yaml: |
+    apiVersion: v2
+    name: claude-code
+    description: Job-based Helm chart for Claude Code with multi-agent collaboration support
+    type: application
+    version: 0.2.0
+    appVersion: "latest"
+    keywords:
+      - claude-code
+      - opentelemetry
+      - monitoring
+      - telemetry
+    home: https://github.com/anthropics/claude-code
+    maintainers:
+      - name: Platform Team
+        email: platform@company.com
+    sources:
+      - https://github.com/anthropics/claude-code
+
+  values.yaml: |
+    # Default values for claude-code.
+    # This is a YAML-formatted file.
+    # Declare variables to be passed into your templates.
+
+    # Job-based deployment configuration (instead of Deployment)
+    job:
+      enabled: true
+      taskType: "implementation"  # implementation, assistance, preparation
+      taskId: ""                  # Will be set by orchestrator
+      microservice: ""            # Target microservice (auth, api, payment, etc.)
+      agentType: "claude"         # claude, gemini
+      backoffLimit: 3
+      activeDeadlineSeconds: 3600  # 1 hour timeout
+      ttlSecondsAfterFinished: 86400  # 24 hours cleanup
+      skipPrepare: false          # Set to true to skip preparation initContainer
+
+    # PM task submission values (set by orchestrator)
+    taskConfigMapName: ""         # ConfigMap containing task markdown files
+    serviceName: ""               # Target service name (e.g., auth-service)
+    taskId: ""                    # Task ID from Task Master
+    attempt: "1"                  # Attempt number for retries
+    agentName: ""                 # Agent name (e.g., claude-agent-1)
+
+    # Shared workspace configuration for multi-agent collaboration
+    sharedWorkspace:
+      enabled: true
+      claimName: "shared-workspace-pvc"
+      existingClaim: ""           # Use existing PVC if specified
+      storageClass: "local-path"
+      accessMode: "ReadWriteOnce"
+      size: "50Gi"
+
+    # Node affinity for local-path-provisioner
+    nodeAffinity:
+      enabled: true
+      required: true              # Use required or preferred
+      preferred: false
+      key: "kubernetes.io/hostname"
+      values: []                  # Will be set by orchestrator, e.g., ["worker-node-1"]
+      preferredWeight: 100
+
+    # Claude home directory configuration
+    claudeHome:
+      persistent: false           # Use ephemeral for job-based deployment
+      existingClaim: ""
+
+    replicaCount: 1  # Not used for jobs, kept for compatibility
+
+    image:
+      repository: ghcr.io/5dlabs/platform/claude-code
+      pullPolicy: IfNotPresent
+      # Overrides the image tag whose default is the chart appVersion.
+      tag: "latest"
+
+    imagePullSecrets:
+      - name: ghcr-secret
+
+    nameOverride: ""
+    fullnameOverride: ""
+
+    serviceAccount:
+      # Specifies whether a service account should be created
+      create: true
+      # Annotations to add to the service account
+      annotations: {}
+      # The name of the service account to use.
+      # If not set and create is true, a name is generated using the fullname template
+      name: ""
+
+    podAnnotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "8080"
+      prometheus.io/path: "/metrics"
+
+    podSecurityContext:
+      fsGroup: 2000
+      runAsNonRoot: true
+      runAsUser: 1000
+
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: false  # Claude Code needs to write config files
+      runAsNonRoot: true
+      runAsUser: 1000
+
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+
+    persistence:
+      enabled: true
+      storageClass: "standard"
+      accessMode: ReadWriteOnce
+      size: 10Gi
+      mountPath: /data
+
+    # Secret configuration for API keys
+    secrets:
+      # REQUIRED: Set your Anthropic API key
+      anthropicApiKey: ""
+      # GitHub token for CLI access
+      githubToken: ""
+
+    # Telemetry configuration
+    telemetry:
+      enabled: true
+      # OTLP collector endpoint - adjust for your environment
+      otlpEndpoint: "otel-collector-opentelemetry-collector.telemetry.svc.cluster.local:4317"
+      otlpProtocol: "grpc"  # grpc or http
+      otlpInsecure: true
+      
+      # Service identification
+      serviceName: "claude-code"
+      serviceVersion: "1.0.0"
+      serviceNamespace: "{{ .Release.Namespace }}"
+      
+      # Team/Organization attributes
+      teamName: "platform"
+      department: "engineering"
+      environment: "development"
+      costCenter: ""
+      
+      # Developer/Agent identification
+      githubUser: ""  # Will be set via environment or deployment
+      workingService: ""  # The service/project being worked on
+      
+      # Export intervals (milliseconds)
+      metricsExportInterval: "60000"  # 1 minute
+      metricsExportTimeout: "30000"   # 30 seconds
+      logsExportInterval: "5000"      # 5 seconds
+      logsExportTimeout: "30000"      # 30 seconds
+      
+      # Cardinality control
+      includeSessionId: true
+      includeAccountUuid: true
+      includeVersion: false
+      
+      # Additional OTEL configuration
+      logLevel: "info"
+      # Optional: Enable user prompt logging (privacy consideration)
+      logUserPrompts: false
+      
+      # Optional: Custom resource attributes (comma-separated key=value pairs)
+      customAttributes: ""
+
+      # Cluster name for telemetry
+      clusterName: "telemetry-dev"
+
+    # Additional environment variables
+    extraEnvVars: []
+
+    # Node selector for pod assignment
+    nodeSelector: {}
+
+    # Tolerations for pod assignment
+    tolerations: []
+
+    # Affinity for pod assignment
+    affinity: {}
+
+  job.yaml: |
+    {{`{{- if .Values.job.enabled }}
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: {{ include "claude-code.fullname" . }}
+      labels:
+        {{- include "claude-code.labels" . | nindent 4 }}
+        component: claude-code
+        task-type: {{ .Values.job.taskType | default "implementation" }}
+        microservice: {{ .Values.job.microservice | default "default" }}
+        {{- if .Values.job.taskId }}
+        task-id: {{ .Values.job.taskId | quote }}
+        {{- end }}
+    spec:
+      backoffLimit: {{ .Values.job.backoffLimit | default 3 }}
+      {{- if .Values.job.activeDeadlineSeconds }}
+      activeDeadlineSeconds: {{ .Values.job.activeDeadlineSeconds }}
+      {{- end }}
+      {{- if .Values.job.ttlSecondsAfterFinished }}
+      ttlSecondsAfterFinished: {{ .Values.job.ttlSecondsAfterFinished }}
+      {{- end }}
+      template:
+        metadata:
+          annotations:
+            checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+            checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+            {{- with .Values.podAnnotations }}
+            {{- toYaml . | nindent 8 }}
+            {{- end }}
+          labels:
+            {{- include "claude-code.selectorLabels" . | nindent 8 }}
+            component: claude-code
+            task-type: {{ .Values.job.taskType | default "implementation" }}
+            {{- if .Values.job.taskId }}
+            task-id: {{ .Values.job.taskId | quote }}
+            {{- end }}
+        spec:
+          restartPolicy: Never
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          serviceAccountName: {{ include "claude-code.serviceAccountName" . }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 8 }}
+
+          {{- if .Values.nodeAffinity.enabled }}
+          affinity:
+            nodeAffinity:
+              {{- if .Values.nodeAffinity.required }}
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: {{ .Values.nodeAffinity.key | quote }}
+                    operator: In
+                    values:
+                      {{- range .Values.nodeAffinity.values }}
+                      - {{ . | quote }}
+                      {{- end }}
+              {{- end }}
+              {{- if .Values.nodeAffinity.preferred }}
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: {{ .Values.nodeAffinity.preferredWeight | default 100 }}
+                preference:
+                  matchExpressions:
+                  - key: {{ .Values.nodeAffinity.key | quote }}
+                    operator: In
+                    values:
+                      {{- range .Values.nodeAffinity.values }}
+                      - {{ . | quote }}
+                      {{- end }}
+              {{- end }}
+            {{- with .Values.affinity }}
+            {{- toYaml . | nindent 8 }}
+            {{- end }}
+          {{- else }}
+          {{- with .Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- end }}
+
+          {{- if not .Values.job.skipPrepare }}
+          initContainers:
+            - name: prepare-workspace
+              image: busybox:1.36
+              securityContext:
+                runAsUser: 1000
+                runAsGroup: 1000
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  echo "🚀 Starting workspace preparation for task {{ .Values.taskId | default "unknown" }}"
+
+                  # Setup Claude home directory
+                  mkdir -p /home/node/.claude/todos
+                  if [ -f /tmp/claude-settings/settings.json ]; then
+                    cp /tmp/claude-settings/settings.json /home/node/.claude/settings.json
+                  fi
+                  chmod -R 755 /home/node/.claude
+
+                  # Create workspace structure for the service
+                  SERVICE_NAME="{{ .Values.serviceName | default .Values.job.microservice | default "default" }}"
+                  TASK_ID="{{ .Values.taskId | default .Values.job.taskId | default "unknown" }}"
+                  ATTEMPT="{{ .Values.attempt | default "1" }}"
+
+                  echo "📁 Creating workspace structure for service: $SERVICE_NAME"
+                  mkdir -p /workspace/${SERVICE_NAME}/.task/${TASK_ID}/run-${ATTEMPT}
+                  mkdir -p /workspace/${SERVICE_NAME}/src
+                  mkdir -p /workspace/${SERVICE_NAME}/tests
+                  mkdir -p /workspace/${SERVICE_NAME}/docs
+
+                  # Copy all task files from ConfigMap to workspace
+                  if [ -d /config ]; then
+                    echo "📋 Copying task files from ConfigMap..."
+                    cp -v /config/* /workspace/${SERVICE_NAME}/.task/${TASK_ID}/run-${ATTEMPT}/ 2>/dev/null || true
+                  fi
+
+                  # Set proper permissions
+                  echo "🔐 Setting permissions..."
+                  chmod -R 755 /workspace
+                  chown -R 1000:1000 /workspace
+
+                  echo "✅ Workspace preparation completed successfully!"
+                  echo "📁 Created structure:"
+                  find /workspace -type d | head -20
+
+              volumeMounts:
+                - name: claude-home
+                  mountPath: /home/node
+                - name: claude-settings
+                  mountPath: /tmp/claude-settings
+                - name: workspace
+                  mountPath: /workspace
+                - name: task-files
+                  mountPath: /config
+                  readOnly: true
+          {{- end }}
+
+          containers:
+            - name: {{ .Chart.Name }}
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 12 }}
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              {{- if or .Values.serviceName .Values.job.microservice }}
+              workingDir: /workspace/{{ .Values.serviceName | default .Values.job.microservice }}
+              {{- else }}
+              workingDir: /workspace
+              {{- end }}
+
+              envFrom:
+                - configMapRef:
+                    name: {{ include "claude-code.fullname" . }}-config
+                {{- if .Values.secrets.anthropicApiKey }}
+                - secretRef:
+                    name: {{ include "claude-code.fullname" . }}-secret
+                {{- end }}
+
+              env:
+                {{- if .Values.job.taskId }}
+                - name: TASK_ID
+                  value: {{ .Values.job.taskId | quote }}
+                {{- end }}
+                {{- if .Values.job.microservice }}
+                - name: MICROSERVICE
+                  value: {{ .Values.job.microservice | quote }}
+                {{- end }}
+                - name: JOB_TYPE
+                  value: {{ .Values.job.taskType | default "implementation" | quote }}
+                {{- with .Values.extraEnvVars }}
+                {{- toYaml . | nindent 12 }}
+                {{- end }}
+
+              resources:
+                {{- toYaml .Values.resources | nindent 12 }}
+
+              volumeMounts:
+                {{- if .Values.persistence.enabled }}
+                - name: data
+                  mountPath: {{ .Values.persistence.mountPath }}
+                {{- end }}
+                - name: claude-home
+                  mountPath: /home/node
+                - name: workspace
+                  mountPath: /workspace
+
+          volumes:
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              persistentVolumeClaim:
+                claimName: {{ .Values.persistence.existingClaim | default (printf "%s-data" (include "claude-code.fullname" .)) }}
+            {{- end }}
+
+            # Claude home directory - can be persistent or ephemeral
+            {{- if .Values.claudeHome.persistent }}
+            - name: claude-home
+              persistentVolumeClaim:
+                claimName: {{ .Values.claudeHome.existingClaim | default (printf "%s-claude-home" (include "claude-code.fullname" .)) }}
+            {{- else }}
+            - name: claude-home
+              emptyDir: {}
+            {{- end }}
+
+            - name: claude-settings
+              configMap:
+                name: {{ include "claude-code.fullname" . }}-settings
+
+            # Task files ConfigMap - contains all markdown files for the task
+            - name: task-files
+              configMap:
+                name: {{ .Values.taskConfigMapName | default (printf "%s-task-%s-run-%s-files" .Values.serviceName .Values.taskId .Values.attempt) }}
+                optional: true
+
+            # Shared workspace - for multi-agent collaboration
+            - name: workspace
+              persistentVolumeClaim:
+                claimName: {{ .Values.sharedWorkspace.existingClaim | default "shared-workspace-pvc" }}
+
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+    {{- end }}`}}
+{{- end }}

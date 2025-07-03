@@ -1,0 +1,17 @@
+# Clippy configuration for consistent linting
+
+# Set the maximum cognitive complexity allowed
+cognitive-complexity-threshold = 30
+
+# Set maximum function arguments
+too-many-arguments-threshold = 7
+
+# Set maximum lines for functions
+too-many-lines-threshold = 100
+
+# Disallow certain macros
+disallowed-macros = [
+    # We prefer tracing over println for logging
+    { path = "std::println", reason = "use tracing::info! instead" },
+    { path = "std::eprintln", reason = "use tracing::error! instead" },
+]

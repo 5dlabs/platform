@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "orchestrator.fullname" . }}-config
+  labels:
+    {{- include "orchestrator.labels" . | nindent 4 }}
+data:
+  # Kubernetes configuration
+  KUBERNETES_NAMESPACE: {{ .Values.config.kubernetesNamespace | quote }}
+
+  # Server configuration
+  SERVER_HOST: {{ .Values.config.serverHost | quote }}
+  SERVER_PORT: {{ .Values.config.serverPort | quote }}
+
+  # Logging
+  RUST_LOG: {{ .Values.config.rustLog | quote }}
+
+  # TaskRun Controller configuration
+  CONTROLLER_ENABLED: {{ .Values.config.controllerEnabled | quote }}
+  CONTROLLER_CONFIG_MAP: {{ .Values.config.controllerConfigMap | quote }}

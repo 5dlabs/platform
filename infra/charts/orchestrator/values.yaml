@@ -1,0 +1,185 @@
+# Default values for orchestrator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/5dlabs/platform/orchestrator
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+imagePullSecrets:
+  - name: ghcr-secret
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "orchestrator"
+
+podAnnotations:
+  kubectl.kubernetes.io/restartedAt: ""
+
+podSecurityContext:
+  fsGroup: 2000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+    - ALL
+  seccompProfile:
+    type: RuntimeDefault
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+  name: http
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: orchestrator.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
+
+affinity: {}
+
+# Orchestrator-specific configuration
+config:
+  # Kubernetes configuration
+  kubernetesNamespace: "orchestrator"
+
+  # Server configuration
+  serverHost: "0.0.0.0"
+  serverPort: "8080"
+
+  # Logging
+  rustLog: "orchestrator=debug,tower_http=debug,axum=debug,kube=info"
+  
+  # TaskRun Controller configuration
+  controllerEnabled: true
+  controllerConfigMap: "taskrun-controller-config"
+
+# Secret configuration for API keys
+secrets:
+  # REQUIRED: Set your Anthropic API key
+  anthropicApiKey: ""
+  # GitHub token for CLI access
+  githubToken: ""
+
+# RBAC configuration
+rbac:
+  # Create RBAC resources
+  create: true
+  # Use Role/RoleBinding (true) or ClusterRole/ClusterRoleBinding (false)
+  namespaced: true
+  rules:
+    # TaskRun CRD management
+    - apiGroups: ["orchestrator.io"]
+      resources: ["taskruns"]
+      verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+    - apiGroups: ["orchestrator.io"]
+      resources: ["taskruns/status"]
+      verbs: ["get", "update", "patch"]
+    # Job management in orchestrator namespace
+    - apiGroups: ["batch"]
+      resources: ["jobs"]
+      verbs: ["create", "get", "list", "watch", "delete", "patch", "update"]
+    # ConfigMap and Secret access (for agent configuration and task files)
+    - apiGroups: [""]
+      resources: ["configmaps", "secrets"]
+      verbs: ["get", "list", "create", "update", "delete", "watch", "patch"]
+    # ServiceAccount management (required for Helm operations)
+    - apiGroups: [""]
+      resources: ["serviceaccounts"]
+      verbs: ["get", "list", "create", "update", "delete", "patch"]
+    # Service management (required for Helm operations)
+    - apiGroups: [""]
+      resources: ["services"]
+      verbs: ["get", "list", "create", "update", "delete", "patch"]
+    # Pod monitoring
+    - apiGroups: [""]
+      resources: ["pods", "pods/log"]
+      verbs: ["get", "list", "watch"]
+    # PVC management for agent workspaces
+    - apiGroups: [""]
+      resources: ["persistentvolumeclaims"]
+      verbs: ["create", "get", "list", "delete"]
+    # Events for debugging
+    - apiGroups: [""]
+      resources: ["events"]
+      verbs: ["get", "list", "watch"]
+
+# Claude Code Helm Chart configuration (no longer needed with CRD)
+claudeCodeChart:
+  enabled: false
+  # The chart will be mounted as a ConfigMap volume
+  mountPath: "/infra"
+
+# Health checks
+healthCheck:
+  enabled: true
+  path: "/health"
+  port: 8080
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 60
+    timeoutSeconds: 1
+    successThreshold: 1
+    failureThreshold: 3
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    timeoutSeconds: 1
+    successThreshold: 1
+    failureThreshold: 3
+
+# Shared workspace PVC (optional - can be managed separately)
+sharedWorkspace:
+  enabled: false  # Set to true to create the PVC with the chart
+  name: "shared-workspace-pvc"
+  storageClass: "local-path"
+  accessMode: "ReadWriteOnce"
+  size: "50Gi"

@@ -1,0 +1,54 @@
+# Production values for orchestrator deployment
+# This overrides the default values.yaml
+
+# Image configuration
+image:
+  repository: ghcr.io/5dlabs/platform/orchestrator
+  tag: "crd"
+  pullPolicy: Always
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: orchestrator.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+# Resource limits
+resources:
+  limits:
+    cpu: 1
+    memory: 1Gi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+# Configuration
+config:
+  kubernetesNamespace: "orchestrator"
+  rustLog: "orchestrator=info,tower_http=info,axum=info,kube=info"
+  controllerEnabled: "true"
+  controllerConfigMap: "taskrun-controller-config"
+
+# Secrets - using existing secrets
+secrets:
+  # These will reference the existing orchestrator-secrets Secret
+  anthropicApiKey: "use-existing"
+  githubToken: "use-existing"
+
+# RBAC is enabled
+rbac:
+  create: true
+  namespaced: true
+
+# Disable Claude Code chart mounting
+claudeCodeChart:
+  enabled: false

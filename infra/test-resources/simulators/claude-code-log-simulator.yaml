@@ -1,0 +1,142 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: log-simulator
+  namespace: claude-code
+data:
+  simulate-logs.sh: |
+    #!/bin/bash
+    echo "Starting Claude Code log simulation..."
+    
+    # Function to send logs to OTLP
+    send_log() {
+      local severity=$1
+      local message=$2
+      local timestamp=$(date +%s)000000000
+      local iso_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+      
+      cat <<EOF > /tmp/logs.json
+    {
+      "resource_logs": [{
+        "resource": {
+          "attributes": [{
+            "key": "service.name",
+            "value": { "string_value": "claude-code" }
+          }, {
+            "key": "service.namespace",
+            "value": { "string_value": "claude-code" }
+          }, {
+            "key": "github.user",
+            "value": { "string_value": "claude-agent-001" }
+          }, {
+            "key": "environment",
+            "value": { "string_value": "production" }
+          }]
+        },
+        "scope_logs": [{
+          "scope": {
+            "name": "claude-code-logger"
+          },
+          "log_records": [{
+            "time_unix_nano": "$timestamp",
+            "severity_number": $severity,
+            "severity_text": "$1",
+            "body": {
+              "string_value": "$message"
+            },
+            "attributes": [{
+              "key": "timestamp",
+              "value": { "string_value": "$iso_time" }
+            }, {
+              "key": "event.type",
+              "value": { "string_value": "claude.log" }
+            }]
+          }]
+        }]
+      }]
+    }
+    EOF
+      
+      # Send to OTLP collector
+      curl -X POST http://otel-collector-opentelemetry-collector.telemetry.svc.cluster.local:4318/v1/logs \
+        -H "Content-Type: application/json" \
+        -d @/tmp/logs.json \
+        --silent --show-error
+    }
+    
+    # Simulate various log messages
+    while true; do
+      echo "$(date): Sending simulated logs..."
+      
+      # Info log - Session started
+      send_log 9 "INFO" "Claude Code session started"
+      sleep 2
+      
+      # Info log - Task execution
+      task_type=("code_generation" "code_review" "debugging" "refactoring")
+      selected_task=${task_type[$RANDOM % ${#task_type[@]}]}
+      send_log 9 "INFO" "Executing task: $selected_task"
+      sleep 3
+      
+      # Debug log - Tool usage
+      tools=("Read" "Write" "Edit" "Bash" "Search")
+      selected_tool=${tools[$RANDOM % ${#tools[@]}]}
+      send_log 5 "DEBUG" "Tool invoked: $selected_tool"
+      sleep 2
+      
+      # Info log - Metrics
+      lines=$((RANDOM % 100 + 10))
+      send_log 9 "INFO" "Code modified: $lines lines"
+      sleep 2
+      
+      # Occasional warning
+      if [ $((RANDOM % 5)) -eq 0 ]; then
+        send_log 13 "WARN" "Rate limit approaching: 80% of quota used"
+        sleep 1
+      fi
+      
+      # Info log - Completion
+      send_log 9 "INFO" "Task completed successfully"
+      
+      echo "Log batch sent"
+      sleep 10
+    done
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: claude-code-log-simulator
+  namespace: claude-code
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: log-simulator
+  template:
+    metadata:
+      labels:
+        app: log-simulator
+    spec:
+      containers:
+      - name: simulator
+        image: alpine:3.19
+        command: ["/bin/sh"]
+        args: 
+          - -c
+          - |
+            apk add --no-cache curl bash
+            bash /scripts/simulate-logs.sh
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+      volumes:
+      - name: scripts
+        configMap:
+          name: log-simulator

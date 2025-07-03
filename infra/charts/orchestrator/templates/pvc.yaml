@@ -1,0 +1,16 @@
+{{- if .Values.sharedWorkspace.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.sharedWorkspace.name }}
+  labels:
+    {{- include "orchestrator.labels" . | nindent 4 }}
+    component: shared-workspace
+spec:
+  accessModes:
+    - {{ .Values.sharedWorkspace.accessMode }}
+  storageClassName: {{ .Values.sharedWorkspace.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.sharedWorkspace.size }}
+{{- end }}

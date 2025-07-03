@@ -1,0 +1,135 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "orchestrator.fullname" . }}
+  labels:
+    {{- include "orchestrator.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "orchestrator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "orchestrator.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "orchestrator.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/app/orchestrator"]
+          ports:
+            - name: {{ .Values.service.name }}
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          env:
+            # Kubernetes configuration
+            - name: KUBERNETES_NAMESPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "orchestrator.fullname" . }}-config
+                  key: KUBERNETES_NAMESPACE
+            - name: RUST_LOG
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "orchestrator.fullname" . }}-config
+                  key: RUST_LOG
+            # TaskRun Controller configuration
+            - name: CONTROLLER_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "orchestrator.fullname" . }}-config
+                  key: CONTROLLER_ENABLED
+            - name: CONTROLLER_CONFIG_MAP
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "orchestrator.fullname" . }}-config
+                  key: CONTROLLER_CONFIG_MAP
+            # Secrets for agents
+            {{- if .Values.secrets.anthropicApiKey }}
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  {{- if eq .Values.secrets.anthropicApiKey "use-existing" }}
+                  name: orchestrator-secrets
+                  {{- else }}
+                  name: {{ include "orchestrator.fullname" . }}-secrets
+                  {{- end }}
+                  key: ANTHROPIC_API_KEY
+            {{- end }}
+            {{- if .Values.secrets.githubToken }}
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  {{- if eq .Values.secrets.githubToken "use-existing" }}
+                  name: orchestrator-secrets
+                  {{- else }}
+                  name: {{ include "orchestrator.fullname" . }}-secrets
+                  {{- end }}
+                  key: GITHUB_TOKEN
+            {{- end }}
+          volumeMounts:
+            {{- if .Values.claudeCodeChart.enabled }}
+            # Mount the Helm chart
+            - name: helm-chart
+              mountPath: {{ .Values.claudeCodeChart.mountPath }}
+              readOnly: true
+            {{- end }}
+          {{- if .Values.healthCheck.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.path }}
+              port: {{ .Values.service.name }}
+            initialDelaySeconds: {{ .Values.healthCheck.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.healthCheck.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.healthCheck.livenessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.healthCheck.livenessProbe.successThreshold }}
+            failureThreshold: {{ .Values.healthCheck.livenessProbe.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.path }}
+              port: {{ .Values.service.name }}
+            initialDelaySeconds: {{ .Values.healthCheck.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.healthCheck.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.healthCheck.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.healthCheck.readinessProbe.successThreshold }}
+            failureThreshold: {{ .Values.healthCheck.readinessProbe.failureThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        {{- if .Values.claudeCodeChart.enabled }}
+        # Mount the claude-code helm chart
+        - name: helm-chart
+          configMap:
+            name: {{ include "orchestrator.fullname" . }}-claude-code-helm-chart
+            optional: true
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
