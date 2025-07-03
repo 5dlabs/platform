@@ -103,21 +103,21 @@ fn api_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
             }),
         )
         .route(
-            "/pm/tasks/:task_id/status",
+            "/pm/tasks/{task_id}/status",
             get({
                 let taskrun_state = state.taskrun_state.clone();
                 move |path| get_task_status(State(taskrun_state), path)
             }),
         )
         .route(
-            "/pm/tasks/:task_id/context",
+            "/pm/tasks/{task_id}/context",
             post({
                 let taskrun_state = state.taskrun_state.clone();
                 move |path, req| add_context(State(taskrun_state), path, req)
             }),
         )
         .route(
-            "/pm/tasks/:task_id/session",
+            "/pm/tasks/{task_id}/session",
             post({
                 let taskrun_state = state.taskrun_state.clone();
                 move |path, req| update_session(State(taskrun_state), path, req)
