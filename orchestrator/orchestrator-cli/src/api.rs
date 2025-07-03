@@ -4,12 +4,22 @@ use anyhow::{Context, Result};
 use orchestrator_common::models::{
     pm_task::PmTaskRequest,
     request::CreateTaskRequest,
-    response::{ApiResponse, JobResponse, TaskResponse},
+    response::{ApiResponse, JobResponse, TaskResponse, ResponseStatus, ResponseMetadata},
 };
 use reqwest::{Client, Response};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use tracing::{debug, info};
+
+/// Simple API response structure used by PM endpoints
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SimpleApiResponse {
+    pub success: bool,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<Value>,
+}
 
 /// API client for the orchestrator service
 #[derive(Clone)]
@@ -72,7 +82,7 @@ impl ApiClient {
     }
 
     /// Submit a PM task with design specification
-    pub async fn submit_pm_task(&self, request: &PmTaskRequest) -> Result<ApiResponse<Value>> {
+    pub async fn submit_pm_task(&self, request: &PmTaskRequest) -> Result<SimpleApiResponse> {
         info!(
             "Submitting PM task: {} for service: {}",
             request.id, request.service_name
@@ -81,16 +91,17 @@ impl ApiClient {
 
         let response = self
             .client
-            .post(format!("{}/api/v1/pm/tasks", self.base_url))
+            .post(format!("{}/pm/tasks", self.base_url))
             .json(request)
             .send()
             .await
             .context("Failed to send PM task submission request")?;
 
-        self.handle_response(response).await
+        self.handle_simple_response(response).await
     }
 
     /// Get task status by ID
+    #[allow(dead_code)]
     pub async fn get_task(&self, task_id: &str) -> Result<ApiResponse<TaskResponse>> {
         info!("Getting task status: {task_id}");
 
@@ -104,16 +115,54 @@ impl ApiClient {
         self.handle_response(response).await
     }
 
+    /// Get task status only (lightweight)
+    pub async fn get_task_status(&self, task_id: u32) -> Result<SimpleApiResponse> {
+        info!("Getting task status: {task_id}");
+
+        let response = self
+            .client
+            .get(format!("{}/pm/tasks/{}/status", self.base_url, task_id))
+            .send()
+            .await
+            .context("Failed to send get task status request")?;
+
+        self.handle_simple_response(response).await
+    }
+
+    /// Add context to a running task
+    pub async fn add_context(&self, task_id: u32, context: &str) -> Result<SimpleApiResponse> {
+        info!("Adding context to task: {task_id}");
+
+        let request_body = serde_json::json!({
+            "additional_context": context
+        });
+
+        let response = self
+            .client
+            .post(format!("{}/pm/tasks/{}/context", self.base_url, task_id))
+            .json(&request_body)
+            .send()
+            .await
+            .context("Failed to send add context request")?;
+
+        self.handle_simple_response(response).await
+    }
+
     /// List tasks with optional filtering
     pub async fn list_tasks(
         &self,
-        microservice: Option<&str>,
-    ) -> Result<ApiResponse<Vec<TaskResponse>>> {
-        let mut url = format!("{}/api/v1/tasks", self.base_url);
+        service: Option<&str>,
+        status: Option<&str>,
+    ) -> Result<SimpleApiResponse> {
+        let mut url = format!("{}/pm/tasks", self.base_url);
         let mut params = vec![];
 
-        if let Some(microservice) = microservice {
-            params.push(format!("microservice={microservice}"));
+        if let Some(service) = service {
+            params.push(format!("service={service}"));
+        }
+
+        if let Some(status) = status {
+            params.push(format!("status={status}"));
         }
 
         if !params.is_empty() {
@@ -129,7 +178,7 @@ impl ApiClient {
             .await
             .context("Failed to send list tasks request")?;
 
-        self.handle_response(response).await
+        self.handle_simple_response(response).await
     }
 
     /// List jobs with optional filtering
@@ -278,7 +327,63 @@ impl ApiClient {
             .await
             .context("Failed to send health check request")?;
 
-        self.handle_response(response).await
+        let status = response.status();
+        let response_text = response
+            .text()
+            .await
+            .context("Failed to read response body")?;
+
+        if status.is_success() {
+            // Health endpoint returns data directly, not wrapped
+            let health_data: Value = serde_json::from_str(&response_text)
+                .with_context(|| format!("Failed to parse health response: {response_text}"))?;
+            
+            Ok(ApiResponse {
+                status: ResponseStatus::Success,
+                data: Some(health_data),
+                error: None,
+                metadata: ResponseMetadata {
+                    request_id: uuid::Uuid::new_v4().to_string(),
+                    timestamp: chrono::Utc::now(),
+                    duration_ms: None,
+                    version: "0.1.0".to_string(),
+                },
+            })
+        } else {
+            Err(anyhow::anyhow!(
+                "Health check failed with status {}: {}",
+                status,
+                response_text
+            ))
+        }
+    }
+
+    /// Generic response handler for simple API responses
+    async fn handle_simple_response(&self, response: Response) -> Result<SimpleApiResponse> {
+        let status = response.status();
+        let response_text = response
+            .text()
+            .await
+            .context("Failed to read response body")?;
+
+        debug!("API response status: {}", status);
+        debug!("API response body: {}", response_text);
+
+        if status.is_success() {
+            serde_json::from_str(&response_text)
+                .with_context(|| format!("Failed to parse successful response: {response_text}"))
+        } else {
+            // Try to parse as error response first
+            if let Ok(error_response) = serde_json::from_str::<SimpleApiResponse>(&response_text) {
+                Ok(error_response)
+            } else {
+                Err(anyhow::anyhow!(
+                    "API request failed with status {}: {}",
+                    status,
+                    response_text
+                ))
+            }
+        }
     }
 
     /// Generic response handler

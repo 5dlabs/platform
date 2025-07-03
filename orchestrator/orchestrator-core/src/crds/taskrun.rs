@@ -28,6 +28,10 @@ pub struct TaskRunSpec {
 
     /// Markdown files containing task context
     pub markdown_files: Vec<MarkdownFile>,
+
+    /// Tools available to the agent
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub agent_tools: Vec<AgentTool>,
 }
 
 fn default_context_version() -> u32 {
@@ -60,6 +64,30 @@ pub enum MarkdownFileType {
     AcceptanceCriteria,
 }
 
+/// Agent tool specification
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentTool {
+    /// Tool name (e.g., "bash", "edit", "read")
+    pub name: String,
+    
+    /// Whether the tool is enabled
+    #[serde(default = "default_tool_enabled")]
+    pub enabled: bool,
+    
+    /// Tool-specific configuration
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub config: Option<serde_json::Value>,
+    
+    /// Tool restrictions or limitations
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub restrictions: Vec<String>,
+}
+
+fn default_tool_enabled() -> bool {
+    true
+}
+
 /// Status of the TaskRun
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -87,6 +115,10 @@ pub struct TaskRunStatus {
     /// Human-readable message about the current status
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
+
+    /// Claude session ID for resuming conversations
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
 
     /// Detailed conditions for the TaskRun
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -174,6 +206,7 @@ mod tests {
                     content: "# Task content".to_string(),
                     file_type: Some(MarkdownFileType::Task),
                 }],
+                agent_tools: vec![],
             },
             status: None,
         };
@@ -192,6 +225,7 @@ mod tests {
             attempts: 1,
             last_updated: Some(Utc::now().to_rfc3339()),
             message: Some("Job is running".to_string()),
+            session_id: None,
             conditions: vec![],
         };
 

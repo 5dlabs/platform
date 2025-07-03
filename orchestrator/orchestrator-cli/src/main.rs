@@ -24,7 +24,7 @@ struct Cli {
     #[arg(
         long,
         env = "ORCHESTRATOR_API_URL",
-        default_value = "http://localhost:8080"
+        default_value = "http://orchestrator.local/api/v1"
     )]
     api_url: String,
 
@@ -64,8 +64,31 @@ enum Commands {
 
 #[derive(Subcommand, Debug)]
 enum TaskCommands {
-    /// Submit a new task (PM workflow)
+    /// Submit a new task (simplified workflow for Task Master projects)
     Submit {
+        /// Task ID to submit (uses Task Master directory structure)
+        task_id: u32,
+        /// Target service name (e.g., auth-service, api-gateway)
+        #[arg(long, short = 's')]
+        service: String,
+        /// Agent name
+        #[arg(long, short = 'a', default_value = "claude-agent-1")]
+        agent: String,
+        /// Path to Task Master directory
+        #[arg(long, short = 'd', default_value = ".taskmaster")]
+        taskmaster_dir: String,
+        /// Path to additional context files
+        #[arg(long, short = 'c')]
+        context: Vec<String>,
+        /// Agent tools (format: tool_name:enabled, e.g., bash:true,edit:false)
+        #[arg(long, short = 't')]
+        tools: Vec<String>,
+        /// Indicates this is a retry of a previous attempt
+        #[arg(long)]
+        retry: bool,
+    },
+    /// Submit a new task (advanced workflow with explicit paths)
+    SubmitAdvanced {
         /// Path to tasks.json file containing all tasks
         #[arg(long)]
         task_json: String,
@@ -91,14 +114,26 @@ enum TaskCommands {
     /// Get task status
     Status {
         /// Task ID
-        #[arg(long)]
-        id: String,
+        task_id: u32,
+    },
+    /// Add context to a running task
+    AddContext {
+        /// Task ID
+        task_id: u32,
+        /// Context to add (can be text or file path)
+        context: String,
+        /// Treat context as file path
+        #[arg(long, short = 'f')]
+        file: bool,
     },
     /// List all tasks
     List {
-        /// Filter by microservice
+        /// Filter by service
+        #[arg(long, short = 's')]
+        service: Option<String>,
+        /// Filter by status
         #[arg(long)]
-        microservice: Option<String>,
+        status: Option<String>,
     },
 }
 
@@ -182,6 +217,28 @@ async fn main() -> Result<()> {
     let result = match cli.command {
         Commands::Task { action } => match action {
             TaskCommands::Submit {
+                task_id,
+                service,
+                agent,
+                taskmaster_dir,
+                context,
+                tools,
+                retry,
+            } => {
+                commands::task::submit_task_simplified(
+                    &api_client,
+                    &output_manager,
+                    task_id,
+                    &service,
+                    &agent,
+                    &taskmaster_dir,
+                    &context,
+                    &tools,
+                    retry,
+                )
+                .await
+            }
+            TaskCommands::SubmitAdvanced {
                 task_json,
                 task_id,
                 design_spec,
@@ -203,11 +260,14 @@ async fn main() -> Result<()> {
                 )
                 .await
             }
-            TaskCommands::Status { id } => {
-                commands::task::status(&api_client, &output_manager, &id).await
+            TaskCommands::Status { task_id } => {
+                commands::task::status(&api_client, &output_manager, task_id).await
             }
-            TaskCommands::List { microservice } => {
-                commands::task::list(&api_client, &output_manager, microservice.as_deref()).await
+            TaskCommands::AddContext { task_id, context, file } => {
+                commands::task::add_context(&api_client, &output_manager, task_id, &context, file).await
+            }
+            TaskCommands::List { service, status } => {
+                commands::task::list(&api_client, &output_manager, service.as_deref(), status.as_deref()).await
             }
         },
         Commands::Job { action } => match action {
@@ -269,42 +329,35 @@ mod tests {
             "orchestrator",
             "task",
             "submit",
-            "--task-json",
-            "tasks.json",
-            "--task-id",
             "1001",
-            "--design-spec",
-            "design.md",
-            "--service-name",
+            "--service",
             "auth-service",
-            "--agent-name",
-            "claude-agent-1",
         ]);
         assert!(cli.is_ok());
 
         let cli = cli.unwrap();
         // The URL might be affected by environment variables from other tests
-        assert!(cli.api_url == "http://localhost:8080" || cli.api_url.starts_with("http://"));
+        assert!(cli.api_url == "http://orchestrator.local/api/v1" || cli.api_url.starts_with("http://"));
 
         match cli.command {
             Commands::Task {
                 action:
                     TaskCommands::Submit {
-                        task_json,
                         task_id,
-                        design_spec,
-                        prompt,
-                        service_name,
-                        agent_name,
+                        service,
+                        agent,
+                        taskmaster_dir,
+                        context,
+                        tools,
                         retry,
                     },
             } => {
-                assert_eq!(task_json, "tasks.json");
                 assert_eq!(task_id, 1001);
-                assert_eq!(design_spec, "design.md");
-                assert_eq!(prompt, None);
-                assert_eq!(service_name, "auth-service");
-                assert_eq!(agent_name, "claude-agent-1");
+                assert_eq!(service, "auth-service");
+                assert_eq!(agent, "claude-agent-1");
+                assert_eq!(taskmaster_dir, ".taskmaster");
+                assert_eq!(context.len(), 0);
+                assert_eq!(tools.len(), 0);
                 assert!(!retry);
             }
             _ => panic!("Expected Task Submit command"),

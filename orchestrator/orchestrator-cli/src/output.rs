@@ -89,6 +89,7 @@ impl OutputManager {
     }
 
     /// Print a single task
+    #[allow(dead_code)]
     pub fn print_task(&self, task: &TaskResponse) -> Result<()> {
         match self.format {
             OutputFormat::Table => self.print_task_table(task),
@@ -98,6 +99,7 @@ impl OutputManager {
     }
 
     /// Print a list of tasks
+    #[allow(dead_code)]
     pub fn print_task_list(&self, tasks: &[TaskResponse]) -> Result<()> {
         match self.format {
             OutputFormat::Table => self.print_task_list_table(tasks),
@@ -137,6 +139,7 @@ impl OutputManager {
     }
 
     /// Print a single task in table format
+    #[allow(dead_code)]
     fn print_task_table(&self, task: &TaskResponse) -> Result<()> {
         let mut table = Table::new();
         table.add_row(Row::new(vec![
@@ -190,6 +193,7 @@ impl OutputManager {
     }
 
     /// Print a list of tasks in table format
+    #[allow(dead_code)]
     fn print_task_list_table(&self, tasks: &[TaskResponse]) -> Result<()> {
         let mut table = Table::new();
         table.add_row(Row::new(vec![
@@ -322,6 +326,7 @@ impl OutputManager {
     }
 
     /// Format task status with color
+    #[allow(dead_code)]
     fn format_task_status(&self, status: &TaskStatus) -> String {
         let status_str = format!("{status}");
         if !self.colored {

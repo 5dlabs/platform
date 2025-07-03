@@ -11,7 +11,10 @@ use axum::{
 };
 use kube::Client;
 use orchestrator_core::{
-    handlers::pm_taskrun::{add_context, submit_task, AppState as TaskRunAppState},
+    handlers::pm_taskrun::{
+        add_context, get_task, get_task_status, list_tasks, submit_task, update_session,
+        AppState as TaskRunAppState,
+    },
     run_taskrun_controller,
 };
 use serde_json::{json, Value};
@@ -86,21 +89,40 @@ fn api_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
             post({
                 let taskrun_state = state.taskrun_state.clone();
                 move |req| submit_task(State(taskrun_state), req)
+            })
+            .get({
+                let taskrun_state = state.taskrun_state.clone();
+                move || list_tasks(State(taskrun_state))
             }),
         )
         .route(
-            "/pm/tasks/{task_id}/context",
+            "/pm/tasks/:task_id",
+            get({
+                let taskrun_state = state.taskrun_state.clone();
+                move |path| get_task(State(taskrun_state), path)
+            }),
+        )
+        .route(
+            "/pm/tasks/:task_id/status",
+            get({
+                let taskrun_state = state.taskrun_state.clone();
+                move |path| get_task_status(State(taskrun_state), path)
+            }),
+        )
+        .route(
+            "/pm/tasks/:task_id/context",
             post({
                 let taskrun_state = state.taskrun_state.clone();
                 move |path, req| add_context(State(taskrun_state), path, req)
             }),
         )
-    // TODO: Add more API routes as we implement them:
-    // .route("/webhook", post(webhook_handler))
-    // .route("/tasks", get(list_tasks))
-    // .route("/tasks/:id", get(get_task))
-    // .route("/jobs", get(list_jobs))
-    // .route("/jobs/:id/logs", get(get_job_logs))
+        .route(
+            "/pm/tasks/:task_id/session",
+            post({
+                let taskrun_state = state.taskrun_state.clone();
+                move |path, req| update_session(State(taskrun_state), path, req)
+            }),
+        )
 }
 
 #[tokio::main]

@@ -439,9 +439,7 @@ fn build_job(
     cm_name: &str,
     config: &ControllerConfig,
 ) -> Result<Job> {
-    // Get the Claude API key from environment
-    let api_key = std::env::var("ANTHROPIC_API_KEY")
-        .map_err(|_| Error::ConfigError("ANTHROPIC_API_KEY not set".to_string()))?;
+    // API key will be injected from secret
 
     // Build telemetry environment variables from config
     let mut telemetry_env = vec![];
@@ -595,7 +593,7 @@ fn build_job(
                         "image": format!("{}:{}", config.agent.image.repository, config.agent.image.tag),
                         "command": config.agent.command.clone(),
                         "args": config.agent.args.clone(),
-                        "env": build_env_vars(tr, &api_key, telemetry_env, config),
+                        "env": build_env_vars(tr, telemetry_env, config),
                         "volumeMounts": [{
                             "name": "workspace",
                             "mountPath": "/workspace"
@@ -627,14 +625,18 @@ fn build_job(
 /// Build environment variables for the container
 fn build_env_vars(
     tr: &TaskRun,
-    api_key: &str,
     telemetry_env: Vec<serde_json::Value>,
     config: &ControllerConfig,
 ) -> Vec<serde_json::Value> {
     let mut env_vars = vec![
         json!({
             "name": "ANTHROPIC_API_KEY",
-            "value": api_key
+            "valueFrom": {
+                "secretKeyRef": {
+                    "name": "claude-api-key",
+                    "key": "api-key"
+                }
+            }
         }),
         json!({
             "name": "TASK_ID",
@@ -721,6 +723,7 @@ mod tests {
                         file_type: Some(MarkdownFileType::DesignSpec),
                     },
                 ],
+                agent_tools: vec![],
             },
             status: None,
         };

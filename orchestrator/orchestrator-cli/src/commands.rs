@@ -6,13 +6,173 @@ use anyhow::{Context, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::io::{self, Write};
 use std::time::Duration;
-use tracing::error;
+use tracing::{error, info};
 
 /// Task command handlers
 pub mod task {
     use super::*;
-    use orchestrator_common::models::pm_task::{MarkdownPayload, PmTaskRequest, TaskMasterFile};
+    use orchestrator_common::models::pm_task::{AgentToolSpec, MarkdownPayload, PmTaskRequest, TaskMasterFile};
     use std::fs;
+    use std::path::Path;
+
+    /// Submit a task using simplified Task Master directory structure
+    #[allow(clippy::too_many_arguments)]
+    pub async fn submit_task_simplified(
+        api_client: &ApiClient,
+        output: &OutputManager,
+        task_id: u32,
+        service_name: &str,
+        agent_name: &str,
+        taskmaster_dir: &str,
+        context_files: &[String],
+        tool_specs: &[String],
+        retry: bool,
+    ) -> Result<()> {
+        output.info("Preparing task submission...")?;
+        info!("Task ID: {}, Service: {}", task_id, service_name);
+        info!("Task Master directory: {}", taskmaster_dir);
+
+        // Construct paths based on Task Master structure
+        let tasks_json_path = Path::new(taskmaster_dir).join("tasks/tasks.json");
+        let design_spec_path = Path::new(taskmaster_dir).join("docs/design-spec.md");
+        let prompt_path = Path::new(taskmaster_dir).join("docs/prompt.md");
+        let acceptance_criteria_path = Path::new(taskmaster_dir).join("docs/acceptance-criteria.md");
+        let regression_testing_path = Path::new(taskmaster_dir).join("docs/regression-testing.md");
+
+        // Read Task Master JSON file
+        info!("Reading tasks JSON from: {}", tasks_json_path.display());
+        let tasks_json = fs::read_to_string(&tasks_json_path)
+            .with_context(|| format!("Failed to read task JSON file: {}", tasks_json_path.display()))?;
+        info!("Successfully read tasks JSON file");
+
+        let tasks_file: TaskMasterFile = serde_json::from_str(&tasks_json)
+            .with_context(|| "Failed to parse Task Master JSON file")?;
+
+        // Extract the specific task by ID
+        let task = tasks_file
+            .master
+            .tasks
+            .into_iter()
+            .find(|t| t.id == task_id)
+            .ok_or_else(|| anyhow::anyhow!("Task ID {} not found in tasks.json", task_id))?;
+
+        output.info(&format!("Found task: {}", task.title))?;
+
+        // Prepare markdown files
+        let mut markdown_files = vec![
+            MarkdownPayload {
+                content: task_to_markdown(&task),
+                filename: "task.md".to_string(),
+                file_type: "task".to_string(),
+            },
+        ];
+
+        // Add design spec if exists
+        if design_spec_path.exists() {
+            let design_spec = fs::read_to_string(&design_spec_path)
+                .with_context(|| format!("Failed to read design spec: {}", design_spec_path.display()))?;
+            markdown_files.push(MarkdownPayload {
+                content: design_spec,
+                filename: "design-spec.md".to_string(),
+                file_type: "design-spec".to_string(),
+            });
+        }
+
+        // Add prompt if exists
+        if prompt_path.exists() {
+            let prompt = fs::read_to_string(&prompt_path)
+                .with_context(|| format!("Failed to read prompt: {}", prompt_path.display()))?;
+            markdown_files.push(MarkdownPayload {
+                content: prompt,
+                filename: "prompt.md".to_string(),
+                file_type: "prompt".to_string(),
+            });
+        }
+
+        // Add acceptance criteria if exists
+        if acceptance_criteria_path.exists() {
+            let criteria = fs::read_to_string(&acceptance_criteria_path)
+                .with_context(|| format!("Failed to read acceptance criteria: {}", acceptance_criteria_path.display()))?;
+            markdown_files.push(MarkdownPayload {
+                content: criteria,
+                filename: "acceptance-criteria.md".to_string(),
+                file_type: "acceptance-criteria".to_string(),
+            });
+        }
+
+        // Add regression testing guide if exists
+        if regression_testing_path.exists() {
+            let regression_guide = fs::read_to_string(&regression_testing_path)
+                .with_context(|| format!("Failed to read regression testing guide: {}", regression_testing_path.display()))?;
+            markdown_files.push(MarkdownPayload {
+                content: regression_guide,
+                filename: "regression-testing.md".to_string(),
+                file_type: "context".to_string(),
+            });
+        }
+
+        // Add any additional context files
+        for (idx, context_file) in context_files.iter().enumerate() {
+            let content = fs::read_to_string(context_file)
+                .with_context(|| format!("Failed to read context file: {context_file}"))?;
+            markdown_files.push(MarkdownPayload {
+                content,
+                filename: format!("context-{}.md", idx + 1),
+                file_type: "context".to_string(),
+            });
+        }
+
+        // Parse agent tools
+        let agent_tools = parse_tool_specs(tool_specs)?;
+
+        // Create PM request
+        let pm_request = PmTaskRequest::new_with_tools(
+            task,
+            service_name.to_string(),
+            agent_name.to_string(),
+            markdown_files,
+            agent_tools,
+        );
+        
+        // Debug: print the request JSON
+        if let Ok(json) = serde_json::to_string_pretty(&pm_request) {
+            info!("PM Request JSON:\n{}", json);
+        }
+
+        // Submit the task
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.green} {msg}")
+                .expect("Failed to set progress bar template"),
+        );
+        pb.set_message("Submitting task...");
+        pb.enable_steady_tick(Duration::from_millis(100));
+
+        let result = api_client.submit_pm_task(&pm_request).await;
+        pb.finish_and_clear();
+
+        match result {
+            Ok(response) => {
+                if let Some(data) = response.data {
+                    output.success(&format!("Task {task_id} submitted successfully!"))?;
+                    output.info(&format!("Service: {service_name}"))?;
+                    output.info(&format!("Agent: {agent_name}"))?;
+                    if retry {
+                        output.info("(Retry attempt)")?;
+                    }
+                    output.print_json(&data)?;
+                } else {
+                    output.error(&format!("Failed to submit task: {}", response.message))?;
+                }
+                Ok(())
+            }
+            Err(e) => {
+                output.error(&format!("Failed to submit task: {e}"))?;
+                Err(e)
+            }
+        }
+    }
 
     /// Submit a PM task with design specification and autonomous prompt
     #[allow(clippy::too_many_arguments)]
@@ -119,8 +279,8 @@ pub mod task {
                     output.info(&format!("Task ID: {}", pm_request.id))?;
                     output.info(&format!("Title: {}", pm_request.title))?;
                     output.info(&format!("Priority: {}", pm_request.priority))?;
-                } else if let Some(error) = response.error {
-                    output.error(&format!("Failed to submit task: {}", error.message))?;
+                } else {
+                    output.error(&format!("Failed to submit task: {}", response.message))?;
                 }
                 Ok(())
             }
@@ -212,10 +372,56 @@ pub mod task {
         }
     }
 
+    /// Add context to a running task
+    pub async fn add_context(
+        api_client: &ApiClient,
+        output: &OutputManager,
+        task_id: u32,
+        context: &str,
+        is_file: bool,
+    ) -> Result<()> {
+        let content = if is_file {
+            fs::read_to_string(context)
+                .with_context(|| format!("Failed to read context file: {context}"))?
+        } else {
+            context.to_string()
+        };
+
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.green} {msg}")
+                .expect("Failed to set progress bar template"),
+        );
+        pb.set_message("Adding context to task...");
+        pb.enable_steady_tick(Duration::from_millis(100));
+
+        let result = api_client.add_context(task_id, &content).await;
+        pb.finish_and_clear();
+
+        match result {
+            Ok(response) => {
+                if response.success {
+                    output.success(&format!("Context added to task {task_id} successfully!"))?;
+                    if let Some(data) = response.data {
+                        output.print_json(&data)?;
+                    }
+                } else {
+                    output.error(&format!("Failed to add context: {}", response.message))?;
+                }
+                Ok(())
+            }
+            Err(e) => {
+                output.error(&format!("Failed to add context: {e}"))?;
+                Err(e)
+            }
+        }
+    }
+
     pub async fn status(
         api_client: &ApiClient,
         output: &OutputManager,
-        task_id: &str,
+        task_id: u32,
     ) -> Result<()> {
         let pb = ProgressBar::new_spinner();
         pb.set_style(
@@ -226,20 +432,23 @@ pub mod task {
         pb.set_message("Getting task status...");
         pb.enable_steady_tick(Duration::from_millis(100));
 
-        let result = api_client.get_task(task_id).await;
+        let result = api_client.get_task_status(task_id).await;
         pb.finish_and_clear();
 
         match result {
             Ok(response) => {
-                if let Some(task) = response.data {
-                    output.print_task(&task)?;
-                } else if let Some(error) = response.error {
-                    output.error(&format!("Failed to get task: {}", error.message))?;
+                if response.success {
+                    if let Some(data) = response.data {
+                        output.success(&format!("Task {task_id} status:"))?;
+                        output.print_json(&data)?;
+                    }
+                } else {
+                    output.error(&format!("Failed to get task status: {}", response.message))?;
                 }
                 Ok(())
             }
             Err(e) => {
-                output.error(&format!("Failed to get task: {e}"))?;
+                output.error(&format!("Failed to get task status: {e}"))?;
                 Err(e)
             }
         }
@@ -248,7 +457,8 @@ pub mod task {
     pub async fn list(
         api_client: &ApiClient,
         output: &OutputManager,
-        microservice: Option<&str>,
+        service: Option<&str>,
+        status_filter: Option<&str>,
     ) -> Result<()> {
         let pb = ProgressBar::new_spinner();
         pb.set_style(
@@ -259,20 +469,19 @@ pub mod task {
         pb.set_message("Listing tasks...");
         pb.enable_steady_tick(Duration::from_millis(100));
 
-        let result = api_client.list_tasks(microservice).await;
+        let result = api_client.list_tasks(service, status_filter).await;
         pb.finish_and_clear();
 
         match result {
             Ok(response) => {
-                if let Some(tasks) = response.data {
-                    if tasks.is_empty() {
-                        output.info("No tasks found")?;
+                if response.success {
+                    if let Some(data) = response.data {
+                        output.print_json(&data)?;
                     } else {
-                        output.info(&format!("Found {} task(s)", tasks.len()))?;
-                        output.print_task_list(&tasks)?;
+                        output.info("No tasks found")?;
                     }
-                } else if let Some(error) = response.error {
-                    output.error(&format!("Failed to list tasks: {}", error.message))?;
+                } else {
+                    output.error(&format!("Failed to list tasks: {}", response.message))?;
                 }
                 Ok(())
             }
@@ -281,6 +490,82 @@ pub mod task {
                 Err(e)
             }
         }
+    }
+
+    /// Parse tool specifications from CLI arguments
+    fn parse_tool_specs(tool_specs: &[String]) -> Result<Vec<AgentToolSpec>> {
+        let mut tools = Vec::new();
+        
+        for spec in tool_specs {
+            let parts: Vec<&str> = spec.split(':').collect();
+            if parts.len() != 2 {
+                return Err(anyhow::anyhow!(
+                    "Invalid tool spec format: '{}'. Expected format: 'tool_name:enabled' (e.g., 'bash:true')",
+                    spec
+                ));
+            }
+            
+            let name = parts[0].to_string();
+            let enabled = match parts[1].to_lowercase().as_str() {
+                "true" | "1" | "yes" | "on" => true,
+                "false" | "0" | "no" | "off" => false,
+                _ => return Err(anyhow::anyhow!(
+                    "Invalid enabled value: '{}'. Use true/false",
+                    parts[1]
+                )),
+            };
+            
+            tools.push(AgentToolSpec {
+                name,
+                enabled,
+                config: None,
+                restrictions: Vec::new(),
+            });
+        }
+        
+        // If no tools specified, use defaults
+        if tools.is_empty() {
+            tools = vec![
+                AgentToolSpec {
+                    name: "bash".to_string(),
+                    enabled: true,
+                    config: None,
+                    restrictions: Vec::new(),
+                },
+                AgentToolSpec {
+                    name: "edit".to_string(),
+                    enabled: true,
+                    config: None,
+                    restrictions: Vec::new(),
+                },
+                AgentToolSpec {
+                    name: "read".to_string(),
+                    enabled: true,
+                    config: None,
+                    restrictions: Vec::new(),
+                },
+                AgentToolSpec {
+                    name: "write".to_string(),
+                    enabled: true,
+                    config: None,
+                    restrictions: Vec::new(),
+                },
+                AgentToolSpec {
+                    name: "glob".to_string(),
+                    enabled: true,
+                    config: None,
+                    restrictions: Vec::new(),
+                },
+                AgentToolSpec {
+                    name: "grep".to_string(),
+                    enabled: true,
+                    config: None,
+                    restrictions: Vec::new(),
+                },
+            ];
+        }
+        
+        Ok(tools)
     }
 }
 

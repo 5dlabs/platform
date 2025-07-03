@@ -22,6 +22,10 @@ pub struct PmTaskRequest {
 
     // Markdown files as structured payloads
     pub markdown_files: Vec<MarkdownPayload>,
+
+    // Agent tools specification
+    #[serde(default)]
+    pub agent_tools: Vec<AgentToolSpec>,
 }
 
 /// Subtask structure from Task Master
@@ -33,6 +37,7 @@ pub struct Subtask {
     pub dependencies: Vec<u32>,
     pub details: String,
     pub status: String,
+    #[serde(default, alias = "testStrategy")]
     pub test_strategy: String,
 }
 
@@ -42,6 +47,17 @@ pub struct MarkdownPayload {
     pub content: String,
     pub filename: String,
     pub file_type: String,
+}
+
+/// Agent tool specification for PM requests
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentToolSpec {
+    pub name: String,
+    pub enabled: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub config: Option<serde_json::Value>,
+    #[serde(default)]
+    pub restrictions: Vec<String>,
 }
 
 /// Task Master JSON file structure
@@ -61,6 +77,7 @@ pub struct Task {
     pub title: String,
     pub description: String,
     pub details: String,
+    #[serde(default, alias = "testStrategy")]
     pub test_strategy: String,
     pub priority: String,
     pub dependencies: Vec<u32>,
@@ -76,6 +93,17 @@ impl PmTaskRequest {
         agent_name: String,
         markdown_files: Vec<MarkdownPayload>,
     ) -> Self {
+        Self::new_with_tools(task, service_name, agent_name, markdown_files, Vec::new())
+    }
+
+    /// Create a new PM task request with agent tools specification
+    pub fn new_with_tools(
+        task: Task,
+        service_name: String,
+        agent_name: String,
+        markdown_files: Vec<MarkdownPayload>,
+        agent_tools: Vec<AgentToolSpec>,
+    ) -> Self {
         Self {
             id: task.id,
             title: task.title,
@@ -89,6 +117,7 @@ impl PmTaskRequest {
             service_name,
             agent_name,
             markdown_files,
+            agent_tools,
         }
     }
 }
