@@ -70,15 +70,15 @@ pub enum MarkdownFileType {
 pub struct AgentTool {
     /// Tool name (e.g., "bash", "edit", "read")
     pub name: String,
-    
+
     /// Whether the tool is enabled
     #[serde(default = "default_tool_enabled")]
     pub enabled: bool,
-    
+
     /// Tool-specific configuration
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub config: Option<serde_json::Value>,
-    
+
     /// Tool restrictions or limitations
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub restrictions: Vec<String>,

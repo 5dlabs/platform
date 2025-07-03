@@ -11,7 +11,9 @@ use tracing::{error, info};
 /// Task command handlers
 pub mod task {
     use super::*;
-    use orchestrator_common::models::pm_task::{AgentToolSpec, MarkdownPayload, PmTaskRequest, TaskMasterFile};
+    use orchestrator_common::models::pm_task::{
+        AgentToolSpec, MarkdownPayload, PmTaskRequest, TaskMasterFile,
+    };
     use std::fs;
     use std::path::Path;
 
@@ -36,13 +38,18 @@ pub mod task {
         let tasks_json_path = Path::new(taskmaster_dir).join("tasks/tasks.json");
         let design_spec_path = Path::new(taskmaster_dir).join("docs/design-spec.md");
         let prompt_path = Path::new(taskmaster_dir).join("docs/prompt.md");
-        let acceptance_criteria_path = Path::new(taskmaster_dir).join("docs/acceptance-criteria.md");
+        let acceptance_criteria_path =
+            Path::new(taskmaster_dir).join("docs/acceptance-criteria.md");
         let regression_testing_path = Path::new(taskmaster_dir).join("docs/regression-testing.md");
 
         // Read Task Master JSON file
         info!("Reading tasks JSON from: {}", tasks_json_path.display());
-        let tasks_json = fs::read_to_string(&tasks_json_path)
-            .with_context(|| format!("Failed to read task JSON file: {}", tasks_json_path.display()))?;
+        let tasks_json = fs::read_to_string(&tasks_json_path).with_context(|| {
+            format!(
+                "Failed to read task JSON file: {}",
+                tasks_json_path.display()
+            )
+        })?;
         info!("Successfully read tasks JSON file");
 
         let tasks_file: TaskMasterFile = serde_json::from_str(&tasks_json)
@@ -59,18 +66,17 @@ pub mod task {
         output.info(&format!("Found task: {}", task.title))?;
 
         // Prepare markdown files
-        let mut markdown_files = vec![
-            MarkdownPayload {
-                content: task_to_markdown(&task),
-                filename: "task.md".to_string(),
-                file_type: "task".to_string(),
-            },
-        ];
+        let mut markdown_files = vec![MarkdownPayload {
+            content: task_to_markdown(&task),
+            filename: "task.md".to_string(),
+            file_type: "task".to_string(),
+        }];
 
         // Add design spec if exists
         if design_spec_path.exists() {
-            let design_spec = fs::read_to_string(&design_spec_path)
-                .with_context(|| format!("Failed to read design spec: {}", design_spec_path.display()))?;
+            let design_spec = fs::read_to_string(&design_spec_path).with_context(|| {
+                format!("Failed to read design spec: {}", design_spec_path.display())
+            })?;
             markdown_files.push(MarkdownPayload {
                 content: design_spec,
                 filename: "design-spec.md".to_string(),
@@ -91,8 +97,12 @@ pub mod task {
 
         // Add acceptance criteria if exists
         if acceptance_criteria_path.exists() {
-            let criteria = fs::read_to_string(&acceptance_criteria_path)
-                .with_context(|| format!("Failed to read acceptance criteria: {}", acceptance_criteria_path.display()))?;
+            let criteria = fs::read_to_string(&acceptance_criteria_path).with_context(|| {
+                format!(
+                    "Failed to read acceptance criteria: {}",
+                    acceptance_criteria_path.display()
+                )
+            })?;
             markdown_files.push(MarkdownPayload {
                 content: criteria,
                 filename: "acceptance-criteria.md".to_string(),
@@ -102,8 +112,13 @@ pub mod task {
 
         // Add regression testing guide if exists
         if regression_testing_path.exists() {
-            let regression_guide = fs::read_to_string(&regression_testing_path)
-                .with_context(|| format!("Failed to read regression testing guide: {}", regression_testing_path.display()))?;
+            let regression_guide =
+                fs::read_to_string(&regression_testing_path).with_context(|| {
+                    format!(
+                        "Failed to read regression testing guide: {}",
+                        regression_testing_path.display()
+                    )
+                })?;
             markdown_files.push(MarkdownPayload {
                 content: regression_guide,
                 filename: "regression-testing.md".to_string(),
@@ -133,7 +148,7 @@ pub mod task {
             markdown_files,
             agent_tools,
         );
-        
+
         // Debug: print the request JSON
         if let Ok(json) = serde_json::to_string_pretty(&pm_request) {
             info!("PM Request JSON:\n{}", json);
@@ -495,7 +510,7 @@ pub mod task {
     /// Parse tool specifications from CLI arguments
     fn parse_tool_specs(tool_specs: &[String]) -> Result<Vec<AgentToolSpec>> {
         let mut tools = Vec::new();
-        
+
         for spec in tool_specs {
             let parts: Vec<&str> = spec.split(':').collect();
             if parts.len() != 2 {
@@ -504,17 +519,19 @@ pub mod task {
                     spec
                 ));
             }
-            
+
             let name = parts[0].to_string();
             let enabled = match parts[1].to_lowercase().as_str() {
                 "true" | "1" | "yes" | "on" => true,
                 "false" | "0" | "no" | "off" => false,
-                _ => return Err(anyhow::anyhow!(
-                    "Invalid enabled value: '{}'. Use true/false",
-                    parts[1]
-                )),
+                _ => {
+                    return Err(anyhow::anyhow!(
+                        "Invalid enabled value: '{}'. Use true/false",
+                        parts[1]
+                    ))
+                }
             };
-            
+
             tools.push(AgentToolSpec {
                 name,
                 enabled,
@@ -522,7 +539,7 @@ pub mod task {
                 restrictions: Vec::new(),
             });
         }
-        
+
         // If no tools specified, use defaults
         if tools.is_empty() {
             tools = vec![
@@ -564,7 +581,7 @@ pub mod task {
                 },
             ];
         }
-        
+
         Ok(tools)
     }
 }

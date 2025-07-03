@@ -263,11 +263,22 @@ async fn main() -> Result<()> {
             TaskCommands::Status { task_id } => {
                 commands::task::status(&api_client, &output_manager, task_id).await
             }
-            TaskCommands::AddContext { task_id, context, file } => {
-                commands::task::add_context(&api_client, &output_manager, task_id, &context, file).await
+            TaskCommands::AddContext {
+                task_id,
+                context,
+                file,
+            } => {
+                commands::task::add_context(&api_client, &output_manager, task_id, &context, file)
+                    .await
             }
             TaskCommands::List { service, status } => {
-                commands::task::list(&api_client, &output_manager, service.as_deref(), status.as_deref()).await
+                commands::task::list(
+                    &api_client,
+                    &output_manager,
+                    service.as_deref(),
+                    status.as_deref(),
+                )
+                .await
             }
         },
         Commands::Job { action } => match action {
@@ -337,7 +348,9 @@ mod tests {
 
         let cli = cli.unwrap();
         // The URL might be affected by environment variables from other tests
-        assert!(cli.api_url == "http://orchestrator.local/api/v1" || cli.api_url.starts_with("http://"));
+        assert!(
+            cli.api_url == "http://orchestrator.local/api/v1" || cli.api_url.starts_with("http://")
+        );
 
         match cli.command {
             Commands::Task {

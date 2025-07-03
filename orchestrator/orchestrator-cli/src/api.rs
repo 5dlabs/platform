@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use orchestrator_common::models::{
     pm_task::PmTaskRequest,
     request::CreateTaskRequest,
-    response::{ApiResponse, JobResponse, TaskResponse, ResponseStatus, ResponseMetadata},
+    response::{ApiResponse, JobResponse, ResponseMetadata, ResponseStatus, TaskResponse},
 };
 use reqwest::{Client, Response};
 use serde::{Deserialize, Serialize};
@@ -337,7 +337,7 @@ impl ApiClient {
             // Health endpoint returns data directly, not wrapped
             let health_data: Value = serde_json::from_str(&response_text)
                 .with_context(|| format!("Failed to parse health response: {response_text}"))?;
-            
+
             Ok(ApiResponse {
                 status: ResponseStatus::Success,
                 data: Some(health_data),

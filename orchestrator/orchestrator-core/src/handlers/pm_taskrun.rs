@@ -294,7 +294,7 @@ pub async fn list_tasks(
     info!("Listing all tasks");
 
     let api: Api<TaskRun> = Api::namespaced(state.k8s_client.clone(), &state.namespace);
-    
+
     match api.list(&ListParams::default()).await {
         Ok(task_list) => {
             let tasks: Vec<Value> = task_list
@@ -385,12 +385,10 @@ pub async fn get_task(
                 data: Some(task_data),
             }))
         }
-        Err(kube::Error::Api(ae)) if ae.code == 404 => {
-            Err((
-                StatusCode::NOT_FOUND,
-                Json(ApiResponse::error(&format!("Task {task_id} not found"))),
-            ))
-        }
+        Err(kube::Error::Api(ae)) if ae.code == 404 => Err((
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error(&format!("Task {task_id} not found"))),
+        )),
         Err(e) => {
             error!("Failed to get task: {}", e);
             Err((
@@ -434,12 +432,10 @@ pub async fn get_task_status(
                 data: Some(status_data),
             }))
         }
-        Err(kube::Error::Api(ae)) if ae.code == 404 => {
-            Err((
-                StatusCode::NOT_FOUND,
-                Json(ApiResponse::error(&format!("Task {task_id} not found"))),
-            ))
-        }
+        Err(kube::Error::Api(ae)) if ae.code == 404 => Err((
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error(&format!("Task {task_id} not found"))),
+        )),
         Err(e) => {
             error!("Failed to get task status: {}", e);
             Err((
@@ -456,7 +452,10 @@ pub async fn update_session(
     axum::extract::Path(task_id): axum::extract::Path<u32>,
     Json(request): Json<UpdateSessionRequest>,
 ) -> Result<Json<ApiResponse>, (StatusCode, Json<ApiResponse>)> {
-    info!("Updating session for task {}: {}", task_id, request.session_id);
+    info!(
+        "Updating session for task {}: {}",
+        task_id, request.session_id
+    );
 
     let api: Api<TaskRun> = Api::namespaced(state.k8s_client.clone(), &state.namespace);
     let name = format!("task-{task_id}");
