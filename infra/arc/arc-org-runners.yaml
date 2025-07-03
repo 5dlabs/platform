@@ -1,0 +1,140 @@
+---
+# Complete ARC organization runner setup for 5dlabs
+# This single file contains everything needed for org-level runners
+
+# Namespace with privileged pod security for Docker-in-Docker
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: arc-systems
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: privileged
+    pod-security.kubernetes.io/audit: privileged
+---
+# Service account for runners
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: github-runner
+  namespace: arc-systems
+---
+# Role with necessary permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: github-runner
+  namespace: arc-systems
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/exec", "pods/log", "secrets", "configmaps", "persistentvolumeclaims"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+---
+# Bind role to service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: github-runner
+  namespace: arc-systems
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: github-runner
+subjects:
+  - kind: ServiceAccount
+    name: github-runner
+    namespace: arc-systems
+---
+# Organization-level runners
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: org-runners
+  namespace: arc-systems
+spec:
+  replicas: 4  # Adjust based on your workload
+  template:
+    spec:
+      # Organization-level configuration
+      organization: 5dlabs
+
+      # GitHub authentication (requires PAT with admin:org scope)
+      githubAPICredentialsFrom:
+        secretRef:
+          name: arc-github-token
+
+      # Runner labels
+      labels:
+        - self-hosted
+        - linux
+        - x64
+        - k8s-runner
+
+      # Resources
+      resources:
+        limits:
+          cpu: "4"
+          memory: "8Gi"
+        requests:
+          cpu: "1"
+          memory: "2Gi"
+
+      # Docker-in-Docker image
+      image: summerwind/actions-runner-dind:latest
+      dockerEnabled: true
+      dockerdWithinRunnerContainer: true
+
+      # Environment
+      env:
+        - name: RUNNER_FEATURE_FLAG_EPHEMERAL
+          value: "true"
+        - name: PATH
+          value: "/shared/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+      # Service account
+      serviceAccountName: github-runner
+
+      # Init container to install tools
+      initContainers:
+        - name: install-tools
+          image: alpine:3.19
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Installing tools..."
+              apk add --no-cache wget tar
+              mkdir -p /shared/bin
+
+              # kubectl
+              wget -qO /shared/bin/kubectl https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl
+              chmod +x /shared/bin/kubectl
+
+              # helm
+              wget -qO- https://get.helm.sh/helm-v3.14.0-linux-amd64.tar.gz | tar xz
+              mv linux-amd64/helm /shared/bin/helm
+              chmod +x /shared/bin/helm
+
+              # GitHub CLI
+              wget -qO- https://github.com/cli/cli/releases/download/v2.40.0/gh_2.40.0_linux_amd64.tar.gz | tar xz
+              mv gh_2.40.0_linux_amd64/bin/gh /shared/bin/gh
+              chmod +x /shared/bin/gh
+
+              echo "Tools installed:"
+              ls -la /shared/bin/
+          volumeMounts:
+            - name: shared-tools
+              mountPath: /shared
+
+      # Volumes
+      volumes:
+        - name: shared-tools
+          emptyDir: {}
+      volumeMounts:
+        - name: shared-tools
+          mountPath: /shared
+
+      # Security context
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000

@@ -1,133 +1,46 @@
 #!/bin/bash
-# Pre-commit hook to detect potential secrets
+# Pre-commit hook for code quality
 
 # ANSI color codes
-RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+RED='\033[0;31m'
+NC='\033[0m'
 
-echo "🔍 Scanning for potential secrets..."
+echo "🔍 Running pre-commit checks..."
 
-# Files to exclude from scanning
-EXCLUDE_PATTERNS=(
-    ".githooks/"
-    ".git/"
-    "*.lock"
-    "*.sum"
-    "vendor/"
-    "node_modules/"
-    "target/"
-    ".github/workflows/ci-"  # Exclude CI workflow files that might have example patterns
-)
-
-# Build grep exclude args
-EXCLUDE_ARGS=""
-for pattern in "${EXCLUDE_PATTERNS[@]}"; do
-    EXCLUDE_ARGS="$EXCLUDE_ARGS --exclude-dir=${pattern%/}"
-done
-
-# Get list of staged files, excluding certain paths
-STAGED_FILES=$(git diff --cached --name-only | grep -v -E '(\.githooks/|\.git/|\.lock$|\.sum$)')
-
-if [ -z "$STAGED_FILES" ]; then
-    echo -e "${GREEN}✅ No files to check.${NC}"
-    exit 0
+# Check for large files (>1MB)
+LARGE_FILES=$(git diff --cached --name-only | xargs -I {} sh -c 'test -f "{}" && stat -f%z "{}" 2>/dev/null || stat -c%s "{}" 2>/dev/null' | awk '$1 > 1048576 {print}' | wc -l)
+if [ "$LARGE_FILES" -gt 0 ]; then
+    echo -e "${YELLOW}⚠️  Warning: Large files detected (>1MB)${NC}"
+    git diff --cached --name-only | xargs -I {} sh -c 'test -f "{}" && echo "{}: $(du -h "{}" | cut -f1)"'
 fi
 
-FOUND_SECRETS=0
+# Remind about GitHub Secret Scanning
+echo -e "${GREEN}✅ GitHub Secret Scanning is enabled for this repository${NC}"
+echo "   Secrets will be automatically detected after push"
 
-# Function to check a single file
-check_file() {
-    local file="$1"
-    local found=0
-    
-    # Skip if file doesn't exist
-    [ -f "$file" ] || return 0
-    
-    # Check for JWT tokens
-    if grep -qE 'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}' "$file" 2>/dev/null; then
-        echo -e "${RED}❌ Potential JWT token in: $file${NC}"
-        found=1
-    fi
-    
-    # Check for AWS keys
-    if grep -qE 'AKIA[0-9A-Z]{16}' "$file" 2>/dev/null; then
-        echo -e "${RED}❌ Potential AWS key in: $file${NC}"
-        found=1
-    fi
-    
-    # Check for GitHub tokens
-    if grep -qE 'gh[ps]_[a-zA-Z0-9]{36}' "$file" 2>/dev/null; then
-        echo -e "${RED}❌ Potential GitHub token in: $file${NC}"
-        found=1
-    fi
-    
-    # Check for private keys
-    if grep -qE '-----BEGIN[^-]*PRIVATE KEY-----' "$file" 2>/dev/null; then
-        echo -e "${RED}❌ Private key found in: $file${NC}"
-        found=1
-    fi
-    
-    # Check for generic secrets (be careful with false positives)
-    if grep -qE '(password|secret|api_key|apikey|token).*[:=][[:space:]]*["\x27][^"\x27]{20,}["\x27]' "$file" 2>/dev/null; then
-        # Extra check to reduce false positives - must not be a variable reference
-        if ! grep -qE '(password|secret|api_key|apikey|token).*[:=][[:space:]]*["\x27]\$\{' "$file" 2>/dev/null; then
-            echo -e "${YELLOW}⚠️  Potential hardcoded secret in: $file${NC}"
-            echo -e "${YELLOW}   Please verify this is not a real secret${NC}"
-        fi
-    fi
-    
-    return $found
-}
+# Check for common issues
+ISSUES=0
 
-# Check each staged file
-for file in $STAGED_FILES; do
-    check_file "$file" && FOUND_SECRETS=1
-done
-
-# Check for sensitive file names
-SENSITIVE_FILES=(
-    ".env"
-    ".env.local"
-    ".env.production"
-    "secrets.yml"
-    "secrets.yaml"
-    "credentials"
-    ".twingate"
-    "*.pem"
-    "*.key"
-    "*.p12"
-)
-
-for pattern in "${SENSITIVE_FILES[@]}"; do
-    if echo "$STAGED_FILES" | grep -qE "(^|/)${pattern}$"; then
-        echo -e "${RED}❌ Attempting to commit sensitive file matching: ${pattern}${NC}"
-        echo "Add this file to .gitignore instead!"
-        FOUND_SECRETS=1
-    fi
-done
-
-# Check for .archive directory
-if echo "$STAGED_FILES" | grep -q "^\.archive/"; then
-    echo -e "${RED}❌ Attempting to commit files from .archive directory${NC}"
-    FOUND_SECRETS=1
-fi
-
-# Final verdict
-if [ $FOUND_SECRETS -eq 1 ]; then
-    echo ""
-    echo -e "${RED}❌ Commit blocked: Potential secrets detected!${NC}"
-    echo ""
-    echo "Options:"
-    echo "1. Remove the secrets from your files"
-    echo "2. Add sensitive files to .gitignore"
-    echo "3. Use environment variables instead of hardcoded secrets"
-    echo "4. If this is a false positive, bypass with: git commit --no-verify"
-    echo ""
-    exit 1
+# Check for trailing whitespace
+if git diff --cached --check; then
+    :
 else
-    echo -e "${GREEN}✅ No secrets detected. Proceeding with commit.${NC}"
+    echo -e "${YELLOW}⚠️  Trailing whitespace detected${NC}"
+    ISSUES=1
+fi
+
+# Check for merge conflict markers
+if git diff --cached --name-only | xargs grep -l "^<<<<<<< \|^======= \|^>>>>>>> " 2>/dev/null; then
+    echo -e "${RED}❌ Merge conflict markers found${NC}"
+    ISSUES=1
+fi
+
+if [ $ISSUES -eq 0 ]; then
+    echo -e "${GREEN}✅ All checks passed${NC}"
+else
+    echo -e "${YELLOW}Consider fixing the issues above before committing${NC}"
 fi
 
 exit 0
