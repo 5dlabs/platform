@@ -397,38 +397,45 @@ fn generate_claude_md(tr: &TaskRun) -> String {
 **Service:** {}  
 **Context Version:** {}
 
-## Task Context Files
-{}
+## Documentation Discovery
+Before starting implementation, please:
+1. **List available documentation**: Tell me what documentation you have access to for this implementation
+2. **Review all context files**: Read through all available task specifications, design documents, and requirements
+3. **Confirm understanding**: Summarize the key requirements and acceptance criteria
 
-## Service Guidelines
+## Implementation Requirements
+- Read ALL available documentation FIRST before any implementation
+- Follow the design specification exactly as provided
+- Implement according to acceptance criteria provided
+- Run tests after EVERY subtask completion
+- Maintain zero warnings policy for linting tools
+- **MANDATORY**: Submit a GitHub pull request when ALL acceptance criteria are fully met
+
+## Project Structure Guidelines
 - Existing service code: @src/
 - Test suite: @tests/
 - Service documentation: @docs/README.md
 - Build instructions: @docs/build.md
 
-## Key Commands
-- `cargo build` - Build the project
-- `cargo test` - Run all tests
-- `cargo clippy -- -D warnings` - Lint with zero tolerance
-- `cargo fmt` - Format code
+## Success Criteria
+- All acceptance criteria from task specification are met
+- All tests pass
+- No linting warnings or errors
+- Code follows established patterns and best practices
+- **Pull request submitted with complete implementation**
 
-## Critical Reminders
-- Read design spec FIRST before any implementation
-- Run tests after EVERY subtask completion  
-- Zero clippy warnings policy
-- Submit GitHub PR when complete
+## Critical Path
+1. **Discover and read** all available documentation
+2. **Plan implementation** based on requirements
+3. **Implement incrementally** with testing at each step
+4. **Verify acceptance criteria** are fully satisfied
+5. **Submit pull request** with working, tested code
 "#,
         tr.spec.service_name,
         tr.spec.task_id,
         tr.spec.task_id,
         tr.spec.service_name,
-        tr.spec.context_version,
-        tr.spec
-            .markdown_files
-            .iter()
-            .map(|f| format!("- @{}", f.filename))
-            .collect::<Vec<_>>()
-            .join("\n")
+        tr.spec.context_version
     )
 }
 
