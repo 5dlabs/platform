@@ -32,6 +32,10 @@ pub struct TaskRunSpec {
     /// Tools available to the agent
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub agent_tools: Vec<AgentTool>,
+
+    /// Repository information for code access
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repository: Option<RepositorySpec>,
 }
 
 fn default_context_version() -> u32 {
@@ -86,6 +90,62 @@ pub struct AgentTool {
 
 fn default_tool_enabled() -> bool {
     true
+}
+
+/// Repository specification for cloning source code
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RepositorySpec {
+    /// Repository URL (HTTPS or SSH)
+    pub url: String,
+
+    /// Branch or tag to checkout
+    #[serde(default = "default_branch")]
+    pub branch: String,
+
+    /// Optional path within the repository to use as workspace root
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+
+    /// Authentication method for private repositories
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth: Option<RepositoryAuth>,
+}
+
+/// Repository authentication specification
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RepositoryAuth {
+    /// Authentication type
+    #[serde(rename = "type")]
+    pub auth_type: RepositoryAuthType,
+
+    /// Secret name containing credentials
+    pub secret_name: String,
+
+    /// Key within the secret for the credential
+    #[serde(default = "default_secret_key")]
+    pub secret_key: String,
+}
+
+/// Repository authentication types
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum RepositoryAuthType {
+    /// GitHub personal access token
+    Token,
+    /// SSH private key
+    SshKey,
+    /// Username/password authentication
+    BasicAuth,
+}
+
+fn default_branch() -> String {
+    "main".to_string()
+}
+
+fn default_secret_key() -> String {
+    "token".to_string()
 }
 
 /// Status of the TaskRun
@@ -207,6 +267,7 @@ mod tests {
                     file_type: Some(MarkdownFileType::Task),
                 }],
                 agent_tools: vec![],
+                repository: None,
             },
             status: None,
         };

@@ -167,6 +167,23 @@ pub async fn submit_task(
             context_version: 1,
             markdown_files,
             agent_tools,
+            repository: request.repository.map(|repo| crate::crds::taskrun::RepositorySpec {
+                url: repo.url,
+                branch: repo.branch,
+                path: repo.path,
+                auth: repo.auth.map(|auth| crate::crds::taskrun::RepositoryAuth {
+                    auth_type: match auth.auth_type {
+                        orchestrator_common::models::pm_task::RepositoryAuthType::Token => 
+                            crate::crds::taskrun::RepositoryAuthType::Token,
+                        orchestrator_common::models::pm_task::RepositoryAuthType::SshKey => 
+                            crate::crds::taskrun::RepositoryAuthType::SshKey,
+                        orchestrator_common::models::pm_task::RepositoryAuthType::BasicAuth => 
+                            crate::crds::taskrun::RepositoryAuthType::BasicAuth,
+                    },
+                    secret_name: auth.secret_name,
+                    secret_key: auth.secret_key,
+                }),
+            }),
         },
         status: None,
     };

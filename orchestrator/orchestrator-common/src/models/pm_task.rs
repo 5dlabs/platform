@@ -26,6 +26,10 @@ pub struct PmTaskRequest {
     // Agent tools specification
     #[serde(default)]
     pub agent_tools: Vec<AgentToolSpec>,
+
+    // Repository specification for code access
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repository: Option<RepositorySpec>,
 }
 
 /// Subtask structure from Task Master
@@ -58,6 +62,44 @@ pub struct AgentToolSpec {
     pub config: Option<serde_json::Value>,
     #[serde(default)]
     pub restrictions: Vec<String>,
+}
+
+/// Repository specification for cloning source code
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepositorySpec {
+    pub url: String,
+    #[serde(default = "default_branch")]
+    pub branch: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth: Option<RepositoryAuth>,
+}
+
+/// Repository authentication specification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepositoryAuth {
+    #[serde(rename = "type")]
+    pub auth_type: RepositoryAuthType,
+    pub secret_name: String,
+    #[serde(default = "default_secret_key")]
+    pub secret_key: String,
+}
+
+/// Repository authentication types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RepositoryAuthType {
+    Token,
+    SshKey,
+    BasicAuth,
+}
+
+fn default_branch() -> String {
+    "main".to_string()
+}
+
+fn default_secret_key() -> String {
+    "token".to_string()
 }
 
 /// Task Master JSON file structure
@@ -118,6 +160,34 @@ impl PmTaskRequest {
             agent_name,
             markdown_files,
             agent_tools,
+            repository: None,
+        }
+    }
+
+    /// Create a new PM task request from Task Master task with repository support
+    pub fn new_with_repository(
+        task: Task,
+        service_name: String,
+        agent_name: String,
+        markdown_files: Vec<MarkdownPayload>,
+        agent_tools: Vec<AgentToolSpec>,
+        repository: Option<RepositorySpec>,
+    ) -> Self {
+        Self {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            details: task.details,
+            test_strategy: task.test_strategy,
+            priority: task.priority,
+            dependencies: task.dependencies,
+            status: task.status,
+            subtasks: task.subtasks,
+            service_name,
+            agent_name,
+            markdown_files,
+            agent_tools,
+            repository,
         }
     }
 }

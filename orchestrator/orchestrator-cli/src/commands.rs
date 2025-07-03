@@ -12,7 +12,7 @@ use tracing::{error, info};
 pub mod task {
     use super::*;
     use orchestrator_common::models::pm_task::{
-        AgentToolSpec, MarkdownPayload, PmTaskRequest, TaskMasterFile,
+        AgentToolSpec, MarkdownPayload, PmTaskRequest, RepositorySpec, TaskMasterFile,
     };
     use std::fs;
     use std::path::Path;
@@ -28,6 +28,8 @@ pub mod task {
         taskmaster_dir: &str,
         context_files: &[String],
         tool_specs: &[String],
+        repo_url: Option<&str>,
+        branch: &str,
         retry: bool,
     ) -> Result<()> {
         output.info("Preparing task submission...")?;
@@ -140,13 +142,22 @@ pub mod task {
         // Parse agent tools
         let agent_tools = parse_tool_specs(tool_specs)?;
 
+        // Create repository specification if URL provided
+        let repository = repo_url.map(|url| RepositorySpec {
+            url: url.to_string(),
+            branch: branch.to_string(),
+            path: None,
+            auth: None, // TODO: Add authentication support
+        });
+
         // Create PM request
-        let pm_request = PmTaskRequest::new_with_tools(
+        let pm_request = PmTaskRequest::new_with_repository(
             task,
             service_name.to_string(),
             agent_name.to_string(),
             markdown_files,
             agent_tools,
+            repository,
         );
 
         // Debug: print the request JSON

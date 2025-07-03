@@ -83,6 +83,12 @@ enum TaskCommands {
         /// Agent tools (format: tool_name:enabled, e.g., bash:true,edit:false)
         #[arg(long, short = 't')]
         tools: Vec<String>,
+        /// Repository URL to clone (e.g., https://github.com/org/repo)
+        #[arg(long, short = 'r')]
+        repo: Option<String>,
+        /// Repository branch or tag to checkout
+        #[arg(long, short = 'b', default_value = "main")]
+        branch: String,
         /// Indicates this is a retry of a previous attempt
         #[arg(long)]
         retry: bool,
@@ -223,6 +229,8 @@ async fn main() -> Result<()> {
                 taskmaster_dir,
                 context,
                 tools,
+                repo,
+                branch,
                 retry,
             } => {
                 commands::task::submit_task_simplified(
@@ -234,6 +242,8 @@ async fn main() -> Result<()> {
                     &taskmaster_dir,
                     &context,
                     &tools,
+                    repo.as_deref(),
+                    &branch,
                     retry,
                 )
                 .await
@@ -362,6 +372,8 @@ mod tests {
                         taskmaster_dir,
                         context,
                         tools,
+                        repo,
+                        branch,
                         retry,
                     },
             } => {
@@ -371,6 +383,8 @@ mod tests {
                 assert_eq!(taskmaster_dir, ".taskmaster");
                 assert_eq!(context.len(), 0);
                 assert_eq!(tools.len(), 0);
+                assert_eq!(repo, None);
+                assert_eq!(branch, "main");
                 assert!(!retry);
             }
             _ => panic!("Expected Task Submit command"),

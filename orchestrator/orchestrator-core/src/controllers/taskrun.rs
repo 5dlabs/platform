@@ -568,15 +568,7 @@ fn build_job(
                         "name": "prepare-workspace",
                         "image": format!("{}:{}", config.init_container.image.repository, config.init_container.image.tag),
                         "command": ["/bin/sh", "-c"],
-                        "args": [format!(
-                            "mkdir -p /workspace/{service}/.task/{task_id}/run-{version} && \
-                             cp /config/* /workspace/{service}/.task/{task_id}/run-{version}/ && \
-                             cp /config/CLAUDE.md /workspace/{service}/ && \
-                             echo 'Workspace prepared successfully'",
-                            service = tr.spec.service_name,
-                            task_id = tr.spec.task_id,
-                            version = tr.spec.context_version
-                        )],
+                        "args": [build_init_script(tr, config)],
                         "volumeMounts": [
                             {
                                 "name": "task-files",
@@ -620,6 +612,74 @@ fn build_job(
     });
 
     serde_json::from_value(job_json).map_err(Error::SerializationError)
+}
+
+/// Build init container script for workspace preparation
+fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
+    let service = &tr.spec.service_name;
+    let task_id = tr.spec.task_id;
+    let version = tr.spec.context_version;
+    
+    let mut script = String::new();
+    
+    // Install git if not present
+    script.push_str("apk add --no-cache git || apt-get update && apt-get install -y git || yum install -y git || echo 'Git already available'\n");
+    
+    // Create workspace directory
+    script.push_str(&format!(
+        "mkdir -p /workspace/{service}/.task/{task_id}/run-{version}\n"
+    ));
+    
+    // Clone repository if specified
+    if let Some(repo) = &tr.spec.repository {
+        script.push_str(&format!(
+            "echo 'Cloning repository: {}'\n",
+            repo.url
+        ));
+        
+        // Clone the repository
+        script.push_str(&format!(
+            "cd /workspace/{service} && git clone --depth 1 --branch {} {} . || echo 'Clone failed, continuing...'\n",
+            repo.branch,
+            repo.url
+        ));
+        
+        // If a specific path is specified, restructure
+        if let Some(path) = &repo.path {
+            script.push_str(&format!(
+                "if [ -d './{path}' ]; then \
+                 mv ./{path}/* . && \
+                 mv ./{path}/.[^.]* . 2>/dev/null || true && \
+                 rmdir ./{path}; \
+                 fi\n"
+            ));
+        }
+    } else {
+        script.push_str(&format!(
+            "echo 'No repository specified, using empty workspace for service: {service}'\n"
+        ));
+    }
+    
+    // Copy task files to .task directory
+    script.push_str(&format!(
+        "cp /config/* /workspace/{service}/.task/{task_id}/run-{version}/ 2>/dev/null || echo 'No config files to copy'\n"
+    ));
+    
+    // Copy CLAUDE.md to service root if it exists
+    script.push_str(&format!(
+        "[ -f /config/CLAUDE.md ] && cp /config/CLAUDE.md /workspace/{service}/ || echo 'No CLAUDE.md found'\n"
+    ));
+    
+    // Copy all task files to service root for @import access
+    script.push_str(&format!(
+        "cp /workspace/{service}/.task/{task_id}/run-{version}/*.md /workspace/{service}/ 2>/dev/null || echo 'No markdown files to copy to root'\n"
+    ));
+    
+    script.push_str("echo 'Workspace prepared successfully'\n");
+    script.push_str("ls -la /workspace/\n");
+    script.push_str(&format!("ls -la /workspace/{service}/ || echo 'Service directory not found'\n"));
+    
+    script
 }
 
 /// Build environment variables for the container
@@ -724,6 +784,7 @@ mod tests {
                     },
                 ],
                 agent_tools: vec![],
+                repository: None,
             },
             status: None,
         };
