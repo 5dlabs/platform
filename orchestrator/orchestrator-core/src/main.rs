@@ -96,7 +96,7 @@ fn api_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
             }),
         )
         .route(
-            "/pm/tasks/:task_id",
+            "/pm/tasks/{task_id}",
             get({
                 let taskrun_state = state.taskrun_state.clone();
                 move |path| get_task(State(taskrun_state), path)
