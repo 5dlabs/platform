@@ -543,17 +543,6 @@ jobs:
           # Add to PATH for this job
           echo "$HOME/bin" >> $GITHUB_PATH
 
-      - name: Verify tools
-        run: |
-          echo "Checking tools..."
-          kubectl version --client || echo "kubectl failed"
-          helm version || echo "helm failed"
-
-      - name: Verify Kubernetes access
-        run: |
-          echo "🔍 Verifying Kubernetes access..."
-          kubectl cluster-info
-
       - name: Install TaskRun CRD
         run: |
           echo "📋 Installing TaskRun CRD..."
@@ -586,18 +575,6 @@ jobs:
           echo "📋 Available agent images for TaskRun resources:"
           echo "- Claude Code: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/claude-code:${{ needs.version.outputs.version }}"
           echo "- Gemini CLI: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/gemini-cli:${{ needs.version.outputs.version }}"
-
-      - name: Verify deployment
-        run: |
-          echo "🔍 Verifying deployment..."
-          kubectl get pods -n orchestrator
-          kubectl get services -n orchestrator
-          kubectl get taskruns -A || echo "No TaskRuns found (expected for fresh deployment)"
-
-          # Wait for orchestrator to be ready
-          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=orchestrator -n orchestrator --timeout=300s
-
-          echo "✅ Deployment verification complete!"
 
       - name: Deployment notification
         run: |
