@@ -551,28 +551,8 @@ jobs:
 
       - name: Verify Kubernetes access
         run: |
-          echo "🔍 Checking Kubernetes access..."
-
-          # ARC runners should have in-cluster access via service account
-          # No need for external kubeconfig!
-
-          # Check if we're in a pod (in-cluster)
-          if [ -f /var/run/secrets/kubernetes.io/serviceaccount/token ]; then
-            echo "✅ Running in-cluster with service account"
-            echo "Service account: $(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace 2>/dev/null || echo 'unknown')"
-          else
-            echo "⚠️ Not running in-cluster, may need explicit kubeconfig"
-          fi
-
-          # Test cluster access
-          echo ""
-          echo "Testing cluster access:"
-          kubectl version --short || echo "kubectl version failed"
-          echo ""
-          kubectl cluster-info || echo "kubectl cluster-info failed"
-          echo ""
-          echo "Listing namespaces:"
-          kubectl get namespaces || echo "Failed to list namespaces"
+          echo "🔍 Verifying Kubernetes access..."
+          kubectl cluster-info
 
       - name: Install TaskRun CRD
         run: |
