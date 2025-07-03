@@ -364,9 +364,8 @@ fn build_configmap(tr: &TaskRun, name: &str) -> Result<ConfigMap> {
         data.insert(file.filename.clone(), file.content.clone());
     }
 
-    // Generate CLAUDE.md with lean index approach
-    let claude_md = generate_claude_md(tr);
-    data.insert("CLAUDE.md".to_string(), claude_md);
+    // Note: CLAUDE.md should be provided by Task Master system as one of the markdown files
+    // No hard-coded content generation in orchestrator
 
     Ok(ConfigMap {
         metadata: ObjectMeta {
@@ -387,57 +386,6 @@ fn build_configmap(tr: &TaskRun, name: &str) -> Result<ConfigMap> {
     })
 }
 
-/// Generate CLAUDE.md content
-fn generate_claude_md(tr: &TaskRun) -> String {
-    format!(
-        r#"# {} Service - Task {}
-
-## Task Overview
-**Task ID:** {}  
-**Service:** {}  
-**Context Version:** {}
-
-## Documentation Discovery
-Before starting implementation, please:
-1. **List available documentation**: Tell me what documentation you have access to for this implementation
-2. **Review all context files**: Read through all available task specifications, design documents, and requirements
-3. **Confirm understanding**: Summarize the key requirements and acceptance criteria
-
-## Implementation Requirements
-- Read ALL available documentation FIRST before any implementation
-- Follow the design specification exactly as provided
-- Implement according to acceptance criteria provided
-- Run tests after EVERY subtask completion
-- Maintain zero warnings policy for linting tools
-- **MANDATORY**: Submit a GitHub pull request when ALL acceptance criteria are fully met
-
-## Project Structure Guidelines
-- Existing service code: @src/
-- Test suite: @tests/
-- Service documentation: @docs/README.md
-- Build instructions: @docs/build.md
-
-## Success Criteria
-- All acceptance criteria from task specification are met
-- All tests pass
-- No linting warnings or errors
-- Code follows established patterns and best practices
-- **Pull request submitted with complete implementation**
-
-## Critical Path
-1. **Discover and read** all available documentation
-2. **Plan implementation** based on requirements
-3. **Implement incrementally** with testing at each step
-4. **Verify acceptance criteria** are fully satisfied
-5. **Submit pull request** with working, tested code
-"#,
-        tr.spec.service_name,
-        tr.spec.task_id,
-        tr.spec.task_id,
-        tr.spec.service_name,
-        tr.spec.context_version
-    )
-}
 
 /// Build Job from TaskRun
 fn build_job(
@@ -672,10 +620,6 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
         "cp /config/* /workspace/{service}/.task/{task_id}/run-{version}/ 2>/dev/null || echo 'No config files to copy'\n"
     ));
     
-    // Copy CLAUDE.md to service root if it exists
-    script.push_str(&format!(
-        "[ -f /config/CLAUDE.md ] && cp /config/CLAUDE.md /workspace/{service}/ || echo 'No CLAUDE.md found'\n"
-    ));
     
     // Copy all task files to service root for @import access
     script.push_str(&format!(
@@ -770,7 +714,7 @@ mod tests {
     use crate::crds::TaskRunSpec;
 
     #[test]
-    fn test_generate_claude_md() {
+    fn test_build_configmap() {
         let tr = TaskRun {
             metadata: Default::default(),
             spec: TaskRunSpec {
@@ -796,9 +740,11 @@ mod tests {
             status: None,
         };
 
-        let claude_md = generate_claude_md(&tr);
-        assert!(claude_md.contains("test-service Service - Task 1001"));
-        assert!(claude_md.contains("- @task.md"));
-        assert!(claude_md.contains("- @design-spec.md"));
+        let cm = build_configmap(&tr, "test-cm").unwrap();
+        let data = cm.data.unwrap();
+        assert!(data.contains_key("task.md"));
+        assert!(data.contains_key("design-spec.md"));
+        assert_eq!(data.get("task.md").unwrap(), "Task content");
+        assert_eq!(data.get("design-spec.md").unwrap(), "Design spec");
     }
 }
