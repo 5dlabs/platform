@@ -1,0 +1,17 @@
+{
+  "name": "todo-api",
+  "version": "1.0.0",
+  "description": "Example Todo API built by AI agents",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest",
+    "lint": "eslint src/"
+  },
+  "keywords": ["todo", "api", "example"],
+  "author": "AI Agents",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {}
+}
