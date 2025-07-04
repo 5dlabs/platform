@@ -53,9 +53,184 @@ impl McpWrapper {
         Self { config, client }
     }
 
-    /// Run the wrapper main loop
-    async fn run(&self) -> Result<()> {
-        info!("Starting MCP wrapper, forwarding to: {}", self.config.toolman_url);
+    /// Run the wrapper with Claude as subprocess
+    async fn run_with_subprocess(&self, claude_args: Vec<String>) -> Result<()> {
+        info!("Starting MCP wrapper with Claude subprocess");
+        info!("Claude command: claude {}", claude_args.join(" "));
+        
+        use tokio::process::{Child, Command};
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        
+        // Start Claude as subprocess
+        let mut claude = Command::new("claude")
+            .args(&claude_args)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::inherit()) // Pass through stderr for debugging
+            .spawn()
+            .context("Failed to start Claude subprocess")?;
+            
+        let claude_stdin = claude.stdin.take()
+            .context("Failed to get Claude stdin")?;
+        let claude_stdout = claude.stdout.take()
+            .context("Failed to get Claude stdout")?;
+            
+        let mut claude_writer = BufWriter::new(claude_stdin);
+        let mut claude_reader = BufReader::new(claude_stdout);
+        
+        // Handle our own stdin/stdout
+        let stdin = tokio::io::stdin();
+        let mut our_reader = BufReader::new(stdin);
+        let stdout = tokio::io::stdout();
+        let mut our_writer = BufWriter::new(stdout);
+        
+        info!("MCP wrapper ready - proxying between external input and Claude");
+        
+        let mut our_line = String::new();
+        let mut claude_line = String::new();
+        
+        loop {
+            tokio::select! {
+                // Read from our stdin and forward to Claude
+                result = our_reader.read_line(&mut our_line) => {
+                    match result {
+                        Ok(0) => {
+                            debug!("EOF on input, shutting down");
+                            break;
+                        }
+                        Ok(_) => {
+                            if self.config.debug {
+                                debug!("Input -> Claude: {}", our_line.trim());
+                            }
+                            
+                            claude_writer.write_all(our_line.as_bytes()).await
+                                .context("Failed to write to Claude")?;
+                            claude_writer.flush().await
+                                .context("Failed to flush to Claude")?;
+                            our_line.clear();
+                        }
+                        Err(e) => {
+                            error!("Error reading input: {}", e);
+                            break;
+                        }
+                    }
+                }
+                
+                // Read from Claude and decide whether to forward or proxy
+                result = claude_reader.read_line(&mut claude_line) => {
+                    match result {
+                        Ok(0) => {
+                            debug!("Claude process ended");
+                            break;
+                        }
+                        Ok(_) => {
+                            let line = claude_line.trim();
+                            
+                            // Check if this looks like an MCP message
+                            if self.is_mcp_message(line) {
+                                if self.config.debug {
+                                    debug!("Claude -> Toolman (MCP): {}", line);
+                                }
+                                
+                                // Parse and forward to toolman
+                                match serde_json::from_str::<Value>(line) {
+                                    Ok(message) => {
+                                        match self.forward_message(message).await {
+                                            Ok(response) => {
+                                                let response_str = serde_json::to_string(&response)
+                                                    .context("Failed to serialize toolman response")?;
+                                                
+                                                if self.config.debug {
+                                                    debug!("Toolman -> Claude: {}", response_str);
+                                                }
+                                                
+                                                // Send response back to Claude (this is tricky - Claude expects it on stdin)
+                                                claude_writer.write_all(response_str.as_bytes()).await
+                                                    .context("Failed to write toolman response to Claude")?;
+                                                claude_writer.write_all(b"\n").await
+                                                    .context("Failed to write newline to Claude")?;
+                                                claude_writer.flush().await
+                                                    .context("Failed to flush to Claude")?;
+                                            }
+                                            Err(e) => {
+                                                error!("Failed to forward MCP message: {}", e);
+                                                // Send error to Claude
+                                                let error_response = serde_json::json!({
+                                                    "jsonrpc": "2.0",
+                                                    "error": {"code": -32603, "message": format!("Toolman error: {}", e)}
+                                                });
+                                                let error_str = serde_json::to_string(&error_response).unwrap();
+                                                claude_writer.write_all(error_str.as_bytes()).await.ok();
+                                                claude_writer.write_all(b"\n").await.ok();
+                                                claude_writer.flush().await.ok();
+                                            }
+                                        }
+                                    }
+                                    Err(e) => {
+                                        error!("Failed to parse MCP message from Claude: {}", e);
+                                        // Pass through as regular output
+                                        our_writer.write_all(claude_line.as_bytes()).await
+                                            .context("Failed to write Claude output")?;
+                                        our_writer.flush().await
+                                            .context("Failed to flush Claude output")?;
+                                    }
+                                }
+                            } else {
+                                // Not an MCP message - pass through directly
+                                if self.config.debug {
+                                    debug!("Claude -> Output (passthrough): {}", line);
+                                }
+                                
+                                our_writer.write_all(claude_line.as_bytes()).await
+                                    .context("Failed to write Claude output")?;
+                                our_writer.flush().await
+                                    .context("Failed to flush Claude output")?;
+                            }
+                            
+                            claude_line.clear();
+                        }
+                        Err(e) => {
+                            error!("Error reading from Claude: {}", e);
+                            break;
+                        }
+                    }
+                }
+                
+                // Check if Claude process has exited
+                _ = claude.wait() => {
+                    info!("Claude process has exited");
+                    break;
+                }
+            }
+        }
+        
+        // Clean up
+        let _ = claude.kill().await;
+        info!("MCP wrapper shutting down");
+        Ok(())
+    }
+    
+    /// Check if a line looks like an MCP JSON-RPC message
+    fn is_mcp_message(&self, line: &str) -> bool {
+        if line.trim().is_empty() {
+            return false;
+        }
+        
+        // Quick check for JSON-RPC structure
+        if let Ok(value) = serde_json::from_str::<Value>(line) {
+            if let Some(obj) = value.as_object() {
+                // MCP messages should have jsonrpc and method fields
+                return obj.contains_key("jsonrpc") && 
+                       (obj.contains_key("method") || obj.contains_key("result") || obj.contains_key("error"));
+            }
+        }
+        
+        false
+    }
+    
+    /// Run the wrapper main loop (direct mode)
+    async fn run_direct(&self) -> Result<()> {
+        info!("Starting MCP wrapper in direct mode, forwarding to: {}", self.config.toolman_url);
 
         let stdin = tokio::io::stdin();
         let mut reader = tokio::io::BufReader::new(stdin);
@@ -181,9 +356,22 @@ async fn main() -> Result<()> {
         debug!("Configuration: {:?}", config);
     }
 
-    // Create and run wrapper
+    // Get command line arguments for Claude
+    let args: Vec<String> = env::args().skip(1).collect();
+    
+    // Create wrapper
     let wrapper = McpWrapper::new(config);
-    wrapper.run().await?;
+    
+    // Decide whether to run with subprocess or direct mode
+    if args.is_empty() {
+        // Direct mode - wrapper acts as MCP proxy
+        info!("Running in direct mode (no Claude subprocess)");
+        wrapper.run_direct().await?;
+    } else {
+        // Subprocess mode - launch Claude and proxy its MCP communication  
+        info!("Running with Claude subprocess: {:?}", args);
+        wrapper.run_with_subprocess(args).await?;
+    }
 
     Ok(())
 }
