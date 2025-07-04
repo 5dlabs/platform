@@ -820,14 +820,8 @@ fn build_agent_startup_script(config: &ControllerConfig) -> String {
     script.push_str("echo '\n--- User Information ---'\n");
     script.push_str("whoami\n");
     script.push_str("id\n");
-    script.push_str("echo '\n--- Full Filesystem Tree from ROOT ---'\n");
-    script.push_str(
-        "tree -a -L 4 / 2>/dev/null || find / -type d -maxdepth 4 2>/dev/null | head -50\n",
-    );
-    script.push_str("echo '\n--- Workspace Tree (detailed) ---'\n");
-    script.push_str(
-        "tree -a /workspace 2>/dev/null || find /workspace -type f 2>/dev/null | head -20\n",
-    );
+    script.push_str("echo '\n--- Current Directory Tree ---'\n");
+    script.push_str("tree -a . 2>/dev/null || find . -type f 2>/dev/null | head -20\n");
     script.push_str("echo '\n--- HOME Directory Contents ---'\n");
     script.push_str("echo \"HOME is set to: $HOME\"\n");
     script.push_str("ls -la \"$HOME\" 2>/dev/null || echo 'HOME directory not accessible'\n");
@@ -837,11 +831,13 @@ fn build_agent_startup_script(config: &ControllerConfig) -> String {
     script.push_str("echo '\n--- Settings.json Content ---'\n");
     script.push_str("cat \"$HOME/.claude/settings.json\" 2>/dev/null || echo 'No settings.json found in HOME/.claude'\n");
     script.push_str("echo '\n--- Alternative Claude Config Locations ---'\n");
-    script.push_str("find / -name 'settings.json' -type f 2>/dev/null | head -10\n");
-    script.push_str("echo '\n--- File Permissions on Settings ---'\n");
-    script.push_str("find / -name 'settings.json' -exec ls -la {} \\; 2>/dev/null\n");
-    script.push_str("echo '\n--- Process Information ---'\n");
-    script.push_str("ps aux | head -10\n");
+    script.push_str("find . -name 'settings.json' -type f 2>/dev/null\n");
+    script.push_str("find .. -name 'settings.json' -type f 2>/dev/null | head -5\n");
+    script.push_str("echo '\n--- File Permissions on All Settings.json ---'\n");
+    script.push_str("find . -name 'settings.json' -exec ls -la {} \\; 2>/dev/null\n");
+    script.push_str("find .. -name 'settings.json' -exec ls -la {} \\; 2>/dev/null | head -5\n");
+    script.push_str("echo '\n--- Parent Directory Structure ---'\n");
+    script.push_str("ls -la .. 2>/dev/null || echo 'Cannot access parent directory'\n");
     script.push_str("echo '=== END DEBUGGING - STARTING CLAUDE ==='\n\n");
 
     // Execute the Claude command
