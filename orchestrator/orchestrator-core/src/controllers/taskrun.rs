@@ -877,6 +877,9 @@ fn build_agent_startup_script(config: &ControllerConfig) -> String {
     script.push_str("echo '\n--- DEVCONTAINER AND ENVIRONMENT VARIABLES ---'\n");
     script.push_str("env | grep -i devcontainer || echo 'No DEVCONTAINER variables found'\n");
     script.push_str("env | grep -i claude || echo 'No CLAUDE environment variables found'\n");
+    script.push_str("echo '\n--- SETTING CLAUDE CONFIG DIRECTORY ---'\n");
+    script.push_str("export CLAUDE_CONFIG_DIR=/workspace/debug-api/.claude\n");
+    script.push_str("echo \"CLAUDE_CONFIG_DIR set to: $CLAUDE_CONFIG_DIR\"\n");
     script.push_str("echo '\n--- UNSETTING DEVCONTAINER VARIABLES ---'\n");
     script.push_str("unset DEVCONTAINER 2>/dev/null || true\n");
     script.push_str("unset DEVCONTAINER_CONFIG 2>/dev/null || true\n");
