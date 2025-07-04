@@ -1,69 +1,26 @@
 {
+  "_comment": "Default minimal toolman configuration. See toolman_example.json for comprehensive examples with real MCP servers.",
   "servers": {
-    "github": {
-      "command": "python",
-      "args": ["-m", "mcp_github"],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
-      },
-      "enabled": true,
-      "description": "GitHub MCP server with 30+ tools"
-    },
-    "taskmaster": {
-      "command": "task-master", 
-      "args": ["mcp"],
-      "env": {
-        "TASKMASTER_LOG_LEVEL": "info"
-      },
-      "enabled": true,
-      "description": "Taskmaster MCP server with 20+ tools"
-    },
     "filesystem": {
-      "command": "node",
-      "args": ["@modelcontextprotocol/server-filesystem", "/workspace"],
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
       "env": {},
       "enabled": true,
-      "description": "Filesystem MCP server with 10+ tools"
-    },
-    "web-search": {
-      "command": "python",
-      "args": ["-m", "mcp_web_search"],
-      "env": {
-        "SEARCH_API_KEY": "${SEARCH_API_KEY}"
-      },
-      "enabled": false,
-      "description": "Web search MCP server"
+      "description": "Official filesystem MCP server"
     }
   },
   "exposed_tools": {
-    "github": [
-      "create_pull_request",
-      "get_file_contents"
-    ],
-    "taskmaster": [
-      "get_tasks",
-      "add_task", 
-      "update_task_status"
-    ],
     "filesystem": [
       "read_file",
-      "write_file"
+      "write_file",
+      "list_directory"
     ]
   },
   "agent_policies": {
-    "claude-code": {
-      "allowed_servers": ["github", "taskmaster", "filesystem"],
+    "default": {
+      "allowed_servers": ["filesystem"],
       "tool_overrides": {
-        "github": ["create_pull_request", "get_file_contents"],
-        "taskmaster": ["get_tasks", "add_task"],
-        "filesystem": ["read_file", "write_file"]
-      }
-    },
-    "claude-research": {
-      "allowed_servers": ["web-search", "filesystem"],
-      "tool_overrides": {
-        "web-search": ["search_web"],
-        "filesystem": ["read_file"]
+        "filesystem": ["read_file", "write_file", "list_directory"]
       }
     }
   },

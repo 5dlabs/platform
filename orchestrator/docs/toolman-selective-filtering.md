@@ -211,27 +211,78 @@ fn generate_toolman_config(tr: &TaskRun) -> String {
 ### Code Development Task
 ```json
 {
-  "github": ["get_file_contents", "create_pull_request"],
-  "filesystem": ["read_file", "write_file", "list_directory"],
-  "taskmaster": ["get_tasks", "add_task"]
+  "filesystem": ["read_file", "write_file", "list_directory", "create_directory"],
+  "github": ["get_file", "create_pull_request", "create_issue"],
+  "git": ["git_log", "git_diff", "read_file"]
 }
 ```
 
-### Testing Task
+### Research Task
 ```json
 {
-  "github": ["get_file_contents"],
-  "filesystem": ["read_file"],
-  "taskmaster": ["get_tasks", "update_task_status"]
+  "filesystem": ["read_file", "search_files"],
+  "brave-search": ["brave_web_search"],
+  "memory": ["create_memories", "search_memories"]
 }
 ```
 
-### Documentation Task
+### Data Analysis Task
 ```json
 {
-  "github": ["get_file_contents", "create_pull_request"],
+  "filesystem": ["read_file", "list_directory"],
+  "postgresql": ["query", "list_tables", "describe_table"],
+  "sqlite": ["query", "list_tables", "describe_table"]
+}
+```
+
+### Automation Task
+```json
+{
   "filesystem": ["read_file", "write_file"],
-  "taskmaster": ["get_tasks", "add_task"]
+  "puppeteer": ["puppeteer_screenshot", "puppeteer_navigate"],
+  "github": ["get_file", "create_issue"]
+}
+```
+
+## Complete Example Configuration
+
+See `orchestrator/orchestrator-core/src/config/toolman_example.json` for a comprehensive example configuration showing:
+
+- **8 Real MCP Servers**: Official servers from the ModelContextProtocol organization
+- **50+ Actual Tools**: Real tool names from filesystem, GitHub, Git, Brave Search, Memory, Puppeteer, PostgreSQL, and SQLite servers
+- **5 Agent Personas**: Different tool sets for developer, researcher, analyst, automation, and read-only scenarios
+- **Task-Based Selection**: Automatic tool addition based on task keywords (API development, frontend, testing, data analysis, research, deployment)
+- **Security Settings**: Dangerous tool lists, confirmation requirements, and audit logging
+- **Performance Tuning**: Timeouts, concurrency limits, and caching
+
+### Key Features Demonstrated:
+
+**Server Configuration:**
+```json
+"filesystem": {
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+  "description": "Official filesystem MCP server with 10+ file operation tools"
+}
+```
+
+**Selective Tool Exposure:**
+```json
+"exposed_tools": {
+  "github": [
+    "create_repository", "get_file", "create_pull_request",
+    "create_issue", "search_repositories", "list_commits"
+  ]
+}
+```
+
+**Agent-Specific Policies:**
+```json
+"claude-developer": {
+  "allowed_servers": ["filesystem", "github", "git"],
+  "tool_overrides": {
+    "filesystem": ["read_file", "write_file", "list_directory"]
+  }
 }
 ```
 
