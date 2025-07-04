@@ -59,7 +59,7 @@ impl McpWrapper {
         info!("Claude command: claude {}", claude_args.join(" "));
 
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-        use tokio::process::{Child, Command};
+        use tokio::process::Command;
 
         // Start Claude as subprocess
         let mut claude = Command::new("claude")
@@ -278,7 +278,7 @@ impl McpWrapper {
             };
 
             // Forward to toolman server
-            match self.forward_message(message).await {
+            match self.forward_message(message.clone()).await {
                 Ok(response) => {
                     // Write response to stdout
                     let response_str =
@@ -394,7 +394,6 @@ async fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
 
     #[test]
     fn test_config_from_env() {

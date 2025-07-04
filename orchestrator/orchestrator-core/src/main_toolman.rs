@@ -1,4 +1,4 @@
-THIS SHOULD BE A LINTER ERROR//! Toolman MCP Server
+//! Toolman MCP Server
 //!
 //! A tool management proxy server that filters and controls access to MCP tools
 //! for agents. This server acts as a middleware layer between agents and actual
@@ -85,7 +85,7 @@ pub enum McpMessage {
 }
 
 /// Toolman server state
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ToolmanServer {
     config: Arc<RwLock<ToolmanConfig>>,
     available_tools: Arc<RwLock<HashMap<String, Value>>>,
@@ -139,7 +139,7 @@ impl ToolmanServer {
 
         let child = cmd
             .spawn()
-            .with_context(|| format!("Failed to start backend server: {}", name))?;
+            .with_context(|| format!("Failed to start backend server: {name}"))?;
 
         let mut processes = self.server_processes.write().await;
         processes.insert(name.to_string(), child);
@@ -164,7 +164,7 @@ impl ToolmanServer {
                             .and_then(|v| v.as_str())
                             .unwrap_or("unknown");
 
-                        all_tools.insert(format!("{}:{}", server_name, tool_name), tool);
+                        all_tools.insert(format!("{server_name}:{tool_name}"), tool);
                     }
                 }
                 Err(e) => {
@@ -516,7 +516,7 @@ impl ToolmanServer {
 
         info!("Starting toolman HTTP server");
 
-        let server = Arc::new(self);
+        let server = Arc::new(self.clone());
 
         // Create HTTP handler for MCP messages
         let handle_mcp = |State(server): State<Arc<ToolmanServer>>, Json(message): Json<Value>| async move {
@@ -526,7 +526,7 @@ impl ToolmanServer {
                     error!("Error handling MCP message: {}", e);
                     Err((
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        format!("Internal error: {}", e),
+                        format!("Internal error: {e}"),
                     ))
                 }
             }
@@ -544,16 +544,16 @@ impl ToolmanServer {
             .parse::<u16>()
             .unwrap_or(3000);
 
-        let addr = format!("0.0.0.0:{}", port);
+        let addr = format!("0.0.0.0:{port}");
         info!("Toolman server listening on {}", addr);
 
         // Start the HTTP server
         let listener = tokio::net::TcpListener::bind(&addr)
             .await
-            .with_context(|| format!("Failed to bind to {}", addr))?;
+            .with_context(|| format!("Failed to bind to {addr}"))?;
 
         axum::serve(listener, app)
-            .with_graceful_shutdown(shutdown_signal())
+            .with_graceful_shutdown(ToolmanServer::shutdown_signal())
             .await
             .with_context(|| "HTTP server error")?;
 
@@ -595,10 +595,10 @@ fn load_config() -> Result<ToolmanConfig> {
 
     if std::path::Path::new(&config_path).exists() {
         let config_str = std::fs::read_to_string(&config_path)
-            .with_context(|| format!("Failed to read config file: {}", config_path))?;
+            .with_context(|| format!("Failed to read config file: {config_path}"))?;
 
         serde_json::from_str(&config_str)
-            .with_context(|| format!("Failed to parse config file: {}", config_path))
+            .with_context(|| format!("Failed to parse config file: {config_path}"))
     } else {
         // Return default configuration
         Ok(ToolmanConfig {
