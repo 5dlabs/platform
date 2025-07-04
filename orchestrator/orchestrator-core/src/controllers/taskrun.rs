@@ -374,8 +374,12 @@ fn build_configmap(tr: &TaskRun, name: &str) -> Result<ConfigMap> {
     let settings_json = generate_claude_settings(tr)?;
     data.insert("settings.json".to_string(), settings_json);
 
-    // Note: CLAUDE.md should be provided by Task Master system as one of the markdown files
-    // No hard-coded content generation in orchestrator
+    // Generate CLAUDE.md if not provided by Task Master system
+    let has_claude_md = tr.spec.markdown_files.iter().any(|f| f.filename == "CLAUDE.md");
+    if !has_claude_md {
+        let claude_md_content = generate_claude_md(tr);
+        data.insert("CLAUDE.md".to_string(), claude_md_content);
+    }
 
     Ok(ConfigMap {
         metadata: ObjectMeta {
@@ -692,11 +696,36 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
             }
         }
 
-        // Clone the repository
+        // Smart repository management: only clone if needed, otherwise sync
         script.push_str(&format!(
-            "cd /workspace/{service} && git clone --depth 1 --branch {} {} . || echo 'Clone failed, continuing...'\n",
-            repo.branch,
-            repo.url
+            "cd /workspace/{service}\n\
+            if [ ! -d '.git' ]; then\n\
+              if [ -z \"$(ls -A . 2>/dev/null)\" ]; then\n\
+                echo 'Directory is empty, cloning repository...'\n\
+                git clone --depth 1 --branch {} {} . || echo 'Clone failed, continuing...'\n\
+              else\n\
+                echo 'Directory not empty but not a Git repo, backing up existing files and cloning...'\n\
+                mkdir -p .backup\n\
+                mv ./* .backup/ 2>/dev/null || true\n\
+                mv .[^.]* .backup/ 2>/dev/null || true\n\
+                git clone --depth 1 --branch {} {} . || echo 'Clone failed, continuing...'\n\
+                echo 'Repository cloned, existing files backed up to .backup/'\n\
+              fi\n\
+            else\n\
+              echo 'Git repository exists, checking if it matches the target repository...'\n\
+              CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo '')\n\
+              if [ \"$CURRENT_REMOTE\" = \"{}\" ]; then\n\
+                echo 'Repository matches, updating to latest changes...'\n\
+                git fetch origin {} --depth 1 2>/dev/null || echo 'Fetch failed, continuing with existing code'\n\
+                git reset --hard origin/{} 2>/dev/null || echo 'Reset failed, continuing with existing code'\n\
+              else\n\
+                echo 'Different repository detected, updating remote and fetching...'\n\
+                git remote set-url origin {}\n\
+                git fetch origin {} --depth 1 || echo 'Fetch failed, continuing...'\n\
+                git reset --hard origin/{} || echo 'Reset failed, continuing...'\n\
+              fi\n\
+            fi\n",
+            repo.branch, repo.url, repo.branch, repo.url, repo.url, repo.branch, repo.branch, repo.url, repo.branch, repo.branch
         ));
 
         // If a specific path is specified, restructure
@@ -891,6 +920,49 @@ fn build_resource_attributes(tr: &TaskRun, config: &ControllerConfig) -> String 
     }
 
     attributes.join(",")
+}
+
+/// Generate CLAUDE.md file that imports task files
+fn generate_claude_md(tr: &TaskRun) -> String {
+    let mut content = String::new();
+    
+    content.push_str("# Task Context\n\n");
+    content.push_str("This workspace contains all the necessary files to complete the assigned task.\n\n");
+    
+    // Add @import statements for each markdown file
+    content.push_str("## Task Files\n\n");
+    for file in &tr.spec.markdown_files {
+        if file.filename != "CLAUDE.md" {
+            content.push_str(&format!("@{}\n\n", file.filename));
+        }
+    }
+    
+    // Add repository information if available
+    if let Some(repo) = &tr.spec.repository {
+        content.push_str("## Repository\n\n");
+        content.push_str(&format!("- **URL**: {}\n", repo.url));
+        content.push_str(&format!("- **Branch**: {}\n", repo.branch));
+        if let Some(path) = &repo.path {
+            content.push_str(&format!("- **Path**: {path}\n"));
+        }
+        content.push('\n');
+    }
+    
+    // Add task metadata
+    content.push_str("## Task Metadata\n\n");
+    content.push_str(&format!("- **Task ID**: {}\n", tr.spec.task_id));
+    content.push_str(&format!("- **Service**: {}\n", tr.spec.service_name));
+    content.push_str(&format!("- **Agent**: {}\n", tr.spec.agent_name));
+    content.push_str(&format!("- **Context Version**: {}\n", tr.spec.context_version));
+    content.push('\n');
+    
+    content.push_str("## Instructions\n\n");
+    content.push_str("1. Review all task files using the @import statements above\n");
+    content.push_str("2. Follow the design specification and implementation guidelines\n");
+    content.push_str("3. Ensure all acceptance criteria are met\n");
+    content.push_str("4. Create a pull request when implementation is complete\n");
+    
+    content
 }
 
 /// Generate Claude Code settings.json for tool permissions
