@@ -64,6 +64,64 @@ spec:
                       type: string
                       enum: ["task", "design-spec", "prompt", "context", "acceptance-criteria"]
                       description: "Type of markdown file"
+              agentTools:
+                type: array
+                description: "Tools available to the agent"
+                items:
+                  type: object
+                  required: ["name", "enabled"]
+                  properties:
+                    name:
+                      type: string
+                      minLength: 1
+                      description: "Tool name (e.g., bash, edit, read)"
+                    enabled:
+                      type: boolean
+                      default: true
+                      description: "Whether the tool is enabled"
+                    config:
+                      type: object
+                      description: "Tool-specific configuration"
+                    restrictions:
+                      type: array
+                      description: "Tool restrictions or limitations"
+                      items:
+                        type: string
+              repository:
+                type: object
+                description: "Repository information for code access"
+                required: ["url", "branch"]
+                properties:
+                  url:
+                    type: string
+                    minLength: 1
+                    description: "Repository URL (HTTPS or SSH)"
+                  branch:
+                    type: string
+                    minLength: 1
+                    default: "main"
+                    description: "Branch or tag to checkout"
+                  path:
+                    type: string
+                    description: "Subdirectory path within the repository"
+                  auth:
+                    type: object
+                    description: "Authentication configuration"
+                    required: ["type", "secretName", "secretKey"]
+                    properties:
+                      type:
+                        type: string
+                        enum: ["Token", "SshKey", "BasicAuth"]
+                        description: "Type of authentication"
+                      secretName:
+                        type: string
+                        minLength: 1
+                        description: "Name of the Kubernetes secret"
+                      secretKey:
+                        type: string
+                        minLength: 1
+                        default: "token"
+                        description: "Key within the secret"
           status:
             type: object
             properties:

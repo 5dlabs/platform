@@ -130,7 +130,6 @@ pub struct RepositoryAuth {
 
 /// Repository authentication types
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
-#[serde(rename_all = "kebab-case")]
 pub enum RepositoryAuthType {
     /// GitHub personal access token
     Token,
