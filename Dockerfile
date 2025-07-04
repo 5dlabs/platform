@@ -23,6 +23,7 @@ RUN apt update && apt install -y less \
 # Install Rust development environment
 RUN apt update && apt install -y \
   curl \
+  tree \
   build-essential \
   pkg-config \
   libssl-dev \

@@ -809,6 +809,36 @@ fn build_agent_startup_script(config: &ControllerConfig) -> String {
     script.push_str("  echo \"GitHub authentication configured\"\n");
     script.push_str("fi\n\n");
 
+    // COMPREHENSIVE DEBUGGING BEFORE CLAUDE STARTS
+    script.push_str("echo '=== COMPREHENSIVE CLAUDE DEBUGGING ==='\n");
+    script.push_str("echo 'Installing tree utility for filesystem debugging...'\n");
+    script.push_str("apk add --no-cache tree 2>/dev/null || echo 'Tree installation failed'\n");
+    script.push_str("echo '\n--- Environment Variables ---'\n");
+    script.push_str("env | grep -E '(HOME|PWD|WORKDIR|CLAUDE)' | sort\n");
+    script.push_str("echo '\n--- Current Working Directory ---'\n");
+    script.push_str("pwd\n");
+    script.push_str("echo '\n--- User Information ---'\n");
+    script.push_str("whoami\n");
+    script.push_str("id\n");
+    script.push_str("echo '\n--- Full Filesystem Tree from ROOT ---'\n");
+    script.push_str("tree -a -L 4 / 2>/dev/null || find / -type d -maxdepth 4 2>/dev/null | head -50\n");
+    script.push_str("echo '\n--- Workspace Tree (detailed) ---'\n");
+    script.push_str("tree -a /workspace 2>/dev/null || find /workspace -type f 2>/dev/null | head -20\n");
+    script.push_str("echo '\n--- HOME Directory Contents ---'\n");
+    script.push_str("echo \"HOME is set to: $HOME\"\n");
+    script.push_str("ls -la \"$HOME\" 2>/dev/null || echo 'HOME directory not accessible'\n");
+    script.push_str("echo '\n--- Claude Config Directory ---'\n");
+    script.push_str("ls -la \"$HOME/.claude\" 2>/dev/null || echo 'No .claude directory in HOME'\n");
+    script.push_str("echo '\n--- Settings.json Content ---'\n");
+    script.push_str("cat \"$HOME/.claude/settings.json\" 2>/dev/null || echo 'No settings.json found in HOME/.claude'\n");
+    script.push_str("echo '\n--- Alternative Claude Config Locations ---'\n");
+    script.push_str("find / -name 'settings.json' -type f 2>/dev/null | head -10\n");
+    script.push_str("echo '\n--- File Permissions on Settings ---'\n");
+    script.push_str("find / -name 'settings.json' -exec ls -la {} \\; 2>/dev/null\n");
+    script.push_str("echo '\n--- Process Information ---'\n");
+    script.push_str("ps aux | head -10\n");
+    script.push_str("echo '=== END DEBUGGING - STARTING CLAUDE ==='\n\n");
+
     // Execute the Claude command
     let command = config.agent.command.join(" ");
     let args = config.agent.args.join(" ");
