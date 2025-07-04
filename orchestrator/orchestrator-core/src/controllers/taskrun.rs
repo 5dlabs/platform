@@ -628,6 +628,10 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     // Setup Claude Code configuration directory and copy settings
     script.push_str("mkdir -p /workspace/.claude\n");
     script.push_str("cp /config/settings.json /workspace/.claude/settings.json 2>/dev/null || echo 'No settings.json to copy'\n");
+    
+    // Also copy settings to service directory for Claude Code
+    script.push_str(&format!("mkdir -p /workspace/{service}/.claude\n"));
+    script.push_str(&format!("cp /config/settings.json /workspace/{service}/.claude/settings.json 2>/dev/null || echo 'No settings.json to copy to service dir'\n"));
 
     script.push_str("echo 'Workspace prepared successfully'\n");
     script.push_str("ls -la /workspace/\n");
@@ -665,6 +669,10 @@ fn build_env_vars(
         json!({
             "name": "AGENT_NAME",
             "value": tr.spec.agent_name.clone()
+        }),
+        json!({
+            "name": "HOME",
+            "value": format!("/workspace/{}", tr.spec.service_name)
         }),
     ];
 
