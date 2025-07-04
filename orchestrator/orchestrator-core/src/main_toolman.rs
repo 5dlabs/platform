@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 use std::env;
-use std::io::{self, BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -384,54 +383,83 @@ impl ToolmanServer {
         }))
     }
 
-    /// Run the main server loop
+    /// Run the HTTP server
     pub async fn run(&self) -> Result<()> {
-        info!("Starting toolman server main loop");
+        use axum::{
+            extract::State,
+            http::StatusCode,
+            response::Json,
+            routing::post,
+            Router,
+        };
         
-        let stdin = io::stdin();
-        let mut reader = BufReader::new(stdin.lock());
-        let mut stdout = io::stdout();
+        info!("Starting toolman HTTP server");
         
-        loop {
-            let mut line = String::new();
-            match reader.read_line(&mut line) {
-                Ok(0) => {
-                    // EOF reached
-                    break;
-                }
-                Ok(_) => {
-                    let line = line.trim();
-                    if line.is_empty() {
-                        continue;
-                    }
-                    
-                    // Parse the JSON message
-                    match serde_json::from_str::<Value>(line) {
-                        Ok(message) => {
-                            match self.handle_message(message).await {
-                                Ok(response) => {
-                                    let response_str = serde_json::to_string(&response)?;
-                                    writeln!(stdout, "{}", response_str)?;
-                                    stdout.flush()?;
-                                }
-                                Err(e) => {
-                                    error!("Error handling message: {}", e);
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            error!("Failed to parse JSON message: {}", e);
-                        }
-                    }
-                }
+        let server = Arc::clone(&self);
+        
+        // Create HTTP handler for MCP messages
+        let handle_mcp = |State(server): State<Arc<ToolmanServer>>, Json(message): Json<Value>| async move {
+            match server.handle_message(message).await {
+                Ok(response) => Ok(Json(response)),
                 Err(e) => {
-                    error!("Error reading from stdin: {}", e);
-                    break;
+                    error!("Error handling MCP message: {}", e);
+                    Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Internal error: {}", e)))
                 }
             }
-        }
+        };
+        
+        // Build the router
+        let app = Router::new()
+            .route("/mcp", post(handle_mcp))
+            .route("/health", axum::routing::get(|| async { "OK" }))
+            .with_state(server);
+        
+        // Get port from environment or use default
+        let port = std::env::var("TOOLMAN_PORT")
+            .unwrap_or_else(|_| "3000".to_string())
+            .parse::<u16>()
+            .unwrap_or(3000);
+            
+        let addr = format!("0.0.0.0:{}", port);
+        info!("Toolman server listening on {}", addr);
+        
+        // Start the HTTP server
+        let listener = tokio::net::TcpListener::bind(&addr).await
+            .with_context(|| format!("Failed to bind to {}", addr))?;
+            
+        axum::serve(listener, app)
+            .with_graceful_shutdown(shutdown_signal())
+            .await
+            .with_context(|| "HTTP server error")?;
         
         Ok(())
+    }
+    
+    /// Graceful shutdown signal handler
+    async fn shutdown_signal() {
+        let ctrl_c = async {
+            tokio::signal::ctrl_c()
+                .await
+                .expect("Failed to install Ctrl+C handler");
+        };
+
+        #[cfg(unix)]
+        let terminate = async {
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                .expect("Failed to install signal handler")
+                .recv()
+                .await;
+        };
+
+        #[cfg(not(unix))]
+        let terminate = std::future::pending::<()>();
+
+        tokio::select! {
+            _ = ctrl_c => {},
+            _ = terminate => {},
+        }
+
+        info!("Shutdown signal received, starting graceful shutdown");
     }
 }
 

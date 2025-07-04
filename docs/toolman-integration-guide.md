@@ -8,15 +8,21 @@ Toolman is a tool management proxy server that provides fine-grained control ove
 
 ```mermaid
 graph TD
-    A[Claude Agent] --> B[Toolman Server]
-    B --> C[Filesystem MCP Server]
-    B --> D[Taskmaster MCP Server]
-    B --> E[Web Search MCP Server]
-    B --> F[Custom MCP Servers]
+    subgraph "Agent Container"
+        A[Claude Agent] --> B[MCP Wrapper]
+    end
     
-    G[Agent Policy] --> B
-    H[Tool Filtering] --> B
-    I[Access Control] --> B
+    subgraph "Toolman Container"
+        C[Toolman HTTP Server] --> D[Filesystem MCP Server]
+        C --> E[Taskmaster MCP Server]
+        C --> F[Web Search MCP Server]
+        C --> G[Custom MCP Servers]
+    end
+    
+    B -->|HTTP localhost:3000/mcp| C
+    H[Agent Policy] --> C
+    I[Tool Filtering] --> C
+    J[Access Control] --> C
 ```
 
 ## Key Features
@@ -122,27 +128,35 @@ When toolman is enabled, the TaskRun controller automatically adds a toolman sid
 ```mermaid
 sequenceDiagram
     participant Agent as Claude Agent
+    participant Wrapper as MCP Wrapper
     participant Toolman as Toolman Server
     participant Backend as Backend MCP Server
     
-    Agent->>Toolman: initialize (MCP protocol)
-    Toolman->>Backend: initialize
+    Agent->>Wrapper: initialize (stdin/stdout)
+    Wrapper->>Toolman: initialize (HTTP POST /mcp)
+    Toolman->>Backend: initialize (stdout/stdin)
     Backend-->>Toolman: capabilities
-    Toolman-->>Agent: filtered capabilities
+    Toolman-->>Wrapper: filtered capabilities (HTTP response)
+    Wrapper-->>Agent: filtered capabilities (stdout)
     
-    Agent->>Toolman: tools/list
-    Toolman->>Backend: tools/list
-    Backend-->>Toolman: all tools
-    Toolman-->>Agent: filtered tools (based on policy)
+    Agent->>Wrapper: tools/list (stdin)
+    Wrapper->>Toolman: tools/list (HTTP POST)
+    Toolman->>Backend: tools/list (stdout)
+    Backend-->>Toolman: all tools (stdin)
+    Toolman-->>Wrapper: filtered tools (HTTP response)
+    Wrapper-->>Agent: filtered tools (stdout)
     
-    Agent->>Toolman: tools/call {name: "read_file"}
+    Agent->>Wrapper: tools/call {name: "read_file"} (stdin)
+    Wrapper->>Toolman: tools/call (HTTP POST)
     Toolman->>Toolman: check policy
     alt Tool allowed
-        Toolman->>Backend: tools/call
-        Backend-->>Toolman: result
-        Toolman-->>Agent: result
+        Toolman->>Backend: tools/call (stdout)
+        Backend-->>Toolman: result (stdin)
+        Toolman-->>Wrapper: result (HTTP response)
+        Wrapper-->>Agent: result (stdout)
     else Tool blocked
-        Toolman-->>Agent: error (tool not allowed)
+        Toolman-->>Wrapper: error (tool not allowed)
+        Wrapper-->>Agent: error (stdout)
     end
 ```
 
@@ -156,23 +170,33 @@ Toolman evaluates tool access using:
 
 ## Environment Variables
 
-### For Claude Agent
-
-When toolman is enabled, the agent receives:
+### For Agent Container (Claude + MCP Wrapper)
 
 ```bash
+# Agent configuration
 MCP_TOOLMAN_ENABLED=true
-MCP_TOOLMAN_SERVER_URL=http://localhost:3000
+MCP_WRAPPER_ENABLED=true
+
+# MCP Wrapper configuration
+MCP_TOOLMAN_SERVER_URL=http://localhost:3000/mcp
+MCP_WRAPPER_TIMEOUT=30
+MCP_WRAPPER_DEBUG=false
+RUST_LOG=info
 ```
 
-### For Toolman Server
+### For Toolman Container
 
 ```bash
+# Toolman server configuration
 TOOLMAN_CONFIG_PATH=/workspace/toolman.json
 TOOLMAN_PORT=3000
+
+# Task context
 AGENT_NAME=claude-agent-1
 TASK_ID=1001
 SERVICE_NAME=auth-service
+
+# Logging
 LOG_LEVEL=info
 RUST_LOG=toolman=debug,info
 ```

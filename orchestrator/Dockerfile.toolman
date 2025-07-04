@@ -32,6 +32,7 @@ FROM debian:bookworm-slim
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user
@@ -61,7 +62,7 @@ ENV RUST_LOG=toolman=info
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD echo '{"jsonrpc": "2.0", "method": "initialize", "id": 1, "params": {}}' | nc localhost 3000 || exit 1
+    CMD curl -f http://localhost:3000/health || exit 1
 
 # Run the toolman server
 CMD ["toolman"]

@@ -634,7 +634,12 @@ fn build_containers(
             }));
             claude_env.push(json!({
                 "name": "MCP_TOOLMAN_SERVER_URL",
-                "value": format!("http://localhost:{}", toolman_config.port)
+                "value": format!("http://localhost:{}/mcp", toolman_config.port)
+            }));
+            // Tell agent to use MCP wrapper for MCP communication
+            claude_env.push(json!({
+                "name": "MCP_WRAPPER_ENABLED",
+                "value": "true"
             }));
         }
     }

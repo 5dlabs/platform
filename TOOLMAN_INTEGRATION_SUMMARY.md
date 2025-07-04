@@ -6,22 +6,35 @@ I have successfully integrated the Toolman server into your platform as a new bi
 
 ## What Was Implemented
 
-### 1. New Toolman Binary (`orchestrator/orchestrator-core/src/main_toolman.rs`)
+### 1. New Toolman Server (`orchestrator/orchestrator-core/src/main_toolman.rs`)
 
-- **Full MCP Server Implementation**: Implements the MCP 2024-11-05 protocol with stdout communication
+- **HTTP MCP Server Implementation**: Implements the MCP 2024-11-05 protocol over HTTP
 - **Tool Filtering & Access Control**: Agent-specific policies for tool permissions
 - **Backend Server Management**: Manages multiple MCP servers as backends
 - **Security**: Whitelist/blacklist-based tool access control
 - **Async Rust Implementation**: Uses Tokio for high-performance async operations
 
 **Key Features:**
-- Listens on stdin/stdout for MCP protocol messages
-- Manages backend MCP server processes
+- Listens on HTTP localhost:3000/mcp for agent connections
+- Communicates with backend servers via stdin/stdout
 - Filters tool lists based on agent policies
 - Blocks unauthorized tool calls
 - Comprehensive error handling and logging
 
-### 2. Platform Integration
+### 2. New MCP Wrapper (`orchestrator/orchestrator-core/src/main_mcp_wrapper.rs`)
+
+- **Lightweight HTTP Client**: Forwards MCP messages between stdin/stdout and HTTP
+- **Agent Integration**: Seamlessly integrates with existing agent MCP expectations
+- **Error Handling**: Proper error propagation and recovery
+- **Simple Configuration**: Environment variable configuration
+
+**Key Features:**
+- Reads MCP messages from agent via stdin
+- Forwards to toolman server via HTTP POST
+- Returns responses to agent via stdout
+- Transparent to agent code - no changes needed
+
+### 3. Platform Integration
 
 #### Controller Configuration Updates
 - Added `ToolmanConfig` struct to controller configuration
@@ -39,7 +52,7 @@ I have successfully integrated the Toolman server into your platform as a new bi
 - Created default toolman configuration JSON
 - Integrated with existing MCP server configuration patterns
 
-### 3. Deployment Infrastructure
+### 4. Deployment Infrastructure
 
 #### Docker Support
 - Created dedicated `Dockerfile.toolman` for building the binary
@@ -53,7 +66,7 @@ I have successfully integrated the Toolman server into your platform as a new bi
 - Resource limits and requests configuration
 - Environment variable configuration
 
-### 4. Documentation
+### 5. Documentation
 
 #### Comprehensive Guide (`docs/toolman-integration-guide.md`)
 - Architecture overview with diagrams
@@ -64,17 +77,17 @@ I have successfully integrated the Toolman server into your platform as a new bi
 
 ## Key Architecture Decisions
 
-### 1. Sidecar Pattern
-**Why**: Provides tool isolation while maintaining localhost communication performance
-- Main container: Claude agent
-- Sidecar container: Toolman server
+### 1. Separate Container Pattern
+**Why**: Clean separation of concerns with optimal communication
+- Agent container: Claude agent + lightweight MCP wrapper
+- Toolman container: Full toolman server + backend MCP servers
 - Communication: HTTP over localhost (port 3000)
 
-### 2. Standard Output MCP Protocol
-**Why**: Better compatibility with cloud code environments
-- Uses stdin/stdout for MCP communication
-- No network dependencies for MCP protocol
-- Simplified deployment and debugging
+### 2. Dual Protocol Support
+**Why**: Best of both worlds for cloud code compatibility
+- Agent ↔ Wrapper: stdin/stdout (no agent code changes needed)
+- Wrapper ↔ Toolman: HTTP (reliable network communication)
+- Toolman ↔ Backends: stdin/stdout (standard MCP)
 
 ### 3. Policy-Based Access Control
 **Why**: Flexible security without modifying agent code
@@ -151,9 +164,12 @@ toolman:
 ## Files Modified/Created
 
 ### New Files
-- `orchestrator/orchestrator-core/src/main_toolman.rs` - Main binary
+- `orchestrator/orchestrator-core/src/main_toolman.rs` - Toolman HTTP server
+- `orchestrator/orchestrator-core/src/main_mcp_wrapper.rs` - MCP wrapper binary
 - `orchestrator/orchestrator-core/src/config/toolman_default.json` - Default config
-- `orchestrator/Dockerfile.toolman` - Docker build file
+- `orchestrator/Dockerfile.toolman` - Toolman server Docker build
+- `orchestrator/Dockerfile.mcp-wrapper` - MCP wrapper Docker build
+- `orchestrator/scripts/build-toolman.sh` - Build script for both binaries
 - `docs/toolman-integration-guide.md` - Documentation
 
 ### Modified Files
