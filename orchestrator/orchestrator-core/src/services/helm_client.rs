@@ -265,6 +265,7 @@ mod tests {
             task,
             "test-service".to_string(),
             "claude-agent-1".to_string(),
+            "sonnet".to_string(),
             vec![],
         );
 

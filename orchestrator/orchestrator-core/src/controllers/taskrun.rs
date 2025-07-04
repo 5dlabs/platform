@@ -1159,6 +1159,7 @@ mod tests {
                 task_id: 1001,
                 service_name: "test-service".to_string(),
                 agent_name: "claude-agent-1".to_string(),
+                model: "sonnet".to_string(),
                 context_version: 1,
                 markdown_files: vec![
                     MarkdownFile {
