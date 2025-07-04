@@ -390,7 +390,6 @@ fn build_configmap(tr: &TaskRun, name: &str) -> Result<ConfigMap> {
     })
 }
 
-
 /// Build Job from TaskRun
 fn build_job(
     tr: &TaskRun,
@@ -578,31 +577,28 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     let service = &tr.spec.service_name;
     let task_id = tr.spec.task_id;
     let version = tr.spec.context_version;
-    
+
     let mut script = String::new();
-    
+
     // Install git if not present
     script.push_str("apk add --no-cache git || apt-get update && apt-get install -y git || yum install -y git || echo 'Git already available'\n");
-    
+
     // Create workspace directory
     script.push_str(&format!(
         "mkdir -p /workspace/{service}/.task/{task_id}/run-{version}\n"
     ));
-    
+
     // Clone repository if specified
     if let Some(repo) = &tr.spec.repository {
-        script.push_str(&format!(
-            "echo 'Cloning repository: {}'\n",
-            repo.url
-        ));
-        
+        script.push_str(&format!("echo 'Cloning repository: {}'\n", repo.url));
+
         // Clone the repository
         script.push_str(&format!(
             "cd /workspace/{service} && git clone --depth 1 --branch {} {} . || echo 'Clone failed, continuing...'\n",
             repo.branch,
             repo.url
         ));
-        
+
         // If a specific path is specified, restructure
         if let Some(path) = &repo.path {
             script.push_str(&format!(
@@ -618,26 +614,27 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
             "echo 'No repository specified, using empty workspace for service: {service}'\n"
         ));
     }
-    
+
     // Copy task files to .task directory
     script.push_str(&format!(
         "cp /config/* /workspace/{service}/.task/{task_id}/run-{version}/ 2>/dev/null || echo 'No config files to copy'\n"
     ));
-    
-    
+
     // Copy all task files to service root for @import access
     script.push_str(&format!(
         "cp /workspace/{service}/.task/{task_id}/run-{version}/*.md /workspace/{service}/ 2>/dev/null || echo 'No markdown files to copy to root'\n"
     ));
-    
+
     // Setup Claude Code configuration directory and copy settings
     script.push_str("mkdir -p /workspace/.claude\n");
     script.push_str("cp /config/settings.json /workspace/.claude/settings.json 2>/dev/null || echo 'No settings.json to copy'\n");
-    
+
     script.push_str("echo 'Workspace prepared successfully'\n");
     script.push_str("ls -la /workspace/\n");
-    script.push_str(&format!("ls -la /workspace/{service}/ || echo 'Service directory not found'\n"));
-    
+    script.push_str(&format!(
+        "ls -la /workspace/{service}/ || echo 'Service directory not found'\n"
+    ));
+
     script
 }
 
@@ -745,7 +742,7 @@ fn generate_claude_settings(tr: &TaskRun) -> Result<String> {
             "Glob(*)".to_string(),
             "Grep(*)".to_string(),
         ]);
-        
+
         // Deny potentially dangerous operations
         deny_rules.extend(vec![
             "Bash(rm -rf *)".to_string(),
@@ -769,9 +766,9 @@ fn generate_claude_settings(tr: &TaskRun) -> Result<String> {
                             }
                             "Bash(*)".to_string()
                         }
-                    },
+                    }
                     "edit" => "Edit(*)".to_string(),
-                    "read" => "Read(*)".to_string(), 
+                    "read" => "Read(*)".to_string(),
                     "write" => "Write(*)".to_string(),
                     "multiedit" => "MultiEdit(*)".to_string(),
                     "glob" => "Glob(*)".to_string(),
