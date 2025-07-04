@@ -186,7 +186,7 @@ async fn reconcile_create_or_update(
         tr.spec.context_version
     );
 
-    let cm = build_configmap(&tr, &cm_name)?;
+    let cm = build_configmap(&tr, &cm_name, config)?;
     match configmaps.create(&PostParams::default(), &cm).await {
         Ok(_) => info!("Created ConfigMap: {}", cm_name),
         Err(kube::Error::Api(ae)) if ae.code == 409 => {
@@ -362,7 +362,7 @@ async fn update_status_with_details(
 }
 
 /// Build ConfigMap from TaskRun
-fn build_configmap(tr: &TaskRun, name: &str) -> Result<ConfigMap> {
+fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Result<ConfigMap> {
     let mut data = BTreeMap::new();
 
     // Add all markdown files
@@ -371,7 +371,7 @@ fn build_configmap(tr: &TaskRun, name: &str) -> Result<ConfigMap> {
     }
 
     // Generate Claude Code settings.json file for tool permissions
-    let settings_json = generate_claude_settings(tr)?;
+    let settings_json = generate_claude_settings(tr, config)?;
     data.insert("settings.json".to_string(), settings_json);
 
     // Generate CLAUDE.md if not provided by Task Master system
@@ -1041,7 +1041,7 @@ fn generate_claude_md(tr: &TaskRun) -> String {
 }
 
 /// Generate Claude Code settings.json for tool permissions
-fn generate_claude_settings(tr: &TaskRun) -> Result<String> {
+fn generate_claude_settings(tr: &TaskRun, config: &ControllerConfig) -> Result<String> {
     let mut allow_rules = Vec::new();
     let mut deny_rules = Vec::new();
 
@@ -1094,11 +1094,22 @@ fn generate_claude_settings(tr: &TaskRun) -> Result<String> {
         }
     }
 
+    // Extract defaultMode from controller config, with fallback to acceptEdits
+    let default_mode = if let Ok(parsed_settings) = serde_json::from_str::<serde_json::Value>(&config.volumes.claude_settings.settings) {
+        parsed_settings
+            .get("defaultMode")
+            .and_then(|v| v.as_str())
+            .unwrap_or("acceptEdits")
+            .to_string()
+    } else {
+        "acceptEdits".to_string()
+    };
+
     let settings = json!({
         "permissions": {
             "allow": allow_rules,
             "deny": deny_rules,
-            "defaultMode": "acceptEdits"
+            "defaultMode": default_mode
         }
     });
 
@@ -1137,7 +1148,8 @@ mod tests {
             status: None,
         };
 
-        let cm = build_configmap(&tr, "test-cm").unwrap();
+        let config = ControllerConfig::default();
+        let cm = build_configmap(&tr, "test-cm", &config).unwrap();
         let data = cm.data.unwrap();
         assert!(data.contains_key("task.md"));
         assert!(data.contains_key("design-spec.md"));
