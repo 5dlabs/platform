@@ -364,6 +364,10 @@ fn build_configmap(tr: &TaskRun, name: &str) -> Result<ConfigMap> {
         data.insert(file.filename.clone(), file.content.clone());
     }
 
+    // Generate Claude Code settings.json file for tool permissions
+    let settings_json = generate_claude_settings(tr)?;
+    data.insert("settings.json".to_string(), settings_json);
+
     // Note: CLAUDE.md should be provided by Task Master system as one of the markdown files
     // No hard-coded content generation in orchestrator
 
@@ -626,6 +630,10 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
         "cp /workspace/{service}/.task/{task_id}/run-{version}/*.md /workspace/{service}/ 2>/dev/null || echo 'No markdown files to copy to root'\n"
     ));
     
+    // Setup Claude Code configuration directory and copy settings
+    script.push_str("mkdir -p /workspace/.claude\n");
+    script.push_str("cp /config/settings.json /workspace/.claude/settings.json 2>/dev/null || echo 'No settings.json to copy'\n");
+    
     script.push_str("echo 'Workspace prepared successfully'\n");
     script.push_str("ls -la /workspace/\n");
     script.push_str(&format!("ls -la /workspace/{service}/ || echo 'Service directory not found'\n"));
@@ -666,32 +674,9 @@ fn build_env_vars(
     // Add telemetry environment variables from config
     env_vars.extend(telemetry_env);
 
-    // Add tool configuration for Claude Code
-    if !tr.spec.agent_tools.is_empty() {
-        // Convert agent tools to JSON and pass as environment variable
-        let tools_json = serde_json::to_string(&tr.spec.agent_tools).unwrap_or_default();
-        env_vars.push(json!({
-            "name": "CLAUDE_TOOLS_CONFIG",
-            "value": tools_json
-        }));
-        
-        // Also provide enabled tools as comma-separated list for easier parsing
-        let enabled_tools: Vec<String> = tr.spec.agent_tools
-            .iter()
-            .filter(|tool| tool.enabled)
-            .map(|tool| tool.name.clone())
-            .collect();
-        env_vars.push(json!({
-            "name": "CLAUDE_ENABLED_TOOLS",
-            "value": enabled_tools.join(",")
-        }));
-    } else {
-        // Provide default tools if none specified
-        env_vars.push(json!({
-            "name": "CLAUDE_ENABLED_TOOLS",
-            "value": "bash,edit,read,write,glob,grep"
-        }));
-    }
+    // Note: Tool configuration is now handled via settings.json file creation
+    // Environment variables CLAUDE_ENABLED_TOOLS and CLAUDE_TOOLS_CONFIG are not valid
+    // per Claude Code documentation - tools must be configured via settings.json
 
     // Add any additional env vars from config
     for env_var in &config.agent.env {
@@ -733,6 +718,81 @@ fn build_resource_attributes(tr: &TaskRun, config: &ControllerConfig) -> String 
     }
 
     attributes.join(",")
+}
+
+/// Generate Claude Code settings.json for tool permissions
+fn generate_claude_settings(tr: &TaskRun) -> Result<String> {
+    let mut allow_rules = Vec::new();
+    let mut deny_rules = Vec::new();
+
+    if tr.spec.agent_tools.is_empty() {
+        // Default tool permissions for standard development tasks
+        allow_rules.extend(vec![
+            "Bash(git *)".to_string(),
+            "Bash(npm run *)".to_string(),
+            "Bash(cargo *)".to_string(),
+            "Bash(ls *)".to_string(),
+            "Bash(find *)".to_string(),
+            "Bash(grep *)".to_string(),
+            "Bash(cat *)".to_string(),
+            "Bash(head *)".to_string(),
+            "Bash(tail *)".to_string(),
+            "Bash(tree *)".to_string(),
+            "Edit(*)".to_string(),
+            "Read(*)".to_string(),
+            "Write(*)".to_string(),
+            "MultiEdit(*)".to_string(),
+            "Glob(*)".to_string(),
+            "Grep(*)".to_string(),
+        ]);
+        
+        // Deny potentially dangerous operations
+        deny_rules.extend(vec![
+            "Bash(rm -rf *)".to_string(),
+            "Bash(curl *)".to_string(),
+            "Bash(wget *)".to_string(),
+            "WebFetch(*)".to_string(),
+            "WebSearch(*)".to_string(),
+        ]);
+    } else {
+        // Build permissions based on agent_tools specification
+        for tool in &tr.spec.agent_tools {
+            if tool.enabled {
+                let tool_rule = match tool.name.as_str() {
+                    "bash" => {
+                        if tool.restrictions.is_empty() {
+                            "Bash(*)".to_string()
+                        } else {
+                            // Apply restrictions as deny rules
+                            for restriction in &tool.restrictions {
+                                deny_rules.push(format!("Bash({restriction})"));
+                            }
+                            "Bash(*)".to_string()
+                        }
+                    },
+                    "edit" => "Edit(*)".to_string(),
+                    "read" => "Read(*)".to_string(), 
+                    "write" => "Write(*)".to_string(),
+                    "multiedit" => "MultiEdit(*)".to_string(),
+                    "glob" => "Glob(*)".to_string(),
+                    "grep" => "Grep(*)".to_string(),
+                    "webfetch" => "WebFetch(*)".to_string(),
+                    "websearch" => "WebSearch(*)".to_string(),
+                    _ => continue, // Skip unknown tools
+                };
+                allow_rules.push(tool_rule);
+            }
+        }
+    }
+
+    let settings = json!({
+        "permissions": {
+            "allow": allow_rules,
+            "deny": deny_rules
+        }
+    });
+
+    serde_json::to_string_pretty(&settings).map_err(Error::SerializationError)
 }
 
 #[cfg(test)]
