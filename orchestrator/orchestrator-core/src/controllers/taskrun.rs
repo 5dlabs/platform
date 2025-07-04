@@ -851,15 +851,15 @@ fn build_agent_startup_script(config: &ControllerConfig) -> String {
     script.push_str(&format!(
         "{command} --help 2>&1 | head -20 || echo 'Claude help failed'\n"
     ));
-    script.push_str("echo '\n--- CLAUDE SETTINGS VALIDATION ---'\n");
-    script.push_str(&format!(
-        "{command} --print-settings 2>/dev/null || echo 'Claude print-settings not available'\n"
-    ));
-    script.push_str(&format!("{command} --validate-settings 2>/dev/null || echo 'Claude validate-settings not available'\n"));
-    script.push_str("echo '\n--- CLAUDE PERMISSIONS CHECK ---'\n");
-    script.push_str(&format!(
-        "{command} --list-tools 2>/dev/null || echo 'Claude list-tools not available'\n"
-    ));
+    script.push_str("echo '\n--- CLAUDE CONFIG COMMANDS DEBUG ---'\n");
+    script.push_str(&format!("{command} config --help 2>&1 || echo 'Claude config help failed'\n"));
+    script.push_str(&format!("{command} config list 2>&1 || echo 'Claude config list failed'\n"));
+    script.push_str(&format!("{command} config show 2>&1 || echo 'Claude config show failed'\n"));
+    script.push_str(&format!("{command} config get defaultMode 2>&1 || echo 'Claude config get defaultMode failed'\n"));
+    script.push_str(&format!("{command} config get permissions 2>&1 || echo 'Claude config get permissions failed'\n"));
+    script.push_str("echo '\n--- CLAUDE SETTINGS FILE DISCOVERY ---'\n");
+    script.push_str(&format!("{command} --print-config-path 2>&1 || echo 'Claude print-config-path not available'\n"));
+    script.push_str(&format!("{command} --debug 2>&1 | head -10 || echo 'Claude debug output failed'\n"));
     script.push_str("echo '\n--- DEVCONTAINER AND ENVIRONMENT VARIABLES ---'\n");
     script.push_str("env | grep -i devcontainer || echo 'No DEVCONTAINER variables found'\n");
     script.push_str("env | grep -i claude || echo 'No CLAUDE environment variables found'\n");
@@ -870,6 +870,12 @@ fn build_agent_startup_script(config: &ControllerConfig) -> String {
     script.push_str("echo '\n--- FINAL SETTINGS CHECK ---'\n");
     script.push_str("echo 'Attempting to read settings.json with cat:'\n");
     script.push_str("find . -name 'settings.json' -exec echo 'Found settings.json:' {} \\; -exec cat {} \\; 2>/dev/null\n");
+    script.push_str("echo '\n--- TESTING PERMISSIVE MODE EXPLICITLY ---'\n");
+    script.push_str(&format!("{command} --help | grep -i permission || echo 'No permission flags found in help'\n"));
+    script.push_str(&format!("{command} --help | grep -i allow || echo 'No allow flags found in help'\n"));
+    script.push_str(&format!("{command} --help | grep -i mode || echo 'No mode flags found in help'\n"));
+    script.push_str("echo '\n--- TESTING SIMPLE CLAUDE COMMAND WITHOUT PROMPT ---'\n");
+    script.push_str(&format!("{command} --version 2>&1\n"));
     script.push_str("echo '\n--- STARTING CLAUDE WITH FULL ARGS ---'\n");
     script.push_str(&format!(
         "echo 'Full Claude command: {command} {}'\n",
