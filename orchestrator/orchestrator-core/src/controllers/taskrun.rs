@@ -1095,7 +1095,9 @@ fn generate_claude_settings(tr: &TaskRun, config: &ControllerConfig) -> Result<S
     }
 
     // Extract defaultMode from controller config, with fallback to acceptEdits
-    let default_mode = if let Ok(parsed_settings) = serde_json::from_str::<serde_json::Value>(&config.volumes.claude_settings.settings) {
+    let default_mode = if let Ok(parsed_settings) =
+        serde_json::from_str::<serde_json::Value>(&config.volumes.claude_settings.settings)
+    {
         parsed_settings
             .get("defaultMode")
             .and_then(|v| v.as_str())
