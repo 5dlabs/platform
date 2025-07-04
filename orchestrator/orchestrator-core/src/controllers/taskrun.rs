@@ -177,10 +177,13 @@ async fn reconcile_create_or_update(
         }
     }
 
-    // Create ConfigMap
+    // Create ConfigMap with matching name pattern
     let cm_name = format!(
-        "{}-{}-v{}-files",
-        tr.spec.service_name, tr.spec.task_id, tr.spec.context_version
+        "{}-{}-task{}-v{}-files",
+        tr.spec.agent_name.replace('_', "-"),
+        tr.spec.service_name.replace('_', "-"),
+        tr.spec.task_id,
+        tr.spec.context_version
     );
 
     let cm = build_configmap(&tr, &cm_name)?;
@@ -192,10 +195,13 @@ async fn reconcile_create_or_update(
         Err(e) => return Err(e.into()),
     }
 
-    // Create Job
+    // Create Job with descriptive name: agent-service-task-attempt
     let job_name = format!(
-        "{}-{}-v{}",
-        tr.spec.service_name, tr.spec.task_id, tr.spec.context_version
+        "{}-{}-task{}-v{}",
+        tr.spec.agent_name.replace('_', "-"),
+        tr.spec.service_name.replace('_', "-"),
+        tr.spec.task_id,
+        tr.spec.context_version
     );
 
     let job = build_job(&tr, &job_name, &cm_name, config)?;
@@ -613,8 +619,8 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
 
     let mut script = String::new();
 
-    // Install git and gh CLI if not present
-    script.push_str("apk add --no-cache git github-cli || apt-get update && apt-get install -y git gh || yum install -y git gh || echo 'Git/gh already available'\n");
+    // Install gh CLI if not present (alpine/git image already has git)
+    script.push_str("which gh >/dev/null 2>&1 || apk add --no-cache github-cli\n");
 
     // Create workspace directory
     script.push_str(&format!(
@@ -662,7 +668,9 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
                     script.push_str(
                         "  echo \"export GITHUB_TOKEN=${GITHUB_TOKEN}\" > /workspace/.github-env\n",
                     );
-                    script.push_str("  chmod 600 /workspace/.github-env\n");
+                    script.push_str("  chmod 644 /workspace/.github-env\n");
+                    script.push_str("  # Ensure git config is accessible to the agent user\n");
+                    script.push_str("  chmod 644 /workspace/.git-credentials\n");
                     script.push_str("else\n");
                     script.push_str("  echo \"Warning: GitHub token not found in secret\"\n");
                     script.push_str("fi\n");
@@ -782,6 +790,10 @@ fn build_env_vars(
         }),
         json!({
             "name": "HOME",
+            "value": "/home/node"  // Use proper home directory from devcontainer
+        }),
+        json!({
+            "name": "WORKDIR",
             "value": format!("/workspace/{}", tr.spec.service_name)
         }),
     ];

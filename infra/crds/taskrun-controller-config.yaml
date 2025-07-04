@@ -40,7 +40,7 @@ data:
           cpu: "4"
           memory: "8Gi"
       
-      # Security context
+      # Security context - using node user from devcontainer
       securityContext:
         allowPrivilegeEscalation: false
         capabilities:
@@ -48,7 +48,7 @@ data:
           - ALL
         readOnlyRootFilesystem: false
         runAsNonRoot: true
-        runAsUser: 1001
+        runAsUser: 1000  # node user in devcontainer
       
       # Environment variables for agent
       env:
@@ -61,8 +61,8 @@ data:
     # Init container configuration
     initContainer:
       image:
-        repository: "busybox"
-        tag: "1.36"
+        repository: "alpine/git"
+        tag: "v2.45.2"
         pullPolicy: "IfNotPresent"
       
       resources:
@@ -74,9 +74,9 @@ data:
           memory: "256Mi"
       
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
         allowPrivilegeEscalation: false
         readOnlyRootFilesystem: false
       
@@ -154,9 +154,9 @@ data:
       
       # Pod security context
       securityContext:
-        fsGroup: 2000
+        fsGroup: 1000  # node group
         runAsNonRoot: true
-        runAsUser: 1001
+        runAsUser: 1000  # node user
       
       # Annotations
       annotations:
