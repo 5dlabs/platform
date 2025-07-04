@@ -312,11 +312,16 @@ async fn update_status(
     phase: TaskRunPhase,
     message: &str,
 ) -> Result<()> {
+    // Get current TaskRun to preserve attempt count
+    let current_tr = api.get(name).await.map_err(Error::KubeError)?;
+    let attempts = current_tr.status.as_ref().map(|s| s.attempts).unwrap_or(0);
+    
     let status = json!({
         "status": {
             "phase": phase,
             "message": message,
             "lastUpdated": Utc::now().to_rfc3339(),
+            "attempts": attempts,
         }
     });
 
@@ -336,10 +341,22 @@ async fn update_status_with_details(
     job_name: Option<String>,
     configmap_name: Option<String>,
 ) -> Result<()> {
+    // Get current TaskRun to access attempt count
+    let current_tr = api.get(name).await.map_err(Error::KubeError)?;
+    let current_attempts = current_tr.status.as_ref().map(|s| s.attempts).unwrap_or(0);
+    
+    // Increment attempts when creating a new job (Running phase)
+    let new_attempts = if phase == TaskRunPhase::Running {
+        current_attempts + 1
+    } else {
+        current_attempts
+    };
+
     let mut status = serde_json::json!({
         "phase": phase,
         "message": message,
         "lastUpdated": Utc::now().to_rfc3339(),
+        "attempts": new_attempts,
     });
 
     if let Some(job) = job_name {
@@ -623,16 +640,16 @@ fn build_job(
 fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     let service = &tr.spec.service_name;
     let task_id = tr.spec.task_id;
-    let version = tr.spec.context_version;
+    let _version = tr.spec.context_version;
 
     let mut script = String::new();
 
     // Install gh CLI if not present (alpine/git image already has git)
     script.push_str("which gh >/dev/null 2>&1 || apk add --no-cache github-cli\n");
 
-    // Create workspace directory
+    // Create workspace directory (no per-attempt subdirectory for --continue support)
     script.push_str(&format!(
-        "mkdir -p /workspace/{service}/.task/{task_id}/run-{version}\n"
+        "mkdir -p /workspace/{service}/.task/{task_id}\n"
     ));
 
     // Clone repository if specified
@@ -750,12 +767,12 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
 
     // Copy task files to .task directory
     script.push_str(&format!(
-        "cp /config/* /workspace/{service}/.task/{task_id}/run-{version}/ 2>/dev/null || echo 'No config files to copy'\n"
+        "cp /config/* /workspace/{service}/.task/{task_id}/ 2>/dev/null || echo 'No config files to copy'\n"
     ));
 
     // Copy all task files to service root for @import access
     script.push_str(&format!(
-        "cp /workspace/{service}/.task/{task_id}/run-{version}/*.md /workspace/{service}/ 2>/dev/null || echo 'No markdown files to copy to root'\n"
+        "cp /workspace/{service}/.task/{task_id}/*.md /workspace/{service}/ 2>/dev/null || echo 'No markdown files to copy to root'\n"
     ));
 
     // Setup Claude Code configuration directory and copy settings
@@ -902,12 +919,19 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> String
     script.push_str(&format!("{command} --version 2>&1\n"));
     script.push_str("echo '\n--- STARTING CLAUDE WITH FULL ARGS ---'\n");
 
-    // Execute the Claude command with model selection
+    // Execute the Claude command with model selection and continuation
     let mut args = config.agent.args.clone();
 
     // Add model argument if not "sonnet" (default)
     if tr.spec.model != "sonnet" {
         args.insert(0, format!("--model={}", tr.spec.model));
+    }
+
+    // Add --continue flag for retry attempts (attempts > 1)
+    let attempts = tr.status.as_ref().map(|s| s.attempts).unwrap_or(0);
+    if attempts > 1 {
+        args.push("--continue".to_string());
+        script.push_str(&format!("echo 'Adding --continue flag for attempt {}'\n", attempts));
     }
 
     let args_str = args.join(" ");
