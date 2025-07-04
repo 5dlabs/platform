@@ -26,7 +26,10 @@ data:
       command: ["claude"]
       args:
         - "-p"
-        - "Read the task context in CLAUDE.md and begin implementing the requested service. Follow the design specification and ensure all acceptance criteria are met."
+        - "--verbose"
+        - "--output-format"
+        - "stream-json"
+        - "Read the task context in CLAUDE.md and begin implementing the requested service. Follow the design specification and ensure all acceptance criteria are met. When your implementation is complete and all tests pass, create a pull request with your changes using 'gh pr create'."
       
       # Resources for agent container
       resources:
