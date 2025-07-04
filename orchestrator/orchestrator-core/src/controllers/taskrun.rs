@@ -840,8 +840,32 @@ fn build_agent_startup_script(config: &ControllerConfig) -> String {
     script.push_str("ls -la .. 2>/dev/null || echo 'Cannot access parent directory'\n");
     script.push_str("echo '=== END DEBUGGING - STARTING CLAUDE ==='\n\n");
 
-    // Execute the Claude command
+    // Print Claude Code's actual loaded settings before execution
+    script.push_str("echo '\n--- CLAUDE CODE SETTINGS DEBUG ---'\n");
+    script.push_str("echo 'Testing Claude Code settings loading...'\n");
     let command = config.agent.command.join(" ");
+    script.push_str(&format!("echo 'Claude command: {command}'\n"));
+    script.push_str(&format!("{command} --version 2>/dev/null || echo 'Claude version failed'\n"));
+    script.push_str(&format!("{command} --help 2>&1 | head -20 || echo 'Claude help failed'\n"));
+    script.push_str("echo '\n--- CLAUDE SETTINGS VALIDATION ---'\n");
+    script.push_str(&format!("{command} --print-settings 2>/dev/null || echo 'Claude print-settings not available'\n"));
+    script.push_str(&format!("{command} --validate-settings 2>/dev/null || echo 'Claude validate-settings not available'\n"));
+    script.push_str("echo '\n--- CLAUDE PERMISSIONS CHECK ---'\n");
+    script.push_str(&format!("{command} --list-tools 2>/dev/null || echo 'Claude list-tools not available'\n"));
+    script.push_str("echo '\n--- DEVCONTAINER AND ENVIRONMENT VARIABLES ---'\n");
+    script.push_str("env | grep -i devcontainer || echo 'No DEVCONTAINER variables found'\n");
+    script.push_str("env | grep -i claude || echo 'No CLAUDE environment variables found'\n");
+    script.push_str("echo '\n--- UNSETTING DEVCONTAINER VARIABLES ---'\n");
+    script.push_str("unset DEVCONTAINER 2>/dev/null || true\n");
+    script.push_str("unset DEVCONTAINER_CONFIG 2>/dev/null || true\n");
+    script.push_str("echo 'DEVCONTAINER variables unset'\n");
+    script.push_str("echo '\n--- FINAL SETTINGS CHECK ---'\n");
+    script.push_str("echo 'Attempting to read settings.json with cat:'\n");
+    script.push_str("find . -name 'settings.json' -exec echo 'Found settings.json:' {} \\; -exec cat {} \\; 2>/dev/null\n");
+    script.push_str("echo '\n--- STARTING CLAUDE WITH FULL ARGS ---'\n");
+    script.push_str(&format!("echo 'Full Claude command: {command} {}'\n", config.agent.args.join(" ")));
+    
+    // Execute the Claude command
     let args = config.agent.args.join(" ");
     script.push_str(&format!("exec {command} {args}"));
 
