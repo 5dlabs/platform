@@ -578,13 +578,10 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     let task_id = tr.spec.task_id;
     let version = tr.spec.context_version;
 
-
     let mut script = String::new();
 
     // Install git if not present
     script.push_str("apk add --no-cache git || apt-get update && apt-get install -y git || yum install -y git || echo 'Git already available'\n");
-
-
 
     // Create workspace directory
     script.push_str(&format!(
