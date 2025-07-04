@@ -89,6 +89,9 @@ enum TaskCommands {
         /// Repository branch or tag to checkout
         #[arg(long, short = 'b', default_value = "main")]
         branch: String,
+        /// GitHub username for authentication (e.g., swe-1-5dlabs)
+        #[arg(long)]
+        github_user: Option<String>,
         /// Indicates this is a retry of a previous attempt
         #[arg(long)]
         retry: bool,
@@ -231,6 +234,7 @@ async fn main() -> Result<()> {
                 tools,
                 repo,
                 branch,
+                github_user,
                 retry,
             } => {
                 commands::task::submit_task_simplified(
@@ -244,6 +248,7 @@ async fn main() -> Result<()> {
                     &tools,
                     repo.as_deref(),
                     &branch,
+                    github_user.as_deref(),
                     retry,
                 )
                 .await
@@ -374,6 +379,7 @@ mod tests {
                         tools,
                         repo,
                         branch,
+                        github_user,
                         retry,
                     },
             } => {
@@ -385,6 +391,7 @@ mod tests {
                 assert_eq!(tools.len(), 0);
                 assert_eq!(repo, None);
                 assert_eq!(branch, "main");
+                assert_eq!(github_user, None);
                 assert!(!retry);
             }
             _ => panic!("Expected Task Submit command"),

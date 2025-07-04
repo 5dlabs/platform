@@ -400,6 +400,56 @@ fn build_job(
     // API key will be injected from secret
 
     // Build telemetry environment variables from config
+    // Build volume mounts for init container
+    let mut init_volume_mounts = vec![
+        json!({
+            "name": "task-files",
+            "mountPath": "/config"
+        }),
+        json!({
+            "name": "workspace",
+            "mountPath": "/workspace"
+        })
+    ];
+
+    // Build volumes list
+    let mut volumes = vec![
+        json!({
+            "name": "task-files",
+            "configMap": {
+                "name": cm_name
+            }
+        }),
+        json!({
+            "name": "workspace",
+            "persistentVolumeClaim": {
+                "claimName": "shared-workspace"
+            }
+        })
+    ];
+
+    // Add secret volume and mount if repository auth is configured
+    if let Some(repo) = &tr.spec.repository {
+        if let Some(auth) = &repo.auth {
+            let secret_volume_name = format!("{}-secret", auth.secret_name);
+            
+            // Add volume mount to init container
+            init_volume_mounts.push(json!({
+                "name": secret_volume_name.clone(),
+                "mountPath": format!("/secrets/{}", auth.secret_name),
+                "readOnly": true
+            }));
+            
+            // Add secret volume
+            volumes.push(json!({
+                "name": secret_volume_name,
+                "secret": {
+                    "secretName": auth.secret_name.clone()
+                }
+            }));
+        }
+    }
+
     let mut telemetry_env = vec![];
 
     if config.telemetry.enabled {
@@ -527,22 +577,13 @@ fn build_job(
                         "image": format!("{}:{}", config.init_container.image.repository, config.init_container.image.tag),
                         "command": ["/bin/sh", "-c"],
                         "args": [build_init_script(tr, config)],
-                        "volumeMounts": [
-                            {
-                                "name": "task-files",
-                                "mountPath": "/config"
-                            },
-                            {
-                                "name": "workspace",
-                                "mountPath": "/workspace"
-                            }
-                        ]
+                        "volumeMounts": init_volume_mounts
                     }],
                     "containers": [{
                         "name": "claude-agent",
                         "image": format!("{}:{}", config.agent.image.repository, config.agent.image.tag),
-                        "command": config.agent.command.clone(),
-                        "args": config.agent.args.clone(),
+                        "command": ["/bin/sh", "-c"],
+                        "args": [build_agent_startup_script(config)],
                         "env": build_env_vars(tr, telemetry_env, config),
                         "volumeMounts": [{
                             "name": "workspace",
@@ -555,20 +596,7 @@ fn build_job(
                             "runAsNonRoot": false
                         }
                     }],
-                    "volumes": [
-                        {
-                            "name": "task-files",
-                            "configMap": {
-                                "name": cm_name
-                            }
-                        },
-                        {
-                            "name": "workspace",
-                            "persistentVolumeClaim": {
-                                "claimName": "shared-workspace"
-                            }
-                        }
-                    ]
+                    "volumes": volumes
                 }
             }
         }
@@ -585,8 +613,8 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
 
     let mut script = String::new();
 
-    // Install git if not present
-    script.push_str("apk add --no-cache git || apt-get update && apt-get install -y git || yum install -y git || echo 'Git already available'\n");
+    // Install git and gh CLI if not present
+    script.push_str("apk add --no-cache git github-cli || apt-get update && apt-get install -y git gh || yum install -y git gh || echo 'Git/gh already available'\n");
 
     // Create workspace directory
     script.push_str(&format!(
@@ -596,6 +624,60 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     // Clone repository if specified
     if let Some(repo) = &tr.spec.repository {
         script.push_str(&format!("echo 'Cloning repository: {}'\n", repo.url));
+
+        // Setup authentication if provided
+        if let Some(auth) = &repo.auth {
+            match auth.auth_type {
+                crate::crds::taskrun::RepositoryAuthType::Token => {
+                    // Export GitHub token from secret
+                    script.push_str(&format!(
+                        "export GITHUB_TOKEN=$(cat /secrets/{}/{} 2>/dev/null)\n",
+                        auth.secret_name, auth.secret_key
+                    ));
+                    script.push_str("if [ -n \"$GITHUB_TOKEN\" ]; then\n");
+                    script.push_str("  echo \"GitHub token loaded from secret\"\n");
+                    script.push_str("  \n");
+                    script.push_str("  # Configure git global settings\n");
+                    script.push_str("  git config --global user.name \"Claude Agent\"\n");
+                    script.push_str("  git config --global user.email \"claude@5dlabs.com\"\n");
+                    script.push_str("  \n");
+                    script.push_str("  # Configure git to use the token for HTTPS authentication\n");
+                    script.push_str("  git config --global credential.helper 'store --file=/workspace/.git-credentials'\n");
+                    script.push_str("  echo \"https://oauth2:${GITHUB_TOKEN}@github.com\" > /workspace/.git-credentials\n");
+                    script.push_str("  chmod 600 /workspace/.git-credentials\n");
+                    script.push_str("  \n");
+                    script.push_str("  # Also configure for the specific service directory\n");
+                    script.push_str(&format!("  mkdir -p /workspace/{service}/.git\n"));
+                    script.push_str(&format!("  cp /workspace/.git-credentials /workspace/{service}/.git-credentials\n"));
+                    script.push_str("  \n");
+                    script.push_str("  # Configure gh CLI authentication\n");
+                    script.push_str("  echo \"${GITHUB_TOKEN}\" > /workspace/.gh-token\n");
+                    script.push_str("  gh auth login --with-token < /workspace/.gh-token 2>/dev/null || echo \"gh auth already configured\"\n");
+                    script.push_str("  rm -f /workspace/.gh-token\n");
+                    script.push_str("  \n");
+                    script.push_str("  # Write GITHUB_TOKEN to a file for the main container\n");
+                    script.push_str("  echo \"export GITHUB_TOKEN=${GITHUB_TOKEN}\" > /workspace/.github-env\n");
+                    script.push_str("  chmod 600 /workspace/.github-env\n");
+                    script.push_str("else\n");
+                    script.push_str("  echo \"Warning: GitHub token not found in secret\"\n");
+                    script.push_str("fi\n");
+                }
+                crate::crds::taskrun::RepositoryAuthType::SshKey => {
+                    // Setup SSH key authentication
+                    script.push_str("mkdir -p ~/.ssh\n");
+                    script.push_str(&format!(
+                        "cp /secrets/{}/{} ~/.ssh/id_rsa\n",
+                        auth.secret_name, auth.secret_key
+                    ));
+                    script.push_str("chmod 600 ~/.ssh/id_rsa\n");
+                    script.push_str("ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null\n");
+                }
+                crate::crds::taskrun::RepositoryAuthType::BasicAuth => {
+                    // Basic auth not implemented yet
+                    script.push_str("echo 'Warning: BasicAuth not implemented yet'\n");
+                }
+            }
+        }
 
         // Clone the repository
         script.push_str(&format!(
@@ -647,6 +729,24 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     script
 }
 
+/// Build startup script for the agent container
+fn build_agent_startup_script(config: &ControllerConfig) -> String {
+    let mut script = String::new();
+    
+    // Source GitHub environment if it exists
+    script.push_str("if [ -f /workspace/.github-env ]; then\n");
+    script.push_str("  source /workspace/.github-env\n");
+    script.push_str("  echo \"GitHub authentication configured\"\n");
+    script.push_str("fi\n\n");
+    
+    // Execute the Claude command
+    let command = config.agent.command.join(" ");
+    let args = config.agent.args.join(" ");
+    script.push_str(&format!("exec {command} {args}"));
+    
+    script
+}
+
 /// Build environment variables for the container
 fn build_env_vars(
     tr: &TaskRun,
@@ -683,6 +783,28 @@ fn build_env_vars(
 
     // Add telemetry environment variables from config
     env_vars.extend(telemetry_env);
+
+    // Add GitHub token if repository auth is configured
+    if let Some(repo) = &tr.spec.repository {
+        if let Some(auth) = &repo.auth {
+            match auth.auth_type {
+                crate::crds::taskrun::RepositoryAuthType::Token => {
+                    env_vars.push(json!({
+                        "name": "GITHUB_TOKEN",
+                        "valueFrom": {
+                            "secretKeyRef": {
+                                "name": auth.secret_name.clone(),
+                                "key": auth.secret_key.clone()
+                            }
+                        }
+                    }));
+                }
+                _ => {
+                    // SSH and BasicAuth would need different handling
+                }
+            }
+        }
+    }
 
     // Note: Tool configuration is now handled via settings.json file creation
     // Environment variables CLAUDE_ENABLED_TOOLS and CLAUDE_TOOLS_CONFIG are not valid
@@ -754,15 +876,17 @@ fn generate_claude_settings(tr: &TaskRun) -> Result<String> {
             "MultiEdit(*)".to_string(),
             "Glob(*)".to_string(),
             "Grep(*)".to_string(),
+            "WebFetch(*)".to_string(),
+            "WebSearch(*)".to_string(),
+            "Bash(curl *)".to_string(),
+            "Bash(wget *)".to_string(),
+            "Bash(curl *)".to_string(),
         ]);
 
         // Deny potentially dangerous operations
         deny_rules.extend(vec![
-            "Bash(rm -rf *)".to_string(),
-            "Bash(curl *)".to_string(),
-            "Bash(wget *)".to_string(),
-            "WebFetch(*)".to_string(),
-            "WebSearch(*)".to_string(),
+            "Bash(rm -rf *)".to_string()
+
         ]);
     } else {
         // Build permissions based on agent_tools specification

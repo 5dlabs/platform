@@ -30,6 +30,7 @@ pub mod task {
         tool_specs: &[String],
         repo_url: Option<&str>,
         branch: &str,
+        github_user: Option<&str>,
         retry: bool,
     ) -> Result<()> {
         output.info("Preparing task submission...")?;
@@ -147,7 +148,14 @@ pub mod task {
             url: url.to_string(),
             branch: branch.to_string(),
             path: None,
-            auth: None, // TODO: Add authentication support
+            auth: github_user.map(|username| {
+                use orchestrator_common::models::pm_task::{RepositoryAuth, RepositoryAuthType};
+                RepositoryAuth {
+                    auth_type: RepositoryAuthType::Token,
+                    secret_name: format!("github-pat-{username}"),
+                    secret_key: "token".to_string(),
+                }
+            }),
         });
 
         // Create PM request

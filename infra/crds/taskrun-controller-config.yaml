@@ -29,7 +29,7 @@ data:
         - "--verbose"
         - "--output-format"
         - "stream-json"
-        - "Read the task context in CLAUDE.md and begin implementing the requested service. Follow the design specification and ensure all acceptance criteria are met. When your implementation is complete and all tests pass, create a pull request with your changes using 'gh pr create'."
+        - "Read the task context in CLAUDE.md and begin implementing the requested service. Follow the design specification and ensure all acceptance criteria are met. When your implementation is complete and all tests pass, you MUST create a pull request by staging all changes with 'git add -A', committing with a descriptive message, and creating a pull request using 'gh pr create --title \"Implement [task name]\" --body \"Implementation complete per task specifications\"'. The PR creation is MANDATORY - do not mark the task as complete without creating a PR."
       
       # Resources for agent container
       resources:
@@ -188,7 +188,25 @@ data:
         # Default settings.json content for Claude
         settings: |
           {
-            "gitHubAuth": "device"
+            "gitHubAuth": "device",
+            "permissions": {
+              "allow": [
+                "Bash(*)",
+                "Read(*)",
+                "Write(*)",
+                "Edit(*)",
+                "MultiEdit(*)",
+                "Glob(*)",
+                "Grep(*)",
+                "LS(*)",
+                "TodoRead(*)",
+                "TodoWrite(*)",
+                "WebFetch(*)",
+                "WebSearch(*)"
+              ],
+              "deny": []
+            },
+            "defaultMode": "allowEdits"
           }
       
       # Log directory for agent output
