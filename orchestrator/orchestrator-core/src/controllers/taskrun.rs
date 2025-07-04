@@ -370,9 +370,9 @@ fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Resul
         data.insert(file.filename.clone(), file.content.clone());
     }
 
-    // Generate Claude Code settings.json file for tool permissions
+    // Generate Claude Code configuration file for tool permissions (using correct filename)
     let settings_json = generate_claude_settings(tr, config)?;
-    data.insert("settings.json".to_string(), settings_json);
+    data.insert(".claude.json".to_string(), settings_json);
 
     // Generate CLAUDE.md if not provided by Task Master system
     let has_claude_md = tr
@@ -760,13 +760,14 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
 
     // Setup Claude Code configuration directory and copy settings
     script.push_str("mkdir -p /home/node/.claude/todos\n");
-    script.push_str("cp /config/settings.json /home/node/.claude/settings.json 2>/dev/null || echo 'No settings.json to copy'\n");
+    script.push_str("cp /config/.claude.json /home/node/.claude.json 2>/dev/null || echo 'No .claude.json to copy'\n");
     script.push_str("chmod -R 755 /home/node/.claude\n");
     script.push_str("chown -R 1000:1000 /home/node/.claude\n");
 
-    // Also copy settings to service directory for Claude Code
+    // Also copy config to service directory for Claude Code (multiple locations for reliability)
     script.push_str(&format!("mkdir -p /workspace/{service}/.claude\n"));
-    script.push_str(&format!("cp /config/settings.json /workspace/{service}/.claude/settings.json 2>/dev/null || echo 'No settings.json to copy to service dir'\n"));
+    script.push_str(&format!("cp /config/.claude.json /workspace/{service}/.claude.json 2>/dev/null || echo 'No .claude.json to copy to service dir'\n"));
+    script.push_str(&format!("cp /config/.claude.json /workspace/{service}/.claude/settings.local.json 2>/dev/null || echo 'No .claude.json to copy as settings.local.json'\n"));
 
     // DEBUG: Show configuration details
     script.push_str("echo '=== DEBUGGING CONFIGURATION ==='\n");
@@ -782,8 +783,8 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     } else {
         script.push_str("echo 'No repository specified in TaskRun spec'\n");
     }
-    script.push_str("echo 'Settings.json contents:'\n");
-    script.push_str("cat /config/settings.json 2>/dev/null || echo 'No settings.json found'\n");
+    script.push_str("echo 'Claude configuration contents:'\n");
+    script.push_str("cat /config/.claude.json 2>/dev/null || echo 'No .claude.json found'\n");
     script.push_str("echo 'File permissions in service .claude directory:'\n");
     script.push_str(&format!(
         "ls -la /workspace/{service}/.claude/ 2>/dev/null || echo 'No .claude directory found'\n"
@@ -1070,7 +1071,7 @@ fn generate_claude_md(tr: &TaskRun) -> String {
 }
 
 /// Generate Claude Code settings.json for tool permissions
-fn generate_claude_settings(tr: &TaskRun, config: &ControllerConfig) -> Result<String> {
+fn generate_claude_settings(tr: &TaskRun, _config: &ControllerConfig) -> Result<String> {
     let mut allow_rules = Vec::new();
     let mut deny_rules = Vec::new();
 
@@ -1123,24 +1124,16 @@ fn generate_claude_settings(tr: &TaskRun, config: &ControllerConfig) -> Result<S
         }
     }
 
-    // Extract defaultMode from controller config, with fallback to acceptEdits
-    let default_mode = if let Ok(parsed_settings) =
-        serde_json::from_str::<serde_json::Value>(&config.volumes.claude_settings.settings)
-    {
-        parsed_settings
-            .get("defaultMode")
-            .and_then(|v| v.as_str())
-            .unwrap_or("acceptEdits")
-            .to_string()
-    } else {
-        "acceptEdits".to_string()
-    };
-
+    // Use the correct Claude Code configuration format as per claudelog.com documentation
+    let workspace_path = format!("/workspace/{}", tr.spec.service_name);
     let settings = json!({
-        "permissions": {
-            "allow": allow_rules,
-            "deny": deny_rules,
-            "defaultMode": default_mode
+        "projects": {
+            workspace_path: {
+                "allowedTools": allow_rules.iter().map(|rule| {
+                    // Convert "Bash(*)" format to "Bash" format
+                    rule.replace("(*)", "")
+                }).collect::<Vec<String>>()
+            }
         }
     });
 
