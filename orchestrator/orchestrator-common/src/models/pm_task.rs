@@ -19,7 +19,7 @@ pub struct PmTaskRequest {
     // PM-specific fields
     pub service_name: String,
     pub agent_name: String,
-    
+
     // Claude model selection (sonnet, opus)
     #[serde(default = "default_model")]
     pub model: String,
@@ -144,7 +144,14 @@ impl PmTaskRequest {
         model: String,
         markdown_files: Vec<MarkdownPayload>,
     ) -> Self {
-        Self::new_with_tools(task, service_name, agent_name, model, markdown_files, Vec::new())
+        Self::new_with_tools(
+            task,
+            service_name,
+            agent_name,
+            model,
+            markdown_files,
+            Vec::new(),
+        )
     }
 
     /// Create a new PM task request with agent tools specification

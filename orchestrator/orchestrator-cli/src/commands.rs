@@ -35,7 +35,10 @@ pub mod task {
         model: &str,
     ) -> Result<()> {
         output.info("Preparing task submission...")?;
-        info!("Task ID: {}, Service: {}, Model: {}", task_id, service_name, model);
+        info!(
+            "Task ID: {}, Service: {}, Model: {}",
+            task_id, service_name, model
+        );
         info!("Task Master directory: {}", taskmaster_dir);
 
         // Construct paths based on Task Master structure

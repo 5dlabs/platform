@@ -904,12 +904,12 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> String
 
     // Execute the Claude command with model selection
     let mut args = config.agent.args.clone();
-    
+
     // Add model argument if not "sonnet" (default)
     if tr.spec.model != "sonnet" {
         args.insert(0, format!("--model={}", tr.spec.model));
     }
-    
+
     let args_str = args.join(" ");
     script.push_str(&format!(
         "echo 'Final Claude command with model: {command} {args_str}'\n"
