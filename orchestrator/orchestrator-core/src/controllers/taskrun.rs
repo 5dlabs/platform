@@ -368,6 +368,10 @@ fn build_configmap(tr: &TaskRun, name: &str) -> Result<ConfigMap> {
     let claude_md = generate_claude_md(tr);
     data.insert("CLAUDE.md".to_string(), claude_md);
 
+    // Generate toolman configuration based on task requirements
+    let toolman_config = generate_toolman_config(tr);
+    data.insert("toolman.json".to_string(), toolman_config);
+
     Ok(ConfigMap {
         metadata: ObjectMeta {
             name: Some(name.to_string()),
@@ -385,6 +389,106 @@ fn build_configmap(tr: &TaskRun, name: &str) -> Result<ConfigMap> {
         data: Some(data),
         ..Default::default()
     })
+}
+
+/// Generate toolman configuration based on TaskRun requirements
+fn generate_toolman_config(tr: &TaskRun) -> String {
+    // Determine tools needed based on service type and task requirements
+    let mut github_tools = vec!["get_file_contents".to_string()];
+    let mut taskmaster_tools = vec!["get_tasks".to_string(), "add_task".to_string()];
+    let mut filesystem_tools = vec!["read_file".to_string(), "write_file".to_string()];
+    
+    // Add tools based on service type
+    match tr.spec.service_name.as_str() {
+        name if name.contains("api") || name.contains("service") => {
+            // API/service tasks need more comprehensive tools
+            github_tools.extend([
+                "create_pull_request".to_string(),
+                "create_branch".to_string()
+            ]);
+            filesystem_tools.extend([
+                "list_directory".to_string(),
+                "create_directory".to_string()
+            ]);
+        }
+        name if name.contains("frontend") || name.contains("ui") => {
+            // Frontend tasks need different tools
+            github_tools.extend([
+                "create_pull_request".to_string()
+            ]);
+            // Could add web-specific tools here
+        }
+        _ => {
+            // Default set for unknown service types
+            github_tools.push("create_pull_request".to_string());
+        }
+    }
+    
+    // Check task description for specific tool requirements
+    let task_description = tr.spec.markdown_files
+        .iter()
+        .find(|f| f.filename == "task.md")
+        .map(|f| f.content.to_lowercase())
+        .unwrap_or_default();
+        
+    if task_description.contains("test") || task_description.contains("testing") {
+        taskmaster_tools.push("update_task_status".to_string());
+    }
+    
+    if task_description.contains("deploy") || task_description.contains("ci") {
+        github_tools.extend([
+            "create_workflow".to_string(),
+            "trigger_workflow".to_string()
+        ]);
+    }
+
+    // Generate configuration JSON
+    let config = serde_json::json!({
+        "servers": {
+            "github": {
+                "command": "python",
+                "args": ["-m", "mcp_github"],
+                "env": {
+                    "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+                },
+                "enabled": true,
+                "description": format!("GitHub MCP server for task {}", tr.spec.task_id)
+            },
+            "taskmaster": {
+                "command": "task-master",
+                "args": ["mcp"],
+                "env": {
+                    "TASKMASTER_LOG_LEVEL": "info"
+                },
+                "enabled": true,
+                "description": format!("Taskmaster MCP server for task {}", tr.spec.task_id)
+            },
+            "filesystem": {
+                "command": "node",
+                "args": ["@modelcontextprotocol/server-filesystem", "/workspace"],
+                "env": {},
+                "enabled": true,
+                "description": format!("Filesystem MCP server for task {}", tr.spec.task_id)
+            }
+        },
+        "exposed_tools": {
+            "github": github_tools,
+            "taskmaster": taskmaster_tools,
+            "filesystem": filesystem_tools
+        },
+        "agent_policies": {
+            &tr.spec.agent_name: {
+                "allowed_servers": ["github", "taskmaster", "filesystem"],
+                "tool_overrides": {}
+            }
+        },
+        "default_policy": {
+            "allow_unknown_tools": false,
+            "allow_unknown_servers": false
+        }
+    });
+
+    serde_json::to_string_pretty(&config).unwrap_or_else(|_| "{}".to_string())
 }
 
 /// Generate CLAUDE.md content
@@ -676,7 +780,7 @@ fn build_toolman_container(
     let mut env_vars = vec![
         json!({
             "name": "TOOLMAN_CONFIG_PATH",
-            "value": toolman_config.config_path.clone()
+            "value": "/config/toolman.json"
         }),
         json!({
             "name": "TOOLMAN_PORT",
@@ -694,6 +798,20 @@ fn build_toolman_container(
             "name": "SERVICE_NAME",
             "value": tr.spec.service_name.clone()
         }),
+        json!({
+            "name": "RUST_LOG",
+            "value": "info"
+        }),
+        json!({
+            "name": "GITHUB_TOKEN",
+            "valueFrom": {
+                "secretKeyRef": {
+                    "name": "github-token",
+                    "key": "token",
+                    "optional": false
+                }
+            }
+        }),
     ];
 
     // Add additional environment variables from config
@@ -708,6 +826,7 @@ fn build_toolman_container(
         "name": "toolman",
         "image": format!("{}:{}", toolman_config.image.repository, toolman_config.image.tag),
         "command": ["toolman"],
+        "args": ["--config", "/config/toolman.json"],
         "env": env_vars,
         "resources": {
             "requests": {
@@ -723,10 +842,32 @@ fn build_toolman_container(
             "containerPort": toolman_config.port,
             "protocol": "TCP"
         }],
-        "volumeMounts": [{
-            "name": "workspace",
-            "mountPath": "/workspace"
-        }]
+        "volumeMounts": [
+            {
+                "name": "task-files",
+                "mountPath": "/config"
+            },
+            {
+                "name": "workspace",
+                "mountPath": "/workspace"
+            }
+        ],
+        "readinessProbe": {
+            "httpGet": {
+                "path": "/health",
+                "port": toolman_config.port
+            },
+            "initialDelaySeconds": 5,
+            "periodSeconds": 10
+        },
+        "livenessProbe": {
+            "httpGet": {
+                "path": "/health",
+                "port": toolman_config.port
+            },
+            "initialDelaySeconds": 15,
+            "periodSeconds": 30
+        }
     })
 }
 

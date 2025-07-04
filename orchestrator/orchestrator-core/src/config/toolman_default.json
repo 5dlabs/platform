@@ -1,18 +1,29 @@
 {
   "servers": {
-    "filesystem": {
-      "command": "node",
-      "args": ["-e", "console.log('MCP filesystem server placeholder')"],
-      "env": {},
-      "enabled": true
+    "github": {
+      "command": "python",
+      "args": ["-m", "mcp_github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "enabled": true,
+      "description": "GitHub MCP server with 30+ tools"
     },
     "taskmaster": {
-      "command": "task-master",
+      "command": "task-master", 
       "args": ["mcp"],
       "env": {
         "TASKMASTER_LOG_LEVEL": "info"
       },
-      "enabled": true
+      "enabled": true,
+      "description": "Taskmaster MCP server with 20+ tools"
+    },
+    "filesystem": {
+      "command": "node",
+      "args": ["@modelcontextprotocol/server-filesystem", "/workspace"],
+      "env": {},
+      "enabled": true,
+      "description": "Filesystem MCP server with 10+ tools"
     },
     "web-search": {
       "command": "python",
@@ -20,24 +31,44 @@
       "env": {
         "SEARCH_API_KEY": "${SEARCH_API_KEY}"
       },
-      "enabled": false
+      "enabled": false,
+      "description": "Web search MCP server"
     }
   },
-  "default_access": {
-    "allowed_tools": [],
-    "blocked_tools": ["dangerous_tool", "system_modify"],
-    "allow_unknown": true
+  "exposed_tools": {
+    "github": [
+      "create_pull_request",
+      "get_file_contents"
+    ],
+    "taskmaster": [
+      "get_tasks",
+      "add_task", 
+      "update_task_status"
+    ],
+    "filesystem": [
+      "read_file",
+      "write_file"
+    ]
   },
   "agent_policies": {
-    "claude": {
-      "allowed_tools": ["read_file", "write_file", "search_web", "get_tasks", "add_task"],
-      "blocked_tools": ["delete_all", "system_shutdown"],
-      "allow_unknown": false
+    "claude-code": {
+      "allowed_servers": ["github", "taskmaster", "filesystem"],
+      "tool_overrides": {
+        "github": ["create_pull_request", "get_file_contents"],
+        "taskmaster": ["get_tasks", "add_task"],
+        "filesystem": ["read_file", "write_file"]
+      }
     },
-    "gemini": {
-      "allowed_tools": ["read_file", "search_web", "get_tasks"],
-      "blocked_tools": ["write_file", "delete_file"],
-      "allow_unknown": false
+    "claude-research": {
+      "allowed_servers": ["web-search", "filesystem"],
+      "tool_overrides": {
+        "web-search": ["search_web"],
+        "filesystem": ["read_file"]
+      }
     }
+  },
+  "default_policy": {
+    "allow_unknown_tools": false,
+    "allow_unknown_servers": false
   }
 }

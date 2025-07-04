@@ -19,10 +19,12 @@ use tracing::{debug, error, info, warn};
 pub struct ToolmanConfig {
     /// Map of server names to their configurations
     pub servers: HashMap<String, ServerConfig>,
-    /// Default tool access policy
-    pub default_access: AccessPolicy,
-    /// Agent-specific tool access policies
-    pub agent_policies: HashMap<String, AccessPolicy>,
+    /// Global list of exposed tools per server (subset filtering)
+    pub exposed_tools: HashMap<String, Vec<String>>,
+    /// Agent-specific policies
+    pub agent_policies: HashMap<String, AgentPolicy>,
+    /// Default policy settings
+    pub default_policy: DefaultPolicy,
 }
 
 /// Configuration for a backend MCP server
@@ -36,17 +38,28 @@ pub struct ServerConfig {
     pub env: HashMap<String, String>,
     /// Whether this server is enabled
     pub enabled: bool,
+    /// Description of this server
+    #[serde(default)]
+    pub description: String,
 }
 
-/// Tool access policy
+/// Agent-specific policy for tool access
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccessPolicy {
-    /// Set of allowed tools (if empty, all tools are allowed)
-    pub allowed_tools: HashSet<String>,
-    /// Set of blocked tools
-    pub blocked_tools: HashSet<String>,
-    /// Whether to allow unknown tools
-    pub allow_unknown: bool,
+pub struct AgentPolicy {
+    /// List of server names this agent can access
+    pub allowed_servers: Vec<String>,
+    /// Per-server tool overrides (if not specified, uses global exposed_tools)
+    #[serde(default)]
+    pub tool_overrides: HashMap<String, Vec<String>>,
+}
+
+/// Default policy settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DefaultPolicy {
+    /// Whether to allow tools not in the exposed list
+    pub allow_unknown_tools: bool,
+    /// Whether to allow servers not in the agent policy
+    pub allow_unknown_servers: bool,
 }
 
 /// MCP message types
@@ -223,10 +236,41 @@ impl ToolmanServer {
     }
 
     /// Check if a tool is allowed for the current agent
-    fn is_tool_allowed(&self, tool_name: &str, agent_id: Option<&str>) -> bool {
-        // This would check against the access policies
-        // For now, implement a simple allow-all policy
-        true
+    async fn is_tool_allowed(&self, tool_name: &str, server_name: &str, agent_id: Option<&str>) -> bool {
+        let config = self.config.read().await;
+        
+        // Get agent policy or use default
+        let agent_policy = agent_id
+            .and_then(|id| config.agent_policies.get(id));
+            
+        // Check if agent can access this server
+        if let Some(policy) = agent_policy {
+            if !policy.allowed_servers.contains(&server_name.to_string()) {
+                debug!("Agent {} not allowed to access server {}", agent_id.unwrap_or("unknown"), server_name);
+                return false;
+            }
+            
+            // Check tool-specific overrides for this agent
+            if let Some(allowed_tools) = policy.tool_overrides.get(server_name) {
+                return allowed_tools.contains(&tool_name.to_string());
+            }
+        }
+        
+        // Fall back to global exposed tools list
+        if let Some(exposed_tools) = config.exposed_tools.get(server_name) {
+            if exposed_tools.contains(&tool_name.to_string()) {
+                return true;
+            }
+        }
+        
+        // Check default policy
+        if config.default_policy.allow_unknown_tools {
+            debug!("Allowing unknown tool {} from server {} due to default policy", tool_name, server_name);
+            return true;
+        }
+        
+        debug!("Tool {} from server {} not allowed for agent {}", tool_name, server_name, agent_id.unwrap_or("unknown"));
+        false
     }
 
     /// Handle an MCP message
@@ -295,14 +339,45 @@ impl ToolmanServer {
 
     /// Handle list tools message
     async fn handle_list_tools(&self, id: Value, _params: Option<Value>) -> Result<Value> {
+        // Get agent ID from environment
+        let agent_id = std::env::var("AGENT_NAME").ok();
+        
+        debug!("Listing tools for agent: {:?}", agent_id);
+        
+        // Get all available tools from backend servers
         let available_tools = self.available_tools.read().await;
-        let tools: Vec<Value> = available_tools.values().cloned().collect();
+        let mut filtered_tools = Vec::new();
+        
+        // Filter tools based on configuration
+        for (tool_key, tool_definition) in available_tools.iter() {
+            // Parse server name from tool key (format: "server:tool_name")
+            if let Some((server_name, tool_name)) = tool_key.split_once(':') {
+                if self.is_tool_allowed(tool_name, server_name, agent_id.as_deref()).await {
+                    // Add server context to tool definition
+                    let mut tool_with_context = tool_definition.clone();
+                    if let Some(obj) = tool_with_context.as_object_mut() {
+                        obj.insert("server".to_string(), json!(server_name));
+                        obj.insert("qualified_name".to_string(), json!(tool_key));
+                    }
+                    filtered_tools.push(tool_with_context);
+                    
+                    debug!("Exposing tool: {} from server: {}", tool_name, server_name);
+                } else {
+                    debug!("Filtering out tool: {} from server: {}", tool_name, server_name);
+                }
+            }
+        }
+        
+        info!("Agent {} has access to {} tools (out of {} total)", 
+              agent_id.as_deref().unwrap_or("unknown"), 
+              filtered_tools.len(), 
+              available_tools.len());
         
         Ok(json!({
             "jsonrpc": "2.0",
             "id": id,
             "result": {
-                "tools": tools
+                "tools": filtered_tools
             }
         }))
     }
@@ -312,19 +387,51 @@ impl ToolmanServer {
         let tool_name = params.get("name")
             .and_then(|v| v.as_str())
             .unwrap_or("");
+            
+        let agent_id = std::env::var("AGENT_NAME").ok();
         
-        if !self.is_tool_allowed(tool_name, None) {
+        debug!("Agent {} calling tool: {}", agent_id.as_deref().unwrap_or("unknown"), tool_name);
+        
+        // Parse qualified tool name (server:tool_name or just tool_name)
+        let (server_name, actual_tool_name) = if tool_name.contains(':') {
+            // Qualified name: "github:create_pull_request"
+            tool_name.split_once(':').unwrap()
+        } else {
+            // Unqualified name - need to find which server has this tool
+            match self.find_server_for_tool(tool_name).await {
+                Some(server) => (server.as_str(), tool_name),
+                None => {
+                    return Ok(json!({
+                        "jsonrpc": "2.0",
+                        "id": id,
+                        "error": {
+                            "code": -32601,
+                            "message": format!("Tool '{}' not found in any server", tool_name)
+                        }
+                    }));
+                }
+            }
+        };
+        
+        // Check if tool is allowed
+        if !self.is_tool_allowed(actual_tool_name, server_name, agent_id.as_deref()).await {
+            warn!("Agent {} attempted to call unauthorized tool: {}:{}", 
+                  agent_id.as_deref().unwrap_or("unknown"), server_name, actual_tool_name);
             return Ok(json!({
                 "jsonrpc": "2.0",
                 "id": id,
                 "error": {
                     "code": -32603,
-                    "message": format!("Tool '{}' is not allowed", tool_name)
+                    "message": format!("Tool '{}' from server '{}' is not allowed", actual_tool_name, server_name)
                 }
             }));
         }
         
-        // For now, return a mock response
+        info!("Executing tool {}:{} for agent {}", 
+              server_name, actual_tool_name, agent_id.as_deref().unwrap_or("unknown"));
+        
+        // TODO: Forward the tool call to the appropriate backend server
+        // For now, return a mock response indicating the call was authorized
         Ok(json!({
             "jsonrpc": "2.0",
             "id": id,
@@ -332,11 +439,27 @@ impl ToolmanServer {
                 "content": [
                     {
                         "type": "text",
-                        "text": format!("Tool '{}' executed successfully", tool_name)
+                        "text": format!("Tool '{}' from server '{}' executed successfully (mock response)", 
+                                       actual_tool_name, server_name)
                     }
                 ]
             }
         }))
+    }
+    
+    /// Find which server provides a given tool name
+    async fn find_server_for_tool(&self, tool_name: &str) -> Option<String> {
+        let available_tools = self.available_tools.read().await;
+        
+        for tool_key in available_tools.keys() {
+            if let Some((server_name, tool)) = tool_key.split_once(':') {
+                if tool == tool_name {
+                    return Some(server_name.to_string());
+                }
+            }
+        }
+        
+        None
     }
 
     /// Handle list resources message
@@ -478,12 +601,12 @@ fn load_config() -> Result<ToolmanConfig> {
         // Return default configuration
         Ok(ToolmanConfig {
             servers: HashMap::new(),
-            default_access: AccessPolicy {
-                allowed_tools: HashSet::new(),
-                blocked_tools: HashSet::new(),
-                allow_unknown: true,
-            },
+            exposed_tools: HashMap::new(),
             agent_policies: HashMap::new(),
+            default_policy: DefaultPolicy {
+                allow_unknown_tools: false,
+                allow_unknown_servers: false,
+            },
         })
     }
 }
@@ -517,12 +640,12 @@ mod tests {
     async fn test_toolman_server_creation() {
         let config = ToolmanConfig {
             servers: HashMap::new(),
-            default_access: AccessPolicy {
-                allowed_tools: HashSet::new(),
-                blocked_tools: HashSet::new(),
-                allow_unknown: true,
-            },
+            exposed_tools: HashMap::new(),
             agent_policies: HashMap::new(),
+            default_policy: DefaultPolicy {
+                allow_unknown_tools: false,
+                allow_unknown_servers: false,
+            },
         };
         
         let server = ToolmanServer::new(config);
@@ -533,12 +656,12 @@ mod tests {
     async fn test_handle_initialize() {
         let config = ToolmanConfig {
             servers: HashMap::new(),
-            default_access: AccessPolicy {
-                allowed_tools: HashSet::new(),
-                blocked_tools: HashSet::new(),
-                allow_unknown: true,
-            },
+            exposed_tools: HashMap::new(),
             agent_policies: HashMap::new(),
+            default_policy: DefaultPolicy {
+                allow_unknown_tools: false,
+                allow_unknown_servers: false,
+            },
         };
         
         let server = ToolmanServer::new(config);
