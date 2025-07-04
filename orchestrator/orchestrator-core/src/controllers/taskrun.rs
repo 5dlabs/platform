@@ -315,7 +315,7 @@ async fn update_status(
     // Get current TaskRun to preserve attempt count
     let current_tr = api.get(name).await.map_err(Error::KubeError)?;
     let attempts = current_tr.status.as_ref().map(|s| s.attempts).unwrap_or(0);
-    
+
     let status = json!({
         "status": {
             "phase": phase,
@@ -344,7 +344,7 @@ async fn update_status_with_details(
     // Get current TaskRun to access attempt count
     let current_tr = api.get(name).await.map_err(Error::KubeError)?;
     let current_attempts = current_tr.status.as_ref().map(|s| s.attempts).unwrap_or(0);
-    
+
     // Increment attempts when creating a new job (Running phase)
     let new_attempts = if phase == TaskRunPhase::Running {
         current_attempts + 1
@@ -648,9 +648,7 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     script.push_str("which gh >/dev/null 2>&1 || apk add --no-cache github-cli\n");
 
     // Create workspace directory (no per-attempt subdirectory for --continue support)
-    script.push_str(&format!(
-        "mkdir -p /workspace/{service}/.task/{task_id}\n"
-    ));
+    script.push_str(&format!("mkdir -p /workspace/{service}/.task/{task_id}\n"));
 
     // Clone repository if specified
     if let Some(repo) = &tr.spec.repository {
@@ -931,7 +929,10 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> String
     let attempts = tr.status.as_ref().map(|s| s.attempts).unwrap_or(0);
     if attempts > 1 {
         args.push("--continue".to_string());
-        script.push_str(&format!("echo 'Adding --continue flag for attempt {}'\n", attempts));
+        script.push_str(&format!(
+            "echo 'Adding --continue flag for attempt {}'\n",
+            attempts
+        ));
     }
 
     let args_str = args.join(" ");
