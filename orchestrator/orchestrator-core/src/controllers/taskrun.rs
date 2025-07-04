@@ -929,10 +929,7 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> String
     let attempts = tr.status.as_ref().map(|s| s.attempts).unwrap_or(0);
     if attempts > 1 {
         args.push("--continue".to_string());
-        script.push_str(&format!(
-            "echo 'Adding --continue flag for attempt {}'\n",
-            attempts
-        ));
+        script.push_str(&format!("echo 'Adding --continue flag for attempt {attempts}'\n"));
     }
 
     let args_str = args.join(" ");
