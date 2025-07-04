@@ -666,6 +666,33 @@ fn build_env_vars(
     // Add telemetry environment variables from config
     env_vars.extend(telemetry_env);
 
+    // Add tool configuration for Claude Code
+    if !tr.spec.agent_tools.is_empty() {
+        // Convert agent tools to JSON and pass as environment variable
+        let tools_json = serde_json::to_string(&tr.spec.agent_tools).unwrap_or_default();
+        env_vars.push(json!({
+            "name": "CLAUDE_TOOLS_CONFIG",
+            "value": tools_json
+        }));
+        
+        // Also provide enabled tools as comma-separated list for easier parsing
+        let enabled_tools: Vec<String> = tr.spec.agent_tools
+            .iter()
+            .filter(|tool| tool.enabled)
+            .map(|tool| tool.name.clone())
+            .collect();
+        env_vars.push(json!({
+            "name": "CLAUDE_ENABLED_TOOLS",
+            "value": enabled_tools.join(",")
+        }));
+    } else {
+        // Provide default tools if none specified
+        env_vars.push(json!({
+            "name": "CLAUDE_ENABLED_TOOLS",
+            "value": "bash,edit,read,write,glob,grep"
+        }));
+    }
+
     // Add any additional env vars from config
     for env_var in &config.agent.env {
         env_vars.push(json!({
