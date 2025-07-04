@@ -825,6 +825,19 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> String
     script.push_str("  echo \"GitHub authentication configured\"\n");
     script.push_str("fi\n\n");
 
+    // Configure git credentials for HTTPS authentication if GITHUB_TOKEN is available
+    script.push_str("if [ -n \"$GITHUB_TOKEN\" ]; then\n");
+    script.push_str("  echo 'Configuring git credentials for GitHub authentication'\n");
+    script.push_str("  git config --global user.name \"Claude Agent\"\n");
+    script.push_str("  git config --global user.email \"claude@5dlabs.com\"\n");
+    script.push_str("  git config --global credential.helper 'store --file=$HOME/.git-credentials'\n");
+    script.push_str("  echo \"https://oauth2:${GITHUB_TOKEN}@github.com\" > \"$HOME/.git-credentials\"\n");
+    script.push_str("  chmod 600 \"$HOME/.git-credentials\"\n");
+    script.push_str("  echo 'Git credentials configured successfully'\n");
+    script.push_str("else\n");
+    script.push_str("  echo 'No GITHUB_TOKEN found, skipping git credential setup'\n");
+    script.push_str("fi\n\n");
+
     // COMPREHENSIVE DEBUGGING BEFORE CLAUDE STARTS
     script.push_str("echo '=== COMPREHENSIVE CLAUDE DEBUGGING ==='\n");
     script.push_str("echo 'Installing tree utility for filesystem debugging...'\n");

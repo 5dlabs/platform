@@ -14,6 +14,7 @@ use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use tracing::{error, info, warn};
+use tokio::process::Command;
 
 /// Application state for the handler
 pub struct AppState {
@@ -28,6 +29,18 @@ pub enum AppError {
     Conflict(String),
     Internal(String),
 }
+
+impl std::fmt::Display for AppError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AppError::BadRequest(msg) => write!(f, "Bad Request: {msg}"),
+            AppError::Conflict(msg) => write!(f, "Conflict: {msg}"),
+            AppError::Internal(msg) => write!(f, "Internal Error: {msg}"),
+        }
+    }
+}
+
+impl std::error::Error for AppError {}
 
 impl From<kube::Error> for AppError {
     fn from(e: kube::Error) -> Self {
@@ -72,6 +85,139 @@ impl ApiResponse {
     }
 }
 
+/// Validate GitHub repository permissions for the given user account
+async fn validate_github_permissions(
+    k8s_client: &Client,
+    namespace: &str,
+    repository_url: &str,
+    secret_name: &str,
+    secret_key: &str,
+) -> Result<(), AppError> {
+    info!(
+        "Validating GitHub permissions for repository: {} using secret: {}",
+        repository_url, secret_name
+    );
+
+    // Extract repository owner and name from URL
+    let repo_parts = extract_repo_info(repository_url)?;
+    let (owner, repo) = repo_parts;
+
+    // Get GitHub token from Kubernetes secret
+    let secret_api: Api<k8s_openapi::api::core::v1::Secret> = 
+        Api::namespaced(k8s_client.clone(), namespace);
+    
+    let secret = secret_api.get(secret_name).await
+        .map_err(|e| AppError::BadRequest(format!("Failed to get GitHub secret '{secret_name}': {e}")))?;
+    
+    let token_bytes = secret.data
+        .and_then(|data| data.get(secret_key).cloned())
+        .ok_or_else(|| AppError::BadRequest(format!("Secret '{secret_name}' does not contain key '{secret_key}'")))?;
+    
+    let token = String::from_utf8(token_bytes.0)
+        .map_err(|_| AppError::BadRequest("Invalid token encoding in secret".to_string()))?;
+
+    // Check repository permissions using GitHub CLI
+    let output = Command::new("gh")
+        .args([
+            "api", 
+            &format!("repos/{owner}/{repo}/collaborators"),
+            "--header", "Accept: application/vnd.github+json",
+            "--header", &format!("Authorization: Bearer {token}")
+        ])
+        .output()
+        .await
+        .map_err(|e| AppError::Internal(format!("Failed to execute gh command: {e}")))?;
+
+    if !output.status.success() {
+        let error_msg = String::from_utf8_lossy(&output.stderr);
+        return Err(AppError::BadRequest(format!("GitHub API error: {error_msg}")));
+    }
+
+    // Parse collaborators response to find the token owner
+    let collaborators: serde_json::Value = serde_json::from_slice(&output.stdout)
+        .map_err(|e| AppError::Internal(format!("Failed to parse GitHub API response: {e}")))?;
+
+    // Get the authenticated user's login to find their permissions
+    let user_output = Command::new("gh")
+        .args([
+            "api", 
+            "user",
+            "--header", "Accept: application/vnd.github+json",
+            "--header", &format!("Authorization: Bearer {token}")
+        ])
+        .output()
+        .await
+        .map_err(|e| AppError::Internal(format!("Failed to get user info: {e}")))?;
+
+    if !user_output.status.success() {
+        let error_msg = String::from_utf8_lossy(&user_output.stderr);
+        return Err(AppError::BadRequest(format!("Failed to get user info: {error_msg}")));
+    }
+
+    let user_info: serde_json::Value = serde_json::from_slice(&user_output.stdout)
+        .map_err(|e| AppError::Internal(format!("Failed to parse user info: {e}")))?;
+    
+    let username = user_info["login"].as_str()
+        .ok_or_else(|| AppError::Internal("No login found in user info".to_string()))?;
+
+    // Find the user in collaborators and check permissions
+    if let Some(collaborators_array) = collaborators.as_array() {
+        for collaborator in collaborators_array {
+            if let Some(login) = collaborator["login"].as_str() {
+                if login == username {
+                    let permissions = &collaborator["permissions"];
+                    let can_push = permissions["push"].as_bool().unwrap_or(false);
+                    
+                    if can_push {
+                        info!("User '{username}' has push permissions to {owner}/{repo}");
+                        return Ok(());
+                    } else {
+                        return Err(AppError::BadRequest(format!(
+                            "User '{username}' does not have push permissions to repository {owner}/{repo}. Required permissions: push=true"
+                        )));
+                    }
+                }
+            }
+        }
+    }
+
+    Err(AppError::BadRequest(format!(
+        "User '{username}' is not a collaborator on repository {owner}/{repo}"
+    )))
+}
+
+/// Extract owner and repository name from GitHub URL
+fn extract_repo_info(url: &str) -> Result<(String, String), AppError> {
+    // Handle both https://github.com/owner/repo and git@github.com:owner/repo.git formats
+    let url = url.trim_end_matches(".git");
+    
+    // Find github.com in the URL
+    if let Some(github_pos) = url.find("github.com") {
+        let after_github = &url[github_pos + "github.com".len()..];
+        
+        // Skip the separator (: or /)
+        let path = if let Some(stripped) = after_github.strip_prefix(':') {
+            stripped
+        } else if let Some(stripped) = after_github.strip_prefix('/') {
+            stripped
+        } else {
+            return Err(AppError::BadRequest(format!("Invalid GitHub repository URL format: {url}")));
+        };
+        
+        // Split by / to get owner and repo
+        let parts: Vec<&str> = path.split('/').collect();
+        if parts.len() >= 2 {
+            let owner = parts[0].to_string();
+            let repo = parts[1].to_string();
+            Ok((owner, repo))
+        } else {
+            Err(AppError::BadRequest(format!("Invalid GitHub repository URL - missing owner or repo: {url}")))
+        }
+    } else {
+        Err(AppError::BadRequest(format!("Invalid GitHub repository URL - must contain github.com: {url}")))
+    }
+}
+
 /// Handle PM task submission with validation
 pub async fn submit_task(
     State(state): State<Arc<AppState>>,
@@ -89,6 +235,33 @@ pub async fn submit_task(
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error("No markdown files provided")),
         ));
+    }
+
+    // Validate GitHub repository permissions if repository is configured
+    if let Some(ref repository) = request.repository {
+        if let Some(ref auth) = repository.auth {
+            if matches!(auth.auth_type, orchestrator_common::models::pm_task::RepositoryAuthType::Token) {
+                info!("Validating GitHub permissions for task {}", request.id);
+                if let Err(e) = validate_github_permissions(
+                    &state.k8s_client,
+                    &state.namespace,
+                    &repository.url,
+                    &auth.secret_name,
+                    &auth.secret_key,
+                ).await {
+                    let error_msg = match &e {
+                        AppError::BadRequest(msg) => msg.clone(),
+                        AppError::Conflict(msg) => msg.clone(),
+                        AppError::Internal(msg) => msg.clone(),
+                    };
+                    error!("GitHub permission validation failed for task {}: {}", request.id, e);
+                    return Err((
+                        StatusCode::from(e),
+                        Json(ApiResponse::error(&format!("GitHub permission validation failed: {error_msg}"))),
+                    ));
+                }
+            }
+        }
     }
 
     // Check if TaskRun already exists
@@ -568,5 +741,64 @@ mod tests {
         assert!(!response.success);
         assert_eq!(response.message, "Validation failed");
         assert!(response.data.is_none());
+    }
+
+    #[test]
+    fn test_extract_repo_info_https() {
+        let url = "https://github.com/owner/repo";
+        let result = extract_repo_info(url).unwrap();
+        assert_eq!(result, ("owner".to_string(), "repo".to_string()));
+    }
+
+    #[test]
+    fn test_extract_repo_info_https_with_git() {
+        let url = "https://github.com/owner/repo.git";
+        let result = extract_repo_info(url).unwrap();
+        assert_eq!(result, ("owner".to_string(), "repo".to_string()));
+    }
+
+    #[test]
+    fn test_extract_repo_info_ssh() {
+        let url = "git@github.com:owner/repo.git";
+        let result = extract_repo_info(url).unwrap();
+        assert_eq!(result, ("owner".to_string(), "repo".to_string()));
+    }
+
+    #[test]
+    fn test_extract_repo_info_invalid_url() {
+        let url = "https://gitlab.com/owner/repo";
+        let result = extract_repo_info(url);
+        assert!(result.is_err());
+        match result {
+            Err(AppError::BadRequest(msg)) => {
+                assert!(msg.contains("must contain github.com"));
+            }
+            _ => panic!("Expected BadRequest error"),
+        }
+    }
+
+    #[test]
+    fn test_extract_repo_info_missing_parts() {
+        let url = "https://github.com/owner";
+        let result = extract_repo_info(url);
+        assert!(result.is_err());
+        match result {
+            Err(AppError::BadRequest(msg)) => {
+                assert!(msg.contains("missing owner or repo"));
+            }
+            _ => panic!("Expected BadRequest error"),
+        }
+    }
+
+    #[test]
+    fn test_app_error_display() {
+        let error = AppError::BadRequest("test message".to_string());
+        assert_eq!(format!("{error}"), "Bad Request: test message");
+
+        let error = AppError::Conflict("conflict message".to_string());
+        assert_eq!(format!("{error}"), "Conflict: conflict message");
+
+        let error = AppError::Internal("internal message".to_string());
+        assert_eq!(format!("{error}"), "Internal Error: internal message");
     }
 }

@@ -1,0 +1,36 @@
+{
+  "id": 993,
+  "title": "Test Model Selection - Sonnet API",
+  "description": "Test task to verify Sonnet model selection works via API",
+  "details": "This is a simple test task to verify that the model sonnet parameter flows through the entire system correctly via API.",
+  "test_strategy": "Check that Claude is executed with default sonnet model",
+  "priority": "low",
+  "dependencies": [],
+  "status": "pending",
+  "subtasks": [],
+  "service_name": "debug-api",
+  "agent_name": "claude-agent-1",
+  "model": "sonnet",
+  "markdown_files": [
+    {
+      "filename": "task.md",
+      "content": "# Test Model Selection - Opus\n\nTest task to verify Opus model selection works end-to-end",
+      "file_type": "task"
+    },
+    {
+      "filename": "design-spec.md", 
+      "content": "# Model Selection Test Design\n\n## Purpose\nTest that Claude model selection (--model opus) flows through the entire system.\n\n## Expected Behavior\n1. API accepts model: \"opus\" parameter\n2. TaskRun CRD has model field set to \"opus\"\n3. Claude container starts with --model=opus argument",
+      "file_type": "design-spec"
+    }
+  ],
+  "agent_tools": [],
+  "repository": {
+    "url": "https://github.com/5dlabs/agent-test",
+    "branch": "main",
+    "auth": {
+      "type": "Token",
+      "secret_name": "github-pat-swe-1-5dlabs",
+      "secret_key": "token"
+    }
+  }
+}
