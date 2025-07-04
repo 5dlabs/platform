@@ -928,7 +928,8 @@ fn generate_claude_settings(tr: &TaskRun) -> Result<String> {
     let settings = json!({
         "permissions": {
             "allow": allow_rules,
-            "deny": deny_rules
+            "deny": deny_rules,
+            "defaultMode": "acceptEdits"
         }
     });
 
