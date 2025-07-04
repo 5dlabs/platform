@@ -830,8 +830,12 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> String
     script.push_str("  echo 'Configuring git credentials for GitHub authentication'\n");
     script.push_str("  git config --global user.name \"Claude Agent\"\n");
     script.push_str("  git config --global user.email \"claude@5dlabs.com\"\n");
-    script.push_str("  git config --global credential.helper 'store --file=$HOME/.git-credentials'\n");
-    script.push_str("  echo \"https://oauth2:${GITHUB_TOKEN}@github.com\" > \"$HOME/.git-credentials\"\n");
+    script.push_str(
+        "  git config --global credential.helper 'store --file=$HOME/.git-credentials'\n",
+    );
+    script.push_str(
+        "  echo \"https://oauth2:${GITHUB_TOKEN}@github.com\" > \"$HOME/.git-credentials\"\n",
+    );
     script.push_str("  chmod 600 \"$HOME/.git-credentials\"\n");
     script.push_str("  echo 'Git credentials configured successfully'\n");
     script.push_str("else\n");

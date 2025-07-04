@@ -13,8 +13,8 @@ use orchestrator_common::models::pm_task::PmTaskRequest;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use tracing::{error, info, warn};
 use tokio::process::Command;
+use tracing::{error, info, warn};
 
 /// Application state for the handler
 pub struct AppState {
@@ -103,26 +103,34 @@ async fn validate_github_permissions(
     let (owner, repo) = repo_parts;
 
     // Get GitHub token from Kubernetes secret
-    let secret_api: Api<k8s_openapi::api::core::v1::Secret> = 
+    let secret_api: Api<k8s_openapi::api::core::v1::Secret> =
         Api::namespaced(k8s_client.clone(), namespace);
-    
-    let secret = secret_api.get(secret_name).await
-        .map_err(|e| AppError::BadRequest(format!("Failed to get GitHub secret '{secret_name}': {e}")))?;
-    
-    let token_bytes = secret.data
+
+    let secret = secret_api.get(secret_name).await.map_err(|e| {
+        AppError::BadRequest(format!("Failed to get GitHub secret '{secret_name}': {e}"))
+    })?;
+
+    let token_bytes = secret
+        .data
         .and_then(|data| data.get(secret_key).cloned())
-        .ok_or_else(|| AppError::BadRequest(format!("Secret '{secret_name}' does not contain key '{secret_key}'")))?;
-    
+        .ok_or_else(|| {
+            AppError::BadRequest(format!(
+                "Secret '{secret_name}' does not contain key '{secret_key}'"
+            ))
+        })?;
+
     let token = String::from_utf8(token_bytes.0)
         .map_err(|_| AppError::BadRequest("Invalid token encoding in secret".to_string()))?;
 
     // Check repository permissions using GitHub CLI
     let output = Command::new("gh")
         .args([
-            "api", 
+            "api",
             &format!("repos/{owner}/{repo}/collaborators"),
-            "--header", "Accept: application/vnd.github+json",
-            "--header", &format!("Authorization: Bearer {token}")
+            "--header",
+            "Accept: application/vnd.github+json",
+            "--header",
+            &format!("Authorization: Bearer {token}"),
         ])
         .output()
         .await
@@ -130,7 +138,9 @@ async fn validate_github_permissions(
 
     if !output.status.success() {
         let error_msg = String::from_utf8_lossy(&output.stderr);
-        return Err(AppError::BadRequest(format!("GitHub API error: {error_msg}")));
+        return Err(AppError::BadRequest(format!(
+            "GitHub API error: {error_msg}"
+        )));
     }
 
     // Parse collaborators response to find the token owner
@@ -140,10 +150,12 @@ async fn validate_github_permissions(
     // Get the authenticated user's login to find their permissions
     let user_output = Command::new("gh")
         .args([
-            "api", 
+            "api",
             "user",
-            "--header", "Accept: application/vnd.github+json",
-            "--header", &format!("Authorization: Bearer {token}")
+            "--header",
+            "Accept: application/vnd.github+json",
+            "--header",
+            &format!("Authorization: Bearer {token}"),
         ])
         .output()
         .await
@@ -151,13 +163,16 @@ async fn validate_github_permissions(
 
     if !user_output.status.success() {
         let error_msg = String::from_utf8_lossy(&user_output.stderr);
-        return Err(AppError::BadRequest(format!("Failed to get user info: {error_msg}")));
+        return Err(AppError::BadRequest(format!(
+            "Failed to get user info: {error_msg}"
+        )));
     }
 
     let user_info: serde_json::Value = serde_json::from_slice(&user_output.stdout)
         .map_err(|e| AppError::Internal(format!("Failed to parse user info: {e}")))?;
-    
-    let username = user_info["login"].as_str()
+
+    let username = user_info["login"]
+        .as_str()
         .ok_or_else(|| AppError::Internal("No login found in user info".to_string()))?;
 
     // Find the user in collaborators and check permissions
@@ -167,7 +182,7 @@ async fn validate_github_permissions(
                 if login == username {
                     let permissions = &collaborator["permissions"];
                     let can_push = permissions["push"].as_bool().unwrap_or(false);
-                    
+
                     if can_push {
                         info!("User '{username}' has push permissions to {owner}/{repo}");
                         return Ok(());
@@ -190,20 +205,22 @@ async fn validate_github_permissions(
 fn extract_repo_info(url: &str) -> Result<(String, String), AppError> {
     // Handle both https://github.com/owner/repo and git@github.com:owner/repo.git formats
     let url = url.trim_end_matches(".git");
-    
+
     // Find github.com in the URL
     if let Some(github_pos) = url.find("github.com") {
         let after_github = &url[github_pos + "github.com".len()..];
-        
+
         // Skip the separator (: or /)
         let path = if let Some(stripped) = after_github.strip_prefix(':') {
             stripped
         } else if let Some(stripped) = after_github.strip_prefix('/') {
             stripped
         } else {
-            return Err(AppError::BadRequest(format!("Invalid GitHub repository URL format: {url}")));
+            return Err(AppError::BadRequest(format!(
+                "Invalid GitHub repository URL format: {url}"
+            )));
         };
-        
+
         // Split by / to get owner and repo
         let parts: Vec<&str> = path.split('/').collect();
         if parts.len() >= 2 {
@@ -211,10 +228,14 @@ fn extract_repo_info(url: &str) -> Result<(String, String), AppError> {
             let repo = parts[1].to_string();
             Ok((owner, repo))
         } else {
-            Err(AppError::BadRequest(format!("Invalid GitHub repository URL - missing owner or repo: {url}")))
+            Err(AppError::BadRequest(format!(
+                "Invalid GitHub repository URL - missing owner or repo: {url}"
+            )))
         }
     } else {
-        Err(AppError::BadRequest(format!("Invalid GitHub repository URL - must contain github.com: {url}")))
+        Err(AppError::BadRequest(format!(
+            "Invalid GitHub repository URL - must contain github.com: {url}"
+        )))
     }
 }
 
@@ -240,7 +261,10 @@ pub async fn submit_task(
     // Validate GitHub repository permissions if repository is configured
     if let Some(ref repository) = request.repository {
         if let Some(ref auth) = repository.auth {
-            if matches!(auth.auth_type, orchestrator_common::models::pm_task::RepositoryAuthType::Token) {
+            if matches!(
+                auth.auth_type,
+                orchestrator_common::models::pm_task::RepositoryAuthType::Token
+            ) {
                 info!("Validating GitHub permissions for task {}", request.id);
                 if let Err(e) = validate_github_permissions(
                     &state.k8s_client,
@@ -248,16 +272,23 @@ pub async fn submit_task(
                     &repository.url,
                     &auth.secret_name,
                     &auth.secret_key,
-                ).await {
+                )
+                .await
+                {
                     let error_msg = match &e {
                         AppError::BadRequest(msg) => msg.clone(),
                         AppError::Conflict(msg) => msg.clone(),
                         AppError::Internal(msg) => msg.clone(),
                     };
-                    error!("GitHub permission validation failed for task {}: {}", request.id, e);
+                    error!(
+                        "GitHub permission validation failed for task {}: {}",
+                        request.id, e
+                    );
                     return Err((
                         StatusCode::from(e),
-                        Json(ApiResponse::error(&format!("GitHub permission validation failed: {error_msg}"))),
+                        Json(ApiResponse::error(&format!(
+                            "GitHub permission validation failed: {error_msg}"
+                        ))),
                     ));
                 }
             }
