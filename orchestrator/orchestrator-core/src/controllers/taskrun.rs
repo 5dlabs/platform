@@ -803,9 +803,9 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
 fn build_agent_startup_script(config: &ControllerConfig) -> String {
     let mut script = String::new();
 
-    // Source GitHub environment if it exists
+    // Source GitHub environment if it exists (using . instead of source for sh compatibility)
     script.push_str("if [ -f /workspace/.github-env ]; then\n");
-    script.push_str("  source /workspace/.github-env\n");
+    script.push_str("  . /workspace/.github-env\n");
     script.push_str("  echo \"GitHub authentication configured\"\n");
     script.push_str("fi\n\n");
 
