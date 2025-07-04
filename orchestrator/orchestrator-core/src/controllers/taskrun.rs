@@ -409,7 +409,7 @@ fn build_job(
         json!({
             "name": "workspace",
             "mountPath": "/workspace"
-        })
+        }),
     ];
 
     // Build volumes list
@@ -425,21 +425,21 @@ fn build_job(
             "persistentVolumeClaim": {
                 "claimName": "shared-workspace"
             }
-        })
+        }),
     ];
 
     // Add secret volume and mount if repository auth is configured
     if let Some(repo) = &tr.spec.repository {
         if let Some(auth) = &repo.auth {
             let secret_volume_name = format!("{}-secret", auth.secret_name);
-            
+
             // Add volume mount to init container
             init_volume_mounts.push(json!({
                 "name": secret_volume_name.clone(),
                 "mountPath": format!("/secrets/{}", auth.secret_name),
                 "readOnly": true
             }));
-            
+
             // Add secret volume
             volumes.push(json!({
                 "name": secret_volume_name,
@@ -641,14 +641,17 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
                     script.push_str("  git config --global user.name \"Claude Agent\"\n");
                     script.push_str("  git config --global user.email \"claude@5dlabs.com\"\n");
                     script.push_str("  \n");
-                    script.push_str("  # Configure git to use the token for HTTPS authentication\n");
+                    script
+                        .push_str("  # Configure git to use the token for HTTPS authentication\n");
                     script.push_str("  git config --global credential.helper 'store --file=/workspace/.git-credentials'\n");
                     script.push_str("  echo \"https://oauth2:${GITHUB_TOKEN}@github.com\" > /workspace/.git-credentials\n");
                     script.push_str("  chmod 600 /workspace/.git-credentials\n");
                     script.push_str("  \n");
                     script.push_str("  # Also configure for the specific service directory\n");
                     script.push_str(&format!("  mkdir -p /workspace/{service}/.git\n"));
-                    script.push_str(&format!("  cp /workspace/.git-credentials /workspace/{service}/.git-credentials\n"));
+                    script.push_str(&format!(
+                        "  cp /workspace/.git-credentials /workspace/{service}/.git-credentials\n"
+                    ));
                     script.push_str("  \n");
                     script.push_str("  # Configure gh CLI authentication\n");
                     script.push_str("  echo \"${GITHUB_TOKEN}\" > /workspace/.gh-token\n");
@@ -656,7 +659,9 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
                     script.push_str("  rm -f /workspace/.gh-token\n");
                     script.push_str("  \n");
                     script.push_str("  # Write GITHUB_TOKEN to a file for the main container\n");
-                    script.push_str("  echo \"export GITHUB_TOKEN=${GITHUB_TOKEN}\" > /workspace/.github-env\n");
+                    script.push_str(
+                        "  echo \"export GITHUB_TOKEN=${GITHUB_TOKEN}\" > /workspace/.github-env\n",
+                    );
                     script.push_str("  chmod 600 /workspace/.github-env\n");
                     script.push_str("else\n");
                     script.push_str("  echo \"Warning: GitHub token not found in secret\"\n");
@@ -732,18 +737,18 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
 /// Build startup script for the agent container
 fn build_agent_startup_script(config: &ControllerConfig) -> String {
     let mut script = String::new();
-    
+
     // Source GitHub environment if it exists
     script.push_str("if [ -f /workspace/.github-env ]; then\n");
     script.push_str("  source /workspace/.github-env\n");
     script.push_str("  echo \"GitHub authentication configured\"\n");
     script.push_str("fi\n\n");
-    
+
     // Execute the Claude command
     let command = config.agent.command.join(" ");
     let args = config.agent.args.join(" ");
     script.push_str(&format!("exec {command} {args}"));
-    
+
     script
 }
 
@@ -884,10 +889,7 @@ fn generate_claude_settings(tr: &TaskRun) -> Result<String> {
         ]);
 
         // Deny potentially dangerous operations
-        deny_rules.extend(vec![
-            "Bash(rm -rf *)".to_string()
-
-        ]);
+        deny_rules.extend(vec!["Bash(rm -rf *)".to_string()]);
     } else {
         // Build permissions based on agent_tools specification
         for tool in &tr.spec.agent_tools {
