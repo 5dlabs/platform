@@ -375,7 +375,11 @@ fn build_configmap(tr: &TaskRun, name: &str) -> Result<ConfigMap> {
     data.insert("settings.json".to_string(), settings_json);
 
     // Generate CLAUDE.md if not provided by Task Master system
-    let has_claude_md = tr.spec.markdown_files.iter().any(|f| f.filename == "CLAUDE.md");
+    let has_claude_md = tr
+        .spec
+        .markdown_files
+        .iter()
+        .any(|f| f.filename == "CLAUDE.md");
     if !has_claude_md {
         let claude_md_content = generate_claude_md(tr);
         data.insert("CLAUDE.md".to_string(), claude_md_content);
@@ -925,10 +929,12 @@ fn build_resource_attributes(tr: &TaskRun, config: &ControllerConfig) -> String 
 /// Generate CLAUDE.md file that imports task files
 fn generate_claude_md(tr: &TaskRun) -> String {
     let mut content = String::new();
-    
+
     content.push_str("# Task Context\n\n");
-    content.push_str("This workspace contains all the necessary files to complete the assigned task.\n\n");
-    
+    content.push_str(
+        "This workspace contains all the necessary files to complete the assigned task.\n\n",
+    );
+
     // Add @import statements for each markdown file
     content.push_str("## Task Files\n\n");
     for file in &tr.spec.markdown_files {
@@ -936,7 +942,7 @@ fn generate_claude_md(tr: &TaskRun) -> String {
             content.push_str(&format!("@{}\n\n", file.filename));
         }
     }
-    
+
     // Add repository information if available
     if let Some(repo) = &tr.spec.repository {
         content.push_str("## Repository\n\n");
@@ -947,21 +953,24 @@ fn generate_claude_md(tr: &TaskRun) -> String {
         }
         content.push('\n');
     }
-    
+
     // Add task metadata
     content.push_str("## Task Metadata\n\n");
     content.push_str(&format!("- **Task ID**: {}\n", tr.spec.task_id));
     content.push_str(&format!("- **Service**: {}\n", tr.spec.service_name));
     content.push_str(&format!("- **Agent**: {}\n", tr.spec.agent_name));
-    content.push_str(&format!("- **Context Version**: {}\n", tr.spec.context_version));
+    content.push_str(&format!(
+        "- **Context Version**: {}\n",
+        tr.spec.context_version
+    ));
     content.push('\n');
-    
+
     content.push_str("## Instructions\n\n");
     content.push_str("1. Review all task files using the @import statements above\n");
     content.push_str("2. Follow the design specification and implementation guidelines\n");
     content.push_str("3. Ensure all acceptance criteria are met\n");
     content.push_str("4. Create a pull request when implementation is complete\n");
-    
+
     content
 }
 
