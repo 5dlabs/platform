@@ -735,6 +735,26 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     script.push_str(&format!("mkdir -p /workspace/{service}/.claude\n"));
     script.push_str(&format!("cp /config/settings.json /workspace/{service}/.claude/settings.json 2>/dev/null || echo 'No settings.json to copy to service dir'\n"));
 
+    // DEBUG: Show configuration details
+    script.push_str("echo '=== DEBUGGING CONFIGURATION ==='\n");
+    if let Some(repo) = &tr.spec.repository {
+        script.push_str(&format!("echo 'Repository URL: {}'\n", repo.url));
+        script.push_str(&format!("echo 'Repository Branch: {}'\n", repo.branch));
+        if let Some(auth) = &repo.auth {
+            script.push_str(&format!("echo 'Auth Type: {:?}'\n", auth.auth_type));
+            script.push_str(&format!("echo 'Secret Name: {}'\n", auth.secret_name));
+        } else {
+            script.push_str("echo 'No repository authentication configured'\n");
+        }
+    } else {
+        script.push_str("echo 'No repository specified in TaskRun spec'\n");
+    }
+    script.push_str("echo 'Settings.json contents:'\n");
+    script.push_str("cat /config/settings.json 2>/dev/null || echo 'No settings.json found'\n");
+    script.push_str("echo 'File permissions in service .claude directory:'\n");
+    script.push_str(&format!("ls -la /workspace/{service}/.claude/ 2>/dev/null || echo 'No .claude directory found'\n"));
+    script.push_str("echo '=== END DEBUGGING ==='\n");
+
     script.push_str("echo 'Workspace prepared successfully'\n");
     script.push_str("ls -la /workspace/\n");
     script.push_str(&format!(
