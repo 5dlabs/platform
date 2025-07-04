@@ -548,7 +548,12 @@ fn build_job(
                             "name": "workspace",
                             "mountPath": "/workspace"
                         }],
-                        "workingDir": format!("/workspace/{}", tr.spec.service_name)
+                        "workingDir": format!("/workspace/{}", tr.spec.service_name),
+                        "securityContext": {
+                            "runAsUser": 0,
+                            "runAsGroup": 0,
+                            "runAsNonRoot": false
+                        }
                     }],
                     "volumes": [
                         {
@@ -632,14 +637,6 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     // Also copy settings to service directory for Claude Code
     script.push_str(&format!("mkdir -p /workspace/{service}/.claude\n"));
     script.push_str(&format!("cp /config/settings.json /workspace/{service}/.claude/settings.json 2>/dev/null || echo 'No settings.json to copy to service dir'\n"));
-
-    // Fix permissions for Claude Code to write
-    script.push_str(&format!(
-        "chmod -R 777 /workspace/{service}/ || echo 'Failed to set permissions'\n"
-    ));
-    script.push_str(
-        "chmod -R 777 /workspace/.claude/ || echo 'Failed to set global .claude permissions'\n",
-    );
 
     script.push_str("echo 'Workspace prepared successfully'\n");
     script.push_str("ls -la /workspace/\n");
