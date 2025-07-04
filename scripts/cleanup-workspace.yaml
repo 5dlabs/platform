@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: workspace-cleanup
+  namespace: orchestrator
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: cleanup
+        image: busybox
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "Checking workspace contents..."
+          ls -la /workspace/
+          echo ""
+          echo "Checking todo-api directory..."
+          ls -la /workspace/todo-api/ || echo "No todo-api directory"
+          echo ""
+          echo "Disk usage:"
+          df -h /workspace
+          echo ""
+          echo "Cleaning up old task directories..."
+          find /workspace -name ".task" -type d -exec rm -rf {} + 2>/dev/null || true
+          echo "Cleanup complete!"
+        volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+      volumes:
+      - name: workspace
+        persistentVolumeClaim:
+          claimName: shared-workspace

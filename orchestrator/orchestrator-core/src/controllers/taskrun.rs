@@ -197,7 +197,7 @@ async fn reconcile_create_or_update(
 
     // Create Job with descriptive name: agent-service-task-attempt
     let job_name = format!(
-        "{}-{}-task{}-v{}",
+        "{}-{}-task{}-attempt{}",
         tr.spec.agent_name.replace('_', "-"),
         tr.spec.service_name.replace('_', "-"),
         tr.spec.task_id,
@@ -726,8 +726,10 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     ));
 
     // Setup Claude Code configuration directory and copy settings
-    script.push_str("mkdir -p /workspace/.claude\n");
-    script.push_str("cp /config/settings.json /workspace/.claude/settings.json 2>/dev/null || echo 'No settings.json to copy'\n");
+    script.push_str("mkdir -p /home/node/.claude/todos\n");
+    script.push_str("cp /config/settings.json /home/node/.claude/settings.json 2>/dev/null || echo 'No settings.json to copy'\n");
+    script.push_str("chmod -R 755 /home/node/.claude\n");
+    script.push_str("chown -R 1000:1000 /home/node/.claude\n");
 
     // Also copy settings to service directory for Claude Code
     script.push_str(&format!("mkdir -p /workspace/{service}/.claude\n"));
