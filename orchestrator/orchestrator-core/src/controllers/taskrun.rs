@@ -397,25 +397,20 @@ fn generate_toolman_config(tr: &TaskRun) -> String {
     let mut github_tools = vec!["get_file_contents".to_string()];
     let mut taskmaster_tools = vec!["get_tasks".to_string(), "add_task".to_string()];
     let mut filesystem_tools = vec!["read_file".to_string(), "write_file".to_string()];
-    
+
     // Add tools based on service type
     match tr.spec.service_name.as_str() {
         name if name.contains("api") || name.contains("service") => {
             // API/service tasks need more comprehensive tools
             github_tools.extend([
                 "create_pull_request".to_string(),
-                "create_branch".to_string()
+                "create_branch".to_string(),
             ]);
-            filesystem_tools.extend([
-                "list_directory".to_string(),
-                "create_directory".to_string()
-            ]);
+            filesystem_tools.extend(["list_directory".to_string(), "create_directory".to_string()]);
         }
         name if name.contains("frontend") || name.contains("ui") => {
             // Frontend tasks need different tools
-            github_tools.extend([
-                "create_pull_request".to_string()
-            ]);
+            github_tools.extend(["create_pull_request".to_string()]);
             // Could add web-specific tools here
         }
         _ => {
@@ -423,22 +418,24 @@ fn generate_toolman_config(tr: &TaskRun) -> String {
             github_tools.push("create_pull_request".to_string());
         }
     }
-    
+
     // Check task description for specific tool requirements
-    let task_description = tr.spec.markdown_files
+    let task_description = tr
+        .spec
+        .markdown_files
         .iter()
         .find(|f| f.filename == "task.md")
         .map(|f| f.content.to_lowercase())
         .unwrap_or_default();
-        
+
     if task_description.contains("test") || task_description.contains("testing") {
         taskmaster_tools.push("update_task_status".to_string());
     }
-    
+
     if task_description.contains("deploy") || task_description.contains("ci") {
         github_tools.extend([
             "create_workflow".to_string(),
-            "trigger_workflow".to_string()
+            "trigger_workflow".to_string(),
         ]);
     }
 
@@ -728,7 +725,7 @@ fn build_containers(
 
     // Main Claude agent container
     let mut claude_env = build_env_vars(tr, api_key, telemetry_env, config);
-    
+
     // Add toolman MCP server configuration if enabled
     if let Some(toolman_config) = &config.toolman {
         if toolman_config.enabled {

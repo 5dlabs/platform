@@ -1,4 +1,4 @@
-//! Toolman MCP Server
+THIS SHOULD BE A LINTER ERROR//! Toolman MCP Server
 //!
 //! A tool management proxy server that filters and controls access to MCP tools
 //! for agents. This server acts as a middleware layer between agents and actual
@@ -7,7 +7,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::env;
 use std::process::{Command, Stdio};
 use std::sync::Arc;
@@ -67,40 +67,19 @@ pub struct DefaultPolicy {
 #[serde(tag = "method")]
 pub enum McpMessage {
     #[serde(rename = "initialize")]
-    Initialize { 
-        id: Value, 
-        params: Value 
-    },
+    Initialize { id: Value, params: Value },
     #[serde(rename = "tools/list")]
-    ListTools { 
-        id: Value, 
-        params: Option<Value> 
-    },
+    ListTools { id: Value, params: Option<Value> },
     #[serde(rename = "tools/call")]
-    CallTool { 
-        id: Value, 
-        params: Value 
-    },
+    CallTool { id: Value, params: Value },
     #[serde(rename = "resources/list")]
-    ListResources { 
-        id: Value, 
-        params: Option<Value> 
-    },
+    ListResources { id: Value, params: Option<Value> },
     #[serde(rename = "resources/read")]
-    ReadResource { 
-        id: Value, 
-        params: Value 
-    },
+    ReadResource { id: Value, params: Value },
     #[serde(rename = "prompts/list")]
-    ListPrompts { 
-        id: Value, 
-        params: Option<Value> 
-    },
+    ListPrompts { id: Value, params: Option<Value> },
     #[serde(rename = "prompts/get")]
-    GetPrompt { 
-        id: Value, 
-        params: Value 
-    },
+    GetPrompt { id: Value, params: Value },
     #[serde(other)]
     Other,
 }
@@ -126,67 +105,66 @@ impl ToolmanServer {
     /// Initialize the server and connect to backend MCP servers
     pub async fn initialize(&self) -> Result<()> {
         info!("Initializing toolman server");
-        
+
         let config = self.config.read().await;
-        
+
         // Start all enabled backend servers
         for (name, server_config) in &config.servers {
             if server_config.enabled {
                 self.start_backend_server(name, server_config).await?;
             }
         }
-        
+
         // Discover available tools from all backend servers
         self.discover_tools().await?;
-        
+
         Ok(())
     }
 
     /// Start a backend MCP server
     async fn start_backend_server(&self, name: &str, config: &ServerConfig) -> Result<()> {
         info!("Starting backend server: {}", name);
-        
+
         let mut cmd = Command::new(&config.command);
         cmd.args(&config.args);
-        
+
         // Set environment variables
         for (key, value) in &config.env {
             cmd.env(key, value);
         }
-        
+
         cmd.stdin(Stdio::piped())
-           .stdout(Stdio::piped())
-           .stderr(Stdio::piped());
-        
-        let child = cmd.spawn()
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        let child = cmd
+            .spawn()
             .with_context(|| format!("Failed to start backend server: {}", name))?;
-        
+
         let mut processes = self.server_processes.write().await;
         processes.insert(name.to_string(), child);
-        
+
         Ok(())
     }
 
     /// Discover tools from all backend servers
     async fn discover_tools(&self) -> Result<()> {
         info!("Discovering tools from backend servers");
-        
+
         let mut all_tools = HashMap::new();
-        
+
         // For each backend server, send a tools/list request
         let processes = self.server_processes.read().await;
         for (server_name, _) in processes.iter() {
             match self.list_tools_from_server(server_name).await {
                 Ok(tools) => {
                     for tool in tools {
-                        let tool_name = tool.get("name")
+                        let tool_name = tool
+                            .get("name")
                             .and_then(|v| v.as_str())
                             .unwrap_or("unknown");
-                        
-                        all_tools.insert(
-                            format!("{}:{}", server_name, tool_name),
-                            tool
-                        );
+
+                        all_tools.insert(format!("{}:{}", server_name, tool_name), tool);
                     }
                 }
                 Err(e) => {
@@ -194,10 +172,10 @@ impl ToolmanServer {
                 }
             }
         }
-        
+
         let mut available_tools = self.available_tools.write().await;
         *available_tools = all_tools;
-        
+
         info!("Discovered {} tools", available_tools.len());
         Ok(())
     }
@@ -207,9 +185,9 @@ impl ToolmanServer {
         // This is a simplified implementation
         // In a real implementation, you'd communicate with the backend server
         // via stdin/stdout using the MCP protocol
-        
+
         debug!("Listing tools from server: {}", server_name);
-        
+
         // For now, return some mock tools
         Ok(vec![
             json!({
@@ -231,78 +209,82 @@ impl ToolmanServer {
                         "location": {"type": "string"}
                     }
                 }
-            })
+            }),
         ])
     }
 
     /// Check if a tool is allowed for the current agent
-    async fn is_tool_allowed(&self, tool_name: &str, server_name: &str, agent_id: Option<&str>) -> bool {
+    async fn is_tool_allowed(
+        &self,
+        tool_name: &str,
+        server_name: &str,
+        agent_id: Option<&str>,
+    ) -> bool {
         let config = self.config.read().await;
-        
+
         // Get agent policy or use default
-        let agent_policy = agent_id
-            .and_then(|id| config.agent_policies.get(id));
-            
+        let agent_policy = agent_id.and_then(|id| config.agent_policies.get(id));
+
         // Check if agent can access this server
         if let Some(policy) = agent_policy {
             if !policy.allowed_servers.contains(&server_name.to_string()) {
-                debug!("Agent {} not allowed to access server {}", agent_id.unwrap_or("unknown"), server_name);
+                debug!(
+                    "Agent {} not allowed to access server {}",
+                    agent_id.unwrap_or("unknown"),
+                    server_name
+                );
                 return false;
             }
-            
+
             // Check tool-specific overrides for this agent
             if let Some(allowed_tools) = policy.tool_overrides.get(server_name) {
                 return allowed_tools.contains(&tool_name.to_string());
             }
         }
-        
+
         // Fall back to global exposed tools list
         if let Some(exposed_tools) = config.exposed_tools.get(server_name) {
             if exposed_tools.contains(&tool_name.to_string()) {
                 return true;
             }
         }
-        
+
         // Check default policy
         if config.default_policy.allow_unknown_tools {
-            debug!("Allowing unknown tool {} from server {} due to default policy", tool_name, server_name);
+            debug!(
+                "Allowing unknown tool {} from server {} due to default policy",
+                tool_name, server_name
+            );
             return true;
         }
-        
-        debug!("Tool {} from server {} not allowed for agent {}", tool_name, server_name, agent_id.unwrap_or("unknown"));
+
+        debug!(
+            "Tool {} from server {} not allowed for agent {}",
+            tool_name,
+            server_name,
+            agent_id.unwrap_or("unknown")
+        );
         false
     }
 
     /// Handle an MCP message
     pub async fn handle_message(&self, message: Value) -> Result<Value> {
         debug!("Handling message: {:?}", message);
-        
+
         // Parse the message
-        let mcp_message: McpMessage = serde_json::from_value(message.clone())
-            .unwrap_or(McpMessage::Other);
-        
+        let mcp_message: McpMessage =
+            serde_json::from_value(message.clone()).unwrap_or(McpMessage::Other);
+
         match mcp_message {
-            McpMessage::Initialize { id, params } => {
-                self.handle_initialize(id, params).await
-            }
-            McpMessage::ListTools { id, params } => {
-                self.handle_list_tools(id, params).await
-            }
-            McpMessage::CallTool { id, params } => {
-                self.handle_call_tool(id, params).await
-            }
+            McpMessage::Initialize { id, params } => self.handle_initialize(id, params).await,
+            McpMessage::ListTools { id, params } => self.handle_list_tools(id, params).await,
+            McpMessage::CallTool { id, params } => self.handle_call_tool(id, params).await,
             McpMessage::ListResources { id, params } => {
                 self.handle_list_resources(id, params).await
             }
-            McpMessage::ReadResource { id, params } => {
-                self.handle_read_resource(id, params).await
-            }
-            McpMessage::ListPrompts { id, params } => {
-                self.handle_list_prompts(id, params).await
-            }
-            McpMessage::GetPrompt { id, params } => {
-                self.handle_get_prompt(id, params).await
-            }
+            McpMessage::ReadResource { id, params } => self.handle_read_resource(id, params).await,
+            McpMessage::ListPrompts { id, params } => self.handle_list_prompts(id, params).await,
+            McpMessage::GetPrompt { id, params } => self.handle_get_prompt(id, params).await,
             McpMessage::Other => {
                 // Pass through unknown messages
                 Ok(json!({
@@ -341,18 +323,21 @@ impl ToolmanServer {
     async fn handle_list_tools(&self, id: Value, _params: Option<Value>) -> Result<Value> {
         // Get agent ID from environment
         let agent_id = std::env::var("AGENT_NAME").ok();
-        
+
         debug!("Listing tools for agent: {:?}", agent_id);
-        
+
         // Get all available tools from backend servers
         let available_tools = self.available_tools.read().await;
         let mut filtered_tools = Vec::new();
-        
+
         // Filter tools based on configuration
         for (tool_key, tool_definition) in available_tools.iter() {
             // Parse server name from tool key (format: "server:tool_name")
             if let Some((server_name, tool_name)) = tool_key.split_once(':') {
-                if self.is_tool_allowed(tool_name, server_name, agent_id.as_deref()).await {
+                if self
+                    .is_tool_allowed(tool_name, server_name, agent_id.as_deref())
+                    .await
+                {
                     // Add server context to tool definition
                     let mut tool_with_context = tool_definition.clone();
                     if let Some(obj) = tool_with_context.as_object_mut() {
@@ -360,19 +345,24 @@ impl ToolmanServer {
                         obj.insert("qualified_name".to_string(), json!(tool_key));
                     }
                     filtered_tools.push(tool_with_context);
-                    
+
                     debug!("Exposing tool: {} from server: {}", tool_name, server_name);
                 } else {
-                    debug!("Filtering out tool: {} from server: {}", tool_name, server_name);
+                    debug!(
+                        "Filtering out tool: {} from server: {}",
+                        tool_name, server_name
+                    );
                 }
             }
         }
-        
-        info!("Agent {} has access to {} tools (out of {} total)", 
-              agent_id.as_deref().unwrap_or("unknown"), 
-              filtered_tools.len(), 
-              available_tools.len());
-        
+
+        info!(
+            "Agent {} has access to {} tools (out of {} total)",
+            agent_id.as_deref().unwrap_or("unknown"),
+            filtered_tools.len(),
+            available_tools.len()
+        );
+
         Ok(json!({
             "jsonrpc": "2.0",
             "id": id,
@@ -384,22 +374,25 @@ impl ToolmanServer {
 
     /// Handle call tool message
     async fn handle_call_tool(&self, id: Value, params: Value) -> Result<Value> {
-        let tool_name = params.get("name")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-            
+        let tool_name = params.get("name").and_then(|v| v.as_str()).unwrap_or("");
+
         let agent_id = std::env::var("AGENT_NAME").ok();
-        
-        debug!("Agent {} calling tool: {}", agent_id.as_deref().unwrap_or("unknown"), tool_name);
-        
+
+        debug!(
+            "Agent {} calling tool: {}",
+            agent_id.as_deref().unwrap_or("unknown"),
+            tool_name
+        );
+
         // Parse qualified tool name (server:tool_name or just tool_name)
         let (server_name, actual_tool_name) = if tool_name.contains(':') {
             // Qualified name: "github:create_pull_request"
-            tool_name.split_once(':').unwrap()
+            let (server, tool) = tool_name.split_once(':').unwrap();
+            (server.to_string(), tool)
         } else {
             // Unqualified name - need to find which server has this tool
             match self.find_server_for_tool(tool_name).await {
-                Some(server) => (server.as_str(), tool_name),
+                Some(server) => (server, tool_name),
                 None => {
                     return Ok(json!({
                         "jsonrpc": "2.0",
@@ -412,11 +405,18 @@ impl ToolmanServer {
                 }
             }
         };
-        
+
         // Check if tool is allowed
-        if !self.is_tool_allowed(actual_tool_name, server_name, agent_id.as_deref()).await {
-            warn!("Agent {} attempted to call unauthorized tool: {}:{}", 
-                  agent_id.as_deref().unwrap_or("unknown"), server_name, actual_tool_name);
+        if !self
+            .is_tool_allowed(actual_tool_name, &server_name, agent_id.as_deref())
+            .await
+        {
+            warn!(
+                "Agent {} attempted to call unauthorized tool: {}:{}",
+                agent_id.as_deref().unwrap_or("unknown"),
+                server_name,
+                actual_tool_name
+            );
             return Ok(json!({
                 "jsonrpc": "2.0",
                 "id": id,
@@ -426,10 +426,14 @@ impl ToolmanServer {
                 }
             }));
         }
-        
-        info!("Executing tool {}:{} for agent {}", 
-              server_name, actual_tool_name, agent_id.as_deref().unwrap_or("unknown"));
-        
+
+        info!(
+            "Executing tool {}:{} for agent {}",
+            server_name,
+            actual_tool_name,
+            agent_id.as_deref().unwrap_or("unknown")
+        );
+
         // TODO: Forward the tool call to the appropriate backend server
         // For now, return a mock response indicating the call was authorized
         Ok(json!({
@@ -439,18 +443,18 @@ impl ToolmanServer {
                 "content": [
                     {
                         "type": "text",
-                        "text": format!("Tool '{}' from server '{}' executed successfully (mock response)", 
+                        "text": format!("Tool '{}' from server '{}' executed successfully (mock response)",
                                        actual_tool_name, server_name)
                     }
                 ]
             }
         }))
     }
-    
+
     /// Find which server provides a given tool name
     async fn find_server_for_tool(&self, tool_name: &str) -> Option<String> {
         let available_tools = self.available_tools.read().await;
-        
+
         for tool_key in available_tools.keys() {
             if let Some((server_name, tool)) = tool_key.split_once(':') {
                 if tool == tool_name {
@@ -458,7 +462,7 @@ impl ToolmanServer {
                 }
             }
         }
-        
+
         None
     }
 
@@ -508,56 +512,54 @@ impl ToolmanServer {
 
     /// Run the HTTP server
     pub async fn run(&self) -> Result<()> {
-        use axum::{
-            extract::State,
-            http::StatusCode,
-            response::Json,
-            routing::post,
-            Router,
-        };
-        
+        use axum::{extract::State, http::StatusCode, response::Json, routing::post, Router};
+
         info!("Starting toolman HTTP server");
-        
-        let server = Arc::clone(&self);
-        
+
+        let server = Arc::new(self);
+
         // Create HTTP handler for MCP messages
         let handle_mcp = |State(server): State<Arc<ToolmanServer>>, Json(message): Json<Value>| async move {
             match server.handle_message(message).await {
                 Ok(response) => Ok(Json(response)),
                 Err(e) => {
                     error!("Error handling MCP message: {}", e);
-                    Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Internal error: {}", e)))
+                    Err((
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("Internal error: {}", e),
+                    ))
                 }
             }
         };
-        
+
         // Build the router
         let app = Router::new()
             .route("/mcp", post(handle_mcp))
             .route("/health", axum::routing::get(|| async { "OK" }))
             .with_state(server);
-        
+
         // Get port from environment or use default
         let port = std::env::var("TOOLMAN_PORT")
             .unwrap_or_else(|_| "3000".to_string())
             .parse::<u16>()
             .unwrap_or(3000);
-            
+
         let addr = format!("0.0.0.0:{}", port);
         info!("Toolman server listening on {}", addr);
-        
+
         // Start the HTTP server
-        let listener = tokio::net::TcpListener::bind(&addr).await
+        let listener = tokio::net::TcpListener::bind(&addr)
+            .await
             .with_context(|| format!("Failed to bind to {}", addr))?;
-            
+
         axum::serve(listener, app)
             .with_graceful_shutdown(shutdown_signal())
             .await
             .with_context(|| "HTTP server error")?;
-        
+
         Ok(())
     }
-    
+
     /// Graceful shutdown signal handler
     async fn shutdown_signal() {
         let ctrl_c = async {
@@ -588,13 +590,13 @@ impl ToolmanServer {
 
 /// Load configuration from environment or file
 fn load_config() -> Result<ToolmanConfig> {
-    let config_path = env::var("TOOLMAN_CONFIG_PATH")
-        .unwrap_or_else(|_| "toolman.json".to_string());
-    
+    let config_path =
+        env::var("TOOLMAN_CONFIG_PATH").unwrap_or_else(|_| "toolman.json".to_string());
+
     if std::path::Path::new(&config_path).exists() {
         let config_str = std::fs::read_to_string(&config_path)
             .with_context(|| format!("Failed to read config file: {}", config_path))?;
-        
+
         serde_json::from_str(&config_str)
             .with_context(|| format!("Failed to parse config file: {}", config_path))
     } else {
@@ -615,19 +617,19 @@ fn load_config() -> Result<ToolmanConfig> {
 async fn main() -> Result<()> {
     // Initialize tracing
     tracing_subscriber::fmt::init();
-    
+
     info!("Starting toolman server");
-    
+
     // Load configuration
     let config = load_config()?;
-    
+
     // Create and initialize the server
     let server = ToolmanServer::new(config);
     server.initialize().await?;
-    
+
     // Run the server
     server.run().await?;
-    
+
     info!("Toolman server shutting down");
     Ok(())
 }
@@ -647,7 +649,7 @@ mod tests {
                 allow_unknown_servers: false,
             },
         };
-        
+
         let server = ToolmanServer::new(config);
         assert!(server.initialize().await.is_ok());
     }
@@ -663,10 +665,10 @@ mod tests {
                 allow_unknown_servers: false,
             },
         };
-        
+
         let server = ToolmanServer::new(config);
         let response = server.handle_initialize(json!(1), json!({})).await.unwrap();
-        
+
         assert_eq!(response["jsonrpc"], "2.0");
         assert_eq!(response["id"], 1);
         assert!(response["result"]["serverInfo"]["name"] == "toolman");
