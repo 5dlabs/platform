@@ -752,7 +752,9 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     script.push_str("echo 'Settings.json contents:'\n");
     script.push_str("cat /config/settings.json 2>/dev/null || echo 'No settings.json found'\n");
     script.push_str("echo 'File permissions in service .claude directory:'\n");
-    script.push_str(&format!("ls -la /workspace/{service}/.claude/ 2>/dev/null || echo 'No .claude directory found'\n"));
+    script.push_str(&format!(
+        "ls -la /workspace/{service}/.claude/ 2>/dev/null || echo 'No .claude directory found'\n"
+    ));
     script.push_str("echo '=== END DEBUGGING ==='\n");
 
     script.push_str("echo 'Workspace prepared successfully'\n");
