@@ -206,7 +206,7 @@ data:
               ],
               "deny": []
             },
-            "defaultMode": "allowEdits"
+            "defaultMode": "acceptEdits"
           }
       
       # Log directory for agent output
