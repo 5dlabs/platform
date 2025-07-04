@@ -879,31 +879,21 @@ fn generate_claude_settings(tr: &TaskRun) -> Result<String> {
     if tr.spec.agent_tools.is_empty() {
         // Default tool permissions for standard development tasks
         allow_rules.extend(vec![
-            "Bash(git *)".to_string(),
-            "Bash(npm run *)".to_string(),
-            "Bash(cargo *)".to_string(),
-            "Bash(ls *)".to_string(),
-            "Bash(find *)".to_string(),
-            "Bash(grep *)".to_string(),
-            "Bash(cat *)".to_string(),
-            "Bash(head *)".to_string(),
-            "Bash(tail *)".to_string(),
-            "Bash(tree *)".to_string(),
+            "Bash(*)".to_string(),
             "Edit(*)".to_string(),
             "Read(*)".to_string(),
             "Write(*)".to_string(),
             "MultiEdit(*)".to_string(),
             "Glob(*)".to_string(),
             "Grep(*)".to_string(),
+            "LS(*)".to_string(),
+            "TodoRead(*)".to_string(),
+            "TodoWrite(*)".to_string(),
             "WebFetch(*)".to_string(),
             "WebSearch(*)".to_string(),
-            "Bash(curl *)".to_string(),
-            "Bash(wget *)".to_string(),
-            "Bash(curl *)".to_string(),
         ]);
 
-        // Deny potentially dangerous operations
-        deny_rules.extend(vec!["Bash(rm -rf *)".to_string()]);
+        // No deny rules by default - trust Claude to be responsible
     } else {
         // Build permissions based on agent_tools specification
         for tool in &tr.spec.agent_tools {
