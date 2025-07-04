@@ -1,0 +1,43 @@
+{
+  "servers": {
+    "filesystem": {
+      "command": "node",
+      "args": ["-e", "console.log('MCP filesystem server placeholder')"],
+      "env": {},
+      "enabled": true
+    },
+    "taskmaster": {
+      "command": "task-master",
+      "args": ["mcp"],
+      "env": {
+        "TASKMASTER_LOG_LEVEL": "info"
+      },
+      "enabled": true
+    },
+    "web-search": {
+      "command": "python",
+      "args": ["-m", "mcp_web_search"],
+      "env": {
+        "SEARCH_API_KEY": "${SEARCH_API_KEY}"
+      },
+      "enabled": false
+    }
+  },
+  "default_access": {
+    "allowed_tools": [],
+    "blocked_tools": ["dangerous_tool", "system_modify"],
+    "allow_unknown": true
+  },
+  "agent_policies": {
+    "claude": {
+      "allowed_tools": ["read_file", "write_file", "search_web", "get_tasks", "add_task"],
+      "blocked_tools": ["delete_all", "system_shutdown"],
+      "allow_unknown": false
+    },
+    "gemini": {
+      "allowed_tools": ["read_file", "search_web", "get_tasks"],
+      "blocked_tools": ["write_file", "delete_file"],
+      "allow_unknown": false
+    }
+  }
+}

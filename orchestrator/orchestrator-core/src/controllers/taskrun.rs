@@ -590,18 +590,7 @@ fn build_job(
                             }
                         ]
                     }],
-                    "containers": [{
-                        "name": "claude-agent",
-                        "image": format!("{}:{}", config.agent.image.repository, config.agent.image.tag),
-                        "command": config.agent.command.clone(),
-                        "args": config.agent.args.clone(),
-                        "env": build_env_vars(tr, &api_key, telemetry_env, config),
-                        "volumeMounts": [{
-                            "name": "workspace",
-                            "mountPath": "/workspace"
-                        }],
-                        "workingDir": format!("/workspace/{}", tr.spec.service_name)
-                    }],
+                    "containers": build_containers(tr, &api_key, telemetry_env, config),
                     "volumes": [
                         {
                             "name": "task-files",
@@ -622,6 +611,118 @@ fn build_job(
     });
 
     serde_json::from_value(job_json).map_err(Error::SerializationError)
+}
+
+/// Build containers for the job
+fn build_containers(
+    tr: &TaskRun,
+    api_key: &str,
+    telemetry_env: Vec<serde_json::Value>,
+    config: &ControllerConfig,
+) -> Vec<serde_json::Value> {
+    let mut containers = vec![];
+
+    // Main Claude agent container
+    let mut claude_env = build_env_vars(tr, api_key, telemetry_env, config);
+    
+    // Add toolman MCP server configuration if enabled
+    if let Some(toolman_config) = &config.toolman {
+        if toolman_config.enabled {
+            claude_env.push(json!({
+                "name": "MCP_TOOLMAN_ENABLED",
+                "value": "true"
+            }));
+            claude_env.push(json!({
+                "name": "MCP_TOOLMAN_SERVER_URL",
+                "value": format!("http://localhost:{}", toolman_config.port)
+            }));
+        }
+    }
+
+    containers.push(json!({
+        "name": "claude-agent",
+        "image": format!("{}:{}", config.agent.image.repository, config.agent.image.tag),
+        "command": config.agent.command.clone(),
+        "args": config.agent.args.clone(),
+        "env": claude_env,
+        "volumeMounts": [{
+            "name": "workspace",
+            "mountPath": "/workspace"
+        }],
+        "workingDir": format!("/workspace/{}", tr.spec.service_name)
+    }));
+
+    // Add toolman sidecar container if enabled
+    if let Some(toolman_config) = &config.toolman {
+        if toolman_config.enabled {
+            let toolman_container = build_toolman_container(tr, toolman_config);
+            containers.push(toolman_container);
+        }
+    }
+
+    containers
+}
+
+/// Build toolman sidecar container
+fn build_toolman_container(
+    tr: &TaskRun,
+    toolman_config: &crate::config::controller_config::ToolmanConfig,
+) -> serde_json::Value {
+    let mut env_vars = vec![
+        json!({
+            "name": "TOOLMAN_CONFIG_PATH",
+            "value": toolman_config.config_path.clone()
+        }),
+        json!({
+            "name": "TOOLMAN_PORT",
+            "value": toolman_config.port.to_string()
+        }),
+        json!({
+            "name": "AGENT_NAME",
+            "value": tr.spec.agent_name.clone()
+        }),
+        json!({
+            "name": "TASK_ID",
+            "value": tr.spec.task_id.to_string()
+        }),
+        json!({
+            "name": "SERVICE_NAME",
+            "value": tr.spec.service_name.clone()
+        }),
+    ];
+
+    // Add additional environment variables from config
+    for env_var in &toolman_config.env {
+        env_vars.push(json!({
+            "name": env_var.name.clone(),
+            "value": env_var.value.clone()
+        }));
+    }
+
+    json!({
+        "name": "toolman",
+        "image": format!("{}:{}", toolman_config.image.repository, toolman_config.image.tag),
+        "command": ["toolman"],
+        "env": env_vars,
+        "resources": {
+            "requests": {
+                "cpu": toolman_config.resources.requests.cpu,
+                "memory": toolman_config.resources.requests.memory
+            },
+            "limits": {
+                "cpu": toolman_config.resources.limits.cpu,
+                "memory": toolman_config.resources.limits.memory
+            }
+        },
+        "ports": [{
+            "containerPort": toolman_config.port,
+            "protocol": "TCP"
+        }],
+        "volumeMounts": [{
+            "name": "workspace",
+            "mountPath": "/workspace"
+        }]
+    })
 }
 
 /// Build environment variables for the container
