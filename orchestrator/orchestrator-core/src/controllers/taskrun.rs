@@ -847,7 +847,7 @@ fn build_env_vars(
         }),
         json!({
             "name": "HOME",
-            "value": "/home/node"  // Use proper home directory from devcontainer
+            "value": format!("/workspace/{}", tr.spec.service_name)  // Set HOME to working directory for Claude settings
         }),
         json!({
             "name": "WORKDIR",
