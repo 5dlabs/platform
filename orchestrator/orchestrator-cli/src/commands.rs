@@ -32,9 +32,10 @@ pub mod task {
         branch: &str,
         github_user: Option<&str>,
         retry: bool,
+        model: &str,
     ) -> Result<()> {
         output.info("Preparing task submission...")?;
-        info!("Task ID: {}, Service: {}", task_id, service_name);
+        info!("Task ID: {}, Service: {}, Model: {}", task_id, service_name, model);
         info!("Task Master directory: {}", taskmaster_dir);
 
         // Construct paths based on Task Master structure
@@ -158,11 +159,12 @@ pub mod task {
             }),
         });
 
-        // Create PM request
+        // Create PM request with model selection
         let pm_request = PmTaskRequest::new_with_repository(
             task,
             service_name.to_string(),
             agent_name.to_string(),
+            model.to_string(),
             markdown_files,
             agent_tools,
             repository,
@@ -220,8 +222,10 @@ pub mod task {
         service_name: &str,
         agent_name: &str,
         _retry: bool,
+        model: &str,
     ) -> Result<()> {
         output.info("Reading task files...")?;
+        info!("Using Claude model: {}", model);
 
         // Read Task Master JSON file
         let tasks_json = fs::read_to_string(task_json_path)
@@ -280,11 +284,12 @@ pub mod task {
             });
         }
 
-        // Create PM request
+        // Create PM request with model selection
         let pm_request = PmTaskRequest::new(
             task,
             service_name.to_string(),
             agent_name.to_string(),
+            model.to_string(),
             markdown_files,
         );
 

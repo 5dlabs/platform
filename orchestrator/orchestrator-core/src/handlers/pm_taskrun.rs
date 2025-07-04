@@ -164,6 +164,7 @@ pub async fn submit_task(
             task_id: request.id,
             service_name: request.service_name.clone(),
             agent_name: request.agent_name.clone(),
+            model: request.model.clone(),
             context_version: 1,
             markdown_files,
             agent_tools,

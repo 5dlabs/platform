@@ -22,6 +22,10 @@ pub struct TaskRunSpec {
     /// Agent to execute the task
     pub agent_name: String,
 
+    /// Claude model to use (sonnet, opus)
+    #[serde(default = "default_model")]
+    pub model: String,
+
     /// Version of the context, incremented on updates
     #[serde(default = "default_context_version")]
     pub context_version: u32,
@@ -40,6 +44,10 @@ pub struct TaskRunSpec {
 
 fn default_context_version() -> u32 {
     1
+}
+
+fn default_model() -> String {
+    "sonnet".to_string()
 }
 
 /// Markdown file containing task context

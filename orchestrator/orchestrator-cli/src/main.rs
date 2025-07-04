@@ -95,6 +95,9 @@ enum TaskCommands {
         /// Indicates this is a retry of a previous attempt
         #[arg(long)]
         retry: bool,
+        /// Claude model to use (sonnet, opus)
+        #[arg(long, short = 'm', default_value = "sonnet")]
+        model: String,
     },
     /// Submit a new task (advanced workflow with explicit paths)
     SubmitAdvanced {
@@ -119,6 +122,9 @@ enum TaskCommands {
         /// Indicates this is a retry of a previous attempt
         #[arg(long)]
         retry: bool,
+        /// Claude model to use (sonnet, opus)
+        #[arg(long, short = 'm', default_value = "sonnet")]
+        model: String,
     },
     /// Get task status
     Status {
@@ -236,6 +242,7 @@ async fn main() -> Result<()> {
                 branch,
                 github_user,
                 retry,
+                model,
             } => {
                 commands::task::submit_task_simplified(
                     &api_client,
@@ -250,6 +257,7 @@ async fn main() -> Result<()> {
                     &branch,
                     github_user.as_deref(),
                     retry,
+                    &model,
                 )
                 .await
             }
@@ -261,6 +269,7 @@ async fn main() -> Result<()> {
                 service_name,
                 agent_name,
                 retry,
+                model,
             } => {
                 commands::task::submit_pm_task(
                     &api_client,
@@ -272,6 +281,7 @@ async fn main() -> Result<()> {
                     &service_name,
                     &agent_name,
                     retry,
+                    &model,
                 )
                 .await
             }
@@ -381,6 +391,7 @@ mod tests {
                         branch,
                         github_user,
                         retry,
+                        model,
                     },
             } => {
                 assert_eq!(task_id, 1001);
@@ -393,6 +404,7 @@ mod tests {
                 assert_eq!(branch, "main");
                 assert_eq!(github_user, None);
                 assert!(!retry);
+                assert_eq!(model, "sonnet");
             }
             _ => panic!("Expected Task Submit command"),
         }

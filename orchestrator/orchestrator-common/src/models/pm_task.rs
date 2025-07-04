@@ -19,6 +19,10 @@ pub struct PmTaskRequest {
     // PM-specific fields
     pub service_name: String,
     pub agent_name: String,
+    
+    // Claude model selection (sonnet, opus)
+    #[serde(default = "default_model")]
+    pub model: String,
 
     // Markdown files as structured payloads
     pub markdown_files: Vec<MarkdownPayload>,
@@ -102,6 +106,10 @@ fn default_secret_key() -> String {
     "token".to_string()
 }
 
+fn default_model() -> String {
+    "sonnet".to_string()
+}
+
 /// Task Master JSON file structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskMasterFile {
@@ -133,9 +141,10 @@ impl PmTaskRequest {
         task: Task,
         service_name: String,
         agent_name: String,
+        model: String,
         markdown_files: Vec<MarkdownPayload>,
     ) -> Self {
-        Self::new_with_tools(task, service_name, agent_name, markdown_files, Vec::new())
+        Self::new_with_tools(task, service_name, agent_name, model, markdown_files, Vec::new())
     }
 
     /// Create a new PM task request with agent tools specification
@@ -143,6 +152,7 @@ impl PmTaskRequest {
         task: Task,
         service_name: String,
         agent_name: String,
+        model: String,
         markdown_files: Vec<MarkdownPayload>,
         agent_tools: Vec<AgentToolSpec>,
     ) -> Self {
@@ -158,6 +168,7 @@ impl PmTaskRequest {
             subtasks: task.subtasks,
             service_name,
             agent_name,
+            model,
             markdown_files,
             agent_tools,
             repository: None,
@@ -169,6 +180,7 @@ impl PmTaskRequest {
         task: Task,
         service_name: String,
         agent_name: String,
+        model: String,
         markdown_files: Vec<MarkdownPayload>,
         agent_tools: Vec<AgentToolSpec>,
         repository: Option<RepositorySpec>,
@@ -185,6 +197,7 @@ impl PmTaskRequest {
             subtasks: task.subtasks,
             service_name,
             agent_name,
+            model,
             markdown_files,
             agent_tools,
             repository,
@@ -220,11 +233,13 @@ mod tests {
             task,
             "test-service".to_string(),
             "claude-agent-1".to_string(),
+            "sonnet".to_string(),
             markdown_files,
         );
 
         assert_eq!(request.id, 1001);
         assert_eq!(request.service_name, "test-service");
+        assert_eq!(request.model, "sonnet");
         assert_eq!(request.markdown_files.len(), 1);
     }
 }

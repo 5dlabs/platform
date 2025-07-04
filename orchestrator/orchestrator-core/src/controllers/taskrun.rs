@@ -597,7 +597,7 @@ fn build_job(
                         "name": "claude-agent",
                         "image": format!("{}:{}", config.agent.image.repository, config.agent.image.tag),
                         "command": ["/bin/sh", "-c"],
-                        "args": [build_agent_startup_script(config)],
+                        "args": [build_agent_startup_script(tr, config)],
                         "env": build_env_vars(tr, telemetry_env, config),
                         "volumeMounts": [{
                             "name": "workspace",
@@ -801,7 +801,7 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
 }
 
 /// Build startup script for the agent container
-fn build_agent_startup_script(config: &ControllerConfig) -> String {
+fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> String {
     let mut script = String::new();
 
     // Source GitHub environment if it exists (using . instead of source for sh compatibility)
@@ -901,14 +901,20 @@ fn build_agent_startup_script(config: &ControllerConfig) -> String {
     script.push_str("echo '\n--- TESTING SIMPLE CLAUDE COMMAND WITHOUT PROMPT ---'\n");
     script.push_str(&format!("{command} --version 2>&1\n"));
     script.push_str("echo '\n--- STARTING CLAUDE WITH FULL ARGS ---'\n");
-    script.push_str(&format!(
-        "echo 'Full Claude command: {command} {}'\n",
-        config.agent.args.join(" ")
-    ));
 
-    // Execute the Claude command
-    let args = config.agent.args.join(" ");
-    script.push_str(&format!("exec {command} {args}"));
+    // Execute the Claude command with model selection
+    let mut args = config.agent.args.clone();
+    
+    // Add model argument if not "sonnet" (default)
+    if tr.spec.model != "sonnet" {
+        args.insert(0, format!("--model={}", tr.spec.model));
+    }
+    
+    let args_str = args.join(" ");
+    script.push_str(&format!(
+        "echo 'Final Claude command with model: {command} {args_str}'\n"
+    ));
+    script.push_str(&format!("exec {command} {args_str}"));
 
     script
 }
