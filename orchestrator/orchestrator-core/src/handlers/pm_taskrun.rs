@@ -139,7 +139,15 @@ async fn validate_github_permissions(
         .map_err(|e| AppError::Internal(format!("Failed to execute wget command: {e}")))?;
 
     if !output.status.success() {
-        let error_msg = String::from_utf8_lossy(&output.stderr);
+        let stderr_msg = String::from_utf8_lossy(&output.stderr);
+        let stdout_msg = String::from_utf8_lossy(&output.stdout);
+        let error_msg = if !stderr_msg.is_empty() {
+            stderr_msg.to_string()
+        } else if !stdout_msg.is_empty() {
+            stdout_msg.to_string()
+        } else {
+            format!("Request failed with exit code: {}", output.status.code().unwrap_or(-1))
+        };
         return Err(AppError::BadRequest(format!(
             "GitHub API error: {error_msg}"
         )));
@@ -166,7 +174,15 @@ async fn validate_github_permissions(
         .map_err(|e| AppError::Internal(format!("Failed to get user info: {e}")))?;
 
     if !user_output.status.success() {
-        let error_msg = String::from_utf8_lossy(&user_output.stderr);
+        let stderr_msg = String::from_utf8_lossy(&user_output.stderr);
+        let stdout_msg = String::from_utf8_lossy(&user_output.stdout);
+        let error_msg = if !stderr_msg.is_empty() {
+            stderr_msg.to_string()
+        } else if !stdout_msg.is_empty() {
+            stdout_msg.to_string()
+        } else {
+            format!("Request failed with exit code: {}", user_output.status.code().unwrap_or(-1))
+        };
         return Err(AppError::BadRequest(format!(
             "Failed to get user info: {error_msg}"
         )));
