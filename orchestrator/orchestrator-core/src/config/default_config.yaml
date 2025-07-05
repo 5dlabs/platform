@@ -37,7 +37,7 @@ agent:
 
 initContainer:
   image:
-    repository: "alpine/git"
+    repository: "ghcr.io/5dlabs/platform/claude-code"
     tag: "latest"
     pullPolicy: "IfNotPresent"
   resources:

@@ -646,8 +646,10 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
 
     let mut script = String::new();
 
-    // Install gh CLI if not present (alpine/git image already has git)
-    script.push_str("which gh >/dev/null 2>&1 || apk add --no-cache github-cli\n");
+    // Claude Code image already has git and gh CLI installed
+    script.push_str("echo 'Using Claude Code image with pre-installed tools'\n");
+    script.push_str("which git && echo 'Git is available' || echo 'Git not found!'\n");
+    script.push_str("which gh && echo 'GitHub CLI is available' || echo 'GitHub CLI not found!'\n");
 
     // Create workspace directory (no per-attempt subdirectory for --continue support)
     // Note: /workspace now maps to the service-specific directory via subPath
@@ -831,8 +833,6 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> String
 
     // COMPREHENSIVE DEBUGGING BEFORE CLAUDE STARTS
     script.push_str("echo '=== COMPREHENSIVE CLAUDE DEBUGGING ==='\n");
-    script.push_str("echo 'Installing tree utility for filesystem debugging...'\n");
-    script.push_str("apk add --no-cache tree 2>/dev/null || echo 'Tree installation failed'\n");
     script.push_str("echo '\n--- Environment Variables ---'\n");
     script.push_str("env | grep -E '(HOME|PWD|WORKDIR|CLAUDE)' | sort\n");
     script.push_str("echo '\n--- Current Working Directory ---'\n");
@@ -871,22 +871,12 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> String
     script.push_str(&format!(
         "{command} --help 2>&1 | head -20 || echo 'Claude help failed'\n"
     ));
-    script.push_str("echo '\n--- CLAUDE CONFIG COMMANDS DEBUG ---'\n");
-    script.push_str(&format!(
-        "{command} config --help 2>&1 || echo 'Claude config help failed'\n"
-    ));
-    script.push_str(&format!(
-        "{command} config list 2>&1 || echo 'Claude config list failed'\n"
-    ));
-    script.push_str(&format!(
-        "{command} config show 2>&1 || echo 'Claude config show failed'\n"
-    ));
-    script.push_str(&format!(
-        "{command} config get defaultMode 2>&1 || echo 'Claude config get defaultMode failed'\n"
-    ));
-    script.push_str(&format!(
-        "{command} config get permissions 2>&1 || echo 'Claude config get permissions failed'\n"
-    ));
+    script.push_str("echo '\n--- CLAUDE SETTINGS VERIFICATION ---'\n");
+    script.push_str("echo 'Claude Code uses .claude.json for configuration'\n");
+    script.push_str("echo 'Checking for .claude.json files:'\n");
+    script.push_str("find . -name '.claude.json' -type f -exec ls -la {} \\; 2>/dev/null\n");
+    script.push_str("echo '\nContent of .claude.json:'\n");
+    script.push_str("cat /workspace/.claude.json 2>/dev/null || echo 'No .claude.json in /workspace'\n");
     script.push_str("echo '\n--- CLAUDE SETTINGS FILE DISCOVERY ---'\n");
     script.push_str(&format!(
         "{command} --print-config-path 2>&1 || echo 'Claude print-config-path not available'\n"
