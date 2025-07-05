@@ -122,19 +122,17 @@ async fn validate_github_permissions(
     let token = String::from_utf8(token_bytes.0)
         .map_err(|_| AppError::BadRequest("Invalid token encoding in secret".to_string()))?;
 
-    // Check repository permissions using GitHub CLI
-    let output = Command::new("gh")
+    // Check repository permissions using curl (GitHub REST API)
+    let output = Command::new("curl")
         .args([
-            "api",
-            &format!("repos/{owner}/{repo}/collaborators"),
-            "--header",
-            "Accept: application/vnd.github+json",
-            "--header",
-            &format!("Authorization: Bearer {token}"),
+            "-s",
+            "-H", "Accept: application/vnd.github+json",
+            "-H", &format!("Authorization: Bearer {token}"),
+            &format!("https://api.github.com/repos/{owner}/{repo}/collaborators")
         ])
         .output()
         .await
-        .map_err(|e| AppError::Internal(format!("Failed to execute gh command: {e}")))?;
+        .map_err(|e| AppError::Internal(format!("Failed to execute curl command: {e}")))?;
 
     if !output.status.success() {
         let error_msg = String::from_utf8_lossy(&output.stderr);
@@ -148,14 +146,12 @@ async fn validate_github_permissions(
         .map_err(|e| AppError::Internal(format!("Failed to parse GitHub API response: {e}")))?;
 
     // Get the authenticated user's login to find their permissions
-    let user_output = Command::new("gh")
+    let user_output = Command::new("curl")
         .args([
-            "api",
-            "user",
-            "--header",
-            "Accept: application/vnd.github+json",
-            "--header",
-            &format!("Authorization: Bearer {token}"),
+            "-s",
+            "-H", "Accept: application/vnd.github+json", 
+            "-H", &format!("Authorization: Bearer {token}"),
+            "https://api.github.com/user"
         ])
         .output()
         .await
