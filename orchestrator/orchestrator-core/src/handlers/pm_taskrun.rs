@@ -295,7 +295,7 @@ pub async fn submit_task(
         // Auto-resolve secret name from GitHub user
         let secret_name = format!("github-pat-{}", repository.github_user);
         let secret_key = "token";
-        
+
         if let Err(e) = validate_github_permissions(
             &state.k8s_client,
             &state.namespace,

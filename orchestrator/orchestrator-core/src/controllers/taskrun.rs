@@ -660,21 +660,27 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
         // Setup authentication using GitHub user to resolve secret
         let secret_name = format!("github-pat-{}", repo.github_user);
         let secret_key = "token"; // Standard convention
-        
+
         // Export GitHub token from secret
         script.push_str(&format!(
             "export GITHUB_TOKEN=$(cat /secrets/{secret_name}/{secret_key} 2>/dev/null)\n"
         ));
         script.push_str("if [ -n \"$GITHUB_TOKEN\" ]; then\n");
-        script.push_str(&format!("  echo \"GitHub token loaded from secret: {secret_name}\"\n"));
+        script.push_str(&format!(
+            "  echo \"GitHub token loaded from secret: {secret_name}\"\n"
+        ));
         script.push_str("  \n");
         script.push_str("  # Configure git global settings\n");
         script.push_str("  git config --global user.name \"Claude Agent\"\n");
         script.push_str("  git config --global user.email \"claude@5dlabs.com\"\n");
         script.push_str("  \n");
         script.push_str("  # Configure git to use the token for HTTPS authentication\n");
-        script.push_str("  git config --global credential.helper 'store --file=/workspace/.git-credentials'\n");
-        script.push_str("  echo \"https://oauth2:${GITHUB_TOKEN}@github.com\" > /workspace/.git-credentials\n");
+        script.push_str(
+            "  git config --global credential.helper 'store --file=/workspace/.git-credentials'\n",
+        );
+        script.push_str(
+            "  echo \"https://oauth2:${GITHUB_TOKEN}@github.com\" > /workspace/.git-credentials\n",
+        );
         script.push_str("  chmod 600 /workspace/.git-credentials\n");
         script.push_str("  \n");
         script.push_str("  # Git credentials are already in the right place since subPath is used\n");
@@ -685,14 +691,15 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
         script.push_str("  rm -f /workspace/.gh-token\n");
         script.push_str("  \n");
         script.push_str("  # Write GITHUB_TOKEN to a file for the main container\n");
-        script.push_str(
-            "  echo \"export GITHUB_TOKEN=${GITHUB_TOKEN}\" > /workspace/.github-env\n",
-        );
+        script
+            .push_str("  echo \"export GITHUB_TOKEN=${GITHUB_TOKEN}\" > /workspace/.github-env\n");
         script.push_str("  chmod 644 /workspace/.github-env\n");
         script.push_str("  # Ensure git config is accessible to the agent user\n");
         script.push_str("  chmod 644 /workspace/.git-credentials\n");
         script.push_str("else\n");
-        script.push_str(&format!("  echo \"Warning: GitHub token not found in secret: {secret_name}\"\n"));
+        script.push_str(&format!(
+            "  echo \"Warning: GitHub token not found in secret: {secret_name}\"\n"
+        ));
         script.push_str("fi\n");
 
         // Smart repository management: only clone if needed, otherwise sync
@@ -774,7 +781,10 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
         script.push_str(&format!("echo 'Repository URL: {}'\n", repo.url));
         script.push_str(&format!("echo 'Repository Branch: {}'\n", repo.branch));
         script.push_str(&format!("echo 'GitHub User: {}'\n", repo.github_user));
-        script.push_str(&format!("echo 'Secret Name: github-pat-{}'\n", repo.github_user));
+        script.push_str(&format!(
+            "echo 'Secret Name: github-pat-{}'\n",
+            repo.github_user
+        ));
     } else {
         script.push_str("echo 'No repository specified in TaskRun spec'\n");
     }
