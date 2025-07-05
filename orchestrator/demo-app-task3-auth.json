@@ -1,0 +1,56 @@
+{
+  "id": 3005,
+  "title": "Initialize Todo API Project Structure",
+  "description": "Create the initial project structure for a todo API with Express.js",
+  "details": "Set up basic Express.js application with project structure, package.json, and initial server configuration",
+  "test_strategy": "Full application development in stages",
+  "priority": "high",
+  "dependencies": [],
+  "status": "pending",
+  "subtasks": [],
+  "service_name": "todo-api",
+  "agent_name": "claude-agent-1",
+  "model": "sonnet",
+  "markdown_files": [
+    {
+      "filename": "task.md",
+      "content": "# Task 1: Initialize Todo API Project\n\n## Objective\nCreate the foundational structure for a RESTful Todo API using Express.js\n\n## Requirements\n1. Initialize a new Node.js project with package.json\n2. Install Express.js and essential dependencies\n3. Create basic server.js with Express setup\n4. Add basic middleware (cors, body-parser, error handling)\n5. Create initial project structure (controllers/, models/, routes/)\n6. Add a basic health check endpoint GET /health\n7. Include README.md with setup instructions\n8. Add .gitignore for Node.js projects\n\n## Git Operations (MANDATORY)\nAfter completing all requirements, you MUST:\n1. Initialize repository: `git init`\n2. Stage all changes: `git add -A`  \n3. Commit with message: `git commit -m \"Initialize Todo API project structure\"`\n4. Add remote: `git remote add origin https://github.com/5dlabs/todo-api.git`\n5. Push to main: `git push -u origin main`\n6. Create feature branch: `git checkout -b feature/initialize-api`\n7. Create pull request: `gh pr create --title \"Initialize Todo API Project\" --body \"Implemented basic Express.js API structure with health endpoint, middleware, and project organization\"`\n\n## Success Criteria\n- Package.json with proper dependencies\n- Working Express server on port 3000\n- Basic project structure in place\n- Health endpoint returns JSON status\n- Clean code with proper error handling\n- **Code pushed to GitHub repository**\n- **Pull request created on GitHub**\n\n## Notes\n- Use modern ES6+ JavaScript\n- Follow REST API best practices\n- Include proper error handling middleware\n- DO NOT mark task complete without creating PR",
+      "file_type": "task"
+    }
+  ],
+  "agent_tools": [
+    {
+      "name": "bash",
+      "enabled": true,
+      "config": {},
+      "restrictions": []
+    },
+    {
+      "name": "read",
+      "enabled": true,
+      "config": {},
+      "restrictions": []
+    },
+    {
+      "name": "edit",
+      "enabled": true,
+      "config": {},
+      "restrictions": []
+    },
+    {
+      "name": "write",
+      "enabled": true,
+      "config": {},
+      "restrictions": []
+    }
+  ],
+  "repository": {
+    "url": "https://github.com/5dlabs/todo-api",
+    "branch": "main",
+    "auth": {
+      "type": "Token",
+      "secret_name": "github-pat-swe-1-5dlabs",
+      "secret_key": "token"
+    }
+  }
+}
