@@ -126,9 +126,11 @@ async fn validate_github_permissions(
     let output = Command::new("curl")
         .args([
             "-s",
-            "-H", "Accept: application/vnd.github+json",
-            "-H", &format!("Authorization: Bearer {token}"),
-            &format!("https://api.github.com/repos/{owner}/{repo}/collaborators")
+            "-H",
+            "Accept: application/vnd.github+json",
+            "-H",
+            &format!("Authorization: Bearer {token}"),
+            &format!("https://api.github.com/repos/{owner}/{repo}/collaborators"),
         ])
         .output()
         .await
@@ -149,9 +151,11 @@ async fn validate_github_permissions(
     let user_output = Command::new("curl")
         .args([
             "-s",
-            "-H", "Accept: application/vnd.github+json", 
-            "-H", &format!("Authorization: Bearer {token}"),
-            "https://api.github.com/user"
+            "-H",
+            "Accept: application/vnd.github+json",
+            "-H",
+            &format!("Authorization: Bearer {token}"),
+            "https://api.github.com/user",
         ])
         .output()
         .await
