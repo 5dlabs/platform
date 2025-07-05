@@ -146,7 +146,10 @@ async fn validate_github_permissions(
         } else if !stdout_msg.is_empty() {
             stdout_msg.to_string()
         } else {
-            format!("Request failed with exit code: {}", output.status.code().unwrap_or(-1))
+            format!(
+                "Request failed with exit code: {}",
+                output.status.code().unwrap_or(-1)
+            )
         };
         return Err(AppError::BadRequest(format!(
             "GitHub API error: {error_msg}"
@@ -181,7 +184,10 @@ async fn validate_github_permissions(
         } else if !stdout_msg.is_empty() {
             stdout_msg.to_string()
         } else {
-            format!("Request failed with exit code: {}", user_output.status.code().unwrap_or(-1))
+            format!(
+                "Request failed with exit code: {}",
+                user_output.status.code().unwrap_or(-1)
+            )
         };
         return Err(AppError::BadRequest(format!(
             "Failed to get user info: {error_msg}"
