@@ -876,7 +876,9 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> String
     script.push_str("echo 'Checking for .claude.json files:'\n");
     script.push_str("find . -name '.claude.json' -type f -exec ls -la {} \\; 2>/dev/null\n");
     script.push_str("echo '\nContent of .claude.json:'\n");
-    script.push_str("cat /workspace/.claude.json 2>/dev/null || echo 'No .claude.json in /workspace'\n");
+    script.push_str(
+        "cat /workspace/.claude.json 2>/dev/null || echo 'No .claude.json in /workspace'\n",
+    );
     script.push_str("echo '\n--- CLAUDE SETTINGS FILE DISCOVERY ---'\n");
     script.push_str(&format!(
         "{command} --print-config-path 2>&1 || echo 'Claude print-config-path not available'\n"
