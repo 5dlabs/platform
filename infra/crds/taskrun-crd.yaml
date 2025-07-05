@@ -90,7 +90,7 @@ spec:
               repository:
                 type: object
                 description: "Repository information for code access"
-                required: ["url", "branch"]
+                required: ["url", "branch", "githubUser"]
                 properties:
                   url:
                     type: string
@@ -101,27 +101,13 @@ spec:
                     minLength: 1
                     default: "main"
                     description: "Branch or tag to checkout"
-                  path:
+                  githubUser:
                     type: string
-                    description: "Subdirectory path within the repository"
-                  auth:
-                    type: object
-                    description: "Authentication configuration"
-                    required: ["type", "secretName", "secretKey"]
-                    properties:
-                      type:
-                        type: string
-                        enum: ["Token", "SshKey", "BasicAuth"]
-                        description: "Type of authentication"
-                      secretName:
-                        type: string
-                        minLength: 1
-                        description: "Name of the Kubernetes secret"
-                      secretKey:
-                        type: string
-                        minLength: 1
-                        default: "token"
-                        description: "Key within the secret"
+                    minLength: 1
+                    description: "GitHub username for authentication (auto-resolves to secret github-pat-{username})"
+                  token:
+                    type: string
+                    description: "Direct token submission (reserved for future use)"
           status:
             type: object
             properties:

@@ -37,8 +37,8 @@ agent:
 
 initContainer:
   image:
-    repository: "busybox"
-    tag: "1.36"
+    repository: "alpine/git"
+    tag: "latest"
     pullPolicy: "IfNotPresent"
   resources:
     requests:
