@@ -610,7 +610,12 @@ fn build_job(
                         "image": format!("{}:{}", config.init_container.image.repository, config.init_container.image.tag),
                         "command": ["/bin/sh", "-c"],
                         "args": [build_init_script(tr, config)],
-                        "volumeMounts": init_volume_mounts
+                        "volumeMounts": init_volume_mounts,
+                        "securityContext": {
+                            "runAsUser": 0,
+                            "runAsGroup": 0,
+                            "runAsNonRoot": false
+                        }
                     }],
                     "containers": [{
                         "name": "claude-agent",
