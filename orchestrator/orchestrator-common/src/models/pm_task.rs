@@ -74,36 +74,13 @@ pub struct RepositorySpec {
     pub url: String,
     #[serde(default = "default_branch")]
     pub branch: String,
+    pub github_user: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub path: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub auth: Option<RepositoryAuth>,
-}
-
-/// Repository authentication specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RepositoryAuth {
-    #[serde(rename = "type")]
-    pub auth_type: RepositoryAuthType,
-    pub secret_name: String,
-    #[serde(default = "default_secret_key")]
-    pub secret_key: String,
-}
-
-/// Repository authentication types
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum RepositoryAuthType {
-    Token,
-    SshKey,
-    BasicAuth,
+    pub token: Option<String>, // Reserved for future use - TODO: Implement direct token submission
 }
 
 fn default_branch() -> String {
     "main".to_string()
-}
-
-fn default_secret_key() -> String {
-    "token".to_string()
 }
 
 fn default_model() -> String {

@@ -111,48 +111,16 @@ pub struct RepositorySpec {
     #[serde(default = "default_branch")]
     pub branch: String,
 
-    /// Optional path within the repository to use as workspace root
+    /// GitHub username for authentication (used to auto-resolve secret name)
+    pub github_user: String,
+
+    /// Optional token for direct authentication (reserved for future use)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub path: Option<String>,
-
-    /// Authentication method for private repositories
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub auth: Option<RepositoryAuth>,
-}
-
-/// Repository authentication specification
-#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct RepositoryAuth {
-    /// Authentication type
-    #[serde(rename = "type")]
-    pub auth_type: RepositoryAuthType,
-
-    /// Secret name containing credentials
-    pub secret_name: String,
-
-    /// Key within the secret for the credential
-    #[serde(default = "default_secret_key")]
-    pub secret_key: String,
-}
-
-/// Repository authentication types
-#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
-pub enum RepositoryAuthType {
-    /// GitHub personal access token
-    Token,
-    /// SSH private key
-    SshKey,
-    /// Username/password authentication
-    BasicAuth,
+    pub token: Option<String>, // TODO: Implement direct token submission in future
 }
 
 fn default_branch() -> String {
     "main".to_string()
-}
-
-fn default_secret_key() -> String {
-    "token".to_string()
 }
 
 /// Status of the TaskRun

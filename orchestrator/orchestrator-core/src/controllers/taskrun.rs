@@ -459,26 +459,26 @@ fn build_job(
         }),
     ];
 
-    // Add secret volume and mount if repository auth is configured
+    // Add secret volume and mount if repository is configured
     if let Some(repo) = &tr.spec.repository {
-        if let Some(auth) = &repo.auth {
-            let secret_volume_name = format!("{}-secret", auth.secret_name);
+        // Auto-resolve secret name from GitHub user
+        let secret_name = format!("github-pat-{}", repo.github_user);
+        let secret_volume_name = format!("{secret_name}-secret");
 
-            // Add volume mount to init container
-            init_volume_mounts.push(json!({
-                "name": secret_volume_name.clone(),
-                "mountPath": format!("/secrets/{}", auth.secret_name),
-                "readOnly": true
-            }));
+        // Add volume mount to init container
+        init_volume_mounts.push(json!({
+            "name": secret_volume_name.clone(),
+            "mountPath": format!("/secrets/{}", secret_name),
+            "readOnly": true
+        }));
 
-            // Add secret volume
-            volumes.push(json!({
-                "name": secret_volume_name,
-                "secret": {
-                    "secretName": auth.secret_name.clone()
-                }
-            }));
-        }
+        // Add secret volume
+        volumes.push(json!({
+            "name": secret_volume_name,
+            "secret": {
+                "secretName": secret_name
+            }
+        }));
     }
 
     let mut telemetry_env = vec![];
@@ -654,66 +654,47 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     if let Some(repo) = &tr.spec.repository {
         script.push_str(&format!("echo 'Cloning repository: {}'\n", repo.url));
 
-        // Setup authentication if provided
-        if let Some(auth) = &repo.auth {
-            match auth.auth_type {
-                crate::crds::taskrun::RepositoryAuthType::Token => {
-                    // Export GitHub token from secret
-                    script.push_str(&format!(
-                        "export GITHUB_TOKEN=$(cat /secrets/{}/{} 2>/dev/null)\n",
-                        auth.secret_name, auth.secret_key
-                    ));
-                    script.push_str("if [ -n \"$GITHUB_TOKEN\" ]; then\n");
-                    script.push_str("  echo \"GitHub token loaded from secret\"\n");
-                    script.push_str("  \n");
-                    script.push_str("  # Configure git global settings\n");
-                    script.push_str("  git config --global user.name \"Claude Agent\"\n");
-                    script.push_str("  git config --global user.email \"claude@5dlabs.com\"\n");
-                    script.push_str("  \n");
-                    script
-                        .push_str("  # Configure git to use the token for HTTPS authentication\n");
-                    script.push_str("  git config --global credential.helper 'store --file=/workspace/.git-credentials'\n");
-                    script.push_str("  echo \"https://oauth2:${GITHUB_TOKEN}@github.com\" > /workspace/.git-credentials\n");
-                    script.push_str("  chmod 600 /workspace/.git-credentials\n");
-                    script.push_str("  \n");
-                    script.push_str("  # Also configure for the specific service directory\n");
-                    script.push_str(&format!("  mkdir -p /workspace/{service}/.git\n"));
-                    script.push_str(&format!(
-                        "  cp /workspace/.git-credentials /workspace/{service}/.git-credentials\n"
-                    ));
-                    script.push_str("  \n");
-                    script.push_str("  # Configure gh CLI authentication\n");
-                    script.push_str("  echo \"${GITHUB_TOKEN}\" > /workspace/.gh-token\n");
-                    script.push_str("  gh auth login --with-token < /workspace/.gh-token 2>/dev/null || echo \"gh auth already configured\"\n");
-                    script.push_str("  rm -f /workspace/.gh-token\n");
-                    script.push_str("  \n");
-                    script.push_str("  # Write GITHUB_TOKEN to a file for the main container\n");
-                    script.push_str(
-                        "  echo \"export GITHUB_TOKEN=${GITHUB_TOKEN}\" > /workspace/.github-env\n",
-                    );
-                    script.push_str("  chmod 644 /workspace/.github-env\n");
-                    script.push_str("  # Ensure git config is accessible to the agent user\n");
-                    script.push_str("  chmod 644 /workspace/.git-credentials\n");
-                    script.push_str("else\n");
-                    script.push_str("  echo \"Warning: GitHub token not found in secret\"\n");
-                    script.push_str("fi\n");
-                }
-                crate::crds::taskrun::RepositoryAuthType::SshKey => {
-                    // Setup SSH key authentication
-                    script.push_str("mkdir -p ~/.ssh\n");
-                    script.push_str(&format!(
-                        "cp /secrets/{}/{} ~/.ssh/id_rsa\n",
-                        auth.secret_name, auth.secret_key
-                    ));
-                    script.push_str("chmod 600 ~/.ssh/id_rsa\n");
-                    script.push_str("ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null\n");
-                }
-                crate::crds::taskrun::RepositoryAuthType::BasicAuth => {
-                    // Basic auth not implemented yet
-                    script.push_str("echo 'Warning: BasicAuth not implemented yet'\n");
-                }
-            }
-        }
+        // Setup authentication using GitHub user to resolve secret
+        let secret_name = format!("github-pat-{}", repo.github_user);
+        let secret_key = "token"; // Standard convention
+        
+        // Export GitHub token from secret
+        script.push_str(&format!(
+            "export GITHUB_TOKEN=$(cat /secrets/{secret_name}/{secret_key} 2>/dev/null)\n"
+        ));
+        script.push_str("if [ -n \"$GITHUB_TOKEN\" ]; then\n");
+        script.push_str(&format!("  echo \"GitHub token loaded from secret: {secret_name}\"\n"));
+        script.push_str("  \n");
+        script.push_str("  # Configure git global settings\n");
+        script.push_str("  git config --global user.name \"Claude Agent\"\n");
+        script.push_str("  git config --global user.email \"claude@5dlabs.com\"\n");
+        script.push_str("  \n");
+        script.push_str("  # Configure git to use the token for HTTPS authentication\n");
+        script.push_str("  git config --global credential.helper 'store --file=/workspace/.git-credentials'\n");
+        script.push_str("  echo \"https://oauth2:${GITHUB_TOKEN}@github.com\" > /workspace/.git-credentials\n");
+        script.push_str("  chmod 600 /workspace/.git-credentials\n");
+        script.push_str("  \n");
+        script.push_str("  # Also configure for the specific service directory\n");
+        script.push_str(&format!("  mkdir -p /workspace/{service}/.git\n"));
+        script.push_str(&format!(
+            "  cp /workspace/.git-credentials /workspace/{service}/.git-credentials\n"
+        ));
+        script.push_str("  \n");
+        script.push_str("  # Configure gh CLI authentication\n");
+        script.push_str("  echo \"${GITHUB_TOKEN}\" > /workspace/.gh-token\n");
+        script.push_str("  gh auth login --with-token < /workspace/.gh-token 2>/dev/null || echo \"gh auth already configured\"\n");
+        script.push_str("  rm -f /workspace/.gh-token\n");
+        script.push_str("  \n");
+        script.push_str("  # Write GITHUB_TOKEN to a file for the main container\n");
+        script.push_str(
+            "  echo \"export GITHUB_TOKEN=${GITHUB_TOKEN}\" > /workspace/.github-env\n",
+        );
+        script.push_str("  chmod 644 /workspace/.github-env\n");
+        script.push_str("  # Ensure git config is accessible to the agent user\n");
+        script.push_str("  chmod 644 /workspace/.git-credentials\n");
+        script.push_str("else\n");
+        script.push_str(&format!("  echo \"Warning: GitHub token not found in secret: {secret_name}\"\n"));
+        script.push_str("fi\n");
 
         // Smart repository management: only clone if needed, otherwise sync
         script.push_str(&format!(
@@ -746,17 +727,6 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
             fi\n",
             repo.branch, repo.url, repo.branch, repo.url, repo.url, repo.branch, repo.branch, repo.url, repo.branch, repo.branch
         ));
-
-        // If a specific path is specified, restructure
-        if let Some(path) = &repo.path {
-            script.push_str(&format!(
-                "if [ -d './{path}' ]; then \
-                 mv ./{path}/* . && \
-                 mv ./{path}/.[^.]* . 2>/dev/null || true && \
-                 rmdir ./{path}; \
-                 fi\n"
-            ));
-        }
     } else {
         script.push_str(&format!(
             "echo 'No repository specified, using empty workspace for service: {service}'\n"
@@ -806,12 +776,8 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     if let Some(repo) = &tr.spec.repository {
         script.push_str(&format!("echo 'Repository URL: {}'\n", repo.url));
         script.push_str(&format!("echo 'Repository Branch: {}'\n", repo.branch));
-        if let Some(auth) = &repo.auth {
-            script.push_str(&format!("echo 'Auth Type: {:?}'\n", auth.auth_type));
-            script.push_str(&format!("echo 'Secret Name: {}'\n", auth.secret_name));
-        } else {
-            script.push_str("echo 'No repository authentication configured'\n");
-        }
+        script.push_str(&format!("echo 'GitHub User: {}'\n", repo.github_user));
+        script.push_str(&format!("echo 'Secret Name: github-pat-{}'\n", repo.github_user));
     } else {
         script.push_str("echo 'No repository specified in TaskRun spec'\n");
     }
@@ -1018,26 +984,19 @@ fn build_env_vars(
     // Add telemetry environment variables from config
     env_vars.extend(telemetry_env);
 
-    // Add GitHub token if repository auth is configured
+    // Add GitHub token if repository is configured
     if let Some(repo) = &tr.spec.repository {
-        if let Some(auth) = &repo.auth {
-            match auth.auth_type {
-                crate::crds::taskrun::RepositoryAuthType::Token => {
-                    env_vars.push(json!({
-                        "name": "GITHUB_TOKEN",
-                        "valueFrom": {
-                            "secretKeyRef": {
-                                "name": auth.secret_name.clone(),
-                                "key": auth.secret_key.clone()
-                            }
-                        }
-                    }));
-                }
-                _ => {
-                    // SSH and BasicAuth would need different handling
+        // Auto-resolve secret name from GitHub user
+        let secret_name = format!("github-pat-{}", repo.github_user);
+        env_vars.push(json!({
+            "name": "GITHUB_TOKEN",
+            "valueFrom": {
+                "secretKeyRef": {
+                    "name": secret_name,
+                    "key": "token" // Standard convention
                 }
             }
-        }
+        }));
     }
 
     // Note: Tool configuration is now handled via settings.json file creation
@@ -1108,9 +1067,7 @@ fn generate_claude_md(tr: &TaskRun) -> String {
         content.push_str("## Repository\n\n");
         content.push_str(&format!("- **URL**: {}\n", repo.url));
         content.push_str(&format!("- **Branch**: {}\n", repo.branch));
-        if let Some(path) = &repo.path {
-            content.push_str(&format!("- **Path**: {path}\n"));
-        }
+        content.push_str(&format!("- **GitHub User**: {}\n", repo.github_user));
         content.push('\n');
     }
 

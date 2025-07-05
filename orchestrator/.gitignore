@@ -1,3 +1,4 @@
 # Platform orchestrator and Claude Code testing files - secrets removed
 *.log
 test-*
+target/

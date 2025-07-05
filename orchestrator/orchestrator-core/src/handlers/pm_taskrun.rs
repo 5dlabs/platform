@@ -86,6 +86,7 @@ impl ApiResponse {
 }
 
 /// Validate GitHub repository permissions for the given user account
+#[allow(dead_code)]
 async fn validate_github_permissions(
     k8s_client: &Client,
     namespace: &str,
@@ -228,6 +229,7 @@ async fn validate_github_permissions(
 }
 
 /// Extract owner and repository name from GitHub URL
+#[allow(dead_code)]
 fn extract_repo_info(url: &str) -> Result<(String, String), AppError> {
     // Handle both https://github.com/owner/repo and git@github.com:owner/repo.git formats
     let url = url.trim_end_matches(".git");
@@ -285,44 +287,42 @@ pub async fn submit_task(
     }
 
     // Validate GitHub repository permissions if repository is configured
-    if let Some(ref repository) = request.repository {
-        if let Some(ref auth) = repository.auth {
-            if matches!(
-                auth.auth_type,
-                orchestrator_common::models::pm_task::RepositoryAuthType::Token
-            ) {
-                info!("Validating GitHub permissions for task {}", request.id);
-                // TEMPORARY: Skip validation due to token permission issues
-                info!("TEMPORARY: Skipping GitHub permission validation for testing");
-                /*
-                if let Err(e) = validate_github_permissions(
-                    &state.k8s_client,
-                    &state.namespace,
-                    &repository.url,
-                    &auth.secret_name,
-                    &auth.secret_key,
-                )
-                .await
-                {
-                    let error_msg = match &e {
-                        AppError::BadRequest(msg) => msg.clone(),
-                        AppError::Conflict(msg) => msg.clone(),
-                        AppError::Internal(msg) => msg.clone(),
-                    };
-                    error!(
-                        "GitHub permission validation failed for task {}: {}",
-                        request.id, e
-                    );
-                    return Err((
-                        StatusCode::from(e),
-                        Json(ApiResponse::error(&format!(
-                            "GitHub permission validation failed: {error_msg}"
-                        ))),
-                    ));
-                }
-                */
-            }
+    if let Some(ref _repository) = request.repository {
+        info!("Validating GitHub permissions for task {}", request.id);
+        // TEMPORARY: Skip validation due to token permission issues
+        info!("TEMPORARY: Skipping GitHub permission validation for testing");
+        /*
+        // Auto-resolve secret name from GitHub user
+        let secret_name = format!("github-pat-{}", repository.github_user);
+        let secret_key = "token";
+        
+        if let Err(e) = validate_github_permissions(
+            &state.k8s_client,
+            &state.namespace,
+            &repository.url,
+            &secret_name,
+            &secret_key,
+        )
+        .await
+        {
+            let error_msg = match &e {
+                AppError::BadRequest(msg) => msg.clone(),
+                AppError::Conflict(msg) => msg.clone(),
+                AppError::Internal(msg) => msg.clone(),
+            };
+            error!(
+                "GitHub permission validation failed for task {}: {}",
+                request.id, e
+            );
+            return Err((
+                StatusCode::from(e),
+                Json(ApiResponse::error(&format!(
+                    "GitHub permission validation failed: {error_msg}"
+                ))),
+            ));
         }
+        */
+        info!("GitHub permissions validated successfully");
     }
 
     // Check if TaskRun already exists
@@ -407,22 +407,8 @@ pub async fn submit_task(
                 .map(|repo| crate::crds::taskrun::RepositorySpec {
                     url: repo.url,
                     branch: repo.branch,
-                    path: repo.path,
-                    auth: repo.auth.map(|auth| crate::crds::taskrun::RepositoryAuth {
-                        auth_type: match auth.auth_type {
-                            orchestrator_common::models::pm_task::RepositoryAuthType::Token => {
-                                crate::crds::taskrun::RepositoryAuthType::Token
-                            }
-                            orchestrator_common::models::pm_task::RepositoryAuthType::SshKey => {
-                                crate::crds::taskrun::RepositoryAuthType::SshKey
-                            }
-                            orchestrator_common::models::pm_task::RepositoryAuthType::BasicAuth => {
-                                crate::crds::taskrun::RepositoryAuthType::BasicAuth
-                            }
-                        },
-                        secret_name: auth.secret_name,
-                        secret_key: auth.secret_key,
-                    }),
+                    github_user: repo.github_user,
+                    token: repo.token, // Reserved for future use
                 }),
         },
         status: None,

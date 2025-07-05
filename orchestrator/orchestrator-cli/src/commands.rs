@@ -148,19 +148,19 @@ pub mod task {
         let agent_tools = parse_tool_specs(tool_specs)?;
 
         // Create repository specification if URL provided
-        let repository = repo_url.map(|url| RepositorySpec {
-            url: url.to_string(),
-            branch: branch.to_string(),
-            path: None,
-            auth: github_user.map(|username| {
-                use orchestrator_common::models::pm_task::{RepositoryAuth, RepositoryAuthType};
-                RepositoryAuth {
-                    auth_type: RepositoryAuthType::Token,
-                    secret_name: format!("github-pat-{username}"),
-                    secret_key: "token".to_string(),
-                }
+        let repository = match (repo_url, github_user) {
+            (Some(url), Some(username)) => Some(RepositorySpec {
+                url: url.to_string(),
+                branch: branch.to_string(),
+                github_user: username.to_string(),
+                token: None, // Reserved for future use
             }),
-        });
+            (Some(_), None) => {
+                error!("Repository URL provided but no GitHub user specified. Please provide --github-user");
+                return Err(anyhow::anyhow!("Repository URL provided but no GitHub user specified. Please provide --github-user"));
+            }
+            _ => None,
+        };
 
         // Create PM request with model selection
         let pm_request = PmTaskRequest::new_with_repository(

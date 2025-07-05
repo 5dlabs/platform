@@ -54,3 +54,4 @@ Chart.lock
 
 # Claude configuration file
 CLAUDE.md
+orchestrator/target/
