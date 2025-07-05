@@ -432,6 +432,7 @@ fn build_job(
 
     // Build telemetry environment variables from config
     // Build volume mounts for init container
+    let service_name = &tr.spec.service_name;
     let mut init_volume_mounts = vec![
         json!({
             "name": "task-files",
@@ -439,7 +440,8 @@ fn build_job(
         }),
         json!({
             "name": "workspace",
-            "mountPath": "/workspace"
+            "mountPath": "/workspace",
+            "subPath": service_name.clone()
         }),
     ];
 
@@ -618,9 +620,10 @@ fn build_job(
                         "env": build_env_vars(tr, telemetry_env, config),
                         "volumeMounts": [{
                             "name": "workspace",
-                            "mountPath": "/workspace"
+                            "mountPath": "/workspace",
+                            "subPath": service_name.clone()
                         }],
-                        "workingDir": format!("/workspace/{}", tr.spec.service_name),
+                        "workingDir": "/workspace",
                         "securityContext": {
                             "runAsUser": 0,
                             "runAsGroup": 0,
@@ -638,7 +641,6 @@ fn build_job(
 
 /// Build init container script for workspace preparation
 fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
-    let service = &tr.spec.service_name;
     let task_id = tr.spec.task_id;
     let _version = tr.spec.context_version;
 
@@ -648,7 +650,8 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     script.push_str("which gh >/dev/null 2>&1 || apk add --no-cache github-cli\n");
 
     // Create workspace directory (no per-attempt subdirectory for --continue support)
-    script.push_str(&format!("mkdir -p /workspace/{service}/.task/{task_id}\n"));
+    // Note: /workspace now maps to the service-specific directory via subPath
+    script.push_str(&format!("mkdir -p /workspace/.task/{task_id}\n"));
 
     // Clone repository if specified
     if let Some(repo) = &tr.spec.repository {
@@ -674,11 +677,7 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
         script.push_str("  echo \"https://oauth2:${GITHUB_TOKEN}@github.com\" > /workspace/.git-credentials\n");
         script.push_str("  chmod 600 /workspace/.git-credentials\n");
         script.push_str("  \n");
-        script.push_str("  # Also configure for the specific service directory\n");
-        script.push_str(&format!("  mkdir -p /workspace/{service}/.git\n"));
-        script.push_str(&format!(
-            "  cp /workspace/.git-credentials /workspace/{service}/.git-credentials\n"
-        ));
+        script.push_str("  # Git credentials are already in the right place since subPath is used\n");
         script.push_str("  \n");
         script.push_str("  # Configure gh CLI authentication\n");
         script.push_str("  echo \"${GITHUB_TOKEN}\" > /workspace/.gh-token\n");
@@ -698,7 +697,7 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
 
         // Smart repository management: only clone if needed, otherwise sync
         script.push_str(&format!(
-            "cd /workspace/{service}\n\
+            "cd /workspace\n\
             if [ ! -d '.git' ]; then\n\
               if [ -z \"$(ls -A . 2>/dev/null)\" ]; then\n\
                 echo 'Directory is empty, cloning repository...'\n\
@@ -728,19 +727,17 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
             repo.branch, repo.url, repo.branch, repo.url, repo.url, repo.branch, repo.branch, repo.url, repo.branch, repo.branch
         ));
     } else {
-        script.push_str(&format!(
-            "echo 'No repository specified, using empty workspace for service: {service}'\n"
-        ));
+        script.push_str("echo 'No repository specified, using empty workspace'\n");
     }
 
     // Copy task files to .task directory
     script.push_str(&format!(
-        "cp /config/* /workspace/{service}/.task/{task_id}/ 2>/dev/null || echo 'No config files to copy'\n"
+        "cp /config/* /workspace/.task/{task_id}/ 2>/dev/null || echo 'No config files to copy'\n"
     ));
 
-    // Copy all task files to service root for @import access
+    // Copy all task files to workspace root for @import access
     script.push_str(&format!(
-        "cp /workspace/{service}/.task/{task_id}/*.md /workspace/{service}/ 2>/dev/null || echo 'No markdown files to copy to root'\n"
+        "cp /workspace/.task/{task_id}/*.md /workspace/ 2>/dev/null || echo 'No markdown files to copy to root'\n"
     ));
 
     // Setup Claude Code configuration directory and copy settings
@@ -749,13 +746,13 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     script.push_str("chmod -R 755 /home/node/.claude\n");
     script.push_str("chown -R 1000:1000 /home/node/.claude\n");
 
-    // Also copy config to service directory for Claude Code (multiple locations for reliability)
-    script.push_str(&format!("mkdir -p /workspace/{service}/.claude\n"));
-    script.push_str(&format!("cp /config/.claude.json /workspace/{service}/.claude.json 2>/dev/null || echo 'No .claude.json to copy to service dir'\n"));
-    script.push_str(&format!("cp /config/.claude.json /workspace/{service}/.claude/settings.local.json 2>/dev/null || echo 'No .claude.json to copy as settings.local.json'\n"));
+    // Also copy config to workspace directory for Claude Code (multiple locations for reliability)
+    script.push_str("mkdir -p /workspace/.claude\n");
+    script.push_str("cp /config/.claude.json /workspace/.claude.json 2>/dev/null || echo 'No .claude.json to copy to workspace dir'\n");
+    script.push_str("cp /config/.claude.json /workspace/.claude/settings.local.json 2>/dev/null || echo 'No .claude.json to copy as settings.local.json'\n");
 
     // Create .gitignore to prevent committing Claude internal files
-    script.push_str(&format!("cat > /workspace/{service}/.gitignore << 'EOF'\n"));
+    script.push_str("cat > /workspace/.gitignore << 'EOF'\n");
     script.push_str("# Claude Code internal files - do not commit\n");
     script.push_str(".claude/\n");
     script.push_str(".claude.json\n");
@@ -783,17 +780,12 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     }
     script.push_str("echo 'Claude configuration contents:'\n");
     script.push_str("cat /config/.claude.json 2>/dev/null || echo 'No .claude.json found'\n");
-    script.push_str("echo 'File permissions in service .claude directory:'\n");
-    script.push_str(&format!(
-        "ls -la /workspace/{service}/.claude/ 2>/dev/null || echo 'No .claude directory found'\n"
-    ));
+    script.push_str("echo 'File permissions in .claude directory:'\n");
+    script.push_str("ls -la /workspace/.claude/ 2>/dev/null || echo 'No .claude directory found'\n");
     script.push_str("echo '=== END DEBUGGING ==='\n");
 
     script.push_str("echo 'Workspace prepared successfully'\n");
     script.push_str("ls -la /workspace/\n");
-    script.push_str(&format!(
-        "ls -la /workspace/{service}/ || echo 'Service directory not found'\n"
-    ));
 
     script
 }
@@ -973,11 +965,11 @@ fn build_env_vars(
         }),
         json!({
             "name": "HOME",
-            "value": format!("/workspace/{}", tr.spec.service_name)  // Set HOME to working directory for Claude settings
+            "value": "/workspace"  // Set HOME to working directory for Claude settings
         }),
         json!({
             "name": "WORKDIR",
-            "value": format!("/workspace/{}", tr.spec.service_name)
+            "value": "/workspace"
         }),
     ];
 
