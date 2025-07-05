@@ -795,7 +795,7 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     script.push_str(".gitconfig\n");
     script.push_str(".git-credentials\n");
     script.push_str("EOF\n");
-    
+
     // Clean up any credentials from parent workspace to prevent accidental commits
     script.push_str("echo 'Cleaning up credentials from parent workspace'\n");
     script.push_str("rm -f /workspace/.git-credentials 2>/dev/null || true\n");
