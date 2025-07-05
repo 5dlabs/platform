@@ -125,10 +125,14 @@ async fn validate_github_permissions(
     // Check repository permissions using wget (GitHub REST API)
     let output = Command::new("wget")
         .args([
-            "-q", "-O", "-",
-            "--header", "Accept: application/vnd.github+json",
-            "--header", &format!("Authorization: Bearer {token}"),
-            &format!("https://api.github.com/repos/{owner}/{repo}/collaborators")
+            "-q",
+            "-O",
+            "-",
+            "--header",
+            "Accept: application/vnd.github+json",
+            "--header",
+            &format!("Authorization: Bearer {token}"),
+            &format!("https://api.github.com/repos/{owner}/{repo}/collaborators"),
         ])
         .output()
         .await
@@ -148,10 +152,14 @@ async fn validate_github_permissions(
     // Get the authenticated user's login to find their permissions
     let user_output = Command::new("wget")
         .args([
-            "-q", "-O", "-",
-            "--header", "Accept: application/vnd.github+json", 
-            "--header", &format!("Authorization: Bearer {token}"),
-            "https://api.github.com/user"
+            "-q",
+            "-O",
+            "-",
+            "--header",
+            "Accept: application/vnd.github+json",
+            "--header",
+            &format!("Authorization: Bearer {token}"),
+            "https://api.github.com/user",
         ])
         .output()
         .await
