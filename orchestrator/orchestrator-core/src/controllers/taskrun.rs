@@ -1147,10 +1147,10 @@ fn generate_claude_settings(tr: &TaskRun, _config: &ControllerConfig) -> Result<
     }
 
     // Use the correct Claude Code configuration format as per claudelog.com documentation
-    let workspace_path = format!("/workspace/{}", tr.spec.service_name);
+    // With subPath mounting, Claude sees /workspace as the root
     let settings = json!({
         "projects": {
-            workspace_path: {
+            "/workspace": {
                 "allowedTools": allow_rules.iter().map(|rule| {
                     // Convert "Bash(*)" format to "Bash" format
                     rule.replace("(*)", "")
