@@ -1,0 +1,11 @@
+/Users/jonathonfritz/platform/orchestrator/target/debug/deps/console-c39aa50bc85de09a.d: /Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/lib.rs /Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/common_term.rs /Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/kb.rs /Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/term.rs /Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/unix_term.rs /Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/utils.rs /Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/ansi.rs
+
+/Users/jonathonfritz/platform/orchestrator/target/debug/deps/libconsole-c39aa50bc85de09a.rmeta: /Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/lib.rs /Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/common_term.rs /Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/kb.rs /Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/term.rs /Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/unix_term.rs /Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/utils.rs /Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/ansi.rs
+
+/Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/lib.rs:
+/Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/common_term.rs:
+/Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/kb.rs:
+/Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/term.rs:
+/Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/unix_term.rs:
+/Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/utils.rs:
+/Users/jonathonfritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.0/src/ansi.rs:

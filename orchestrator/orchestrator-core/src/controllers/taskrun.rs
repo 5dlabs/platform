@@ -784,6 +784,18 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     script.push_str(&format!("cp /config/.claude.json /workspace/{service}/.claude.json 2>/dev/null || echo 'No .claude.json to copy to service dir'\n"));
     script.push_str(&format!("cp /config/.claude.json /workspace/{service}/.claude/settings.local.json 2>/dev/null || echo 'No .claude.json to copy as settings.local.json'\n"));
 
+    // Create .gitignore to prevent committing Claude internal files
+    script.push_str(&format!("cat > /workspace/{service}/.gitignore << 'EOF'\n"));
+    script.push_str("# Claude Code internal files - do not commit\n");
+    script.push_str(".claude/\n");
+    script.push_str(".claude.json\n");
+    script.push_str(".task/\n");
+    script.push_str("task.md\n");
+    script.push_str("CLAUDE.md\n");
+    script.push_str(".gitconfig\n");
+    script.push_str(".git-credentials\n");
+    script.push_str("EOF\n");
+
     // DEBUG: Show configuration details
     script.push_str("echo '=== DEBUGGING CONFIGURATION ==='\n");
     if let Some(repo) = &tr.spec.repository {

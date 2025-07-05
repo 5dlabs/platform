@@ -1,5 +1,5 @@
 {
-  "id": 2005,
+  "id": 2006,
   "title": "Test GitHub Integration - PR Creation",
   "description": "Verify git cloning, authentication, and PR submission workflow",
   "details": "Test the complete GitHub integration including repository cloning, file modifications, and PR creation",
@@ -37,11 +37,6 @@
   ],
   "repository": {
     "url": "https://github.com/5dlabs/agent-test",
-    "branch": "main",
-    "auth": {
-      "type": "Token",
-      "secret_name": "github-pat-pm0-5dlabs",
-      "secret_key": "token"
-    }
+    "branch": "main"
   }
 }

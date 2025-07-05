@@ -1,22 +1,3 @@
-# Rust
-target/
-# Cargo.lock is committed for binary applications
-*.rs.bk
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-
-# Environment
-.env
-.env.local
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
+# Platform orchestrator and Claude Code testing files - secrets removed
 *.log
+test-*
