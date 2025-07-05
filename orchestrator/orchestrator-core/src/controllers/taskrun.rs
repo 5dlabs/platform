@@ -683,7 +683,8 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
         );
         script.push_str("  chmod 600 /workspace/.git-credentials\n");
         script.push_str("  \n");
-        script.push_str("  # Git credentials are already in the right place since subPath is used\n");
+        script
+            .push_str("  # Git credentials are already in the right place since subPath is used\n");
         script.push_str("  \n");
         script.push_str("  # Configure gh CLI authentication\n");
         script.push_str("  echo \"${GITHUB_TOKEN}\" > /workspace/.gh-token\n");
@@ -791,7 +792,8 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     script.push_str("echo 'Claude configuration contents:'\n");
     script.push_str("cat /config/.claude.json 2>/dev/null || echo 'No .claude.json found'\n");
     script.push_str("echo 'File permissions in .claude directory:'\n");
-    script.push_str("ls -la /workspace/.claude/ 2>/dev/null || echo 'No .claude directory found'\n");
+    script
+        .push_str("ls -la /workspace/.claude/ 2>/dev/null || echo 'No .claude directory found'\n");
     script.push_str("echo '=== END DEBUGGING ==='\n");
 
     script.push_str("echo 'Workspace prepared successfully'\n");
