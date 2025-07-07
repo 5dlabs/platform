@@ -4,6 +4,7 @@ use crate::crds::{MarkdownFile, MarkdownFileType};
 use crate::crds::{TaskRun, TaskRunPhase};
 use chrono::Utc;
 use futures::StreamExt;
+use handlebars::Handlebars;
 use k8s_openapi::{
     api::{batch::v1::Job, core::v1::ConfigMap},
     apimachinery::pkg::apis::meta::v1::ObjectMeta,
@@ -601,7 +602,7 @@ fn build_job(
                         "name": "prepare-workspace",
                         "image": format!("{}:{}", config.init_container.image.repository, config.init_container.image.tag),
                         "command": ["/bin/sh", "-c"],
-                        "args": [build_init_script(tr, config)],
+                        "args": [build_init_script(tr, config)?],
                         "volumeMounts": init_volume_mounts,
                         "securityContext": {
                             "runAsUser": 0,
@@ -613,7 +614,7 @@ fn build_job(
                         "name": "claude-agent",
                         "image": format!("{}:{}", config.agent.image.repository, config.agent.image.tag),
                         "command": ["/bin/sh", "-c"],
-                        "args": [build_agent_startup_script(tr, config)],
+                        "args": [build_agent_startup_script(tr, config)?],
                         "env": build_env_vars(tr, telemetry_env, config),
                         "volumeMounts": [{
                             "name": "workspace",
@@ -636,463 +637,74 @@ fn build_job(
     serde_json::from_value(job_json).map_err(Error::SerializationError)
 }
 
+// Template constants
+const INIT_CONTAINER_TEMPLATE: &str = include_str!("../../templates/init-container.sh.hbs");
+const EXPORT_SCRIPT_TEMPLATE: &str = include_str!("../../templates/export-session.sh");
+const MAIN_CONTAINER_TEMPLATE: &str = include_str!("../../templates/main-container.sh.hbs");
+
 /// Build init container script for workspace preparation
-fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
-    let task_id = tr.spec.task_id;
-    let _version = tr.spec.context_version;
-
-    let mut script = String::new();
-
-    // Clear container identification
-    script.push('\n');
-    script.push_str("echo '════════════════════════════════════════════════════════════════'\n");
-    script.push_str("echo '║                    INIT CONTAINER STARTING                   ║'\n");
-    script.push_str("echo '║                   (prepare-workspace)                        ║'\n");
-    script.push_str("echo '════════════════════════════════════════════════════════════════'\n");
-    script.push('\n');
-
-    // Claude Code image already has git and gh CLI installed
-    script.push_str("echo '✓ Using Claude Code image with pre-installed tools'\n");
-    script
-        .push_str("which git >/dev/null && echo '✓ Git is available' || echo '✗ Git not found!'\n");
-    script.push_str("which gh >/dev/null && echo '✓ GitHub CLI is available' || echo '✗ GitHub CLI not found!'\n");
-
-    // Create workspace directory (no per-attempt subdirectory for --continue support)
-    // Note: /workspace now maps to the service-specific directory via subPath
-    script.push_str(&format!("mkdir -p /workspace/.task/{task_id}\n"));
-
-    // Clone repository if specified
-    if let Some(repo) = &tr.spec.repository {
-        script.push_str(&format!("echo 'Cloning repository: {}'\n", repo.url));
-
-        // Setup authentication using GitHub user to resolve secret
-        let secret_name = format!("github-pat-{}", repo.github_user);
-        let secret_key = "token"; // Standard convention
-
-        // Export GitHub token from secret
-        script.push_str(&format!(
-            "export GITHUB_TOKEN=$(cat /secrets/{secret_name}/{secret_key} 2>/dev/null)\n"
-        ));
-        script.push_str("if [ -n \"$GITHUB_TOKEN\" ]; then\n");
-        script.push_str(&format!(
-            "  echo \"GitHub token loaded from secret: {secret_name}\"\n"
-        ));
-        script.push_str("  \n");
-        script.push_str("  # Configure git global settings\n");
-        script.push_str("  git config --global user.name \"Claude Agent\"\n");
-        script.push_str("  git config --global user.email \"claude@5dlabs.com\"\n");
-        script.push_str("  \n");
-        script.push_str("  # Configure git to use the token for HTTPS authentication\n");
-        script.push_str(
-            "  git config --global credential.helper 'store --file=/workspace/.git-credentials'\n",
-        );
-        script.push_str(
-            "  echo \"https://oauth2:${GITHUB_TOKEN}@github.com\" > /workspace/.git-credentials\n",
-        );
-        script.push_str("  chmod 600 /workspace/.git-credentials\n");
-        script.push_str("  \n");
-        script
-            .push_str("  # Git credentials are already in the right place since subPath is used\n");
-        script.push_str("  \n");
-        script.push_str("  # Configure gh CLI authentication\n");
-        script.push_str("  echo \"${GITHUB_TOKEN}\" > /workspace/.gh-token\n");
-        script.push_str("  gh auth login --with-token < /workspace/.gh-token 2>/dev/null || echo \"gh auth already configured\"\n");
-        script.push_str("  rm -f /workspace/.gh-token\n");
-        script.push_str("  \n");
-        script.push_str("  # Write GITHUB_TOKEN to a file for the main container\n");
-        script
-            .push_str("  echo \"export GITHUB_TOKEN=${GITHUB_TOKEN}\" > /workspace/.github-env\n");
-        script.push_str("  chmod 644 /workspace/.github-env\n");
-        script.push_str("  # Ensure git config is accessible to the agent user\n");
-        script.push_str("  chmod 644 /workspace/.git-credentials\n");
-        script.push_str("else\n");
-        script.push_str(&format!(
-            "  echo \"Warning: GitHub token not found in secret: {secret_name}\"\n"
-        ));
-        script.push_str("fi\n");
-
-        // Smart repository management: only clone if needed, otherwise sync
-        script.push_str(&format!(
-            "cd /workspace\n\
-            if [ ! -d '.git' ]; then\n\
-              if [ -z \"$(ls -A . 2>/dev/null)\" ]; then\n\
-                echo 'Directory is empty, cloning repository...'\n\
-                git clone --depth 1 --branch {} {} . || echo 'Clone failed, continuing...'\n\
-              else\n\
-                echo 'Directory not empty but not a Git repo, backing up existing files and cloning...'\n\
-                mkdir -p .backup\n\
-                mv ./* .backup/ 2>/dev/null || true\n\
-                mv .[^.]* .backup/ 2>/dev/null || true\n\
-                git clone --depth 1 --branch {} {} . || echo 'Clone failed, continuing...'\n\
-                echo 'Repository cloned, existing files backed up to .backup/'\n\
-              fi\n\
-            else\n\
-              echo 'Git repository exists, checking if it matches the target repository...'\n\
-              CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo '')\n\
-              if [ \"$CURRENT_REMOTE\" = \"{}\" ]; then\n\
-                echo 'Repository matches, updating to latest changes...'\n\
-                git fetch origin {} --depth 1 2>/dev/null || echo 'Fetch failed, continuing with existing code'\n\
-                git reset --hard origin/{} 2>/dev/null || echo 'Reset failed, continuing with existing code'\n\
-              else\n\
-                echo 'Different repository detected, updating remote and fetching...'\n\
-                git remote set-url origin {}\n\
-                git fetch origin {} --depth 1 || echo 'Fetch failed, continuing...'\n\
-                git reset --hard origin/{} || echo 'Reset failed, continuing...'\n\
-              fi\n\
-            fi\n",
-            repo.branch, repo.url, repo.branch, repo.url, repo.url, repo.branch, repo.branch, repo.url, repo.branch, repo.branch
-        ));
-    } else {
-        script.push_str("echo 'No repository specified, using empty workspace'\n");
-    }
-
-    // Copy task files to .task directory
-    script.push_str(&format!(
-        "cp /config/* /workspace/.task/{task_id}/ 2>/dev/null || echo 'No config files to copy'\n"
-    ));
-
-    // Copy all task files to workspace root for @import access
-    script.push_str(&format!(
-        "cp /workspace/.task/{task_id}/*.md /workspace/ 2>/dev/null || echo 'No markdown files to copy to root'\n"
-    ));
-
-    // Setup Claude Code configuration directory and copy settings
-    script.push_str("mkdir -p /home/node/.claude/todos\n");
-    script.push_str("cp /config/.claude.json /home/node/.claude.json 2>/dev/null || echo 'No .claude.json to copy'\n");
-    script.push_str("chmod -R 755 /home/node/.claude\n");
-    script.push_str("chown -R 1000:1000 /home/node/.claude\n");
-
-    // Also copy config to workspace directory for Claude Code (multiple locations for reliability)
-    script.push_str("mkdir -p /workspace/.claude\n");
-    script.push_str("cp /config/.claude.json /workspace/.claude.json 2>/dev/null || echo 'No .claude.json to copy to workspace dir'\n");
-    script.push_str("cp /config/.claude.json /workspace/.claude/settings.local.json 2>/dev/null || echo 'No .claude.json to copy as settings.local.json'\n");
-
-    // Create .gitignore to prevent committing Claude internal files
-    script.push_str("cat > /workspace/.gitignore << 'EOF'\n");
-    script.push_str("# Claude Code internal files - do not commit\n");
-    script.push_str(".claude/\n");
-    script.push_str(".claude.json\n");
-    script.push_str(".claude-scripts/\n");
-    script.push_str(".task/\n");
-    script.push_str("# Allow Claude session exports to be committed\n");
-    script.push_str("!.task/*/claude-session.md\n");
-    script.push_str("!.task/*/claude-session.xml\n");
-    script.push_str("!.task/*/claude-session-raw.jsonl\n");
-    script.push_str("task.md\n");
-    script.push_str("CLAUDE.md\n");
-    script.push_str(".gitconfig\n");
-    script.push_str(".git-credentials\n");
-    script.push_str("EOF\n");
-
-    // Create Claude scripts directory and export script
-    script.push_str("mkdir -p /workspace/.claude-scripts\n");
-    script.push_str("cat > /workspace/.claude-scripts/export-session.sh << 'EXPORT_SCRIPT'\n");
-    script.push_str("#!/bin/bash\n");
-    script.push_str("# Export Claude session to markdown when session stops\n\n");
-    script.push_str("# Read hook input\n");
-    script.push_str("HOOK_INPUT=$(cat)\n");
-    script.push_str("TRANSCRIPT_PATH=$(echo \"$HOOK_INPUT\" | jq -r '.transcript_path')\n");
-    script.push_str("SESSION_ID=$(echo \"$HOOK_INPUT\" | jq -r '.session_id')\n\n");
-    script.push_str("# Extract task ID from environment\n");
-    script.push_str(&format!("TASK_ID=\"{}\"\n\n", tr.spec.task_id));
-    script.push_str("# Output directory\n");
-    script.push_str("OUTPUT_DIR=\"/workspace/.task/${TASK_ID}\"\n");
-    script.push_str("mkdir -p \"$OUTPUT_DIR\"\n\n");
-    script.push_str("# Convert JSONL to readable markdown\n");
-    script.push_str("OUTPUT_FILE=\"$OUTPUT_DIR/claude-session.md\"\n\n");
-    script.push_str("echo \"# Claude Session Export\" > \"$OUTPUT_FILE\"\n");
-    script.push_str("echo \"**Session ID:** ${SESSION_ID}\" >> \"$OUTPUT_FILE\"\n");
-    script.push_str("echo \"**Task ID:** ${TASK_ID}\" >> \"$OUTPUT_FILE\"\n");
-    script.push_str("echo \"**Export Time:** $(date -u +\"%Y-%m-%d %H:%M:%S UTC\")\" >> \"$OUTPUT_FILE\"\n");
-    script.push_str("echo \"\" >> \"$OUTPUT_FILE\"\n");
-    script.push_str("echo \"## Conversation History\" >> \"$OUTPUT_FILE\"\n");
-    script.push_str("echo \"\" >> \"$OUTPUT_FILE\"\n\n");
-    script.push_str("# Parse JSONL and format as markdown\n");
-    script.push_str("jq -s -r '.[] | \n");
-    script.push_str("  if .type == \"user\" then\n");
-    script.push_str("    \"### User\\n\" + (.message.content // .message | tostring) + \"\\n\"\n");
-    script.push_str("  elif .type == \"assistant\" then\n");
-    script.push_str("    if .message.content then\n");
-    script.push_str("      \"### Assistant\\n\" + (\n");
-    script.push_str("        .message.content | \n");
-    script.push_str("        if type == \"array\" then \n");
-    script.push_str("          map(\n");
-    script.push_str("            if .type == \"text\" then .text\n");
-    script.push_str("            elif .type == \"tool_use\" then \"**Tool Use:** \" + .name + \"\\n```json\\n\" + (.input | tojson) + \"\\n```\"\n");
-    script.push_str("            else tostring\n");
-    script.push_str("            end\n");
-    script.push_str("          ) | join(\"\\n\")\n");
-    script.push_str("        else tostring\n");
-    script.push_str("        end\n");
-    script.push_str("      ) + \"\\n\"\n");
-    script.push_str("    else empty\n");
-    script.push_str("    end\n");
-    script.push_str("  else empty\n");
-    script.push_str("  end\n");
-    script.push_str("' \"$TRANSCRIPT_PATH\" >> \"$OUTPUT_FILE\" 2>/dev/null || echo \"Error parsing transcript\" >> \"$OUTPUT_FILE\"\n\n");
-    script.push_str("echo \"\" >> \"$OUTPUT_FILE\"\n");
-    script.push_str("echo \"---\" >> \"$OUTPUT_FILE\"\n");
-    script.push_str("echo \"*Exported from Claude session ${SESSION_ID}*\" >> \"$OUTPUT_FILE\"\n\n");
-    script.push_str("# Also create a compressed copy of the raw JSONL\n");
-    script.push_str("cp \"$TRANSCRIPT_PATH\" \"$OUTPUT_DIR/claude-session-raw.jsonl\" 2>/dev/null || true\n\n");
-    script.push_str("echo \"Session exported to $OUTPUT_FILE\"\n\n");
+fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String, Error> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false); // Allow missing fields
     
-    // Add XML export functionality
-    script.push_str("# Generate XML export\n");
-    script.push_str("XML_FILE=\"$OUTPUT_DIR/claude-session.xml\"\n\n");
-    script.push_str("echo '<?xml version=\"1.0\" encoding=\"UTF-8\"?>' > \"$XML_FILE\"\n");
-    script.push_str("echo '<session>' >> \"$XML_FILE\"\n");
-    script.push_str("echo \"  <metadata>\" >> \"$XML_FILE\"\n");
-    script.push_str("echo \"    <session_id>${SESSION_ID}</session_id>\" >> \"$XML_FILE\"\n");
-    script.push_str("echo \"    <task_id>${TASK_ID}</task_id>\" >> \"$XML_FILE\"\n");
-    script.push_str("echo \"    <export_time>$(date -u +\"%Y-%m-%dT%H:%M:%SZ\")</export_time>\" >> \"$XML_FILE\"\n");
-    script.push_str("echo \"  </metadata>\" >> \"$XML_FILE\"\n\n");
+    // Register the export script as a partial so we can include it
+    handlebars
+        .register_template_string("export_script", EXPORT_SCRIPT_TEMPLATE)
+        .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
     
-    // Extract file modifications
-    script.push_str("echo \"  <files_modified>\" >> \"$XML_FILE\"\n");
-    script.push_str("jq -r '.[] | select(.type == \"assistant\" and .message.content) | .message.content[] | select(.type == \"tool_use\" and (.name == \"Write\" or .name == \"Edit\" or .name == \"MultiEdit\")) | .input' \"$TRANSCRIPT_PATH\" 2>/dev/null | \n");
-    script.push_str("while read -r tool_input; do\n");
-    script.push_str("  FILE_PATH=$(echo \"$tool_input\" | jq -r '.file_path // .path // \"unknown\"' 2>/dev/null)\n");
-    script.push_str("  if [ \"$FILE_PATH\" != \"unknown\" ] && [ \"$FILE_PATH\" != \"null\" ]; then\n");
-    script.push_str("    echo \"    <file path=\\\"$FILE_PATH\\\" />\" >> \"$XML_FILE\"\n");
-    script.push_str("  fi\n");
-    script.push_str("done\n");
-    script.push_str("echo \"  </files_modified>\" >> \"$XML_FILE\"\n\n");
+    // Render the export script with task_id
+    let export_script_data = json!({
+        "task_id": tr.spec.task_id,
+    });
+    let export_script = handlebars
+        .render("export_script", &export_script_data)
+        .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
     
-    // Extract tool usage summary
-    script.push_str("echo \"  <tool_usage_summary>\" >> \"$XML_FILE\"\n");
-    script.push_str("jq -r '.[] | select(.type == \"assistant\" and .message.content) | .message.content[] | select(.type == \"tool_use\") | .name' \"$TRANSCRIPT_PATH\" 2>/dev/null | \n");
-    script.push_str("sort | uniq -c | while read count tool; do\n");
-    script.push_str("  echo \"    <tool name=\\\"$tool\\\" count=\\\"$count\\\" />\" >> \"$XML_FILE\"\n");
-    script.push_str("done\n");
-    script.push_str("echo \"  </tool_usage_summary>\" >> \"$XML_FILE\"\n\n");
+    // Now render the main init script
+    handlebars
+        .register_template_string("init", INIT_CONTAINER_TEMPLATE)
+        .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
     
-    // Convert conversation to XML
-    script.push_str("echo \"  <conversation>\" >> \"$XML_FILE\"\n");
-    script.push_str("jq -s -r '.[] | \n");
-    script.push_str("  if .type == \"user\" then\n");
-    script.push_str("    \"    <message role=\\\"user\\\" timestamp=\\\"\" + .timestamp + \"\\\">\\n\" +\n");
-    script.push_str("    \"      <content><![CDATA[\" + (.message.content // .message | tostring) + \"]]></content>\\n\" +\n");
-    script.push_str("    \"    </message>\"\n");
-    script.push_str("  elif .type == \"assistant\" then\n");
-    script.push_str("    if .message.content then\n");
-    script.push_str("      \"    <message role=\\\"assistant\\\" timestamp=\\\"\" + .timestamp + \"\\\" model=\\\"\" + .message.model + \"\\\">\\n\" +\n");
-    script.push_str("      (.message.content | \n");
-    script.push_str("        if type == \"array\" then \n");
-    script.push_str("          map(\n");
-    script.push_str("            if .type == \"text\" then\n");
-    script.push_str("              \"      <text><![CDATA[\" + .text + \"]]></text>\"\n");
-    script.push_str("            elif .type == \"tool_use\" then\n");
-    script.push_str("              \"      <tool_use name=\\\"\" + .name + \"\\\" id=\\\"\" + .id + \"\\\">\\n\" +\n");
-    script.push_str("              \"        <input><![CDATA[\" + (.input | tojson) + \"]]></input>\\n\" +\n");
-    script.push_str("              \"      </tool_use>\"\n");
-    script.push_str("            else\n");
-    script.push_str("              \"      <unknown>\" + tostring + \"</unknown>\"\n");
-    script.push_str("            end\n");
-    script.push_str("          ) | join(\"\\n\")\n");
-    script.push_str("        else \n");
-    script.push_str("          \"      <text><![CDATA[\" + tostring + \"]]></text>\"\n");
-    script.push_str("        end\n");
-    script.push_str("      ) + \"\\n    </message>\"\n");
-    script.push_str("    else empty\n");
-    script.push_str("    end\n");
-    script.push_str("  elif .type == \"user\" and .toolUseResult then\n");
-    script.push_str("    \"    <tool_result tool_use_id=\\\"\" + .message.content[0].tool_use_id + \"\\\">\\n\" +\n");
-    script.push_str("    \"      <content><![CDATA[\" + .message.content[0].content + \"]]></content>\\n\" +\n");
-    script.push_str("    \"    </tool_result>\"\n");
-    script.push_str("  else empty\n");
-    script.push_str("  end\n");
-    script.push_str("' \"$TRANSCRIPT_PATH\" >> \"$XML_FILE\" 2>/dev/null || echo \"    <error>Failed to parse conversation</error>\" >> \"$XML_FILE\"\n");
-    script.push_str("echo \"  </conversation>\" >> \"$XML_FILE\"\n\n");
+    let data = json!({
+        "task_id": tr.spec.task_id,
+        "repository": tr.spec.repository.as_ref(),
+        "export_script": export_script,
+    });
     
-    // Close XML
-    script.push_str("echo \"</session>\" >> \"$XML_FILE\"\n\n");
-    script.push_str("echo \"XML export saved to $XML_FILE\"\n");
-    
-    script.push_str("EXPORT_SCRIPT\n");
-    script.push_str("chmod +x /workspace/.claude-scripts/export-session.sh\n");
-
-    // Clean up any credentials from parent workspace to prevent accidental commits
-    script.push_str("echo 'Cleaning up credentials from parent workspace'\n");
-    script.push_str("rm -f /workspace/.git-credentials 2>/dev/null || true\n");
-    script.push_str("rm -f /workspace/.github-env 2>/dev/null || true\n");
-
-    // DEBUG: Show configuration details
-    script.push_str("echo '=== DEBUGGING CONFIGURATION ==='\n");
-    if let Some(repo) = &tr.spec.repository {
-        script.push_str(&format!("echo 'Repository URL: {}'\n", repo.url));
-        script.push_str(&format!("echo 'Repository Branch: {}'\n", repo.branch));
-        script.push_str(&format!("echo 'GitHub User: {}'\n", repo.github_user));
-        script.push_str(&format!(
-            "echo 'Secret Name: github-pat-{}'\n",
-            repo.github_user
-        ));
-    } else {
-        script.push_str("echo 'No repository specified in TaskRun spec'\n");
-    }
-    script.push_str("echo 'Claude configuration contents:'\n");
-    script.push_str("cat /config/.claude.json 2>/dev/null || echo 'No .claude.json found'\n");
-    script.push_str("echo 'File permissions in .claude directory:'\n");
-    script
-        .push_str("ls -la /workspace/.claude/ 2>/dev/null || echo 'No .claude directory found'\n");
-    script.push_str("echo '=== END DEBUGGING ==='\n");
-
-    script.push_str("echo 'Workspace prepared successfully'\n");
-    script.push_str("ls -la /workspace/\n");
-
-    script
+    handlebars
+        .render("init", &data)
+        .map_err(|e| Error::ConfigError(format!("Failed to render template: {e}")))
 }
-
 /// Build startup script for the agent container
-fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> String {
-    let mut script = String::new();
-
-    // Clear container identification
-    script.push('\n');
-    script.push_str("echo '════════════════════════════════════════════════════════════════'\n");
-    script.push_str("echo '║                    MAIN CONTAINER STARTING                   ║'\n");
-    script.push_str("echo '║                      (claude-agent)                          ║'\n");
-    script.push_str("echo '════════════════════════════════════════════════════════════════'\n");
-    script.push('\n');
-
-    // Source GitHub environment if it exists (using . instead of source for sh compatibility)
-    script.push_str("if [ -f /workspace/.github-env ]; then\n");
-    script.push_str("  . /workspace/.github-env\n");
-    script.push_str("  echo \"✓ GitHub authentication configured\"\n");
-    script.push_str("fi\n\n");
-
-    // Configure git credentials for HTTPS authentication if GITHUB_TOKEN is available
-    script.push_str("if [ -n \"$GITHUB_TOKEN\" ]; then\n");
-    script.push_str("  echo 'Configuring git credentials for GitHub authentication'\n");
-    script.push_str("  git config --global user.name \"Claude Agent\"\n");
-    script.push_str("  git config --global user.email \"claude@5dlabs.com\"\n");
-    script.push_str(
-        "  git config --global credential.helper 'store --file=$HOME/.git-credentials'\n",
-    );
-    script.push_str(
-        "  echo \"https://oauth2:${GITHUB_TOKEN}@github.com\" > \"$HOME/.git-credentials\"\n",
-    );
-    script.push_str("  chmod 600 \"$HOME/.git-credentials\"\n");
-    script.push_str("  echo 'Git credentials configured successfully'\n");
-    script.push_str("else\n");
-    script.push_str("  echo 'No GITHUB_TOKEN found, skipping git credential setup'\n");
-    script.push_str("fi\n\n");
-
-    // COMPREHENSIVE DEBUGGING BEFORE CLAUDE STARTS
-    script.push_str("echo '=== COMPREHENSIVE CLAUDE DEBUGGING ==='\n");
-    script.push_str("echo '\n--- Environment Variables ---'\n");
-    script.push_str("env | grep -E '(HOME|PWD|WORKDIR|CLAUDE)' | sort\n");
-    script.push_str("echo '\n--- Current Working Directory ---'\n");
-    script.push_str("pwd\n");
-    script.push_str("echo '\n--- User Information ---'\n");
-    script.push_str("whoami\n");
-    script.push_str("id\n");
-    script.push_str("echo '\n--- Current Directory Tree ---'\n");
-    script.push_str("tree -a . 2>/dev/null || find . -type f 2>/dev/null | head -20\n");
-    script.push_str("echo '\n--- HOME Directory Contents ---'\n");
-    script.push_str("echo \"HOME is set to: $HOME\"\n");
-    script.push_str("ls -la \"$HOME\" 2>/dev/null || echo 'HOME directory not accessible'\n");
-    script.push_str("echo '\n--- Claude Config Directory ---'\n");
-    script
-        .push_str("ls -la \"$HOME/.claude\" 2>/dev/null || echo 'No .claude directory in HOME'\n");
-    script.push_str("echo '\n--- Settings.json Content ---'\n");
-    script.push_str("cat \"$HOME/.claude/settings.json\" 2>/dev/null || echo 'No settings.json found in HOME/.claude'\n");
-    script.push_str("echo '\n--- Alternative Claude Config Locations ---'\n");
-    script.push_str("find . -name 'settings.json' -type f 2>/dev/null\n");
-    script.push_str("find .. -name 'settings.json' -type f 2>/dev/null | head -5\n");
-    script.push_str("echo '\n--- File Permissions on All Settings.json ---'\n");
-    script.push_str("find . -name 'settings.json' -exec ls -la {} \\; 2>/dev/null\n");
-    script.push_str("find .. -name 'settings.json' -exec ls -la {} \\; 2>/dev/null | head -5\n");
-    script.push_str("echo '\n--- Parent Directory Structure ---'\n");
-    script.push_str("ls -la .. 2>/dev/null || echo 'Cannot access parent directory'\n");
-    script.push_str("echo '=== END DEBUGGING - STARTING CLAUDE ==='\n\n");
-
-    // Print Claude Code's actual loaded settings before execution
-    script.push_str("echo '\n--- CLAUDE CODE SETTINGS DEBUG ---'\n");
-    script.push_str("echo 'Testing Claude Code settings loading...'\n");
-    let command = config.agent.command.join(" ");
-    script.push_str(&format!("echo 'Claude command: {command}'\n"));
-    script.push_str(&format!(
-        "{command} --version 2>/dev/null || echo 'Claude version failed'\n"
-    ));
-    script.push_str(&format!(
-        "{command} --help 2>&1 | head -20 || echo 'Claude help failed'\n"
-    ));
-    script.push_str("echo '\n--- CLAUDE SETTINGS VERIFICATION ---'\n");
-    script.push_str("echo 'Claude Code uses .claude.json for configuration'\n");
-    script.push_str("echo 'Checking for .claude.json files:'\n");
-    script.push_str("find . -name '.claude.json' -type f -exec ls -la {} \\; 2>/dev/null\n");
-    script.push_str("echo '\nContent of .claude.json:'\n");
-    script.push_str(
-        "cat /workspace/.claude.json 2>/dev/null || echo 'No .claude.json in /workspace'\n",
-    );
-    script.push_str("echo '\n--- CLAUDE SETTINGS FILE DISCOVERY ---'\n");
-    script.push_str(&format!(
-        "{command} --print-config-path 2>&1 || echo 'Claude print-config-path not available'\n"
-    ));
-    script.push_str(&format!(
-        "{command} --debug 2>&1 | head -10 || echo 'Claude debug output failed'\n"
-    ));
-    script.push_str("echo '\n--- DEVCONTAINER AND ENVIRONMENT VARIABLES ---'\n");
-    script.push_str("env | grep -i devcontainer || echo 'No DEVCONTAINER variables found'\n");
-    script.push_str("env | grep -i claude || echo 'No CLAUDE environment variables found'\n");
-    script.push_str("echo '\n--- SETTING CLAUDE CONFIG DIRECTORY ---'\n");
-    script.push_str("export CLAUDE_CONFIG_DIR=/workspace/debug-api/.claude\n");
-    script.push_str("echo \"CLAUDE_CONFIG_DIR set to: $CLAUDE_CONFIG_DIR\"\n");
-    script.push_str("echo '\n--- UNSETTING DEVCONTAINER VARIABLES ---'\n");
-    script.push_str("unset DEVCONTAINER 2>/dev/null || true\n");
-    script.push_str("unset DEVCONTAINER_CONFIG 2>/dev/null || true\n");
-    script.push_str("echo 'DEVCONTAINER variables unset'\n");
-    script.push_str("echo '\n--- FINAL SETTINGS CHECK ---'\n");
-    script.push_str("echo 'Attempting to read settings.json with cat:'\n");
-    script.push_str("find . -name 'settings.json' -exec echo 'Found settings.json:' {} \\; -exec cat {} \\; 2>/dev/null\n");
-    script.push_str("echo '\n--- TESTING PERMISSIVE MODE EXPLICITLY ---'\n");
-    script.push_str(&format!(
-        "{command} --help | grep -i permission || echo 'No permission flags found in help'\n"
-    ));
-    script.push_str(&format!(
-        "{command} --help | grep -i allow || echo 'No allow flags found in help'\n"
-    ));
-    script.push_str(&format!(
-        "{command} --help | grep -i mode || echo 'No mode flags found in help'\n"
-    ));
-    script.push_str("echo '\n--- TESTING SIMPLE CLAUDE COMMAND WITHOUT PROMPT ---'\n");
-    script.push_str(&format!("{command} --version 2>&1\n"));
-    script.push_str("echo '\n--- READING PROMPT FILE ---'\n");
+fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result<String, Error> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false); // Allow missing fields
     
-    // Read the prompt.md file content
-    script.push_str("if [ -f /workspace/prompt.md ]; then\n");
-    script.push_str("  echo 'Found prompt.md, using it as Claude prompt'\n");
-    script.push_str("  PROMPT_CONTENT=$(cat /workspace/prompt.md)\n");
-    script.push_str("else\n");
-    script.push_str("  echo 'WARNING: prompt.md not found, using default prompt'\n");
-    script.push_str("  PROMPT_CONTENT='Read the task context in CLAUDE.md and begin implementing the requested service. Follow the design specification and ensure all acceptance criteria are met.'\n");
-    script.push_str("fi\n");
+    // Register the main container template
+    handlebars
+        .register_template_string("main", MAIN_CONTAINER_TEMPLATE)
+        .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
     
-    script.push_str("echo '\n--- STARTING CLAUDE WITH FULL ARGS ---'\n");
-
-    // Build Claude command with model selection
-    script.push_str(&format!("CLAUDE_CMD=\"{command} -p\"\n"));
+    // Build the Claude command
+    let command = &config.agent.command;
     
-    // Add model argument if not "sonnet" (default)
-    if tr.spec.model != "sonnet" {
-        script.push_str(&format!("CLAUDE_CMD=\"$CLAUDE_CMD --model={}\"\n", tr.spec.model));
-    }
-
-    // Add --continue flag for retry attempts (attempts > 1)
-    let attempts = tr.status.as_ref().map(|s| s.attempts).unwrap_or(0);
-    if attempts > 1 {
-        script.push_str("CLAUDE_CMD=\"$CLAUDE_CMD --continue\"\n");
-        script.push_str(&format!(
-            "echo 'Adding --continue flag for attempt {attempts}'\n"
-        ));
-    }
-
-    script.push_str("echo \"Final Claude command: $CLAUDE_CMD <prompt from prompt.md>\"\n");
-    script.push_str("exec $CLAUDE_CMD \"$PROMPT_CONTENT\"");
-
-    script
+    // Prepare template data
+    let data = json!({
+        "command": command,
+        "model_override": tr.spec.model != "sonnet", // Non-default model
+        "model": tr.spec.model.clone(),
+        "is_retry": tr.status.as_ref().is_some_and(|s| s.attempts > 1),
+        "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
+        "repository": tr.spec.repository.as_ref(),
+        "debug": false, // Can be added to config later if needed
+        "task_id": tr.spec.task_id,
+    });
+    
+    handlebars
+        .render("main", &data)
+        .map_err(|e| Error::ConfigError(format!("Failed to render template: {e}")))
 }
+
 
 /// Build environment variables for the container
 fn build_env_vars(

@@ -1,0 +1,171 @@
+#!/bin/sh
+
+echo '════════════════════════════════════════════════════════════════'
+echo '║                    MAIN CONTAINER STARTING                   ║'
+echo '║                      (claude-agent)                          ║'
+echo '════════════════════════════════════════════════════════════════'
+
+# Source GitHub environment if it exists (using . instead of source for sh compatibility)
+if [ -f /workspace/.github-env ]; then
+  . /workspace/.github-env
+  echo "✓ GitHub authentication configured"
+fi
+
+# Configure git credentials for HTTPS authentication if GITHUB_TOKEN is available
+if [ -n "$GITHUB_TOKEN" ]; then
+  echo 'Configuring git credentials for GitHub authentication'
+  git config --global user.name "Claude Agent"
+  git config --global user.email "claude@5dlabs.com"
+  git config --global credential.helper store
+  git config --global push.autoSetupRemote true
+  
+  {{#if repository}}
+  # Write token to git credentials file using the correct format
+  echo "https://{{repository.github_user}}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+  
+  # Ensure git config is accessible
+  chmod 644 /workspace/.git-credentials
+  
+  # Set git to use the credentials for the specific repository
+  cd /workspace
+  git remote set-url origin {{repository.url}} 2>/dev/null || true
+  {{/if}}
+  
+  echo 'Git credentials configured successfully'
+else
+  echo 'Warning: GITHUB_TOKEN not available, git operations may fail'
+fi
+
+# Create .gitconfig
+cat > /workspace/.gitconfig << 'EOF'
+[user]
+    name = Claude Agent
+    email = claude@5dlabs.com
+[credential]
+    helper = store
+[push]
+    autoSetupRemote = true
+EOF
+
+echo '=== COMPREHENSIVE CLAUDE DEBUGGING ==='
+
+echo '
+--- Environment Variables ---'
+env | grep -E '(HOME|PWD|WORKDIR|CLAUDE)' | sort
+echo '
+--- Current Working Directory ---'
+pwd
+echo '
+--- User Information ---'
+whoami
+id
+echo '
+--- Current Directory Tree ---'
+tree -a . 2>/dev/null || find . -type f 2>/dev/null | head -20
+echo '
+--- HOME Directory Contents ---'
+echo "HOME is set to: $HOME"
+ls -la "$HOME" 2>/dev/null || echo 'HOME directory not accessible'
+echo '
+--- Claude Config Directory ---'
+ls -la "$HOME/.claude" 2>/dev/null || echo 'No .claude directory in HOME'
+echo '
+--- Settings.json Content ---'
+cat "$HOME/.claude/settings.json" 2>/dev/null || echo 'No settings.json found in HOME/.claude'
+echo '
+--- Alternative Claude Config Locations ---'
+find . -name 'settings.json' -type f 2>/dev/null
+find .. -name 'settings.json' -type f 2>/dev/null | head -5
+echo '
+--- File Permissions on All Settings.json ---'
+find . -name 'settings.json' -exec ls -la {} \; 2>/dev/null
+find .. -name 'settings.json' -exec ls -la {} \; 2>/dev/null | head -5
+echo '
+--- Parent Directory Structure ---'
+ls -la .. 2>/dev/null || echo 'Cannot access parent directory'
+echo '=== END DEBUGGING - STARTING CLAUDE ==='
+
+echo '
+--- CLAUDE CODE SETTINGS DEBUG ---'
+echo 'Testing Claude Code settings loading...'
+echo 'Claude command: {{command}}'
+{{command}} --version 2>/dev/null || echo 'Claude version failed'
+{{command}} --help 2>&1 | head -20 || echo 'Claude help failed'
+echo '
+--- CLAUDE SETTINGS VERIFICATION ---'
+echo 'Claude Code uses .claude.json for configuration'
+echo 'Checking for .claude.json files:'
+find . -name '.claude.json' -type f -exec ls -la {} \; 2>/dev/null
+echo '
+Content of .claude.json:'
+cat /workspace/.claude.json 2>/dev/null || echo 'No .claude.json in /workspace'
+echo '
+--- CLAUDE SETTINGS FILE DISCOVERY ---'
+{{command}} --print-config-path 2>&1 || echo 'Claude print-config-path not available'
+{{#if debug}}
+[DEBUG] Reading config from /workspace/.claude.json
+[DEBUG] Config parsed successfully from /workspace/.claude.json
+[DEBUG] Reading config from /workspace/.claude.json
+[DEBUG] Config parsed successfully from /workspace/.claude.json
+[DEBUG] Reading config from /workspace/.claude.json
+[DEBUG] Config parsed successfully from /workspace/.claude.json
+[DEBUG] Reading config from /workspace/.claude.json
+[DEBUG] Config parsed successfully from /workspace/.claude.json
+[DEBUG] Saving project config for /workspace to /workspace/.claude.json
+[DEBUG] Re-reading config from /workspace/.claude.json
+{{/if}}
+
+echo '
+--- DEVCONTAINER AND ENVIRONMENT VARIABLES ---'
+env | grep -E '(DEVCONTAINER|HOSTNAME|OTEL_|CLAUDE_|AGENT_)' | sort
+echo '
+--- SETTING CLAUDE CONFIG DIRECTORY ---'
+export CLAUDE_CONFIG_DIR=/workspace/debug-api/.claude
+echo "CLAUDE_CONFIG_DIR set to: $CLAUDE_CONFIG_DIR"
+echo '
+--- UNSETTING DEVCONTAINER VARIABLES ---'
+unset DEVCONTAINER 2>/dev/null || true
+unset DEVCONTAINER_CONFIG 2>/dev/null || true
+echo 'DEVCONTAINER variables unset'
+echo '
+--- FINAL SETTINGS CHECK ---'
+echo 'Attempting to read settings.json with cat:'
+find . -name 'settings.json' -exec echo 'Found settings.json:' {} \; -exec cat {} \; 2>/dev/null
+echo '
+--- TESTING PERMISSIVE MODE EXPLICITLY ---'
+{{command}} --help | grep -i permission || echo 'No permission flags found in help'
+{{command}} --help | grep -i allow || echo 'No allow flags found in help'
+{{command}} --help | grep -i mode || echo 'No mode flags found in help'
+echo '
+--- TESTING SIMPLE CLAUDE COMMAND WITHOUT PROMPT ---'
+{{command}} --version 2>&1
+
+echo '
+--- PREPARING CLAUDE EXECUTION ---'
+
+# Check if prompt.md exists
+if [ -f /workspace/prompt.md ]; then
+  echo 'Found prompt.md, will use it as Claude prompt'
+else
+  echo 'WARNING: prompt.md not found, creating default prompt'
+  echo 'Read the task context in CLAUDE.md and begin implementing the requested service. Follow the design specification and ensure all acceptance criteria are met.' > /workspace/prompt.md
+fi
+
+echo '
+--- STARTING CLAUDE WITH FULL ARGS ---'
+
+# Build Claude command with model selection
+CLAUDE_CMD="{{command}} -p"
+
+{{#if model_override}}
+CLAUDE_CMD="$CLAUDE_CMD --model={{model}}"
+{{/if}}
+
+{{#if is_retry}}
+CLAUDE_CMD="$CLAUDE_CMD --continue"
+echo 'Adding --continue flag for attempt {{attempts}}'
+{{/if}}
+
+# Use stdin to pass the prompt content to avoid shell interpretation issues
+echo "Final Claude command: $CLAUDE_CMD (with prompt from stdin)"
+exec $CLAUDE_CMD < /workspace/prompt.md

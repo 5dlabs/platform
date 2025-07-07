@@ -1,0 +1,136 @@
+#!/bin/bash
+set -e
+
+echo '════════════════════════════════════════════════════════════════'
+echo '║                    INIT CONTAINER STARTING                   ║'
+echo '║                   (prepare-workspace)                        ║'
+echo '════════════════════════════════════════════════════════════════'
+
+echo '✓ Using Claude Code image with pre-installed tools'
+which git >/dev/null && echo '✓ Git is available' || echo '✗ Git not found!'
+which gh >/dev/null && echo '✓ GitHub CLI is available' || echo '✗ GitHub CLI not found!'
+
+# Create workspace directory structure
+mkdir -p /workspace/.task/{{task_id}}
+
+{{#if repository}}
+echo 'Cloning repository: {{repository.url}}'
+
+# Setup GitHub authentication
+export GITHUB_TOKEN=$(cat /secrets/github-pat-{{repository.github_user}}/token 2>/dev/null)
+if [ -n "$GITHUB_TOKEN" ]; then
+  echo "GitHub token loaded from secret: github-pat-{{repository.github_user}}"
+  
+  # Configure git global settings
+  git config --global user.name "Claude Agent"
+  git config --global user.email "claude@5dlabs.com"
+  git config --global credential.helper store
+  
+  # Configure gh CLI
+  echo "$GITHUB_TOKEN" | gh auth login --with-token 2>/dev/null || echo "gh auth already configured"
+  
+  # Write token to git credentials file
+  echo "https://{{repository.github_user}}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+  
+  # Ensure git config is accessible to the agent user
+  chmod 644 /workspace/.git-credentials
+else
+  echo "Warning: GitHub token not found in secret: github-pat-{{repository.github_user}}"
+fi
+
+# Smart repository management
+cd /workspace
+if [ ! -d '.git' ]; then
+  if [ -z "$(ls -A . 2>/dev/null)" ]; then
+    echo 'Directory is empty, cloning repository...'
+    git clone --depth 1 --branch {{repository.branch}} {{repository.url}} . || echo 'Clone failed, continuing...'
+  else
+    echo 'Directory not empty but not a Git repo, backing up existing files and cloning...'
+    mkdir -p .backup
+    mv ./* .backup/ 2>/dev/null || true
+    mv .[^.]* .backup/ 2>/dev/null || true
+    git clone --depth 1 --branch {{repository.branch}} {{repository.url}} . || echo 'Clone failed, continuing...'
+    echo 'Repository cloned, existing files backed up to .backup/'
+  fi
+else
+  echo 'Git repository exists, checking if it matches the target repository...'
+  CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo '')
+  if [ "$CURRENT_REMOTE" = "{{repository.url}}" ]; then
+    echo 'Repository matches, updating to latest changes...'
+    git fetch origin {{repository.branch}} --depth 1 2>/dev/null || echo 'Fetch failed, continuing with existing code'
+    git reset --hard origin/{{repository.branch}} 2>/dev/null || echo 'Reset failed, continuing with existing code'
+  else
+    echo 'Different repository detected, updating remote and fetching...'
+    git remote set-url origin {{repository.url}}
+    git fetch origin {{repository.branch}} --depth 1 || echo 'Fetch failed, continuing...'
+    git reset --hard origin/{{repository.branch}} || echo 'Reset failed, continuing...'
+  fi
+fi
+{{else}}
+echo 'No repository specified, using empty workspace'
+{{/if}}
+
+# Copy task files to .task directory
+cp /config/* /workspace/.task/{{task_id}}/ 2>/dev/null || echo 'No config files to copy'
+
+# Copy all markdown files to workspace root for @import access
+cp /workspace/.task/{{task_id}}/*.md /workspace/ 2>/dev/null || echo 'No markdown files to copy to root'
+
+# Setup Claude Code configuration
+mkdir -p /home/node/.claude/todos
+cp /config/.claude.json /home/node/.claude.json 2>/dev/null || echo 'No .claude.json to copy'
+chmod -R 755 /home/node/.claude
+chown -R 1000:1000 /home/node/.claude
+
+# Also copy config to workspace directory
+mkdir -p /workspace/.claude
+cp /config/.claude.json /workspace/.claude.json 2>/dev/null || echo 'No .claude.json to copy to workspace dir'
+cp /config/.claude.json /workspace/.claude/settings.local.json 2>/dev/null || echo 'No .claude.json to copy as settings.local.json'
+
+# Create .gitignore to prevent committing Claude internal files
+cat > /workspace/.gitignore << 'EOF'
+# Claude Code internal files - do not commit
+.claude/
+.claude.json
+.claude-scripts/
+.task/
+# Allow Claude session exports to be committed
+!.task/*/claude-session.md
+!.task/*/claude-session.xml
+!.task/*/claude-session-raw.jsonl
+task.md
+CLAUDE.md
+.gitconfig
+.git-credentials
+EOF
+
+# Create Claude scripts directory and export script
+mkdir -p /workspace/.claude-scripts
+cat > /workspace/.claude-scripts/export-session.sh << 'EXPORT_SCRIPT'
+{{export_script}}
+EXPORT_SCRIPT
+chmod +x /workspace/.claude-scripts/export-session.sh
+
+# Clean up any credentials from parent workspace
+echo 'Cleaning up credentials from parent workspace'
+rm -f /workspace/.git-credentials 2>/dev/null || true
+rm -f /workspace/.github-env 2>/dev/null || true
+
+# DEBUG: Show configuration details
+echo '=== DEBUGGING CONFIGURATION ==='
+{{#if repository}}
+echo 'Repository URL: {{repository.url}}'
+echo 'Repository Branch: {{repository.branch}}'
+echo 'GitHub User: {{repository.github_user}}'
+echo 'Secret Name: github-pat-{{repository.github_user}}'
+{{else}}
+echo 'No repository specified in TaskRun spec'
+{{/if}}
+echo 'Claude configuration contents:'
+cat /config/.claude.json 2>/dev/null || echo 'No .claude.json found'
+echo 'File permissions in .claude directory:'
+ls -la /workspace/.claude/ 2>/dev/null || echo 'No .claude directory found'
+echo '=== END DEBUGGING ==='
+
+echo 'Workspace prepared successfully'
+ls -la /workspace/
