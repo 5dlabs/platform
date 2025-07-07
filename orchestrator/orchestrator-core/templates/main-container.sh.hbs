@@ -144,9 +144,72 @@ echo '
 {{command}} --version 2>&1
 
 echo '
+--- WORKSPACE VALIDATION ---'
+
+# Pre-flight check - ensure all required files are in place before starting Claude
+MISSING_FILES=""
+REQUIRED_FILES="CLAUDE.md task.md design-spec.md prompt.md acceptance-criteria.md"
+
+echo "Checking for required files in /workspace..."
+for file in $REQUIRED_FILES; do
+  if [ ! -f "/workspace/$file" ]; then
+    echo "ERROR: Missing required file: $file"
+    MISSING_FILES="$MISSING_FILES $file"
+  else
+    echo "✓ Found: $file"
+  fi
+done
+
+# Also check for .claude.json configuration
+if [ ! -f "/workspace/.claude.json" ]; then
+  echo "ERROR: Missing .claude.json configuration file"
+  MISSING_FILES="$MISSING_FILES .claude.json"
+else
+  echo "✓ Found: .claude.json"
+  # Check if it has proper allowedTools
+  if grep -q '"allowedTools": \[\]' /workspace/.claude.json; then
+    echo "WARNING: .claude.json has empty allowedTools array"
+  fi
+fi
+
+# Check for git repository
+if [ ! -d "/workspace/.git" ]; then
+  echo "ERROR: No git repository found at /workspace"
+  MISSING_FILES="$MISSING_FILES .git"
+else
+  echo "✓ Found: git repository"
+fi
+
+# If any files are missing, abort before starting Claude
+if [ -n "$MISSING_FILES" ]; then
+  echo ""
+  echo "═══════════════════════════════════════════════════════════════"
+  echo "║                    WORKSPACE VALIDATION FAILED              ║"
+  echo "═══════════════════════════════════════════════════════════════"
+  echo ""
+  echo "The following required files/directories are missing:"
+  echo "$MISSING_FILES"
+  echo ""
+  echo "This indicates a problem with workspace preparation."
+  echo "Claude will NOT be started to avoid wasting API credits."
+  echo ""
+  echo "Debugging information:"
+  echo "- Working directory: $(pwd)"
+  echo "- Workspace contents:"
+  ls -la /workspace/ | head -20
+  echo ""
+  echo "Aborting to prevent credit waste."
+  exit 1
+fi
+
+echo ""
+echo "✓ All required files present. Workspace is valid."
+echo ""
+
+echo '
 --- PREPARING CLAUDE EXECUTION ---'
 
-# Check if prompt.md exists
+# Check if prompt.md exists (redundant but kept for compatibility)
 if [ -f /workspace/prompt.md ]; then
   echo 'Found prompt.md, will use it as Claude prompt'
 else
