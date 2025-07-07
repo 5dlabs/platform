@@ -738,10 +738,6 @@ fn build_env_vars(
             "value": "/workspace"  // Set HOME to working directory for Claude settings
         }),
         json!({
-            "name": "CLAUDE_VERBOSE_JSON_LOGS",
-            "value": "true"  // Enable verbose JSON streaming output
-        }),
-        json!({
             "name": "WORKDIR",
             "value": "/workspace"
         }),
