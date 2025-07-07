@@ -36,10 +36,9 @@ for file in $REQUIRED_FILES; do
   fi
 done
 
-# Check for git repository
+# Check for git repository (optional - only needed for tasks that push code)
 if [ ! -d "/workspace/.git" ]; then
-  echo "ERROR: No git repository found at /workspace"
-  MISSING_FILES="$MISSING_FILES .git"
+  echo "! Note: No git repository found (okay for non-code tasks)"
 else
   echo "✓ Found: git repository"
 fi
