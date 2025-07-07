@@ -15,4 +15,3 @@ pub use config::ControllerConfig;
 pub use controllers::run_taskrun_controller;
 pub use crds::{MarkdownFile, TaskRun, TaskRunSpec, TaskRunStatus};
 pub use k8s::{K8sClient, K8sError, K8sResult};
-pub use services::HelmClient;
