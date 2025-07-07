@@ -58,12 +58,19 @@ if [ "$SKIP_CLONE" = "false" ]; then
       }
     else
       echo 'Directory not empty but not a Git repo, backing up existing files and cloning...'
-      mkdir -p .backup-$(date +%s)
-      find . -maxdepth 1 -not -name '.backup*' -not -name '.task' -not -name '.current-service' -not -name '.' -exec mv {} .backup-$(date +%s)/ \; 2>/dev/null || true
-      git clone --depth 1 --branch {{repository.branch}} {{repository.url}} . || {
+      BACKUP_DIR=".backup-$(date +%s)"
+      mkdir -p "$BACKUP_DIR"
+      find . -maxdepth 1 -not -name '.backup*' -not -name '.task' -not -name '.current-service' -not -name '.' -exec mv {} "$BACKUP_DIR/" \; 2>/dev/null || true
+      # Clone to a temp directory first, then move contents
+      TEMP_CLONE_DIR="/tmp/git-clone-$$"
+      git clone --depth 1 --branch {{repository.branch}} {{repository.url}} "$TEMP_CLONE_DIR" || {
         echo 'Clone failed'
         exit 1
       }
+      # Move cloned contents to current directory
+      mv "$TEMP_CLONE_DIR"/.git .
+      mv "$TEMP_CLONE_DIR"/* . 2>/dev/null || true
+      rm -rf "$TEMP_CLONE_DIR"
     fi
   else
     echo 'Git repository exists, checking remote...'
