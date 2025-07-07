@@ -104,9 +104,9 @@ spec:
             
             # Also show service directories
             for dir in /workspace/*/; do
-              if [ -d "$dir" ]; then
-                echo "Service directory: $dir"
-                ls -la "$dir" | head -5
+              if [ -d "\$dir" ]; then
+                echo "Service directory: \$dir"
+                ls -la "\$dir" | head -5
               fi
             done
             

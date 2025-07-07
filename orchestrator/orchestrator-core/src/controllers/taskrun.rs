@@ -618,9 +618,10 @@ fn build_job(
                         "env": build_env_vars(tr, telemetry_env, config),
                         "volumeMounts": [{
                             "name": "workspace",
-                            "mountPath": "/workspace"
+                            "mountPath": "/workspace",
+                            "subPath": service_name.clone()
                         }],
-                        "workingDir": format!("/workspace/{}", service_name),
+                        "workingDir": "/workspace",
                         "securityContext": {
                             "runAsUser": 0,
                             "runAsGroup": 0,

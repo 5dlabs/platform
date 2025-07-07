@@ -6,8 +6,8 @@ echo '║                      (claude-agent)                          ║'
 echo '════════════════════════════════════════════════════════════════'
 
 # Source GitHub environment if it exists (using . instead of source for sh compatibility)
-if [ -f /workspace/{{service_name}}/.github-env ]; then
-  . /workspace/{{service_name}}/.github-env
+if [ -f /workspace/.github-env ]; then
+  . /workspace/.github-env
   echo "✓ GitHub authentication configured"
 fi
 
@@ -28,7 +28,7 @@ if [ -n "$GITHUB_TOKEN" ]; then
   chmod 644 /workspace/.git-credentials
   
   # Set git to use the credentials for the specific repository
-  cd /workspace/{{service_name}}
+  cd /workspace
   git remote set-url origin {{repository.url}} 2>/dev/null || true
   {{/if}}
   
@@ -122,8 +122,8 @@ echo '
 env | grep -E '(DEVCONTAINER|HOSTNAME|OTEL_|CLAUDE_|AGENT_)' | sort
 echo '
 --- SETTING CLAUDE CONFIG DIRECTORY ---'
-# Use the service directory for Claude config
-export CLAUDE_CONFIG_DIR=/workspace/{{service_name}}/.claude
+# Use the workspace root for Claude config
+export CLAUDE_CONFIG_DIR=/workspace/.claude
 echo "CLAUDE_CONFIG_DIR set to: $CLAUDE_CONFIG_DIR"
 echo '
 --- UNSETTING DEVCONTAINER VARIABLES ---'
@@ -146,12 +146,12 @@ echo '
 echo '
 --- PREPARING CLAUDE EXECUTION ---'
 
-# Check if prompt.md exists in service directory
-if [ -f /workspace/{{service_name}}/prompt.md ]; then
+# Check if prompt.md exists
+if [ -f /workspace/prompt.md ]; then
   echo 'Found prompt.md, will use it as Claude prompt'
 else
   echo 'WARNING: prompt.md not found, creating default prompt'
-  echo 'Read the task context in CLAUDE.md and begin implementing the requested service. Follow the design specification and ensure all acceptance criteria are met.' > /workspace/{{service_name}}/prompt.md
+  echo 'Read the task context in CLAUDE.md and begin implementing the requested service. Follow the design specification and ensure all acceptance criteria are met.' > /workspace/prompt.md
 fi
 
 echo '
@@ -171,4 +171,4 @@ echo 'Adding --continue flag for attempt {{attempts}}'
 
 # Use stdin to pass the prompt content to avoid shell interpretation issues
 echo "Final Claude command: $CLAUDE_CMD (with prompt from stdin)"
-exec $CLAUDE_CMD < /workspace/{{service_name}}/prompt.md
+exec $CLAUDE_CMD < /workspace/prompt.md
