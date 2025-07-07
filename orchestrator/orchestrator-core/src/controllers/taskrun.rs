@@ -6,7 +6,12 @@ use chrono::Utc;
 use futures::StreamExt;
 use handlebars::Handlebars;
 use k8s_openapi::{
-    api::{batch::v1::Job, core::v1::{ConfigMap, PersistentVolumeClaim, PersistentVolumeClaimSpec, VolumeResourceRequirements}},
+    api::{
+        batch::v1::Job,
+        core::v1::{
+            ConfigMap, PersistentVolumeClaim, PersistentVolumeClaimSpec, VolumeResourceRequirements,
+        },
+    },
     apimachinery::pkg::{api::resource::Quantity, apis::meta::v1::ObjectMeta},
 };
 use kube::{
@@ -61,28 +66,39 @@ async fn ensure_pvc_exists(
     // Check if PVC already exists
     match pvcs.get(pvc_name).await {
         Ok(pvc) => {
-            info!("PVC {} already exists, status: {:?}", pvc_name, pvc.status.as_ref().map(|s| &s.phase));
+            info!(
+                "PVC {} already exists, status: {:?}",
+                pvc_name,
+                pvc.status.as_ref().map(|s| &s.phase)
+            );
             Ok(())
         }
         Err(kube::Error::Api(ae)) if ae.code == 404 => {
             // PVC doesn't exist, create it
             info!("Creating PVC {} for service {}", pvc_name, service_name);
-            
+
             let pvc = PersistentVolumeClaim {
                 metadata: ObjectMeta {
                     name: Some(pvc_name.to_string()),
                     labels: Some(BTreeMap::from([
-                        ("app.kubernetes.io/managed-by".to_string(), "taskrun-controller".to_string()),
-                        ("orchestrator.io/service".to_string(), service_name.to_string()),
+                        (
+                            "app.kubernetes.io/managed-by".to_string(),
+                            "taskrun-controller".to_string(),
+                        ),
+                        (
+                            "orchestrator.io/service".to_string(),
+                            service_name.to_string(),
+                        ),
                     ])),
                     ..Default::default()
                 },
                 spec: Some(PersistentVolumeClaimSpec {
                     access_modes: Some(vec!["ReadWriteOnce".to_string()]),
                     resources: Some(VolumeResourceRequirements {
-                        requests: Some(BTreeMap::from([
-                            ("storage".to_string(), Quantity("10Gi".to_string())),
-                        ])),
+                        requests: Some(BTreeMap::from([(
+                            "storage".to_string(),
+                            Quantity("10Gi".to_string()),
+                        )])),
                         ..Default::default()
                     }),
                     storage_class_name: Some("local-path".to_string()),
@@ -94,7 +110,7 @@ async fn ensure_pvc_exists(
 
             pvcs.create(&PostParams::default(), &pvc).await?;
             info!("Created PVC {} successfully", pvc_name);
-            
+
             // Wait a moment for PVC to be bound
             tokio::time::sleep(Duration::from_secs(2)).await;
             Ok(())
@@ -161,7 +177,8 @@ async fn reconcile(tr: Arc<TaskRun>, ctx: Arc<Context>) -> Result<Action> {
         match event {
             FinalizerEvent::Apply(tr) => {
                 // Create or update resources
-                reconcile_create_or_update(tr, &jobs, &configmaps, &pvcs, &taskruns, &ctx.config).await
+                reconcile_create_or_update(tr, &jobs, &configmaps, &pvcs, &taskruns, &ctx.config)
+                    .await
             }
             FinalizerEvent::Cleanup(tr) => {
                 // Cleanup resources when TaskRun is deleted (don't delete PVCs - they're shared)
@@ -739,7 +756,7 @@ fn build_prep_job(
     // Build volumes for prep job
     let service_name = &tr.spec.service_name;
     let pvc_name = format!("workspace-{service_name}");
-    
+
     let mut volumes = vec![
         json!({
             "name": "task-files",
