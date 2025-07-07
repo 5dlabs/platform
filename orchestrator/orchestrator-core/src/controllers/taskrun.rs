@@ -653,7 +653,8 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
 
     // Claude Code image already has git and gh CLI installed
     script.push_str("echo '✓ Using Claude Code image with pre-installed tools'\n");
-    script.push_str("which git >/dev/null && echo '✓ Git is available' || echo '✗ Git not found!'\n");
+    script
+        .push_str("which git >/dev/null && echo '✓ Git is available' || echo '✗ Git not found!'\n");
     script.push_str("which gh >/dev/null && echo '✓ GitHub CLI is available' || echo '✗ GitHub CLI not found!'\n");
 
     // Create workspace directory (no per-attempt subdirectory for --continue support)
