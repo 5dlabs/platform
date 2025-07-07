@@ -646,12 +646,12 @@ const MAIN_CONTAINER_TEMPLATE: &str = include_str!("../../templates/main-contain
 fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String, Error> {
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false); // Allow missing fields
-    
+
     // Register the export script as a partial so we can include it
     handlebars
         .register_template_string("export_script", EXPORT_SCRIPT_TEMPLATE)
         .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
-    
+
     // Render the export script with task_id
     let export_script_data = json!({
         "task_id": tr.spec.task_id,
@@ -659,18 +659,18 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String,
     let export_script = handlebars
         .render("export_script", &export_script_data)
         .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
-    
+
     // Now render the main init script
     handlebars
         .register_template_string("init", INIT_CONTAINER_TEMPLATE)
         .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
-    
+
     let data = json!({
         "task_id": tr.spec.task_id,
         "repository": tr.spec.repository.as_ref(),
         "export_script": export_script,
     });
-    
+
     handlebars
         .render("init", &data)
         .map_err(|e| Error::ConfigError(format!("Failed to render template: {e}")))
@@ -679,15 +679,15 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String,
 fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result<String, Error> {
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false); // Allow missing fields
-    
+
     // Register the main container template
     handlebars
         .register_template_string("main", MAIN_CONTAINER_TEMPLATE)
         .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
-    
+
     // Build the Claude command
     let command = &config.agent.command;
-    
+
     // Prepare template data
     let data = json!({
         "command": command,
@@ -699,12 +699,11 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
         "debug": false, // Can be added to config later if needed
         "task_id": tr.spec.task_id,
     });
-    
+
     handlebars
         .render("main", &data)
         .map_err(|e| Error::ConfigError(format!("Failed to render template: {e}")))
 }
-
 
 /// Build environment variables for the container
 fn build_env_vars(
