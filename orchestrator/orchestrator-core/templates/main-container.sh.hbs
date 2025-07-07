@@ -155,7 +155,7 @@ echo '
 --- STARTING CLAUDE WITH FULL ARGS ---'
 
 # Build Claude command with model selection, text output, and verbose debugging
-CLAUDE_CMD="{{command}} -p --text --verbose"
+CLAUDE_CMD="{{command}} -p --output-format stream-json --verbose"
 
 {{#if model_override}}
 CLAUDE_CMD="$CLAUDE_CMD --model={{model}}"
