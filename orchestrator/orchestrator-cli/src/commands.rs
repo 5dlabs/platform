@@ -137,10 +137,7 @@ pub mod task {
         let claude_md_path = Path::new(taskmaster_dir).join("docs/CLAUDE.md");
         if claude_md_path.exists() {
             let claude_md = fs::read_to_string(&claude_md_path).with_context(|| {
-                format!(
-                    "Failed to read CLAUDE.md: {}",
-                    claude_md_path.display()
-                )
+                format!("Failed to read CLAUDE.md: {}", claude_md_path.display())
             })?;
             markdown_files.push(MarkdownPayload {
                 content: claude_md,

@@ -803,7 +803,9 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     script.push_str("echo \"# Claude Session Export\" > \"$OUTPUT_FILE\"\n");
     script.push_str("echo \"**Session ID:** ${SESSION_ID}\" >> \"$OUTPUT_FILE\"\n");
     script.push_str("echo \"**Task ID:** ${TASK_ID}\" >> \"$OUTPUT_FILE\"\n");
-    script.push_str("echo \"**Export Time:** $(date -u +\"%Y-%m-%d %H:%M:%S UTC\")\" >> \"$OUTPUT_FILE\"\n");
+    script.push_str(
+        "echo \"**Export Time:** $(date -u +\"%Y-%m-%d %H:%M:%S UTC\")\" >> \"$OUTPUT_FILE\"\n",
+    );
     script.push_str("echo \"\" >> \"$OUTPUT_FILE\"\n");
     script.push_str("echo \"## Conversation History\" >> \"$OUTPUT_FILE\"\n");
     script.push_str("echo \"\" >> \"$OUTPUT_FILE\"\n\n");
@@ -832,11 +834,14 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     script.push_str("' \"$TRANSCRIPT_PATH\" >> \"$OUTPUT_FILE\" 2>/dev/null || echo \"Error parsing transcript\" >> \"$OUTPUT_FILE\"\n\n");
     script.push_str("echo \"\" >> \"$OUTPUT_FILE\"\n");
     script.push_str("echo \"---\" >> \"$OUTPUT_FILE\"\n");
-    script.push_str("echo \"*Exported from Claude session ${SESSION_ID}*\" >> \"$OUTPUT_FILE\"\n\n");
+    script
+        .push_str("echo \"*Exported from Claude session ${SESSION_ID}*\" >> \"$OUTPUT_FILE\"\n\n");
     script.push_str("# Also create a compressed copy of the raw JSONL\n");
-    script.push_str("cp \"$TRANSCRIPT_PATH\" \"$OUTPUT_DIR/claude-session-raw.jsonl\" 2>/dev/null || true\n\n");
+    script.push_str(
+        "cp \"$TRANSCRIPT_PATH\" \"$OUTPUT_DIR/claude-session-raw.jsonl\" 2>/dev/null || true\n\n",
+    );
     script.push_str("echo \"Session exported to $OUTPUT_FILE\"\n\n");
-    
+
     // Add XML export functionality
     script.push_str("# Generate XML export\n");
     script.push_str("XML_FILE=\"$OUTPUT_DIR/claude-session.xml\"\n\n");
@@ -847,31 +852,37 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     script.push_str("echo \"    <task_id>${TASK_ID}</task_id>\" >> \"$XML_FILE\"\n");
     script.push_str("echo \"    <export_time>$(date -u +\"%Y-%m-%dT%H:%M:%SZ\")</export_time>\" >> \"$XML_FILE\"\n");
     script.push_str("echo \"  </metadata>\" >> \"$XML_FILE\"\n\n");
-    
+
     // Extract file modifications
     script.push_str("echo \"  <files_modified>\" >> \"$XML_FILE\"\n");
     script.push_str("jq -r '.[] | select(.type == \"assistant\" and .message.content) | .message.content[] | select(.type == \"tool_use\" and (.name == \"Write\" or .name == \"Edit\" or .name == \"MultiEdit\")) | .input' \"$TRANSCRIPT_PATH\" 2>/dev/null | \n");
     script.push_str("while read -r tool_input; do\n");
     script.push_str("  FILE_PATH=$(echo \"$tool_input\" | jq -r '.file_path // .path // \"unknown\"' 2>/dev/null)\n");
-    script.push_str("  if [ \"$FILE_PATH\" != \"unknown\" ] && [ \"$FILE_PATH\" != \"null\" ]; then\n");
+    script.push_str(
+        "  if [ \"$FILE_PATH\" != \"unknown\" ] && [ \"$FILE_PATH\" != \"null\" ]; then\n",
+    );
     script.push_str("    echo \"    <file path=\\\"$FILE_PATH\\\" />\" >> \"$XML_FILE\"\n");
     script.push_str("  fi\n");
     script.push_str("done\n");
     script.push_str("echo \"  </files_modified>\" >> \"$XML_FILE\"\n\n");
-    
+
     // Extract tool usage summary
     script.push_str("echo \"  <tool_usage_summary>\" >> \"$XML_FILE\"\n");
     script.push_str("jq -r '.[] | select(.type == \"assistant\" and .message.content) | .message.content[] | select(.type == \"tool_use\") | .name' \"$TRANSCRIPT_PATH\" 2>/dev/null | \n");
     script.push_str("sort | uniq -c | while read count tool; do\n");
-    script.push_str("  echo \"    <tool name=\\\"$tool\\\" count=\\\"$count\\\" />\" >> \"$XML_FILE\"\n");
+    script.push_str(
+        "  echo \"    <tool name=\\\"$tool\\\" count=\\\"$count\\\" />\" >> \"$XML_FILE\"\n",
+    );
     script.push_str("done\n");
     script.push_str("echo \"  </tool_usage_summary>\" >> \"$XML_FILE\"\n\n");
-    
+
     // Convert conversation to XML
     script.push_str("echo \"  <conversation>\" >> \"$XML_FILE\"\n");
     script.push_str("jq -s -r '.[] | \n");
     script.push_str("  if .type == \"user\" then\n");
-    script.push_str("    \"    <message role=\\\"user\\\" timestamp=\\\"\" + .timestamp + \"\\\">\\n\" +\n");
+    script.push_str(
+        "    \"    <message role=\\\"user\\\" timestamp=\\\"\" + .timestamp + \"\\\">\\n\" +\n",
+    );
     script.push_str("    \"      <content><![CDATA[\" + (.message.content // .message | tostring) + \"]]></content>\\n\" +\n");
     script.push_str("    \"    </message>\"\n");
     script.push_str("  elif .type == \"assistant\" then\n");
@@ -884,7 +895,9 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     script.push_str("              \"      <text><![CDATA[\" + .text + \"]]></text>\"\n");
     script.push_str("            elif .type == \"tool_use\" then\n");
     script.push_str("              \"      <tool_use name=\\\"\" + .name + \"\\\" id=\\\"\" + .id + \"\\\">\\n\" +\n");
-    script.push_str("              \"        <input><![CDATA[\" + (.input | tojson) + \"]]></input>\\n\" +\n");
+    script.push_str(
+        "              \"        <input><![CDATA[\" + (.input | tojson) + \"]]></input>\\n\" +\n",
+    );
     script.push_str("              \"      </tool_use>\"\n");
     script.push_str("            else\n");
     script.push_str("              \"      <unknown>\" + tostring + \"</unknown>\"\n");
@@ -898,17 +911,19 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
     script.push_str("    end\n");
     script.push_str("  elif .type == \"user\" and .toolUseResult then\n");
     script.push_str("    \"    <tool_result tool_use_id=\\\"\" + .message.content[0].tool_use_id + \"\\\">\\n\" +\n");
-    script.push_str("    \"      <content><![CDATA[\" + .message.content[0].content + \"]]></content>\\n\" +\n");
+    script.push_str(
+        "    \"      <content><![CDATA[\" + .message.content[0].content + \"]]></content>\\n\" +\n",
+    );
     script.push_str("    \"    </tool_result>\"\n");
     script.push_str("  else empty\n");
     script.push_str("  end\n");
     script.push_str("' \"$TRANSCRIPT_PATH\" >> \"$XML_FILE\" 2>/dev/null || echo \"    <error>Failed to parse conversation</error>\" >> \"$XML_FILE\"\n");
     script.push_str("echo \"  </conversation>\" >> \"$XML_FILE\"\n\n");
-    
+
     // Close XML
     script.push_str("echo \"</session>\" >> \"$XML_FILE\"\n\n");
     script.push_str("echo \"XML export saved to $XML_FILE\"\n");
-    
+
     script.push_str("EXPORT_SCRIPT\n");
     script.push_str("chmod +x /workspace/.claude-scripts/export-session.sh\n");
 
@@ -1059,7 +1074,7 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> String
     script.push_str("echo '\n--- TESTING SIMPLE CLAUDE COMMAND WITHOUT PROMPT ---'\n");
     script.push_str(&format!("{command} --version 2>&1\n"));
     script.push_str("echo '\n--- READING PROMPT FILE ---'\n");
-    
+
     // Read the prompt.md file content
     script.push_str("if [ -f /workspace/prompt.md ]; then\n");
     script.push_str("  echo 'Found prompt.md, using it as Claude prompt'\n");
@@ -1068,15 +1083,18 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> String
     script.push_str("  echo 'WARNING: prompt.md not found, using default prompt'\n");
     script.push_str("  PROMPT_CONTENT='Read the task context in CLAUDE.md and begin implementing the requested service. Follow the design specification and ensure all acceptance criteria are met.'\n");
     script.push_str("fi\n");
-    
+
     script.push_str("echo '\n--- STARTING CLAUDE WITH FULL ARGS ---'\n");
 
     // Build Claude command with model selection
     script.push_str(&format!("CLAUDE_CMD=\"{command} -p\"\n"));
-    
+
     // Add model argument if not "sonnet" (default)
     if tr.spec.model != "sonnet" {
-        script.push_str(&format!("CLAUDE_CMD=\"$CLAUDE_CMD --model={}\"\n", tr.spec.model));
+        script.push_str(&format!(
+            "CLAUDE_CMD=\"$CLAUDE_CMD --model={}\"\n",
+            tr.spec.model
+        ));
     }
 
     // Add --continue flag for retry attempts (attempts > 1)
