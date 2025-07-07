@@ -8,8 +8,6 @@ pub mod controllers;
 pub mod crds;
 pub mod handlers;
 pub mod k8s;
-pub mod services;
-
 // Re-export commonly used types
 pub use config::ControllerConfig;
 pub use controllers::run_taskrun_controller;
