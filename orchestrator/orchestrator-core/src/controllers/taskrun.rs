@@ -391,16 +391,8 @@ fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Resul
     let settings_json = generate_claude_settings(tr, config)?;
     data.insert(".claude.json".to_string(), settings_json);
 
-    // Generate CLAUDE.md if not provided by Task Master system
-    let has_claude_md = tr
-        .spec
-        .markdown_files
-        .iter()
-        .any(|f| f.filename == "CLAUDE.md");
-    if !has_claude_md {
-        let claude_md_content = generate_claude_md(tr);
-        data.insert("CLAUDE.md".to_string(), claude_md_content);
-    }
+    // CLAUDE.md should always be provided by the client
+    // This allows task-specific instructions and Git workflows
 
     Ok(ConfigMap {
         metadata: ObjectMeta {
@@ -651,10 +643,18 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
 
     let mut script = String::new();
 
+    // Clear container identification
+    script.push('\n');
+    script.push_str("echo '════════════════════════════════════════════════════════════════'\n");
+    script.push_str("echo '║                    INIT CONTAINER STARTING                   ║'\n");
+    script.push_str("echo '║                   (prepare-workspace)                        ║'\n");
+    script.push_str("echo '════════════════════════════════════════════════════════════════'\n");
+    script.push('\n');
+
     // Claude Code image already has git and gh CLI installed
-    script.push_str("echo 'Using Claude Code image with pre-installed tools'\n");
-    script.push_str("which git && echo 'Git is available' || echo 'Git not found!'\n");
-    script.push_str("which gh && echo 'GitHub CLI is available' || echo 'GitHub CLI not found!'\n");
+    script.push_str("echo '✓ Using Claude Code image with pre-installed tools'\n");
+    script.push_str("which git >/dev/null && echo '✓ Git is available' || echo '✗ Git not found!'\n");
+    script.push_str("which gh >/dev/null && echo '✓ GitHub CLI is available' || echo '✗ GitHub CLI not found!'\n");
 
     // Create workspace directory (no per-attempt subdirectory for --continue support)
     // Note: /workspace now maps to the service-specific directory via subPath
@@ -813,10 +813,18 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> String {
 fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> String {
     let mut script = String::new();
 
+    // Clear container identification
+    script.push('\n');
+    script.push_str("echo '════════════════════════════════════════════════════════════════'\n");
+    script.push_str("echo '║                    MAIN CONTAINER STARTING                   ║'\n");
+    script.push_str("echo '║                      (claude-agent)                          ║'\n");
+    script.push_str("echo '════════════════════════════════════════════════════════════════'\n");
+    script.push('\n');
+
     // Source GitHub environment if it exists (using . instead of source for sh compatibility)
     script.push_str("if [ -f /workspace/.github-env ]; then\n");
     script.push_str("  . /workspace/.github-env\n");
-    script.push_str("  echo \"GitHub authentication configured\"\n");
+    script.push_str("  echo \"✓ GitHub authentication configured\"\n");
     script.push_str("fi\n\n");
 
     // Configure git credentials for HTTPS authentication if GITHUB_TOKEN is available
@@ -1046,51 +1054,8 @@ fn build_resource_attributes(tr: &TaskRun, config: &ControllerConfig) -> String 
     attributes.join(",")
 }
 
-/// Generate CLAUDE.md file that imports task files
-fn generate_claude_md(tr: &TaskRun) -> String {
-    let mut content = String::new();
-
-    content.push_str("# Task Context\n\n");
-    content.push_str(
-        "This workspace contains all the necessary files to complete the assigned task.\n\n",
-    );
-
-    // Add @import statements for each markdown file
-    content.push_str("## Task Files\n\n");
-    for file in &tr.spec.markdown_files {
-        if file.filename != "CLAUDE.md" {
-            content.push_str(&format!("@{}\n\n", file.filename));
-        }
-    }
-
-    // Add repository information if available
-    if let Some(repo) = &tr.spec.repository {
-        content.push_str("## Repository\n\n");
-        content.push_str(&format!("- **URL**: {}\n", repo.url));
-        content.push_str(&format!("- **Branch**: {}\n", repo.branch));
-        content.push_str(&format!("- **GitHub User**: {}\n", repo.github_user));
-        content.push('\n');
-    }
-
-    // Add task metadata
-    content.push_str("## Task Metadata\n\n");
-    content.push_str(&format!("- **Task ID**: {}\n", tr.spec.task_id));
-    content.push_str(&format!("- **Service**: {}\n", tr.spec.service_name));
-    content.push_str(&format!("- **Agent**: {}\n", tr.spec.agent_name));
-    content.push_str(&format!(
-        "- **Context Version**: {}\n",
-        tr.spec.context_version
-    ));
-    content.push('\n');
-
-    content.push_str("## Instructions\n\n");
-    content.push_str("1. Review all task files using the @import statements above\n");
-    content.push_str("2. Follow the design specification and implementation guidelines\n");
-    content.push_str("3. Ensure all acceptance criteria are met\n");
-    content.push_str("4. Create a pull request when implementation is complete\n");
-
-    content
-}
+// CLAUDE.md generation removed - should be provided by client
+// This allows task-specific instructions and Git workflows
 
 /// Generate Claude Code settings.json for tool permissions
 fn generate_claude_settings(tr: &TaskRun, _config: &ControllerConfig) -> Result<String> {
