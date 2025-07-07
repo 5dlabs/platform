@@ -111,10 +111,19 @@ cat > /workspace/.claude-scripts/export-session.sh << 'EXPORT_SCRIPT'
 EXPORT_SCRIPT
 chmod +x /workspace/.claude-scripts/export-session.sh
 
+# Create GitHub environment file for main container
+{{#if repository}}
+if [ -n "$GITHUB_TOKEN" ]; then
+  echo "export GITHUB_TOKEN='$GITHUB_TOKEN'" > /workspace/.github-env
+  echo "export GITHUB_USER='{{repository.github_user}}'" >> /workspace/.github-env
+  chmod 644 /workspace/.github-env
+  echo '✓ Created .github-env file for main container'
+fi
+{{/if}}
+
 # Clean up any credentials from parent workspace
 echo 'Cleaning up credentials from parent workspace'
 rm -f /workspace/.git-credentials 2>/dev/null || true
-rm -f /workspace/.github-env 2>/dev/null || true
 
 # DEBUG: Show configuration details
 echo '=== DEBUGGING CONFIGURATION ==='
