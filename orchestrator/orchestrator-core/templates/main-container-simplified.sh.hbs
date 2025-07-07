@@ -8,6 +8,18 @@ echo '════════════════════════�
 if [ -f /workspace/.github-env ]; then
   . /workspace/.github-env
   echo "✓ GitHub authentication configured"
+  
+  # Configure git credentials for HTTPS authentication
+  if [ -n "$GITHUB_TOKEN" ]; then
+    git config --global user.name "Claude Agent"
+    git config --global user.email "claude@5dlabs.com"
+    git config --global credential.helper store
+    {{#if repository}}
+    echo "https://{{repository.githubUser}}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+    git config --global credential.helper 'store --file=/workspace/.git-credentials'
+    {{/if}}
+    echo "✓ Git credentials configured"
+  fi
 fi
 
 # Create .claude scripts directory and export script
