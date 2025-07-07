@@ -10,16 +10,13 @@ echo '✓ Using Claude Code image with pre-installed tools'
 which git >/dev/null && echo '✓ Git is available' || echo '✗ Git not found!'
 which gh >/dev/null && echo '✓ GitHub CLI is available' || echo '✗ GitHub CLI not found!'
 
-# Create workspace directory structure
-mkdir -p /workspace/.task/{{task_id}}
-
 {{#if repository}}
 echo 'Cloning repository: {{repository.url}}'
 
 # Setup GitHub authentication
-export GITHUB_TOKEN=$(cat /secrets/github-pat-{{repository.github_user}}/token 2>/dev/null)
+export GITHUB_TOKEN=$(cat /secrets/github-pat-{{repository.githubUser}}/token 2>/dev/null)
 if [ -n "$GITHUB_TOKEN" ]; then
-  echo "GitHub token loaded from secret: github-pat-{{repository.github_user}}"
+  echo "GitHub token loaded from secret: github-pat-{{repository.githubUser}}"
   
   # Configure git global settings
   git config --global user.name "Claude Agent"
@@ -30,12 +27,12 @@ if [ -n "$GITHUB_TOKEN" ]; then
   echo "$GITHUB_TOKEN" | gh auth login --with-token 2>/dev/null || echo "gh auth already configured"
   
   # Write token to git credentials file
-  echo "https://{{repository.github_user}}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+  echo "https://{{repository.githubUser}}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
   
   # Ensure git config is accessible to the agent user
   chmod 644 /workspace/.git-credentials
 else
-  echo "Warning: GitHub token not found in secret: github-pat-{{repository.github_user}}"
+  echo "Warning: GitHub token not found in secret: github-pat-{{repository.githubUser}}"
 fi
 
 # Smart repository management
@@ -69,6 +66,9 @@ fi
 {{else}}
 echo 'No repository specified, using empty workspace'
 {{/if}}
+
+# Create workspace directory structure (after cloning to avoid conflicts)
+mkdir -p /workspace/.task/{{task_id}}
 
 # Copy task files to .task directory
 cp /config/* /workspace/.task/{{task_id}}/ 2>/dev/null || echo 'No config files to copy'
@@ -130,8 +130,8 @@ echo '=== DEBUGGING CONFIGURATION ==='
 {{#if repository}}
 echo 'Repository URL: {{repository.url}}'
 echo 'Repository Branch: {{repository.branch}}'
-echo 'GitHub User: {{repository.github_user}}'
-echo 'Secret Name: github-pat-{{repository.github_user}}'
+echo 'GitHub User: {{repository.githubUser}}'
+echo 'Secret Name: github-pat-{{repository.githubUser}}'
 {{else}}
 echo 'No repository specified in TaskRun spec'
 {{/if}}

@@ -21,7 +21,7 @@ if [ -n "$GITHUB_TOKEN" ]; then
   
   {{#if repository}}
   # Write token to git credentials file using the correct format
-  echo "https://{{repository.github_user}}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+  echo "https://{{repository.githubUser}}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
   
   # Ensure git config is accessible
   chmod 644 /workspace/.git-credentials
