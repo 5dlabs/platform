@@ -224,7 +224,9 @@ async fn reconcile_create_or_update(
                     .await?;
                 } else {
                     // Prep job still running
-                    if tr.status.as_ref().and_then(|s| s.phase.as_ref()) != Some(&TaskRunPhase::Preparing) {
+                    if tr.status.as_ref().and_then(|s| s.phase.as_ref())
+                        != Some(&TaskRunPhase::Preparing)
+                    {
                         update_status(
                             taskruns,
                             &name,
@@ -514,14 +516,12 @@ fn build_claude_job(
     let service_name = &tr.spec.service_name;
 
     // Build volumes list - just the workspace PVC
-    let volumes = vec![
-        json!({
-            "name": "workspace",
-            "persistentVolumeClaim": {
-                "claimName": "shared-workspace"
-            }
-        }),
-    ];
+    let volumes = vec![json!({
+        "name": "workspace",
+        "persistentVolumeClaim": {
+            "claimName": "shared-workspace"
+        }
+    })];
 
     let mut telemetry_env = vec![];
 
@@ -679,7 +679,6 @@ fn build_prep_job(
     cm_name: &str,
     config: &ControllerConfig,
 ) -> Result<Job> {
-
     // Build volumes for prep job
     let mut volumes = vec![
         json!({
@@ -787,7 +786,8 @@ fn build_prep_job(
 // Template constants
 const PREP_JOB_TEMPLATE: &str = include_str!("../../templates/prep-job.sh.hbs");
 const EXPORT_SCRIPT_TEMPLATE: &str = include_str!("../../templates/export-session.sh");
-const MAIN_CONTAINER_TEMPLATE: &str = include_str!("../../templates/main-container-simplified.sh.hbs");
+const MAIN_CONTAINER_TEMPLATE: &str =
+    include_str!("../../templates/main-container-simplified.sh.hbs");
 
 /// Build prep job script for workspace preparation
 fn build_prep_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String, Error> {
