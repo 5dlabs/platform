@@ -433,8 +433,8 @@ fn build_job(
         }),
         json!({
             "name": "workspace",
-            "mountPath": "/workspace",
-            "subPath": service_name.clone()
+            "mountPath": "/workspace"
+            // No subPath for init container - needs access to root to create service dir
         }),
     ];
 

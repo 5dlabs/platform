@@ -9,11 +9,11 @@ NC='\033[0m' # No Color
 
 # Configuration
 NAMESPACE="orchestrator"
-PVC_NAME="claude-workspace-pvc"
-WORKER_NODE="telemetry-worker-1"
+PVC_NAME="shared-workspace"
+WORKER_NODE="talos-a43-ee1"
 ORCHESTRATOR_API_URL="http://orchestrator.orchestrator.svc.cluster.local/api/v1"
 AGENT_TEMPLATE_REPO="https://github.com/5dlabs/agent-template"
-TEST_REPO_NAME="todo-api-test"
+TEST_REPO_NAME="${TEST_REPO_NAME:-todo-api-test}"
 GITHUB_ORG="5dlabs"
 GITHUB_USER="swe-1-5dlabs"
 TASK_ID="9999"
@@ -88,7 +88,7 @@ spec:
     spec:
       restartPolicy: Never
       nodeSelector:
-        kubernetes.io/hostname: telemetry-worker-1
+        kubernetes.io/hostname: talos-a43-ee1
       containers:
       - name: cleaner
         image: busybox
@@ -117,7 +117,7 @@ spec:
       volumes:
       - name: workspace
         persistentVolumeClaim:
-          claimName: claude-workspace-pvc
+          claimName: shared-workspace
 EOF
 
 # Wait for cleaning job to complete
@@ -139,9 +139,15 @@ echo -e "${GREEN}Step 2: Creating fresh repository from template...${NC}"
 
 # Check if repo exists and delete if it does
 if gh repo view "${GITHUB_ORG}/${TEST_REPO_NAME}" &>/dev/null; then
-    echo "Repository ${TEST_REPO_NAME} exists, deleting..."
-    gh repo delete "${GITHUB_ORG}/${TEST_REPO_NAME}" --yes
-    sleep 5  # Give GitHub a moment
+    echo "Repository ${TEST_REPO_NAME} exists, attempting to delete..."
+    if gh repo delete "${GITHUB_ORG}/${TEST_REPO_NAME}" --yes 2>/dev/null; then
+        echo "Repository deleted successfully"
+        sleep 5  # Give GitHub a moment
+    else
+        echo -e "${YELLOW}Warning: Could not delete repository (may need admin rights)${NC}"
+        echo "You may need to manually delete it or use a different test repo name"
+        echo "Continuing anyway..."
+    fi
 fi
 
 # Create new repo from template
@@ -203,8 +209,19 @@ fi
 
 # Submit the task
 echo "Submitting task to orchestrator..."
-TASK_RESPONSE=$(orchestrator task submit \
-    --api-url "$ORCHESTRATOR_API_URL" \
+# Note: This assumes kubectl port-forward is running on localhost:8080
+# Or run this script from within a Kubernetes pod to use the service URL directly
+if command -v kubectl &> /dev/null && kubectl auth can-i get pods &> /dev/null; then
+    # We're running outside the cluster, use port-forward
+    echo "Running outside cluster - using localhost:8080 (ensure port-forward is active)"
+    SUBMIT_URL="http://localhost:8080/api/v1"
+else
+    # We're running inside the cluster, use service URL
+    echo "Running inside cluster - using service URL"
+    SUBMIT_URL="$ORCHESTRATOR_API_URL"
+fi
+
+TASK_RESPONSE=$(ORCHESTRATOR_API_URL="$SUBMIT_URL" orchestrator task submit \
     --service "$TEST_REPO_NAME" \
     --repo "https://github.com/${GITHUB_ORG}/${TEST_REPO_NAME}" \
     --github-user "$GITHUB_USER" \

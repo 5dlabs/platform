@@ -36,9 +36,12 @@ else
 fi
 
 # Smart repository management - only clone on first task for a service
-cd /workspace
+# First ensure the service directory exists on the PVC
+mkdir -p /workspace/{{service_name}}
+cd /workspace/{{service_name}}
 
 # Check if we're continuing work on the same service
+# Service tracking file is at PVC root level
 SKIP_CLONE=false
 if [ -f "/workspace/.current-service" ]; then
   CURRENT_SERVICE=$(cat /workspace/.current-service)
@@ -48,16 +51,13 @@ if [ -f "/workspace/.current-service" ]; then
     SKIP_CLONE=true
   else
     echo "Switching from service '$CURRENT_SERVICE' to '{{service_name}}'"
-    # Clean up for new service
-    echo "Backing up previous service files..."
-    mkdir -p "/workspace/.backup-${CURRENT_SERVICE}"
-    find . -maxdepth 1 -not -name '.backup*' -not -name '.task' -not -name '.' -exec mv {} "/workspace/.backup-${CURRENT_SERVICE}/" \; 2>/dev/null || true
+    # No need to backup when switching services - each has its own directory
   fi
 else
   echo "First task - no previous service found"
 fi
 
-# Save current service for next task
+# Save current service for next task (at PVC root)
 echo "{{service_name}}" > /workspace/.current-service
 
 # Only clone if needed
@@ -99,16 +99,16 @@ echo 'No repository specified, using empty workspace'
 
 # Create workspace directory structure (after cloning to avoid conflicts)
 # Use attempt-specific subdirectory to preserve history
-mkdir -p /workspace/.task/{{task_id}}/attempt-{{attempts}}
+mkdir -p /workspace/{{service_name}}/.task/{{task_id}}/attempt-{{attempts}}
 
 # Copy task files to attempt-specific directory
-cp /config/* /workspace/.task/{{task_id}}/attempt-{{attempts}}/ 2>/dev/null || echo 'No config files to copy'
+cp /config/* /workspace/{{service_name}}/.task/{{task_id}}/attempt-{{attempts}}/ 2>/dev/null || echo 'No config files to copy'
 
 # Also copy to task root for backward compatibility
-cp /config/*.md /workspace/.task/{{task_id}}/ 2>/dev/null || echo 'No markdown files to copy to task root'
+cp /config/*.md /workspace/{{service_name}}/.task/{{task_id}}/ 2>/dev/null || echo 'No markdown files to copy to task root'
 
-# Copy all markdown files to workspace root for @import access
-cp /workspace/.task/{{task_id}}/attempt-{{attempts}}/*.md /workspace/ 2>/dev/null || echo 'No markdown files to copy to root'
+# Copy all markdown files to service workspace root for @import access
+cp /workspace/{{service_name}}/.task/{{task_id}}/attempt-{{attempts}}/*.md /workspace/{{service_name}}/ 2>/dev/null || echo 'No markdown files to copy to root'
 
 # Setup Claude Code configuration
 mkdir -p /home/node/.claude/todos
@@ -117,12 +117,12 @@ chmod -R 755 /home/node/.claude
 chown -R 1000:1000 /home/node/.claude
 
 # Also copy config to workspace directory
-mkdir -p /workspace/.claude
-cp /config/.claude.json /workspace/.claude.json 2>/dev/null || echo 'No .claude.json to copy to workspace dir'
-cp /config/.claude.json /workspace/.claude/settings.local.json 2>/dev/null || echo 'No .claude.json to copy as settings.local.json'
+mkdir -p /workspace/{{service_name}}/.claude
+cp /config/.claude.json /workspace/{{service_name}}/.claude.json 2>/dev/null || echo 'No .claude.json to copy to workspace dir'
+cp /config/.claude.json /workspace/{{service_name}}/.claude/settings.local.json 2>/dev/null || echo 'No .claude.json to copy as settings.local.json'
 
 # Create .gitignore to prevent committing Claude internal files
-cat > /workspace/.gitignore << 'EOF'
+cat > /workspace/{{service_name}}/.gitignore << 'EOF'
 # Claude Code internal files - do not commit
 .claude/
 .claude.json
@@ -141,25 +141,25 @@ CLAUDE.md
 EOF
 
 # Create Claude scripts directory and export script
-mkdir -p /workspace/.claude-scripts
-cat > /workspace/.claude-scripts/export-session.sh << 'EXPORT_SCRIPT'
+mkdir -p /workspace/{{service_name}}/.claude-scripts
+cat > /workspace/{{service_name}}/.claude-scripts/export-session.sh << 'EXPORT_SCRIPT'
 {{{export_script}}}
 EXPORT_SCRIPT
-chmod +x /workspace/.claude-scripts/export-session.sh
+chmod +x /workspace/{{service_name}}/.claude-scripts/export-session.sh
 
 # Create GitHub environment file for main container
 {{#if repository}}
 if [ -n "$GITHUB_TOKEN" ]; then
-  echo "export GITHUB_TOKEN='$GITHUB_TOKEN'" > /workspace/.github-env
-  echo "export GITHUB_USER='{{repository.github_user}}'" >> /workspace/.github-env
-  chmod 644 /workspace/.github-env
+  echo "export GITHUB_TOKEN='$GITHUB_TOKEN'" > /workspace/{{service_name}}/.github-env
+  echo "export GITHUB_USER='{{repository.github_user}}'" >> /workspace/{{service_name}}/.github-env
+  chmod 644 /workspace/{{service_name}}/.github-env
   echo '✓ Created .github-env file for main container'
 fi
 {{/if}}
 
 # Clean up any credentials from parent workspace
 echo 'Cleaning up credentials from parent workspace'
-rm -f /workspace/.git-credentials 2>/dev/null || true
+rm -f /workspace/{{service_name}}/.git-credentials 2>/dev/null || true
 
 # DEBUG: Show configuration details
 echo '=== DEBUGGING CONFIGURATION ==='
@@ -174,8 +174,11 @@ echo 'No repository specified in TaskRun spec'
 echo 'Claude configuration contents:'
 cat /config/.claude.json 2>/dev/null || echo 'No .claude.json found'
 echo 'File permissions in .claude directory:'
-ls -la /workspace/.claude/ 2>/dev/null || echo 'No .claude directory found'
+ls -la /workspace/{{service_name}}/.claude/ 2>/dev/null || echo 'No .claude directory found'
 echo '=== END DEBUGGING ==='
 
 echo 'Workspace prepared successfully'
+echo 'Service directory contents:'
+ls -la /workspace/{{service_name}}/
+echo 'PVC root contents:'
 ls -la /workspace/
