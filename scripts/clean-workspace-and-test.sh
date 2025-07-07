@@ -16,7 +16,7 @@ AGENT_TEMPLATE_REPO="https://github.com/5dlabs/agent-template"
 TEST_REPO_NAME="${TEST_REPO_NAME:-todo-api-test}"
 GITHUB_ORG="5dlabs"
 GITHUB_USER="swe-1-5dlabs"
-TASK_ID="9999"
+TASK_ID="1"
 
 echo -e "${GREEN}=== Claude Workspace Clean Test Script ===${NC}"
 echo "This script will:"
@@ -39,17 +39,11 @@ gh auth status >/dev/null 2>&1 || { echo -e "${RED}Not authenticated to GitHub. 
 echo -e "${GREEN}Prerequisites check passed!${NC}"
 echo ""
 
-# Confirmation prompt
-echo -e "${YELLOW}WARNING: This will:${NC}"
-echo " - Delete ALL data in PVC ${PVC_NAME}"
-echo " - Delete and recreate repository ${TEST_REPO_NAME}"
-echo " - Restart the orchestrator deployment"
-echo ""
-read -p "Are you sure you want to continue? (yes/no): " -r
-if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
-    echo "Aborted."
-    exit 0
-fi
+# No confirmation - just show what will happen
+echo -e "${YELLOW}Starting clean test:${NC}"
+echo " - Cleaning PVC ${PVC_NAME}"
+echo " - Recreating repository ${TEST_REPO_NAME}"
+echo " - Restarting orchestrator"
 echo ""
 
 # Function to wait for GitHub Actions
@@ -187,47 +181,20 @@ if [ ! -d ".taskmaster/docs" ]; then
     echo -e "${YELLOW}Creating .taskmaster/docs directory with test files...${NC}"
     mkdir -p .taskmaster/docs
     
-    cat > .taskmaster/docs/design-spec.md << 'EOFD'
-# Design Specification - Task 9999
-
-## Objective
-Verify workspace setup and create test results.
-
-## Requirements
-1. Verify git repository is properly cloned
-2. Create test results file
-3. Create workspace snapshot
-4. Commit and push changes
-EOFD
-
-    cat > .taskmaster/docs/prompt.md << 'EOFP'
-# Task 9999 - Workspace Verification
-
-Please verify the workspace setup and create appropriate test files.
-EOFP
-
-    cat > .taskmaster/docs/acceptance-criteria.md << 'EOFA'
-# Acceptance Criteria
-
-- [ ] Workspace is properly configured
-- [ ] Test results created
-- [ ] Changes committed to repository
-EOFA
+    # Don't override if files already exist with our test content
+    echo "Using existing .taskmaster/docs files"
 fi
+
+# Clean up any existing TaskRuns and Jobs for this task
+echo "Cleaning up any existing runs for task $TASK_ID..."
+kubectl delete taskrun -n $NAMESPACE "task-$TASK_ID" 2>/dev/null || true
+kubectl delete jobs -n $NAMESPACE -l "task-id=$TASK_ID" 2>/dev/null || true
 
 # Submit the task
 echo "Submitting task to orchestrator..."
-# Note: This assumes kubectl port-forward is running on localhost:8080
-# Or run this script from within a Kubernetes pod to use the service URL directly
-if command -v kubectl &> /dev/null && kubectl auth can-i get pods &> /dev/null; then
-    # We're running outside the cluster, use port-forward
-    echo "Running outside cluster - using localhost:8080 (ensure port-forward is active)"
-    SUBMIT_URL="http://localhost:8080/api/v1"
-else
-    # We're running inside the cluster, use service URL
-    echo "Running inside cluster - using service URL"
-    SUBMIT_URL="$ORCHESTRATOR_API_URL"
-fi
+# Always use the Kubernetes service URL - we have Twingate VPN
+SUBMIT_URL="http://orchestrator.orchestrator.svc.cluster.local/api/v1"
+echo "Using Kubernetes service URL: $SUBMIT_URL"
 
 TASK_RESPONSE=$(ORCHESTRATOR_API_URL="$SUBMIT_URL" orchestrator task submit \
     --service "$TEST_REPO_NAME" \
