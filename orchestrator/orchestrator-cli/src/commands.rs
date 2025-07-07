@@ -133,6 +133,22 @@ pub mod task {
             });
         }
 
+        // Add CLAUDE.md if exists
+        let claude_md_path = Path::new(taskmaster_dir).join("docs/CLAUDE.md");
+        if claude_md_path.exists() {
+            let claude_md = fs::read_to_string(&claude_md_path).with_context(|| {
+                format!(
+                    "Failed to read CLAUDE.md: {}",
+                    claude_md_path.display()
+                )
+            })?;
+            markdown_files.push(MarkdownPayload {
+                content: claude_md,
+                filename: "CLAUDE.md".to_string(),
+                file_type: "claude".to_string(),
+            });
+        }
+
         // Add any additional context files
         for (idx, context_file) in context_files.iter().enumerate() {
             let content = fs::read_to_string(context_file)
