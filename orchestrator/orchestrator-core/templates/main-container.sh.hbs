@@ -101,7 +101,8 @@ Content of .claude.json:'
 cat /workspace/.claude.json 2>/dev/null || echo 'No .claude.json in /workspace'
 echo '
 --- CLAUDE SETTINGS FILE DISCOVERY ---'
-{{command}} --print-config-path 2>&1 || echo 'Claude print-config-path not available'
+# Note: Claude Code doesn't have a --print-config-path option
+echo 'Claude Code loads settings from .claude.json in the workspace root'
 {{#if debug}}
 [DEBUG] Reading config from /workspace/.claude.json
 [DEBUG] Config parsed successfully from /workspace/.claude.json
@@ -120,7 +121,8 @@ echo '
 env | grep -E '(DEVCONTAINER|HOSTNAME|OTEL_|CLAUDE_|AGENT_)' | sort
 echo '
 --- SETTING CLAUDE CONFIG DIRECTORY ---'
-export CLAUDE_CONFIG_DIR=/workspace/debug-api/.claude
+# Use the workspace root for Claude config
+export CLAUDE_CONFIG_DIR=/workspace/.claude
 echo "CLAUDE_CONFIG_DIR set to: $CLAUDE_CONFIG_DIR"
 echo '
 --- UNSETTING DEVCONTAINER VARIABLES ---'
