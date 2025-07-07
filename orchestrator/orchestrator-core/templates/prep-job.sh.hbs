@@ -10,6 +10,12 @@ echo '════════════════════════�
 echo "Working in dedicated PVC for service: {{service_name}}"
 cd /workspace
 
+# Clean up old backup directories from previous failed runs
+if ls .backup-* 1> /dev/null 2>&1; then
+  echo "Cleaning up old backup directories..."
+  rm -rf .backup-*
+fi
+
 {{#if repository}}
 echo 'Repository management for: {{repository.url}}'
 
