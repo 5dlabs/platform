@@ -155,30 +155,7 @@ async fn reconcile_create_or_update(
         update_status(taskruns, &name, TaskRunPhase::Pending, "TaskRun created").await?;
     }
 
-    // Check for existing jobs with older versions
-    let job_list = jobs
-        .list(&ListParams::default().labels(&format!("task-id={}", tr.spec.task_id)))
-        .await?;
-
-    // Delete older versions
-    for job in job_list.items {
-        if let Some(version) = job
-            .metadata
-            .labels
-            .as_ref()
-            .and_then(|l| l.get("context-version"))
-            .and_then(|v| v.parse::<u32>().ok())
-        {
-            if version < tr.spec.context_version {
-                if let Some(job_name) = &job.metadata.name {
-                    jobs.delete(job_name, &DeleteParams::background()).await?;
-                    info!("Deleted older job version: {}", job_name);
-                }
-            }
-        }
-    }
-
-    // Create ConfigMap with matching name pattern
+    // Create ConfigMap first (needed by both prep and main jobs)
     let cm_name = format!(
         "{}-{}-task{}-v{}-files",
         tr.spec.agent_name.replace('_', "-"),
@@ -196,7 +173,111 @@ async fn reconcile_create_or_update(
         Err(e) => return Err(e.into()),
     }
 
-    // Create Job with descriptive name: agent-service-task-attempt
+    // Check for and delete older job versions
+    let job_list = jobs
+        .list(&ListParams::default().labels(&format!("task-id={}", tr.spec.task_id)))
+        .await?;
+
+    for job in job_list.items {
+        if let Some(version) = job
+            .metadata
+            .labels
+            .as_ref()
+            .and_then(|l| l.get("context-version"))
+            .and_then(|v| v.parse::<u32>().ok())
+        {
+            if version < tr.spec.context_version {
+                if let Some(job_name) = &job.metadata.name {
+                    jobs.delete(job_name, &DeleteParams::background()).await?;
+                    info!("Deleted older job version: {}", job_name);
+                }
+            }
+        }
+    }
+
+    // Check prep job status
+    let prep_job_name = format!(
+        "prep-{}-{}-task{}-attempt{}",
+        tr.spec.agent_name.replace('_', "-"),
+        tr.spec.service_name.replace('_', "-"),
+        tr.spec.task_id,
+        tr.spec.context_version
+    );
+
+    // Try to get prep job
+    match jobs.get(&prep_job_name).await {
+        Ok(prep_job) => {
+            // Prep job exists, check its status
+            if let Some(job_status) = &prep_job.status {
+                if job_status.succeeded.unwrap_or(0) > 0 {
+                    // Prep job succeeded, create main Claude job
+                    info!("Prep job succeeded, creating Claude job");
+                    create_claude_job(tr, jobs, taskruns, &cm_name, config).await?;
+                } else if job_status.failed.unwrap_or(0) > 0 {
+                    // Prep job failed
+                    update_status(
+                        taskruns,
+                        &name,
+                        TaskRunPhase::Failed,
+                        "Workspace preparation failed",
+                    )
+                    .await?;
+                } else {
+                    // Prep job still running
+                    if tr.status.as_ref().and_then(|s| s.phase.as_ref()) != Some(&TaskRunPhase::Preparing) {
+                        update_status(
+                            taskruns,
+                            &name,
+                            TaskRunPhase::Preparing,
+                            "Preparing workspace",
+                        )
+                        .await?;
+                    }
+                }
+            }
+        }
+        Err(kube::Error::Api(ae)) if ae.code == 404 => {
+            // Prep job doesn't exist, create it
+            info!("Creating prep job: {}", prep_job_name);
+            let prep_job = build_prep_job(&tr, &prep_job_name, &cm_name, config)?;
+            match jobs.create(&PostParams::default(), &prep_job).await {
+                Ok(_) => {
+                    info!("Created prep job: {}", prep_job_name);
+                    update_status(
+                        taskruns,
+                        &name,
+                        TaskRunPhase::Preparing,
+                        "Workspace preparation started",
+                    )
+                    .await?;
+                }
+                Err(e) => {
+                    update_status(
+                        taskruns,
+                        &name,
+                        TaskRunPhase::Failed,
+                        &format!("Failed to create prep job: {e}"),
+                    )
+                    .await?;
+                    return Err(e.into());
+                }
+            }
+        }
+        Err(e) => return Err(e.into()),
+    }
+
+    Ok(Action::requeue(Duration::from_secs(10))) // Check more frequently during preparation
+}
+
+/// Create the main Claude job after prep job succeeds
+async fn create_claude_job(
+    tr: Arc<TaskRun>,
+    jobs: &Api<Job>,
+    taskruns: &Api<TaskRun>,
+    cm_name: &str,
+    config: &ControllerConfig,
+) -> Result<()> {
+    let name = tr.name_any();
     let job_name = format!(
         "{}-{}-task{}-attempt{}",
         tr.spec.agent_name.replace('_', "-"),
@@ -205,37 +286,45 @@ async fn reconcile_create_or_update(
         tr.spec.context_version
     );
 
-    let job = build_job(&tr, &job_name, &cm_name, config)?;
-    match jobs.create(&PostParams::default(), &job).await {
+    // Check if Claude job already exists
+    match jobs.get(&job_name).await {
         Ok(_) => {
-            info!("Created Job: {}", job_name);
-            update_status_with_details(
-                taskruns,
-                &name,
-                TaskRunPhase::Running,
-                "Job created successfully",
-                Some(job_name.clone()),
-                Some(cm_name),
-            )
-            .await?;
+            info!("Claude job already exists: {}", job_name);
+            if tr.status.as_ref().and_then(|s| s.phase.as_ref()) != Some(&TaskRunPhase::Running) {
+                update_status(taskruns, &name, TaskRunPhase::Running, "Job already exists").await?;
+            }
         }
-        Err(kube::Error::Api(ae)) if ae.code == 409 => {
-            info!("Job already exists: {}", job_name);
-            update_status(taskruns, &name, TaskRunPhase::Running, "Job already exists").await?;
+        Err(kube::Error::Api(ae)) if ae.code == 404 => {
+            // Create Claude job
+            let job = build_claude_job(&tr, &job_name, cm_name, config)?;
+            match jobs.create(&PostParams::default(), &job).await {
+                Ok(_) => {
+                    info!("Created Claude job: {}", job_name);
+                    update_status_with_details(
+                        taskruns,
+                        &name,
+                        TaskRunPhase::Running,
+                        "Claude agent started",
+                        Some(job_name),
+                        Some(cm_name.to_string()),
+                    )
+                    .await?;
+                }
+                Err(e) => {
+                    update_status(
+                        taskruns,
+                        &name,
+                        TaskRunPhase::Failed,
+                        &format!("Failed to create Claude job: {e}"),
+                    )
+                    .await?;
+                    return Err(e.into());
+                }
+            }
         }
-        Err(e) => {
-            update_status(
-                taskruns,
-                &name,
-                TaskRunPhase::Failed,
-                &format!("Failed to create job: {e}"),
-            )
-            .await?;
-            return Err(e.into());
-        }
+        Err(e) => return Err(e.into()),
     }
-
-    Ok(Action::requeue(Duration::from_secs(30)))
+    Ok(())
 }
 
 /// Monitor Job status and update TaskRun
@@ -414,38 +503,18 @@ fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Resul
     })
 }
 
-/// Build Job from TaskRun
-fn build_job(
+/// Build Claude Job from TaskRun
+fn build_claude_job(
     tr: &TaskRun,
     job_name: &str,
-    cm_name: &str,
+    _cm_name: &str,
     config: &ControllerConfig,
 ) -> Result<Job> {
     // API key will be injected from secret
-
-    // Build telemetry environment variables from config
-    // Build volume mounts for init container
     let service_name = &tr.spec.service_name;
-    let mut init_volume_mounts = vec![
-        json!({
-            "name": "task-files",
-            "mountPath": "/config"
-        }),
-        json!({
-            "name": "workspace",
-            "mountPath": "/workspace"
-            // No subPath for init container - needs access to root to create service dir
-        }),
-    ];
 
-    // Build volumes list
-    let mut volumes = vec![
-        json!({
-            "name": "task-files",
-            "configMap": {
-                "name": cm_name
-            }
-        }),
+    // Build volumes list - just the workspace PVC
+    let volumes = vec![
         json!({
             "name": "workspace",
             "persistentVolumeClaim": {
@@ -453,28 +522,6 @@ fn build_job(
             }
         }),
     ];
-
-    // Add secret volume and mount if repository is configured
-    if let Some(repo) = &tr.spec.repository {
-        // Auto-resolve secret name from GitHub user
-        let secret_name = format!("github-pat-{}", repo.github_user);
-        let secret_volume_name = format!("{secret_name}-secret");
-
-        // Add volume mount to init container
-        init_volume_mounts.push(json!({
-            "name": secret_volume_name.clone(),
-            "mountPath": format!("/secrets/{}", secret_name),
-            "readOnly": true
-        }));
-
-        // Add secret volume
-        volumes.push(json!({
-            "name": secret_volume_name,
-            "secret": {
-                "secretName": secret_name
-            }
-        }));
-    }
 
     let mut telemetry_env = vec![];
 
@@ -598,18 +645,6 @@ fn build_job(
                 "spec": {
                     "restartPolicy": config.job.restart_policy.clone(),
                     "imagePullSecrets": [{"name": "ghcr-secret"}],
-                    "initContainers": [{
-                        "name": "prepare-workspace",
-                        "image": format!("{}:{}", config.init_container.image.repository, config.init_container.image.tag),
-                        "command": ["/bin/sh", "-c"],
-                        "args": [build_init_script(tr, config)?],
-                        "volumeMounts": init_volume_mounts,
-                        "securityContext": {
-                            "runAsUser": 0,
-                            "runAsGroup": 0,
-                            "runAsNonRoot": false
-                        }
-                    }],
                     "containers": [{
                         "name": "claude-agent",
                         "image": format!("{}:{}", config.agent.image.repository, config.agent.image.tag),
@@ -637,20 +672,153 @@ fn build_job(
     serde_json::from_value(job_json).map_err(Error::SerializationError)
 }
 
-// Template constants
-const INIT_CONTAINER_TEMPLATE: &str = include_str!("../../templates/init-container.sh.hbs");
-const EXPORT_SCRIPT_TEMPLATE: &str = include_str!("../../templates/export-session.sh");
-const MAIN_CONTAINER_TEMPLATE: &str = include_str!("../../templates/main-container.sh.hbs");
+/// Build Prep Job for workspace preparation
+fn build_prep_job(
+    tr: &TaskRun,
+    job_name: &str,
+    cm_name: &str,
+    config: &ControllerConfig,
+) -> Result<Job> {
 
-/// Build init container script for workspace preparation
-fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String, Error> {
+    // Build volumes for prep job
+    let mut volumes = vec![
+        json!({
+            "name": "task-files",
+            "configMap": {
+                "name": cm_name
+            }
+        }),
+        json!({
+            "name": "workspace",
+            "persistentVolumeClaim": {
+                "claimName": "shared-workspace"
+            }
+        }),
+    ];
+
+    let mut volume_mounts = vec![
+        json!({
+            "name": "task-files",
+            "mountPath": "/config"
+        }),
+        json!({
+            "name": "workspace",
+            "mountPath": "/workspace"
+            // No subPath - needs full PVC access to create directories
+        }),
+    ];
+
+    // Add secret volume if repository is configured
+    if let Some(repo) = &tr.spec.repository {
+        let secret_name = format!("github-pat-{}", repo.github_user);
+        let secret_volume_name = format!("{secret_name}-secret");
+
+        volume_mounts.push(json!({
+            "name": secret_volume_name.clone(),
+            "mountPath": format!("/secrets/{}", secret_name),
+            "readOnly": true
+        }));
+
+        volumes.push(json!({
+            "name": secret_volume_name,
+            "secret": {
+                "secretName": secret_name
+            }
+        }));
+    }
+
+    let job_json = json!({
+        "apiVersion": "batch/v1",
+        "kind": "Job",
+        "metadata": {
+            "name": job_name,
+            "namespace": tr.namespace().unwrap_or_default(),
+            "labels": {
+                "task-id": tr.spec.task_id.to_string(),
+                "service-name": tr.spec.service_name.clone(),
+                "context-version": tr.spec.context_version.to_string(),
+                "managed-by": "taskrun-controller",
+                "job-type": "prep",
+            }
+        },
+        "spec": {
+            "backoffLimit": 2,  // Less retries for prep
+            "activeDeadlineSeconds": 300,  // 5 minutes should be enough
+            "ttlSecondsAfterFinished": config.job.ttl_seconds_after_finished,
+            "template": {
+                "spec": {
+                    "restartPolicy": "Never",
+                    "imagePullSecrets": [{"name": "ghcr-secret"}],
+                    "containers": [{
+                        "name": "prep-workspace",
+                        "image": "alpine/git:latest",  // Alpine with git for cloning
+                        "command": ["/bin/sh", "-c"],
+                        "args": [build_prep_script(tr, config)?],
+                        "volumeMounts": volume_mounts,
+                        "securityContext": {
+                            "runAsUser": 0,
+                            "runAsGroup": 0,
+                            "runAsNonRoot": false
+                        },
+                        "resources": {
+                            "requests": {
+                                "memory": "128Mi",
+                                "cpu": "100m"
+                            },
+                            "limits": {
+                                "memory": "512Mi",
+                                "cpu": "500m"
+                            }
+                        }
+                    }],
+                    "volumes": volumes,
+                    // Force onto same node as PVC for local-path provisioner
+                    "nodeSelector": {
+                        "kubernetes.io/hostname": "talos-a43-ee1"
+                    }
+                }
+            }
+        }
+    });
+
+    serde_json::from_value(job_json).map_err(Error::SerializationError)
+}
+
+// Template constants
+const PREP_JOB_TEMPLATE: &str = include_str!("../../templates/prep-job.sh.hbs");
+const EXPORT_SCRIPT_TEMPLATE: &str = include_str!("../../templates/export-session.sh");
+const MAIN_CONTAINER_TEMPLATE: &str = include_str!("../../templates/main-container-simplified.sh.hbs");
+
+/// Build prep job script for workspace preparation
+fn build_prep_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String, Error> {
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false); // Allow missing fields
 
-    // Register the export script as a partial so we can include it
+    handlebars
+        .register_template_string("prep", PREP_JOB_TEMPLATE)
+        .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
+
+    let data = json!({
+        "task_id": tr.spec.task_id,
+        "service_name": tr.spec.service_name,
+        "repository": tr.spec.repository.as_ref(),
+        "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
+    });
+
+    handlebars
+        .render("prep", &data)
+        .map_err(|e| Error::ConfigError(format!("Failed to render template: {e}")))
+}
+
+/// Build startup script for the agent container
+fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result<String, Error> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false); // Allow missing fields
+
+    // Register the export script as a partial
     handlebars
         .register_template_string("export_script", EXPORT_SCRIPT_TEMPLATE)
-        .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
+        .map_err(|e| Error::ConfigError(format!("Failed to register export template: {e}")))?;
 
     // Render the export script with task_id and attempt number
     let export_script_data = json!({
@@ -659,34 +827,12 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String,
     });
     let export_script = handlebars
         .render("export_script", &export_script_data)
-        .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
-
-    // Now render the main init script
-    handlebars
-        .register_template_string("init", INIT_CONTAINER_TEMPLATE)
-        .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
-
-    let data = json!({
-        "task_id": tr.spec.task_id,
-        "service_name": tr.spec.service_name,
-        "repository": tr.spec.repository.as_ref(),
-        "export_script": export_script,
-        "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
-    });
-
-    handlebars
-        .render("init", &data)
-        .map_err(|e| Error::ConfigError(format!("Failed to render template: {e}")))
-}
-/// Build startup script for the agent container
-fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result<String, Error> {
-    let mut handlebars = Handlebars::new();
-    handlebars.set_strict_mode(false); // Allow missing fields
+        .map_err(|e| Error::ConfigError(format!("Failed to render export script: {e}")))?;
 
     // Register the main container template
     handlebars
         .register_template_string("main", MAIN_CONTAINER_TEMPLATE)
-        .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
+        .map_err(|e| Error::ConfigError(format!("Failed to register main template: {e}")))?;
 
     // Build the Claude command
     let command = config.agent.command.join(" ");
@@ -698,8 +844,7 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
         "model": tr.spec.model.clone(),
         "is_retry": tr.status.as_ref().is_some_and(|s| s.attempts > 1),
         "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
-        "repository": tr.spec.repository.as_ref(),
-        "debug": false, // Can be added to config later if needed
+        "export_script": export_script,
         "task_id": tr.spec.task_id,
     });
 

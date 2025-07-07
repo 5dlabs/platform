@@ -1,0 +1,154 @@
+#!/bin/sh
+set -e
+
+echo '════════════════════════════════════════════════════════════════'
+echo '║                    PREP JOB STARTING                         ║'
+echo '║                   (workspace-preparation)                     ║'
+echo '════════════════════════════════════════════════════════════════'
+
+# First ensure the service directory exists on the PVC
+echo "Creating service directory: /workspace/{{service_name}}"
+mkdir -p /workspace/{{service_name}}
+cd /workspace/{{service_name}}
+
+{{#if repository}}
+echo 'Repository management for: {{repository.url}}'
+
+# Setup GitHub authentication if available
+export GITHUB_TOKEN=$(cat /secrets/github-pat-{{repository.githubUser}}/token 2>/dev/null || echo "")
+if [ -n "$GITHUB_TOKEN" ]; then
+  echo "GitHub token loaded from secret: github-pat-{{repository.githubUser}}"
+  
+  # Configure git for cloning
+  git config --global user.name "Claude Agent"
+  git config --global user.email "claude@5dlabs.com"
+  git config --global credential.helper store
+  
+  # Write token to temporary credentials file for cloning
+  echo "https://{{repository.githubUser}}:${GITHUB_TOKEN}@github.com" > /tmp/.git-credentials
+  cp /tmp/.git-credentials /home/git-credentials
+  git config --global credential.helper 'store --file=/home/git-credentials'
+else
+  echo "Warning: GitHub token not found in secret: github-pat-{{repository.githubUser}}"
+fi
+
+# Smart repository management - only clone on first task for a service
+SKIP_CLONE=false
+if [ -f "/workspace/.current-service" ]; then
+  CURRENT_SERVICE=$(cat /workspace/.current-service)
+  if [ "$CURRENT_SERVICE" = "{{service_name}}" ]; then
+    echo "Continuing work on service: $CURRENT_SERVICE"
+    echo "Using existing code from previous tasks"
+    SKIP_CLONE=true
+  else
+    echo "Switching from service '$CURRENT_SERVICE' to '{{service_name}}'"
+  fi
+else
+  echo "First task - no previous service found"
+fi
+
+# Save current service for next task (at PVC root)
+echo "{{service_name}}" > /workspace/.current-service
+
+# Only clone if needed
+if [ "$SKIP_CLONE" = "false" ]; then
+  if [ ! -d '.git' ]; then
+    if [ -z "$(ls -A . 2>/dev/null | grep -v '.current-service' | grep -v '.task' | grep -v '.backup')" ]; then
+      echo 'Directory is empty, cloning repository...'
+      git clone --depth 1 --branch {{repository.branch}} {{repository.url}} . || {
+        echo 'Clone failed - checking error'
+        exit 1
+      }
+    else
+      echo 'Directory not empty but not a Git repo, backing up existing files and cloning...'
+      mkdir -p .backup-$(date +%s)
+      find . -maxdepth 1 -not -name '.backup*' -not -name '.task' -not -name '.current-service' -not -name '.' -exec mv {} .backup-$(date +%s)/ \; 2>/dev/null || true
+      git clone --depth 1 --branch {{repository.branch}} {{repository.url}} . || {
+        echo 'Clone failed'
+        exit 1
+      }
+    fi
+  else
+    echo 'Git repository exists, checking remote...'
+    CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo '')
+    if [ "$CURRENT_REMOTE" != "{{repository.url}}" ]; then
+      echo "Remote URL mismatch. Expected: {{repository.url}}, Got: $CURRENT_REMOTE"
+      echo "Removing old repository and cloning fresh..."
+      rm -rf .git
+      git clone --depth 1 --branch {{repository.branch}} {{repository.url}} . || {
+        echo 'Clone failed'
+        exit 1
+      }
+    fi
+  fi
+else
+  # Continuing with same service - just ensure we're on the right branch
+  if [ -d '.git' ]; then
+    CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo '')
+    if [ "$CURRENT_BRANCH" != "{{repository.branch}}" ]; then
+      echo "Switching to branch {{repository.branch}}..."
+      git checkout {{repository.branch}} 2>/dev/null || echo "Branch checkout failed, continuing with current branch"
+    fi
+  fi
+fi
+
+# Create GitHub environment file for main container
+if [ -n "$GITHUB_TOKEN" ]; then
+  echo "export GITHUB_TOKEN='$GITHUB_TOKEN'" > /workspace/{{service_name}}/.github-env
+  echo "export GITHUB_USER='{{repository.githubUser}}'" >> /workspace/{{service_name}}/.github-env
+  chmod 644 /workspace/{{service_name}}/.github-env
+  echo '✓ Created .github-env file for main container'
+fi
+{{else}}
+echo 'No repository specified, using empty workspace'
+{{/if}}
+
+# Create workspace directory structure
+echo "Creating task directories..."
+mkdir -p /workspace/{{service_name}}/.task/{{task_id}}/attempt-{{attempts}}
+
+# Copy task files to attempt-specific directory
+echo "Copying task files..."
+cp /config/* /workspace/{{service_name}}/.task/{{task_id}}/attempt-{{attempts}}/ 2>/dev/null || echo 'No config files to copy'
+
+# Also copy markdown files to task root for backward compatibility
+cp /config/*.md /workspace/{{service_name}}/.task/{{task_id}}/ 2>/dev/null || true
+
+# Copy all markdown files to service workspace root for @import access
+cp /workspace/{{service_name}}/.task/{{task_id}}/attempt-{{attempts}}/*.md /workspace/{{service_name}}/ 2>/dev/null || echo 'No markdown files to copy to root'
+
+# Copy Claude configuration to workspace
+cp /config/.claude.json /workspace/{{service_name}}/.claude.json 2>/dev/null || echo 'No .claude.json to copy'
+
+# Create .gitignore to prevent committing Claude internal files
+cat > /workspace/{{service_name}}/.gitignore << 'EOF'
+# Claude Code internal files - do not commit
+.claude/
+.claude.json
+.claude-scripts/
+.task/
+# Allow Claude session exports to be committed
+!.task/*/attempt-*/claude-session.md
+!.task/*/attempt-*/claude-session.xml
+!.task/*/attempt-*/claude-session-raw.jsonl
+task.md
+design-spec.md
+prompt.md
+acceptance-criteria.md
+CLAUDE.md
+.github-env
+.gitconfig
+.git-credentials
+.current-service
+.backup-*
+EOF
+
+# Clean up temporary credentials
+rm -f /tmp/.git-credentials /home/git-credentials 2>/dev/null || true
+
+echo '✓ Workspace preparation complete'
+echo 'Service directory contents:'
+ls -la /workspace/{{service_name}}/
+echo ''
+echo 'Task files:'
+ls -la /workspace/{{service_name}}/.task/{{task_id}}/attempt-{{attempts}}/

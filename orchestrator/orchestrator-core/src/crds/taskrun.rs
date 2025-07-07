@@ -164,6 +164,7 @@ pub struct TaskRunStatus {
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
 pub enum TaskRunPhase {
     Pending,
+    Preparing,
     Running,
     Succeeded,
     Failed,
@@ -173,6 +174,7 @@ impl std::fmt::Display for TaskRunPhase {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TaskRunPhase::Pending => write!(f, "Pending"),
+            TaskRunPhase::Preparing => write!(f, "Preparing"),
             TaskRunPhase::Running => write!(f, "Running"),
             TaskRunPhase::Succeeded => write!(f, "Succeeded"),
             TaskRunPhase::Failed => write!(f, "Failed"),
