@@ -27,7 +27,8 @@ spec:
     volumeMounts:
     - name: workspace
       mountPath: /workspace
-    workingDir: /workspace/${SERVICE_NAME}
+      subPath: ${SERVICE_NAME}
+    workingDir: /workspace
     securityContext:
       runAsUser: 0
       runAsGroup: 0

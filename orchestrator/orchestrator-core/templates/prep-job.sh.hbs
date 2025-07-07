@@ -6,10 +6,9 @@ echo '║                    PREP JOB STARTING                         ║'
 echo '║                   (workspace-preparation)                     ║'
 echo '════════════════════════════════════════════════════════════════'
 
-# First ensure the service directory exists on the PVC
-echo "Creating service directory: /workspace/{{service_name}}"
-mkdir -p /workspace/{{service_name}}
-cd /workspace/{{service_name}}
+# Working directly in the root of the dedicated PVC
+echo "Working in dedicated PVC for service: {{service_name}}"
+cd /workspace
 
 {{#if repository}}
 echo 'Repository management for: {{repository.url}}'
@@ -32,23 +31,17 @@ else
   echo "Warning: GitHub token not found in secret: github-pat-{{repository.githubUser}}"
 fi
 
-# Smart repository management - only clone on first task for a service
+# Smart repository management - check if repo already exists
 SKIP_CLONE=false
-if [ -f "/workspace/.current-service" ]; then
-  CURRENT_SERVICE=$(cat /workspace/.current-service)
-  if [ "$CURRENT_SERVICE" = "{{service_name}}" ]; then
-    echo "Continuing work on service: $CURRENT_SERVICE"
-    echo "Using existing code from previous tasks"
-    SKIP_CLONE=true
-  else
-    echo "Switching from service '$CURRENT_SERVICE' to '{{service_name}}'"
-  fi
+if [ -d ".git" ]; then
+  echo "Repository already exists in workspace"
+  echo "Using existing code from previous tasks"
+  SKIP_CLONE=true
 else
-  echo "First task - no previous service found"
+  echo "First task for this service - will clone repository"
 fi
 
-# Save current service for next task (at PVC root)
-echo "{{service_name}}" > /workspace/.current-service
+# No need to track current service - each service has its own PVC now
 
 # Only clone if needed
 if [ "$SKIP_CLONE" = "false" ]; then
@@ -94,9 +87,9 @@ fi
 
 # Create GitHub environment file for main container
 if [ -n "$GITHUB_TOKEN" ]; then
-  echo "export GITHUB_TOKEN='$GITHUB_TOKEN'" > /workspace/{{service_name}}/.github-env
-  echo "export GITHUB_USER='{{repository.githubUser}}'" >> /workspace/{{service_name}}/.github-env
-  chmod 644 /workspace/{{service_name}}/.github-env
+  echo "export GITHUB_TOKEN='$GITHUB_TOKEN'" > /workspace/.github-env
+  echo "export GITHUB_USER='{{repository.githubUser}}'" >> /workspace/.github-env
+  chmod 644 /workspace/.github-env
   echo '✓ Created .github-env file for main container'
 fi
 {{else}}
@@ -105,23 +98,23 @@ echo 'No repository specified, using empty workspace'
 
 # Create workspace directory structure
 echo "Creating task directories..."
-mkdir -p /workspace/{{service_name}}/.task/{{task_id}}/attempt-{{attempts}}
+mkdir -p /workspace/.task/{{task_id}}/attempt-{{attempts}}
 
 # Copy task files to attempt-specific directory
 echo "Copying task files..."
-cp /config/* /workspace/{{service_name}}/.task/{{task_id}}/attempt-{{attempts}}/ 2>/dev/null || echo 'No config files to copy'
+cp /config/* /workspace/.task/{{task_id}}/attempt-{{attempts}}/ 2>/dev/null || echo 'No config files to copy'
 
 # Also copy markdown files to task root for backward compatibility
-cp /config/*.md /workspace/{{service_name}}/.task/{{task_id}}/ 2>/dev/null || true
+cp /config/*.md /workspace/.task/{{task_id}}/ 2>/dev/null || true
 
-# Copy all markdown files to service workspace root for @import access
-cp /workspace/{{service_name}}/.task/{{task_id}}/attempt-{{attempts}}/*.md /workspace/{{service_name}}/ 2>/dev/null || echo 'No markdown files to copy to root'
+# Copy all markdown files to workspace root for @import access
+cp /workspace/.task/{{task_id}}/attempt-{{attempts}}/*.md /workspace/ 2>/dev/null || echo 'No markdown files to copy to root'
 
 # Copy Claude configuration to workspace
-cp /config/.claude.json /workspace/{{service_name}}/.claude.json 2>/dev/null || echo 'No .claude.json to copy'
+cp /config/.claude.json /workspace/.claude.json 2>/dev/null || echo 'No .claude.json to copy'
 
 # Create .gitignore to prevent committing Claude internal files
-cat > /workspace/{{service_name}}/.gitignore << 'EOF'
+cat > /workspace/.gitignore << 'EOF'
 # Claude Code internal files - do not commit
 .claude/
 .claude.json
@@ -147,8 +140,8 @@ EOF
 rm -f /tmp/.git-credentials /home/git-credentials 2>/dev/null || true
 
 echo '✓ Workspace preparation complete'
-echo 'Service directory contents:'
-ls -la /workspace/{{service_name}}/
+echo 'Workspace contents:'
+ls -la /workspace/
 echo ''
 echo 'Task files:'
-ls -la /workspace/{{service_name}}/.task/{{task_id}}/attempt-{{attempts}}/
+ls -la /workspace/.task/{{task_id}}/attempt-{{attempts}}/

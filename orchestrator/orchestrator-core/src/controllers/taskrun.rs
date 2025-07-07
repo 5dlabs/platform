@@ -6,8 +6,8 @@ use chrono::Utc;
 use futures::StreamExt;
 use handlebars::Handlebars;
 use k8s_openapi::{
-    api::{batch::v1::Job, core::v1::ConfigMap},
-    apimachinery::pkg::apis::meta::v1::ObjectMeta,
+    api::{batch::v1::Job, core::v1::{ConfigMap, PersistentVolumeClaim, PersistentVolumeClaimSpec, VolumeResourceRequirements}},
+    apimachinery::pkg::{api::resource::Quantity, apis::meta::v1::ObjectMeta},
 };
 use kube::{
     api::{Api, DeleteParams, ListParams, Patch, PatchParams, PostParams},
@@ -51,6 +51,57 @@ struct Context {
 
 // Finalizer name for cleanup
 const FINALIZER_NAME: &str = "taskruns.orchestrator.io/finalizer";
+
+/// Ensure PVC exists for a service
+async fn ensure_pvc_exists(
+    pvcs: &Api<PersistentVolumeClaim>,
+    pvc_name: &str,
+    service_name: &str,
+) -> Result<()> {
+    // Check if PVC already exists
+    match pvcs.get(pvc_name).await {
+        Ok(pvc) => {
+            info!("PVC {} already exists, status: {:?}", pvc_name, pvc.status.as_ref().map(|s| &s.phase));
+            Ok(())
+        }
+        Err(kube::Error::Api(ae)) if ae.code == 404 => {
+            // PVC doesn't exist, create it
+            info!("Creating PVC {} for service {}", pvc_name, service_name);
+            
+            let pvc = PersistentVolumeClaim {
+                metadata: ObjectMeta {
+                    name: Some(pvc_name.to_string()),
+                    labels: Some(BTreeMap::from([
+                        ("app.kubernetes.io/managed-by".to_string(), "taskrun-controller".to_string()),
+                        ("orchestrator.io/service".to_string(), service_name.to_string()),
+                    ])),
+                    ..Default::default()
+                },
+                spec: Some(PersistentVolumeClaimSpec {
+                    access_modes: Some(vec!["ReadWriteOnce".to_string()]),
+                    resources: Some(VolumeResourceRequirements {
+                        requests: Some(BTreeMap::from([
+                            ("storage".to_string(), Quantity("10Gi".to_string())),
+                        ])),
+                        ..Default::default()
+                    }),
+                    storage_class_name: Some("local-path".to_string()),
+                    volume_mode: Some("Filesystem".to_string()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            };
+
+            pvcs.create(&PostParams::default(), &pvc).await?;
+            info!("Created PVC {} successfully", pvc_name);
+            
+            // Wait a moment for PVC to be bound
+            tokio::time::sleep(Duration::from_secs(2)).await;
+            Ok(())
+        }
+        Err(e) => Err(e.into()),
+    }
+}
 
 /// Run the TaskRun controller
 pub async fn run_taskrun_controller(client: Client, namespace: String) -> Result<()> {
@@ -100,6 +151,7 @@ async fn reconcile(tr: Arc<TaskRun>, ctx: Arc<Context>) -> Result<Action> {
     let taskruns: Api<TaskRun> = Api::namespaced(client.clone(), namespace);
     let jobs: Api<Job> = Api::namespaced(client.clone(), namespace);
     let configmaps: Api<ConfigMap> = Api::namespaced(client.clone(), namespace);
+    let pvcs: Api<PersistentVolumeClaim> = Api::namespaced(client.clone(), namespace);
 
     let name = tr.name_any();
     info!("Reconciling TaskRun: {}", name);
@@ -109,10 +161,10 @@ async fn reconcile(tr: Arc<TaskRun>, ctx: Arc<Context>) -> Result<Action> {
         match event {
             FinalizerEvent::Apply(tr) => {
                 // Create or update resources
-                reconcile_create_or_update(tr, &jobs, &configmaps, &taskruns, &ctx.config).await
+                reconcile_create_or_update(tr, &jobs, &configmaps, &pvcs, &taskruns, &ctx.config).await
             }
             FinalizerEvent::Cleanup(tr) => {
-                // Cleanup resources when TaskRun is deleted
+                // Cleanup resources when TaskRun is deleted (don't delete PVCs - they're shared)
                 cleanup_resources(tr, &jobs, &configmaps).await
             }
         }
@@ -145,6 +197,7 @@ async fn reconcile_create_or_update(
     tr: Arc<TaskRun>,
     jobs: &Api<Job>,
     configmaps: &Api<ConfigMap>,
+    pvcs: &Api<PersistentVolumeClaim>,
     taskruns: &Api<TaskRun>,
     config: &ControllerConfig,
 ) -> Result<Action> {
@@ -154,6 +207,10 @@ async fn reconcile_create_or_update(
     if tr.status.is_none() {
         update_status(taskruns, &name, TaskRunPhase::Pending, "TaskRun created").await?;
     }
+
+    // Ensure PVC exists for the service
+    let pvc_name = format!("workspace-{}", tr.spec.service_name);
+    ensure_pvc_exists(pvcs, &pvc_name, &tr.spec.service_name).await?;
 
     // Create ConfigMap first (needed by both prep and main jobs)
     let cm_name = format!(
@@ -515,11 +572,12 @@ fn build_claude_job(
     // API key will be injected from secret
     let service_name = &tr.spec.service_name;
 
-    // Build volumes list - just the workspace PVC
+    // Build volumes list - use dedicated PVC for this service
+    let pvc_name = format!("workspace-{service_name}");
     let volumes = vec![json!({
         "name": "workspace",
         "persistentVolumeClaim": {
-            "claimName": "shared-workspace"
+            "claimName": pvc_name
         }
     })];
 
@@ -653,8 +711,7 @@ fn build_claude_job(
                         "env": build_env_vars(tr, telemetry_env, config),
                         "volumeMounts": [{
                             "name": "workspace",
-                            "mountPath": "/workspace",
-                            "subPath": service_name.clone()
+                            "mountPath": "/workspace"
                         }],
                         "workingDir": "/workspace",
                         "securityContext": {
@@ -680,6 +737,9 @@ fn build_prep_job(
     config: &ControllerConfig,
 ) -> Result<Job> {
     // Build volumes for prep job
+    let service_name = &tr.spec.service_name;
+    let pvc_name = format!("workspace-{service_name}");
+    
     let mut volumes = vec![
         json!({
             "name": "task-files",
@@ -690,7 +750,7 @@ fn build_prep_job(
         json!({
             "name": "workspace",
             "persistentVolumeClaim": {
-                "claimName": "shared-workspace"
+                "claimName": pvc_name
             }
         }),
     ];

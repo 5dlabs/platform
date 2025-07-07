@@ -218,13 +218,14 @@ if [ -n "$SUBMITTED_TASK_ID" ]; then
 fi
 echo ""
 echo "Next steps:"
-echo "1. Monitor the task with: kubectl logs -n $NAMESPACE -l task-id=$TASK_ID -f"
+echo "1. Watch both prep and Claude jobs: kubectl get jobs -n $NAMESPACE -l task-id=$TASK_ID -w"
+echo "2. Monitor prep job logs: kubectl logs -n $NAMESPACE -l task-id=$TASK_ID,job-type=prep -f"
+echo "3. Monitor Claude job logs: kubectl logs -n $NAMESPACE -l task-id=$TASK_ID,job-type!=prep -f"
 if [ -n "$SUBMITTED_TASK_ID" ]; then
-    echo "2. Check task status with: orchestrator task status ${SUBMITTED_TASK_ID}"
+    echo "4. Check task status with: orchestrator task status ${SUBMITTED_TASK_ID}"
 else
-    echo "2. Check task status with: orchestrator task status <task-id>"
+    echo "4. Check task status with: orchestrator task status <task-id>"
 fi
-echo "3. View the agent workspace: kubectl exec -it -n $NAMESPACE <pod-name> -- bash"
-echo "4. Watch the job: kubectl get jobs -n $NAMESPACE -w"
+echo "5. View the agent workspace: kubectl exec -it -n $NAMESPACE <pod-name> -- bash"
 echo ""
 echo -e "${GREEN}Repository URL: https://github.com/${GITHUB_ORG}/${TEST_REPO_NAME}${NC}"
