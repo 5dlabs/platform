@@ -62,6 +62,14 @@ whoami
 id
 echo '
 --- Current Directory Tree ---'
+echo "PWD: $(pwd)"
+echo "Listing /workspace (our mount point):"
+ls -la /workspace/ | head -10
+echo ""
+echo "Checking if we're in a subPath mount by looking at parent:"
+ls -la /workspace/.. 2>/dev/null | head -5 || echo "Cannot access parent"
+echo ""
+echo "Directory tree:"
 tree -a . 2>/dev/null || find . -type f 2>/dev/null | head -20
 echo '
 --- HOME Directory Contents ---'
