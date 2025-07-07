@@ -618,10 +618,9 @@ fn build_job(
                         "env": build_env_vars(tr, telemetry_env, config),
                         "volumeMounts": [{
                             "name": "workspace",
-                            "mountPath": "/workspace",
-                            "subPath": service_name.clone()
+                            "mountPath": "/workspace"
                         }],
-                        "workingDir": "/workspace",
+                        "workingDir": format!("/workspace/{}", service_name),
                         "securityContext": {
                             "runAsUser": 0,
                             "runAsGroup": 0,
@@ -868,7 +867,7 @@ fn generate_claude_settings(tr: &TaskRun, _config: &ControllerConfig) -> Result<
     }
 
     // Use the correct Claude Code configuration format as per claudelog.com documentation
-    // With subPath mounting, Claude sees /workspace as the root
+    // Claude's working directory is set to /workspace/{service_name}
     let settings = json!({
         "projects": {
             "/workspace": {

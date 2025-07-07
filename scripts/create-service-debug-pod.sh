@@ -27,8 +27,7 @@ spec:
     volumeMounts:
     - name: workspace
       mountPath: /workspace
-      subPath: ${SERVICE_NAME}
-    workingDir: /workspace
+    workingDir: /workspace/${SERVICE_NAME}
     securityContext:
       runAsUser: 0
       runAsGroup: 0
@@ -54,8 +53,7 @@ echo "  kubectl exec -it -n ${NAMESPACE} ${POD_NAME} -- bash"
 echo ""
 echo "The pod has the same workspace mount as the agent jobs:"
 echo "  - PVC 'shared-workspace' mounted at /workspace"
-echo "  - Using subPath: ${SERVICE_NAME}"
-echo "  - Working directory: /workspace"
+echo "  - Working directory: /workspace/${SERVICE_NAME}"
 echo ""
 echo "To delete the pod when done:"
 echo "  kubectl delete pod ${POD_NAME} -n ${NAMESPACE}"
