@@ -686,7 +686,7 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
         .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
 
     // Build the Claude command
-    let command = &config.agent.command;
+    let command = config.agent.command.join(" ");
 
     // Prepare template data
     let data = json!({
