@@ -154,8 +154,8 @@ fi
 echo '
 --- STARTING CLAUDE WITH FULL ARGS ---'
 
-# Build Claude command with verbose debugging for interactive mode
-CLAUDE_CMD="{{command}} --verbose"
+# Build Claude command with print mode and verbose debugging
+CLAUDE_CMD="{{command}} -p --verbose"
 
 {{#if model_override}}
 CLAUDE_CMD="$CLAUDE_CMD --model={{model}}"
@@ -166,7 +166,6 @@ CLAUDE_CMD="$CLAUDE_CMD --continue"
 echo 'Adding --continue flag for attempt {{attempts}}'
 {{/if}}
 
-# Read prompt content and pass it as an argument to avoid shell interpretation
-PROMPT_CONTENT=$(cat /workspace/prompt.md)
-echo "Final Claude command: $CLAUDE_CMD \"[prompt content]\""
-exec $CLAUDE_CMD "$PROMPT_CONTENT"
+# Use stdin to pass the prompt content to avoid shell interpretation issues
+echo "Final Claude command: $CLAUDE_CMD (with prompt from stdin)"
+exec $CLAUDE_CMD < /workspace/prompt.md
