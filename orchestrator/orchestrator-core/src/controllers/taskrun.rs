@@ -652,9 +652,10 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String,
         .register_template_string("export_script", EXPORT_SCRIPT_TEMPLATE)
         .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
 
-    // Render the export script with task_id
+    // Render the export script with task_id and attempt number
     let export_script_data = json!({
         "task_id": tr.spec.task_id,
+        "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
     });
     let export_script = handlebars
         .render("export_script", &export_script_data)
@@ -667,8 +668,10 @@ fn build_init_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String,
 
     let data = json!({
         "task_id": tr.spec.task_id,
+        "service_name": tr.spec.service_name,
         "repository": tr.spec.repository.as_ref(),
         "export_script": export_script,
+        "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
     });
 
     handlebars

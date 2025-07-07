@@ -6,11 +6,12 @@ HOOK_INPUT=$(cat)
 TRANSCRIPT_PATH=$(echo "$HOOK_INPUT" | jq -r '.transcript_path')
 SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id')
 
-# Extract task ID from environment
+# Extract task ID and attempt from environment
 TASK_ID="{{task_id}}"
+ATTEMPT="{{attempts}}"
 
-# Output directory
-OUTPUT_DIR="/workspace/.task/${TASK_ID}"
+# Output directory - use attempt-specific subdirectory
+OUTPUT_DIR="/workspace/.task/${TASK_ID}/attempt-${ATTEMPT}"
 mkdir -p "$OUTPUT_DIR"
 
 # Convert JSONL to readable markdown

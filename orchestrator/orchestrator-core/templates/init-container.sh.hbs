@@ -35,32 +35,62 @@ else
   echo "Warning: GitHub token not found in secret: github-pat-{{repository.githubUser}}"
 fi
 
-# Smart repository management
+# Smart repository management - only clone on first task for a service
 cd /workspace
-if [ ! -d '.git' ]; then
-  if [ -z "$(ls -A . 2>/dev/null)" ]; then
-    echo 'Directory is empty, cloning repository...'
-    git clone --depth 1 --branch {{repository.branch}} {{repository.url}} . || echo 'Clone failed, continuing...'
+
+# Check if we're continuing work on the same service
+SKIP_CLONE=false
+if [ -f "/workspace/.current-service" ]; then
+  CURRENT_SERVICE=$(cat /workspace/.current-service)
+  if [ "$CURRENT_SERVICE" = "{{service_name}}" ]; then
+    echo "Continuing work on service: $CURRENT_SERVICE"
+    echo "Using existing code from previous tasks"
+    SKIP_CLONE=true
   else
-    echo 'Directory not empty but not a Git repo, backing up existing files and cloning...'
-    mkdir -p .backup
-    mv ./* .backup/ 2>/dev/null || true
-    mv .[^.]* .backup/ 2>/dev/null || true
-    git clone --depth 1 --branch {{repository.branch}} {{repository.url}} . || echo 'Clone failed, continuing...'
-    echo 'Repository cloned, existing files backed up to .backup/'
+    echo "Switching from service '$CURRENT_SERVICE' to '{{service_name}}'"
+    # Clean up for new service
+    echo "Backing up previous service files..."
+    mkdir -p "/workspace/.backup-${CURRENT_SERVICE}"
+    find . -maxdepth 1 -not -name '.backup*' -not -name '.task' -not -name '.' -exec mv {} "/workspace/.backup-${CURRENT_SERVICE}/" \; 2>/dev/null || true
   fi
 else
-  echo 'Git repository exists, checking if it matches the target repository...'
-  CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo '')
-  if [ "$CURRENT_REMOTE" = "{{repository.url}}" ]; then
-    echo 'Repository matches, updating to latest changes...'
-    git fetch origin {{repository.branch}} --depth 1 2>/dev/null || echo 'Fetch failed, continuing with existing code'
-    git reset --hard origin/{{repository.branch}} 2>/dev/null || echo 'Reset failed, continuing with existing code'
+  echo "First task - no previous service found"
+fi
+
+# Save current service for next task
+echo "{{service_name}}" > /workspace/.current-service
+
+# Only clone if needed
+if [ "$SKIP_CLONE" = "false" ]; then
+  if [ ! -d '.git' ]; then
+    if [ -z "$(ls -A . 2>/dev/null | grep -v '.current-service' | grep -v '.task' | grep -v '.backup')" ]; then
+      echo 'Directory is empty, cloning repository...'
+      git clone --depth 1 --branch {{repository.branch}} {{repository.url}} . || echo 'Clone failed, continuing...'
+    else
+      echo 'Directory not empty but not a Git repo, backing up existing files and cloning...'
+      mkdir -p .backup
+      find . -maxdepth 1 -not -name '.backup*' -not -name '.task' -not -name '.current-service' -not -name '.' -exec mv {} .backup/ \; 2>/dev/null || true
+      git clone --depth 1 --branch {{repository.branch}} {{repository.url}} . || echo 'Clone failed, continuing...'
+      echo 'Repository cloned, existing files backed up to .backup/'
+    fi
   else
-    echo 'Different repository detected, updating remote and fetching...'
-    git remote set-url origin {{repository.url}}
-    git fetch origin {{repository.branch}} --depth 1 || echo 'Fetch failed, continuing...'
-    git reset --hard origin/{{repository.branch}} || echo 'Reset failed, continuing...'
+    echo 'Git repository exists for new service, checking remote...'
+    CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo '')
+    if [ "$CURRENT_REMOTE" != "{{repository.url}}" ]; then
+      echo "Remote URL mismatch. Expected: {{repository.url}}, Got: $CURRENT_REMOTE"
+      echo "Removing old repository and cloning fresh..."
+      rm -rf .git
+      git clone --depth 1 --branch {{repository.branch}} {{repository.url}} . || echo 'Clone failed, continuing...'
+    fi
+  fi
+else
+  # Continuing with same service - just ensure we're on the right branch
+  if [ -d '.git' ]; then
+    CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo '')
+    if [ "$CURRENT_BRANCH" != "{{repository.branch}}" ]; then
+      echo "Switching to branch {{repository.branch}}..."
+      git checkout {{repository.branch}} 2>/dev/null || echo "Branch checkout failed, continuing with current branch"
+    fi
   fi
 fi
 {{else}}
@@ -68,13 +98,17 @@ echo 'No repository specified, using empty workspace'
 {{/if}}
 
 # Create workspace directory structure (after cloning to avoid conflicts)
-mkdir -p /workspace/.task/{{task_id}}
+# Use attempt-specific subdirectory to preserve history
+mkdir -p /workspace/.task/{{task_id}}/attempt-{{attempts}}
 
-# Copy task files to .task directory
-cp /config/* /workspace/.task/{{task_id}}/ 2>/dev/null || echo 'No config files to copy'
+# Copy task files to attempt-specific directory
+cp /config/* /workspace/.task/{{task_id}}/attempt-{{attempts}}/ 2>/dev/null || echo 'No config files to copy'
+
+# Also copy to task root for backward compatibility
+cp /config/*.md /workspace/.task/{{task_id}}/ 2>/dev/null || echo 'No markdown files to copy to task root'
 
 # Copy all markdown files to workspace root for @import access
-cp /workspace/.task/{{task_id}}/*.md /workspace/ 2>/dev/null || echo 'No markdown files to copy to root'
+cp /workspace/.task/{{task_id}}/attempt-{{attempts}}/*.md /workspace/ 2>/dev/null || echo 'No markdown files to copy to root'
 
 # Setup Claude Code configuration
 mkdir -p /home/node/.claude/todos
@@ -95,19 +129,21 @@ cat > /workspace/.gitignore << 'EOF'
 .claude-scripts/
 .task/
 # Allow Claude session exports to be committed
-!.task/*/claude-session.md
-!.task/*/claude-session.xml
-!.task/*/claude-session-raw.jsonl
+!.task/*/attempt-*/claude-session.md
+!.task/*/attempt-*/claude-session.xml
+!.task/*/attempt-*/claude-session-raw.jsonl
 task.md
 CLAUDE.md
 .gitconfig
 .git-credentials
+.current-service
+.backup-*
 EOF
 
 # Create Claude scripts directory and export script
 mkdir -p /workspace/.claude-scripts
 cat > /workspace/.claude-scripts/export-session.sh << 'EXPORT_SCRIPT'
-{{export_script}}
+{{{export_script}}}
 EXPORT_SCRIPT
 chmod +x /workspace/.claude-scripts/export-session.sh
 
