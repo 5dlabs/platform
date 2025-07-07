@@ -68,73 +68,11 @@ wait_for_github_build() {
     echo -e "${GREEN}Build completed successfully!${NC}"
 }
 
-# Step 1: Clean the PVC
-echo -e "${GREEN}Step 1: Cleaning PVC ${PVC_NAME}...${NC}"
-CLEAN_JOB_NAME="clean-pvc-$(date +%s)"
-cat <<EOF | kubectl apply -f -
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: ${CLEAN_JOB_NAME}
-  namespace: orchestrator
-spec:
-  template:
-    spec:
-      restartPolicy: Never
-      nodeSelector:
-        kubernetes.io/hostname: talos-a43-ee1
-      containers:
-      - name: cleaner
-        image: busybox
-        command: 
-        - sh
-        - -c
-        - |
-          echo "Cleaning workspace..."
-          if [ -d /workspace ]; then
-            # List what we're about to delete
-            echo "Current contents:"
-            ls -la /workspace/
-            
-            # Also show service directories
-            for dir in /workspace/*/; do
-              if [ -d "\$dir" ]; then
-                echo "Service directory: \$dir"
-                ls -la "\$dir" | head -5
-              fi
-            done
-            
-            # Remove everything including hidden files
-            find /workspace -mindepth 1 -delete 2>/dev/null || true
-            
-            echo "Workspace cleaned"
-            echo "Verification:"
-            ls -la /workspace/
-          else
-            echo "Workspace directory doesn't exist"
-          fi
-        volumeMounts:
-        - name: workspace
-          mountPath: /workspace
-      volumes:
-      - name: workspace
-        persistentVolumeClaim:
-          claimName: shared-workspace
-EOF
-
-# Wait for cleaning job to complete
-echo "Waiting for cleaning job to complete..."
-kubectl wait --for=condition=complete job/${CLEAN_JOB_NAME} -n $NAMESPACE --timeout=60s || {
-    echo -e "${RED}Cleaning job failed or timed out${NC}"
-    exit 1
-}
-
-# Show job logs for debugging
-echo "Cleaning job output:"
-kubectl logs job/${CLEAN_JOB_NAME} -n $NAMESPACE
-
-# Delete the cleaning job
-kubectl delete job/${CLEAN_JOB_NAME} -n $NAMESPACE
+# Step 1: Skip PVC cleaning (each service has dedicated PVC now)
+echo -e "${GREEN}Step 1: Skipping PVC cleaning (using dedicated PVCs)...${NC}"
+echo "Each service now has its own dedicated PVC."
+echo "To clean a specific service workspace, manually delete its PVC:"
+echo "  kubectl delete pvc workspace-<service-name> -n $NAMESPACE"
 
 # Step 2: Create fresh repository from template
 echo -e "${GREEN}Step 2: Creating fresh repository from template...${NC}"

@@ -557,6 +557,10 @@ fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Resul
     let settings_json = generate_claude_settings(tr, config)?;
     data.insert(".claude.json".to_string(), settings_json);
 
+    // Generate export script from template
+    let export_script = render_export_script(tr)?;
+    data.insert("export-session.sh".to_string(), export_script);
+
     // CLAUDE.md should always be provided by the client
     // This allows task-specific instructions and Git workflows
 
@@ -862,9 +866,27 @@ fn build_prep_job(
 
 // Template constants
 const PREP_JOB_TEMPLATE: &str = include_str!("../../templates/prep-job.sh.hbs");
-const EXPORT_SCRIPT_TEMPLATE: &str = include_str!("../../templates/export-session.sh");
-const MAIN_CONTAINER_TEMPLATE: &str =
-    include_str!("../../templates/main-container-simplified.sh.hbs");
+const MAIN_CONTAINER_TEMPLATE: &str = include_str!("../../templates/main-container.sh.hbs");
+const EXPORT_SCRIPT_TEMPLATE: &str = include_str!("../../templates/export-session.sh.hbs");
+
+/// Render export script from template
+fn render_export_script(tr: &TaskRun) -> Result<String, Error> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false);
+
+    handlebars
+        .register_template_string("export_script", EXPORT_SCRIPT_TEMPLATE)
+        .map_err(|e| Error::ConfigError(format!("Failed to register export template: {e}")))?;
+
+    let data = json!({
+        "task_id": tr.spec.task_id,
+        "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
+    });
+
+    handlebars
+        .render("export_script", &data)
+        .map_err(|e| Error::ConfigError(format!("Failed to render export script: {e}")))
+}
 
 /// Build prep job script for workspace preparation
 fn build_prep_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String, Error> {
@@ -892,19 +914,7 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false); // Allow missing fields
 
-    // Register the export script as a partial
-    handlebars
-        .register_template_string("export_script", EXPORT_SCRIPT_TEMPLATE)
-        .map_err(|e| Error::ConfigError(format!("Failed to register export template: {e}")))?;
-
-    // Render the export script with task_id and attempt number
-    let export_script_data = json!({
-        "task_id": tr.spec.task_id,
-        "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
-    });
-    let export_script = handlebars
-        .render("export_script", &export_script_data)
-        .map_err(|e| Error::ConfigError(format!("Failed to render export script: {e}")))?;
+    // Export script is now created by prep job, no need to render it here
 
     // Register the main container template
     handlebars
@@ -921,7 +931,6 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
         "model": tr.spec.model.clone(),
         "is_retry": tr.status.as_ref().is_some_and(|s| s.attempts > 1),
         "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
-        "export_script": export_script,
         "task_id": tr.spec.task_id,
     });
 

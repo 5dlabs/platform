@@ -27,6 +27,10 @@ if [ -n "$GITHUB_TOKEN" ]; then
   echo "https://{{repository.githubUser}}:${GITHUB_TOKEN}@github.com" > /tmp/.git-credentials
   cp /tmp/.git-credentials /home/git-credentials
   git config --global credential.helper 'store --file=/home/git-credentials'
+  
+  # Also set up persistent credentials in workspace for main container
+  echo "https://{{repository.githubUser}}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+  chmod 600 /workspace/.git-credentials
 else
   echo "Warning: GitHub token not found in secret: github-pat-{{repository.githubUser}}"
 fi
@@ -112,6 +116,11 @@ cp /workspace/.task/{{task_id}}/attempt-{{attempts}}/*.md /workspace/ 2>/dev/nul
 
 # Copy Claude configuration to workspace
 cp /config/.claude.json /workspace/.claude.json 2>/dev/null || echo 'No .claude.json to copy'
+
+# Create .claude scripts directory and copy export script
+mkdir -p /workspace/.claude-scripts
+cp /config/export-session.sh /workspace/.claude-scripts/export-session.sh
+chmod +x /workspace/.claude-scripts/export-session.sh
 
 # Create .gitignore to prevent committing Claude internal files
 cat > /workspace/.gitignore << 'EOF'
