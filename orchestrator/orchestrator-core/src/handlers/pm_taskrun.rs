@@ -822,7 +822,11 @@ Follow these steps:
    - `design-spec.md`: Technical design specification
    - `acceptance-criteria.md`: Clear acceptance criteria and test cases
 
-Note: Since you're working in a restricted environment, you won't be creating branches or PRs. Focus only on generating the documentation files in the correct directories.
+4. After generating all documentation:
+   - Stage all changes: `git add .`
+   - Commit with message: `docs: auto-generate Task Master documentation for all tasks`
+   - Push the branch: `git push origin HEAD`
+   - Create a PR using: `gh pr create --title "docs: auto-generate Task Master documentation" --body "Auto-generated documentation for Task Master tasks"`
 
 ## Important Notes
 
