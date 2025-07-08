@@ -834,6 +834,7 @@ Follow these steps:
 - Include code examples, commands, and implementation details where relevant
 - Maintain consistency across all generated documents
 - Ensure all markdown is properly formatted
+- Generate ALL FOUR files (task.md, prompt.md, design-spec.md, acceptance-criteria.md) for EACH task
 - Working directory is relative to repository root
 "#,
                     request.repository_url,
