@@ -10,11 +10,11 @@ if [ -f /workspace/.github-env ]; then
   echo "✓ GitHub authentication configured"
   
   # Configure git credentials for HTTPS authentication
-  if [ -n "$GITHUB_TOKEN" ]; then
-    git config --global user.name "Claude Agent"
-    git config --global user.email "claude@5dlabs.com"
+  if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USER" ]; then
+    git config --global user.name "$GITHUB_USER"
+    git config --global user.email "${GITHUB_USER}@users.noreply.github.com"
     git config --global credential.helper 'store --file=/workspace/.git-credentials'
-    echo "✓ Git credentials configured"
+    echo "✓ Git credentials configured for user: $GITHUB_USER"
   fi
 fi
 

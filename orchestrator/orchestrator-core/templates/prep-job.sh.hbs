@@ -25,8 +25,8 @@ if [ -n "$GITHUB_TOKEN" ]; then
   echo "GitHub token loaded from secret: github-pat-{{repository.githubUser}}"
   
   # Configure git for cloning
-  git config --global user.name "Claude Agent"
-  git config --global user.email "claude@5dlabs.com"
+  git config --global user.name "{{repository.githubUser}}"
+  git config --global user.email "{{repository.githubUser}}@users.noreply.github.com"
   git config --global credential.helper store
   
   # Write token to temporary credentials file for cloning
