@@ -5,6 +5,10 @@ FROM summerwind/actions-runner-dind:latest
 # Switch to root for installations
 USER root
 
+# Add LLVM repository for modern clang/lld
+RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
+    && echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-15 main" >> /etc/apt/sources.list.d/llvm.list
+
 # Install additional system dependencies for Rust builds
 RUN apt-get update && apt-get install -y \
     # Build essentials (some may already be installed)
@@ -16,7 +20,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     git \
     unzip \
-    # Clang for mold linker
+    # Clang for mold linker (from LLVM repo)
     clang-15 \
     lld-15 \
     # Additional tools
