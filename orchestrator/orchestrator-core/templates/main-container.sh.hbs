@@ -173,6 +173,31 @@ else
   echo "Changing to working directory: /workspace/.taskmaster for docs generation"
   cd "/workspace/.taskmaster"
 fi
+
+echo ""
+echo "=== DOCUMENTATION GENERATION DIAGNOSTICS ==="
+echo "Current directory: $(pwd)"
+echo "Directory contents:"
+ls -la
+echo ""
+echo "Checking for tasks.json:"
+if [ -f "tasks/tasks.json" ]; then
+  echo "✓ Found tasks/tasks.json"
+  echo "First 5 lines:"
+  head -5 tasks/tasks.json
+else
+  echo "✗ ERROR: tasks/tasks.json not found!"
+fi
+echo ""
+echo "Checking for prompt.md:"
+if [ -f "prompt.md" ]; then
+  echo "✓ Found prompt.md"
+  echo "File size: $(wc -c < prompt.md) bytes"
+else
+  echo "✗ ERROR: prompt.md not found!"
+fi
+echo "=== END DIAGNOSTICS ==="
+echo ""
 {{/if}}
 
 {{#if model_override}}
