@@ -269,7 +269,15 @@ async fn reconcile_create_or_update(
         }
     }
 
-    // Check prep job status
+    // Special handling for documentation generation tasks (task_id = 999999)
+    if tr.spec.task_id == 999999 {
+        info!("Documentation generation task detected, skipping prep job");
+        // Skip prep job and create Claude job directly
+        create_claude_job(tr, jobs, taskruns, &cm_name, config).await?;
+        return Ok(Action::requeue(Duration::from_secs(30)));
+    }
+
+    // Check prep job status for normal tasks
     let prep_job_name = format!(
         "prep-{}-{}-task{}-attempt{}",
         tr.spec.agent_name.replace('_', "-"),
@@ -587,7 +595,7 @@ fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Resul
 fn build_claude_job(
     tr: &TaskRun,
     job_name: &str,
-    _cm_name: &str,
+    cm_name: &str,
     config: &ControllerConfig,
 ) -> Result<Job> {
     // API key will be injected from secret
@@ -595,12 +603,22 @@ fn build_claude_job(
 
     // Build volumes list - use dedicated PVC for this service
     let pvc_name = format!("workspace-{service_name}");
-    let volumes = vec![json!({
+    let mut volumes = vec![json!({
         "name": "workspace",
         "persistentVolumeClaim": {
             "claimName": pvc_name
         }
     })];
+    
+    // For documentation generation tasks, mount the ConfigMap directly
+    if tr.spec.task_id == 999999 {
+        volumes.push(json!({
+            "name": "task-files",
+            "configMap": {
+                "name": cm_name
+            }
+        }));
+    }
 
     let mut telemetry_env = vec![];
 
@@ -730,10 +748,7 @@ fn build_claude_job(
                         "command": ["/bin/sh", "-c"],
                         "args": [build_agent_startup_script(tr, config)?],
                         "env": build_env_vars(tr, telemetry_env, config),
-                        "volumeMounts": [{
-                            "name": "workspace",
-                            "mountPath": "/workspace"
-                        }],
+                        "volumeMounts": build_volume_mounts(tr),
                         "workingDir": "/workspace",
                         "securityContext": {
                             "runAsUser": 0,
@@ -932,6 +947,7 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
         "is_retry": tr.status.as_ref().is_some_and(|s| s.attempts > 1),
         "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
         "task_id": tr.spec.task_id,
+        "is_docs_generation": tr.spec.task_id == 999999, // Special docs generation task
     });
 
     handlebars
@@ -1008,6 +1024,24 @@ fn build_env_vars(
     }
 
     env_vars
+}
+
+/// Build volume mounts based on task type
+fn build_volume_mounts(tr: &TaskRun) -> Vec<serde_json::Value> {
+    let mut mounts = vec![json!({
+        "name": "workspace",
+        "mountPath": "/workspace"
+    })];
+    
+    // For documentation generation tasks, mount the ConfigMap
+    if tr.spec.task_id == 999999 {
+        mounts.push(json!({
+            "name": "task-files",
+            "mountPath": "/config"
+        }));
+    }
+    
+    mounts
 }
 
 /// Build resource attributes for OTEL

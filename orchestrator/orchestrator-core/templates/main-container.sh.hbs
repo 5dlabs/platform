@@ -33,6 +33,35 @@ fi
 
 echo '=== WORKSPACE VALIDATION ==='
 
+{{#if is_docs_generation}}
+# Documentation generation task - minimal validation
+echo "Documentation generation task detected - using minimal validation"
+MISSING_FILES=""
+REQUIRED_FILES="CLAUDE.md"
+
+echo "Checking for required files..."
+for file in $REQUIRED_FILES; do
+  if [ ! -f "/workspace/$file" ]; then
+    echo "ERROR: Missing required file: $file"
+    MISSING_FILES="$MISSING_FILES $file"
+  else
+    echo "✓ Found: $file"
+  fi
+done
+
+# Copy files from ConfigMap for docs generation
+if [ -d "/config" ]; then
+  echo "Copying files from ConfigMap..."
+  cp -v /config/* /workspace/
+  echo "✓ Copied ConfigMap files to workspace"
+fi
+
+# Create a prompt.md from CLAUDE.md for docs generation
+if [ -f "/workspace/CLAUDE.md" ]; then
+  cp /workspace/CLAUDE.md /workspace/prompt.md
+  echo "✓ Created prompt.md from CLAUDE.md for docs generation"
+fi
+{{else}}
 # Validate that prep job completed successfully
 MISSING_FILES=""
 REQUIRED_FILES="CLAUDE.md task.md design-spec.md prompt.md acceptance-criteria.md .claude.json"
@@ -46,6 +75,7 @@ for file in $REQUIRED_FILES; do
     echo "✓ Found: $file"
   fi
 done
+{{/if}}
 
 # Check for git repository (optional - only needed for tasks that push code)
 if [ ! -d "/workspace/.git" ]; then
