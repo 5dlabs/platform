@@ -99,24 +99,9 @@ RUN --mount=type=cache,target=/tmp/cargo-registry,uid=1001,gid=1001 \
         cargo-tree \
         cargo-watch
 
-# Pre-warm common dependencies by building a dummy project (with cargo cache)
-RUN --mount=type=cache,target=/tmp/cargo-registry,uid=1001,gid=1001 \
-    --mount=type=cache,target=/tmp/cargo-git,uid=1001,gid=1001 \
-    --mount=type=cache,target=/tmp/target-cache,uid=1001,gid=1001 \
-    # Ensure cache links are active
-    ln -sf /tmp/cargo-registry /home/runner/.cargo/registry && \
-    ln -sf /tmp/cargo-git /home/runner/.cargo/git && \
-    # Build dummy project
-    ~/.cargo/bin/cargo new --bin dummy-project && \
-    cd dummy-project && \
-    echo 'tokio = { version = "1.40", features = ["full"] }' >> Cargo.toml && \
-    echo 'axum = "0.8"' >> Cargo.toml && \
-    echo 'serde = { version = "1.0", features = ["derive"] }' >> Cargo.toml && \
-    echo 'anyhow = "1.0"' >> Cargo.toml && \
-    echo 'tracing = "0.1"' >> Cargo.toml && \
-    CARGO_TARGET_DIR=/tmp/target-cache ~/.cargo/bin/cargo build && \
-    cd .. && \
-    rm -rf dummy-project
+# Skip pre-warming for now to avoid permission issues
+# The main optimizations (mold, sccache, persistent caches) are more important
+# Pre-warming can be added later once the base image is working
 
 # Switch back to root for final setup
 USER root
