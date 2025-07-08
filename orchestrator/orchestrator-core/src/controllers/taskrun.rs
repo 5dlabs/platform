@@ -271,10 +271,51 @@ async fn reconcile_create_or_update(
 
     // Special handling for documentation generation tasks (task_id = 999999)
     if tr.spec.task_id == 999999 {
-        info!("Documentation generation task detected, skipping prep job");
-        // Skip prep job and create Claude job directly
-        create_claude_job(tr, jobs, taskruns, &cm_name, config).await?;
-        return Ok(Action::requeue(Duration::from_secs(30)));
+        info!("Documentation generation task detected, using minimal prep job");
+        // Use a special prep job for docs generation
+        let prep_job_name = format!(
+            "prep-{}-{}-task{}-attempt{}",
+            tr.spec.agent_name.replace('_', "-"),
+            tr.spec.service_name.replace('_', "-"),
+            tr.spec.task_id,
+            tr.spec.context_version
+        );
+        
+        // Check if prep job exists
+        match jobs.get(&prep_job_name).await {
+            Ok(prep_job) => {
+                // Check prep job status
+                if let Some(job_status) = &prep_job.status {
+                    if job_status.succeeded.unwrap_or(0) > 0 {
+                        info!("Docs prep job succeeded, creating Claude job");
+                        create_claude_job(tr, jobs, taskruns, &cm_name, config).await?;
+                    } else if job_status.failed.unwrap_or(0) > 0 {
+                        update_status(
+                            taskruns,
+                            &name,
+                            TaskRunPhase::Failed,
+                            "Documentation prep failed",
+                        )
+                        .await?;
+                    }
+                }
+            }
+            Err(kube::Error::Api(ae)) if ae.code == 404 => {
+                // Create minimal prep job for docs
+                info!("Creating docs prep job: {}", prep_job_name);
+                let prep_job = build_docs_prep_job(&tr, &prep_job_name, config)?;
+                jobs.create(&PostParams::default(), &prep_job).await?;
+                update_status(
+                    taskruns,
+                    &name,
+                    TaskRunPhase::Preparing,
+                    "Preparing documentation workspace",
+                )
+                .await?;
+            }
+            Err(e) => return Err(e.into()),
+        }
+        return Ok(Action::requeue(Duration::from_secs(10)));
     }
 
     // Check prep job status for normal tasks
@@ -595,7 +636,7 @@ fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Resul
 fn build_claude_job(
     tr: &TaskRun,
     job_name: &str,
-    cm_name: &str,
+    _cm_name: &str,
     config: &ControllerConfig,
 ) -> Result<Job> {
     // API key will be injected from secret
@@ -603,22 +644,12 @@ fn build_claude_job(
 
     // Build volumes list - use dedicated PVC for this service
     let pvc_name = format!("workspace-{service_name}");
-    let mut volumes = vec![json!({
+    let volumes = vec![json!({
         "name": "workspace",
         "persistentVolumeClaim": {
             "claimName": pvc_name
         }
     })];
-    
-    // For documentation generation tasks, mount the ConfigMap directly
-    if tr.spec.task_id == 999999 {
-        volumes.push(json!({
-            "name": "task-files",
-            "configMap": {
-                "name": cm_name
-            }
-        }));
-    }
 
     let mut telemetry_env = vec![];
 
@@ -748,7 +779,10 @@ fn build_claude_job(
                         "command": ["/bin/sh", "-c"],
                         "args": [build_agent_startup_script(tr, config)?],
                         "env": build_env_vars(tr, telemetry_env, config),
-                        "volumeMounts": build_volume_mounts(tr),
+                        "volumeMounts": [{
+                            "name": "workspace",
+                            "mountPath": "/workspace"
+                        }],
                         "workingDir": "/workspace",
                         "securityContext": {
                             "runAsUser": 0,
@@ -876,6 +910,139 @@ fn build_prep_job(
         }
     });
 
+    serde_json::from_value(job_json).map_err(Error::SerializationError)
+}
+
+/// Build minimal prep job for documentation generation
+fn build_docs_prep_job(
+    tr: &TaskRun,
+    job_name: &str,
+    config: &ControllerConfig,
+) -> Result<Job> {
+    // Extract repository info from markdown files
+    let mut repo_url = String::new();
+    let mut working_dir = String::new();
+    
+    // Parse CLAUDE.md to get repo info
+    if let Some(claude_md) = tr.spec.markdown_files.iter().find(|f| f.filename == "CLAUDE.md") {
+        // Extract repository URL and working directory from content
+        for line in claude_md.content.lines() {
+            if line.starts_with("- **Repository**: ") {
+                repo_url = line.trim_start_matches("- **Repository**: ").to_string();
+            } else if line.starts_with("- **Working Directory**: ") {
+                working_dir = line.trim_start_matches("- **Working Directory**: ").to_string();
+            }
+        }
+    }
+    
+    let service_name = &tr.spec.service_name;
+    let pvc_name = format!("workspace-{service_name}");
+    
+    let prep_script = format!(
+        r#"#!/bin/sh
+set -e
+
+echo "=== DOCS PREP JOB STARTING ==="
+echo "Repository: {repo_url}"
+echo "Working directory: {working_dir}"
+
+# Clone repository
+echo "Cloning repository..."
+git clone --depth 1 {repo_url} /tmp/repo
+cd /tmp/repo
+
+# Copy only the taskmaster directory
+echo "Copying .taskmaster directory to workspace..."
+if [ -d "{working_dir}" ]; then
+    cd "{working_dir}"
+    if [ -d ".taskmaster" ]; then
+        cp -r .taskmaster /workspace/
+        echo "✓ Copied .taskmaster directory"
+    else
+        echo "ERROR: .taskmaster directory not found in {working_dir}"
+        exit 1
+    fi
+else
+    echo "ERROR: Working directory {working_dir} not found"
+    exit 1
+fi
+
+# Copy ConfigMap files
+echo "Copying ConfigMap files..."
+cp -v /config/* /workspace/
+
+echo "✓ Documentation workspace prepared"
+"#
+    );
+    
+    let job_json = json!({
+        "apiVersion": "batch/v1",
+        "kind": "Job",
+        "metadata": {
+            "name": job_name,
+            "namespace": tr.namespace().unwrap_or_default(),
+            "labels": {
+                "task-id": tr.spec.task_id.to_string(),
+                "service-name": tr.spec.service_name.clone(),
+                "context-version": tr.spec.context_version.to_string(),
+                "managed-by": "taskrun-controller",
+                "job-type": "docs-prep",
+            }
+        },
+        "spec": {
+            "backoffLimit": 2,
+            "activeDeadlineSeconds": 300,
+            "ttlSecondsAfterFinished": config.job.ttl_seconds_after_finished,
+            "template": {
+                "spec": {
+                    "restartPolicy": "Never",
+                    "imagePullSecrets": [{"name": "ghcr-secret"}],
+                    "containers": [{
+                        "name": "prep-docs",
+                        "image": "alpine/git:latest",
+                        "command": ["/bin/sh", "-c"],
+                        "args": [prep_script],
+                        "volumeMounts": [
+                            {
+                                "name": "workspace",
+                                "mountPath": "/workspace"
+                            },
+                            {
+                                "name": "task-files",
+                                "mountPath": "/config"
+                            }
+                        ],
+                        "securityContext": {
+                            "runAsUser": 0,
+                            "runAsGroup": 0,
+                            "runAsNonRoot": false
+                        }
+                    }],
+                    "volumes": [
+                        {
+                            "name": "workspace",
+                            "persistentVolumeClaim": {
+                                "claimName": pvc_name
+                            }
+                        },
+                        {
+                            "name": "task-files",
+                            "configMap": {
+                                "name": format!(
+                                    "{}-{}-task{}-v{}-files",
+                                    tr.spec.agent_name.replace('_', "-"),
+                                    tr.spec.service_name.replace('_', "-"),
+                                    tr.spec.task_id,
+                                    tr.spec.context_version
+                                )
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    });
+    
     serde_json::from_value(job_json).map_err(Error::SerializationError)
 }
 
@@ -1024,24 +1191,6 @@ fn build_env_vars(
     }
 
     env_vars
-}
-
-/// Build volume mounts based on task type
-fn build_volume_mounts(tr: &TaskRun) -> Vec<serde_json::Value> {
-    let mut mounts = vec![json!({
-        "name": "workspace",
-        "mountPath": "/workspace"
-    })];
-    
-    // For documentation generation tasks, mount the ConfigMap
-    if tr.spec.task_id == 999999 {
-        mounts.push(json!({
-            "name": "task-files",
-            "mountPath": "/config"
-        }));
-    }
-    
-    mounts
 }
 
 /// Build resource attributes for OTEL

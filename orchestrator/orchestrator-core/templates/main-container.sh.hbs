@@ -49,14 +49,8 @@ for file in $REQUIRED_FILES; do
   fi
 done
 
-# Copy files from ConfigMap for docs generation
-if [ -d "/config" ]; then
-  echo "Copying files from ConfigMap..."
-  cp -v /config/* /workspace/
-  echo "✓ Copied ConfigMap files to workspace"
-fi
-
-# Create a prompt.md from CLAUDE.md for docs generation
+# For docs generation, create prompt.md from CLAUDE.md
+echo "Documentation generation workspace prepared by prep job"
 if [ -f "/workspace/CLAUDE.md" ]; then
   cp /workspace/CLAUDE.md /workspace/prompt.md
   echo "✓ Created prompt.md from CLAUDE.md for docs generation"
@@ -147,6 +141,12 @@ echo '=== STARTING CLAUDE ==='
 
 # Build Claude command with print mode, streaming output, and explicit tools
 CLAUDE_CMD="{{command}} -p --output-format stream-json --verbose --allowedTools Bash,Edit,Read,Write,Glob,Grep,LS,MultiEdit,WebSearch,WebFetch,TodoRead,TodoWrite"
+
+{{#if is_docs_generation}}
+# For docs generation, set working directory to restrict access
+CLAUDE_CMD="$CLAUDE_CMD --cwd /workspace/.taskmaster"
+echo 'Setting working directory to .taskmaster for docs generation'
+{{/if}}
 
 {{#if model_override}}
 CLAUDE_CMD="$CLAUDE_CMD --model={{model}}"
