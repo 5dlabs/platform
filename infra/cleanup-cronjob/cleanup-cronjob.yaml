@@ -45,7 +45,7 @@ data:
     set -e
 
     echo "Starting cleanup job at $(date)"
-    
+
     # Configuration
     NAMESPACE="orchestrator"
     FAILED_POD_AGE_HOURS=24  # Delete failed pods older than 24 hours
@@ -83,7 +83,7 @@ data:
             echo "Keeping failed pod: $pod_name (age: ${age_hours}h)"
         fi
     done
-        echo "Deleted $FAILED_POD_COUNT failed pods"
+    echo "Deleted $FAILED_POD_COUNT failed pods"
     echo ""
 
     # Clean up completed pods (not associated with jobs)

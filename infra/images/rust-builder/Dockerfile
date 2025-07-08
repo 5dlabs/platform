@@ -27,7 +27,7 @@ RUN apt-get update && apt-get install -y \
     software-properties-common \
     && rm -rf /var/lib/apt/lists/*
 
-# Install mold linker (fastest linker for Rust)
+# Install mold linker (fastest linker for Rust) - UPDATED VERSION
 RUN wget -qO- https://github.com/rui314/mold/releases/download/v2.4.0/mold-2.4.0-x86_64-linux.tar.gz | tar xz \
     && cp mold-2.4.0-x86_64-linux/bin/mold /usr/local/bin/ \
     && chmod +x /usr/local/bin/mold \
@@ -101,11 +101,11 @@ RUN mkdir -p /cache/{cargo,rustup,sccache} \
 # Set up default Cargo config with optimizations
 RUN mkdir -p /app/.cargo && cat > /app/.cargo/config.toml << 'EOF'
 [build]
-jobs = 0  # Use all available cores
+rustc-wrapper = "sccache"
 
 [target.x86_64-unknown-linux-gnu]
-linker = "/usr/bin/clang-15"
-rustflags = ["-C", "link-arg=--ld-path=/usr/local/bin/mold"]
+linker = "clang-15"
+rustflags = ["-C", "link-arg=-fuse-ld=mold", "-C", "target-cpu=native"]
 
 [profile.dev]
 debug = 0
@@ -114,10 +114,12 @@ incremental = true
 
 [profile.dev.package."*"]
 opt-level = 3
-debug = 2
 
 [profile.dev.build-override]
 opt-level = 3
+
+[registries.crates-io]
+protocol = "sparse"
 
 [net]
 git-fetch-with-cli = true

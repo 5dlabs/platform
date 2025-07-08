@@ -67,8 +67,15 @@ jobs:
           if ! command -v cargo &> /dev/null; then
             echo "📦 Installing Rust toolchain..."
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-            source ~/.cargo/env
-            echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+            # Source from the correct location based on CARGO_HOME
+            if [ -d "/cache/cargo" ]; then
+              source /cache/cargo/env
+              echo "/cache/cargo/bin" >> $GITHUB_PATH
+            else
+              source ~/.cargo/env
+              echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+            fi
           else
             echo "✅ Rust already available"
           fi
