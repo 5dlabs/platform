@@ -37,7 +37,10 @@ jobs:
   # Build only orchestrator (skip Claude Code for now)
   build-orchestrator:
     needs: [version]
-    runs-on: [self-hosted, rust-fast]
+    runs-on: [self-hosted, k8s-runner]
+    container:
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:feature-example-project-and-cli-75991d8
+      options: --user 1001:1001 --volume /tmp/cargo-cache:/home/runner/.cargo --volume /tmp/sccache:/home/runner/.cache/sccache
     permissions:
       contents: read
       packages: write
@@ -198,7 +201,7 @@ jobs:
   # Deploy immediately
   deploy:
     needs: [version, build-orchestrator]
-    runs-on: [self-hosted, rust-fast]
+    runs-on: [self-hosted, k8s-runner]
     steps:
       - uses: actions/checkout@v4
 
