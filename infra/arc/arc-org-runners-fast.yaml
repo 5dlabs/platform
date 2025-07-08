@@ -77,8 +77,8 @@ spec:
           cpu: "1"
           memory: "2Gi"
 
-      # Standard working image
-      image: summerwind/actions-runner-dind:latest
+      # Custom Rust builder image with mold and optimizations pre-installed
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:feature-example-project-and-cli
       dockerEnabled: true
       dockerdWithinRunnerContainer: true
 

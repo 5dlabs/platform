@@ -48,96 +48,27 @@ jobs:
         run: |
           echo "🚀 Setting up ULTRA-OPTIMIZED Rust build environment..."
 
-          # Install system dependencies first (critical for OpenSSL)
-          echo "📦 Installing system dependencies..."
-          sudo apt-get update -qq
-          sudo apt-get install -y pkg-config libssl-dev build-essential clang
-
-          # Try to install mold (fallback if not available)
-          echo "⚡ Installing mold linker..."
-          if ! sudo apt-get install -y mold; then
-            echo "⚠️ Mold not available in apt, trying manual install..."
-            wget -q https://github.com/rui314/mold/releases/download/v2.4.0/mold-2.4.0-x86_64-linux.tar.gz
-            tar -xzf mold-2.4.0-x86_64-linux.tar.gz
-            sudo cp mold-2.4.0-x86_64-linux/bin/mold /usr/local/bin/
-            sudo chmod +x /usr/local/bin/mold
-          fi
-
-          # Install Rust if not available
-          if ! command -v cargo &> /dev/null; then
-            echo "📦 Installing Rust toolchain..."
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-
-            # Source from the correct location based on CARGO_HOME
-            if [ -d "/cache/cargo" ]; then
-              source /cache/cargo/env
-              echo "/cache/cargo/bin" >> $GITHUB_PATH
-            else
-              source ~/.cargo/env
-              echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-            fi
-          else
-            echo "✅ Rust already available"
-          fi
-
-          # Install sccache for compilation caching
-          echo "⚡ Installing sccache..."
-          if ! command -v sccache &> /dev/null; then
-            cargo install sccache --locked
-          fi
-
-          # Setup build optimizations (with fallbacks)
-          echo "🔧 Configuring build optimizations..."
-          mkdir -p ~/.cargo
-
-          # Create cargo config with conditional mold support
-          if command -v mold &> /dev/null; then
-            echo "✅ Using mold linker"
-            cat > ~/.cargo/config.toml << 'EOF'
-          [build]
-          rustc-wrapper = "sccache"
-
-          [target.x86_64-unknown-linux-gnu]
-          linker = "clang"
-          rustflags = ["-C", "link-arg=-fuse-ld=mold", "-C", "target-cpu=native"]
-
-          [registries.crates-io]
-          protocol = "sparse"
-          EOF
-          else
-            echo "⚠️ Falling back to default linker"
-            cat > ~/.cargo/config.toml << 'EOF'
-          [build]
-          rustc-wrapper = "sccache"
-
-          [target.x86_64-unknown-linux-gnu]
-          linker = "clang"
-          rustflags = ["-C", "target-cpu=native"]
-
-          [registries.crates-io]
-          protocol = "sparse"
-          EOF
-          fi
-
-          # Verify installations
-          echo "🔍 Verifying installations..."
-          rustc --version
-          cargo --version
-          pkg-config --version
-          openssl version
-          clang --version
-          if command -v mold &> /dev/null; then
-            mold --version
-          else
-            echo "⚠️ mold not available"
-          fi
-          sccache --version
+          # Custom image already has most tools pre-installed, just verify
+          echo "🔍 Verifying pre-installed tools..."
+          rustc --version || echo "⚠️ Rust not found"
+          cargo --version || echo "⚠️ Cargo not found"
+          sccache --version || echo "⚠️ sccache not found"
+          mold --version || echo "⚠️ mold not found"
+          clang --version || echo "⚠️ clang not found"
+          pkg-config --version || echo "⚠️ pkg-config not found"
+          openssl version || echo "⚠️ openssl not found"
 
           # Show available resources
           echo "💾 Available resources:"
           echo "CPU cores: $(nproc)"
           echo "Memory: $(free -h | grep '^Mem:' | awk '{print $2}')"
           echo "Disk space: $(df -h . | tail -1 | awk '{print $4}')"
+
+          # Show cache locations
+          echo "📁 Cache locations:"
+          echo "CARGO_HOME: ${CARGO_HOME:-$HOME/.cargo}"
+          echo "SCCACHE_DIR: ${SCCACHE_DIR:-$HOME/.cache/sccache}"
+          echo "RUSTUP_HOME: ${RUSTUP_HOME:-$HOME/.rustup}"
 
       - name: Setup sccache
         run: |
