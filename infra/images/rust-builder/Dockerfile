@@ -99,9 +99,66 @@ RUN --mount=type=cache,target=/tmp/cargo-registry,uid=1001,gid=1001 \
         cargo-tree \
         cargo-watch
 
-# Skip pre-warming for now to avoid permission issues
-# The main optimizations (mold, sccache, persistent caches) are more important
-# Pre-warming can be added later once the base image is working
+# === DEPENDENCY PRE-WARMING USING CARGO-CHEF ===
+# This is the industry-standard approach for Docker layer caching of Rust dependencies
+
+# Create a minimal project for dependency pre-warming
+RUN mkdir -p /tmp/warmup-project
+WORKDIR /tmp/warmup-project
+
+# Create Cargo.toml with common dependencies
+RUN cat > Cargo.toml << 'EOF'
+[package]
+name = "warmup"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Web frameworks
+axum = "0.8"
+tokio = { version = "1.40", features = ["full"] }
+tower = "0.5"
+tower-http = "0.6"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Database (common ones)
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json"] }
+
+# Utilities
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+EOF
+
+# Create minimal main.rs
+RUN echo 'fn main() { println!("warmup"); }' > src/main.rs && mkdir -p src
+
+# Use cargo-chef to prepare dependencies (this creates the optimal caching layer)
+RUN --mount=type=cache,target=/tmp/cargo-registry,uid=1001,gid=1001 \
+    --mount=type=cache,target=/tmp/cargo-git,uid=1001,gid=1001 \
+    # Ensure cache links are active
+    ln -sf /tmp/cargo-registry /home/runner/.cargo/registry && \
+    ln -sf /tmp/cargo-git /home/runner/.cargo/git && \
+    # Use cargo-chef for optimal dependency caching
+    cargo chef prepare --recipe-path recipe.json && \
+    cargo chef cook --release --recipe-path recipe.json
+
+# Clean up warmup project
+WORKDIR /home/runner
+RUN rm -rf /tmp/warmup-project
 
 # Switch back to root for final setup
 USER root
