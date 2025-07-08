@@ -1,12 +1,13 @@
 # Pre-staged Rust builder image for fast CI builds
-FROM ubuntu:22.04
+# Based on summerwind/actions-runner-dind to include GitHub Actions runner software
+FROM summerwind/actions-runner-dind:latest
 
-# Avoid interactive prompts during build
-ENV DEBIAN_FRONTEND=noninteractive
+# Switch to root for installations
+USER root
 
-# Install system dependencies
+# Install additional system dependencies for Rust builds
 RUN apt-get update && apt-get install -y \
-    # Build essentials
+    # Build essentials (some may already be installed)
     build-essential \
     pkg-config \
     libssl-dev \
@@ -18,8 +19,6 @@ RUN apt-get update && apt-get install -y \
     # Clang for mold linker
     clang-15 \
     lld-15 \
-    # Docker for DinD
-    docker.io \
     # Additional tools
     jq \
     ca-certificates \
@@ -52,19 +51,16 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
     && apt-get install -y gh \
     && rm -rf /var/lib/apt/lists/*
 
-# Create app user
-RUN useradd -r -u 1000 -m -d /app -s /bin/bash app
+# Switch to runner user (already exists in summerwind image)
+USER runner
+WORKDIR /home/runner
 
-# Install Rust as app user
-USER app
-WORKDIR /app
-
-# Install rustup and Rust toolchain
+# Install Rust as runner user
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
     && echo 'source ~/.cargo/env' >> ~/.bashrc
 
 # Add Rust to PATH
-ENV PATH="/app/.cargo/bin:${PATH}"
+ENV PATH="/home/runner/.cargo/bin:${PATH}"
 
 # Install additional Rust tools
 RUN ~/.cargo/bin/rustup component add clippy rustfmt \
@@ -91,15 +87,15 @@ RUN ~/.cargo/bin/cargo new --bin dummy-project \
     && cd .. \
     && rm -rf dummy-project
 
-# Switch back to root for runner setup
+# Switch back to root for final setup
 USER root
 
 # Create cache directories
 RUN mkdir -p /cache/{cargo,rustup,sccache} \
-    && chown -R app:app /cache
+    && chown -R runner:runner /cache
 
 # Set up default Cargo config with optimizations
-RUN mkdir -p /app/.cargo && cat > /app/.cargo/config.toml << 'EOF'
+RUN mkdir -p /home/runner/.cargo && cat > /home/runner/.cargo/config.toml << 'EOF'
 [build]
 rustc-wrapper = "sccache"
 
@@ -129,7 +125,7 @@ vcs = "none"
 EOF
 
 # Set ownership
-RUN chown -R app:app /app
+RUN chown -R runner:runner /home/runner
 
 # Environment variables
 ENV CARGO_HOME="/cache/cargo"
@@ -142,5 +138,4 @@ ENV RUSTC_WRAPPER="sccache"
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD sccache --show-stats || exit 1
 
-# Default command
-CMD ["/bin/bash"]
+# Use the default entrypoint from summerwind image
