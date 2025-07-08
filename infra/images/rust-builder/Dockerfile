@@ -144,7 +144,7 @@ chrono = { version = "0.4", features = ["serde"] }
 EOF
 
 # Create minimal main.rs
-RUN echo 'fn main() { println!("warmup"); }' > src/main.rs && mkdir -p src
+RUN mkdir -p src && echo 'fn main() { println!("warmup"); }' > src/main.rs
 
 # Use cargo-chef to prepare dependencies (this creates the optimal caching layer)
 RUN --mount=type=cache,target=/tmp/cargo-registry,uid=1001,gid=1001 \
