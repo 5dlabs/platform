@@ -150,7 +150,10 @@ pub mod task {
         let git_guidelines_path = Path::new(taskmaster_dir).join("docs/git-guidelines.md");
         if git_guidelines_path.exists() {
             let git_guidelines = fs::read_to_string(&git_guidelines_path).with_context(|| {
-                format!("Failed to read git-guidelines.md: {}", git_guidelines_path.display())
+                format!(
+                    "Failed to read git-guidelines.md: {}",
+                    git_guidelines_path.display()
+                )
             })?;
             markdown_files.push(MarkdownPayload {
                 content: git_guidelines,
