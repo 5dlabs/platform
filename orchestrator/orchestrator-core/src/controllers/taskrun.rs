@@ -949,17 +949,37 @@ echo "=== DOCS PREP JOB STARTING ==="
 echo "Repository: {repo_url}"
 echo "Working directory: {working_dir}"
 
-# Clone repository directly into workspace with the correct branch
-echo "Cloning repository into workspace..."
-BRANCH="{branch}"
-if [ -n "$BRANCH" ]; then
-    echo "Cloning branch: $BRANCH"
-    git clone --depth 1 --branch "$BRANCH" {repo_url} /workspace
+# Check if repository already exists
+if [ -d "/workspace/.git" ]; then
+    echo "Repository already exists, updating..."
+    cd /workspace
+    
+    # Fetch latest changes
+    git fetch origin
+    
+    # Checkout the correct branch
+    BRANCH="{branch}"
+    if [ -n "$BRANCH" ]; then
+        echo "Checking out branch: $BRANCH"
+        git checkout "$BRANCH" || git checkout -b "$BRANCH" "origin/$BRANCH"
+        git pull origin "$BRANCH"
+    else
+        echo "Using default branch"
+        git pull
+    fi
 else
-    echo "Cloning default branch"
-    git clone --depth 1 {repo_url} /workspace
+    # Clone repository if it doesn't exist
+    echo "Cloning repository into workspace..."
+    BRANCH="{branch}"
+    if [ -n "$BRANCH" ]; then
+        echo "Cloning branch: $BRANCH"
+        git clone --depth 1 --branch "$BRANCH" {repo_url} /workspace
+    else
+        echo "Cloning default branch"
+        git clone --depth 1 {repo_url} /workspace
+    fi
+    cd /workspace
 fi
-cd /workspace
 
 # Navigate to working directory if specified
 if [ -n "{working_dir}" ] && [ "{working_dir}" != "." ]; then
