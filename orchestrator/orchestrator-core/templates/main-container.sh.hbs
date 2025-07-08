@@ -163,15 +163,15 @@ echo '=== STARTING CLAUDE ==='
 CLAUDE_CMD="{{command}} -p --output-format stream-json --verbose --allowedTools Bash,Edit,Read,Write,Glob,Grep,LS,MultiEdit,WebSearch,WebFetch,TodoRead,TodoWrite"
 
 {{#if is_docs_generation}}
-# For docs generation, set working directory to restrict access to .taskmaster only
+# For docs generation, change to the .taskmaster directory before running Claude
 # The working_dir variable comes from the TaskRun spec
 WORKING_DIR="{{working_dir}}"
 if [ -n "$WORKING_DIR" ] && [ "$WORKING_DIR" != "." ]; then
-  CLAUDE_CMD="$CLAUDE_CMD --cwd /workspace/$WORKING_DIR/.taskmaster"
-  echo "Setting working directory to /workspace/$WORKING_DIR/.taskmaster for docs generation"
+  echo "Changing to working directory: /workspace/$WORKING_DIR/.taskmaster for docs generation"
+  cd "/workspace/$WORKING_DIR/.taskmaster"
 else
-  CLAUDE_CMD="$CLAUDE_CMD --cwd /workspace/.taskmaster"
-  echo "Setting working directory to /workspace/.taskmaster for docs generation"
+  echo "Changing to working directory: /workspace/.taskmaster for docs generation"
+  cd "/workspace/.taskmaster"
 fi
 {{/if}}
 
