@@ -76,9 +76,17 @@ RUN --mount=type=cache,target=/tmp/rustup,uid=1001,gid=1001 \
 # Add Rust to PATH
 ENV PATH="/home/runner/.cargo/bin:${PATH}"
 
+# Create cargo directories with proper ownership first
+RUN mkdir -p /home/runner/.cargo/registry /home/runner/.cargo/git && \
+    chown -R runner:runner /home/runner/.cargo
+
 # Install additional Rust tools (with cargo cache)
-RUN --mount=type=cache,target=/home/runner/.cargo/registry,uid=1001,gid=1001 \
-    --mount=type=cache,target=/home/runner/.cargo/git,uid=1001,gid=1001 \
+RUN --mount=type=cache,target=/tmp/cargo-registry,uid=1001,gid=1001 \
+    --mount=type=cache,target=/tmp/cargo-git,uid=1001,gid=1001 \
+    # Link cache directories
+    ln -sf /tmp/cargo-registry /home/runner/.cargo/registry && \
+    ln -sf /tmp/cargo-git /home/runner/.cargo/git && \
+    # Install components and tools
     ~/.cargo/bin/rustup component add clippy rustfmt && \
     ~/.cargo/bin/cargo install \
         # Build acceleration tools
@@ -92,9 +100,13 @@ RUN --mount=type=cache,target=/home/runner/.cargo/registry,uid=1001,gid=1001 \
         cargo-watch
 
 # Pre-warm common dependencies by building a dummy project (with cargo cache)
-RUN --mount=type=cache,target=/home/runner/.cargo/registry,uid=1001,gid=1001 \
-    --mount=type=cache,target=/home/runner/.cargo/git,uid=1001,gid=1001 \
-    --mount=type=cache,target=/home/runner/dummy-project/target,uid=1001,gid=1001 \
+RUN --mount=type=cache,target=/tmp/cargo-registry,uid=1001,gid=1001 \
+    --mount=type=cache,target=/tmp/cargo-git,uid=1001,gid=1001 \
+    --mount=type=cache,target=/tmp/target-cache,uid=1001,gid=1001 \
+    # Ensure cache links are active
+    ln -sf /tmp/cargo-registry /home/runner/.cargo/registry && \
+    ln -sf /tmp/cargo-git /home/runner/.cargo/git && \
+    # Build dummy project
     ~/.cargo/bin/cargo new --bin dummy-project && \
     cd dummy-project && \
     echo 'tokio = { version = "1.40", features = ["full"] }' >> Cargo.toml && \
@@ -102,7 +114,7 @@ RUN --mount=type=cache,target=/home/runner/.cargo/registry,uid=1001,gid=1001 \
     echo 'serde = { version = "1.0", features = ["derive"] }' >> Cargo.toml && \
     echo 'anyhow = "1.0"' >> Cargo.toml && \
     echo 'tracing = "0.1"' >> Cargo.toml && \
-    ~/.cargo/bin/cargo build && \
+    CARGO_TARGET_DIR=/tmp/target-cache ~/.cargo/bin/cargo build && \
     cd .. && \
     rm -rf dummy-project
 
