@@ -1162,6 +1162,20 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
     // Build the Claude command
     let command = config.agent.command.join(" ");
 
+    // Extract working directory for docs generation tasks
+    let mut working_dir = String::new();
+    if tr.spec.task_id == 999999 {
+        // For docs generation, parse working directory from markdown
+        if let Some(claude_md) = tr.spec.markdown_files.iter().find(|f| f.filename == "CLAUDE.md") {
+            for line in claude_md.content.lines() {
+                if line.starts_with("- **Working Directory**: ") {
+                    working_dir = line.trim_start_matches("- **Working Directory**: ").to_string();
+                    break;
+                }
+            }
+        }
+    }
+
     // Prepare template data
     let data = json!({
         "command": command,
@@ -1171,6 +1185,7 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
         "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
         "task_id": tr.spec.task_id,
         "is_docs_generation": tr.spec.task_id == 999999, // Special docs generation task
+        "working_dir": working_dir,
     });
 
     handlebars
