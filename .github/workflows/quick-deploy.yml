@@ -37,35 +37,42 @@ jobs:
   # Build only orchestrator (skip Claude Code for now)
   build-orchestrator:
     needs: [version]
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, rust-fast]
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Setup optimized Rust environment
+        run: |
+          echo "🚀 Setting up optimized Rust build environment..."
 
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
+          # Rust should already be installed in the fast runner init container
+          rustc --version || echo "⚠️ Rust not found, installing..."
 
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: orchestrator -> target
-          shared-key: "rust-cache-agent-platform-quick"
-          cache-targets: true
-          cache-all-crates: true
-          cache-on-failure: true
-          save-if: true
+          # Show available resources
+          echo "💾 Available resources:"
+          echo "CPU cores: $(nproc)"
+          echo "Memory: $(free -h | grep '^Mem:' | awk '{print $2}')"
 
-      - name: Build release binary (no tests)
+      - name: Build release binary (ultra-fast)
         working-directory: ./orchestrator
         env:
-          SCCACHE_GHA_ENABLED: "true"
-          RUSTC_WRAPPER: "sccache"
+          CARGO_INCREMENTAL: "1"
+          CARGO_BUILD_JOBS: "0"  # Use all cores
         run: |
-          echo "🏗️ Building orchestrator binary (skipping tests)..."
-          cargo build --release --package orchestrator-core
+          echo "🏗️ Building orchestrator binary with enhanced resources..."
+
+          # Show build environment
+          echo "Build environment:"
+          echo "CARGO_BUILD_JOBS: $CARGO_BUILD_JOBS"
+          echo "Available cores: $(nproc)"
+
+          # Time the build
+          time cargo build --release --package orchestrator-core
+
+          # Copy binary
           cp target/release/orchestrator-core orchestrator
 
       - name: Set up Docker Buildx
@@ -97,7 +104,7 @@ jobs:
   # Deploy immediately
   deploy:
     needs: [version, build-orchestrator]
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, rust-fast]
     steps:
       - uses: actions/checkout@v4
 
