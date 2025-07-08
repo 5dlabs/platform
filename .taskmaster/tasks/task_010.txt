@@ -1,0 +1,55 @@
+# Task ID: 10
+# Title: Build Integrated MCP Proxy Server
+# Status: pending
+# Dependencies: 8
+# Priority: high
+# Description: Create MCP proxy server for selective tool exposure in agent tasks
+# Details:
+Build a custom MCP (Model Context Protocol) proxy server integrated with the orchestrator that manages tool availability for agents. This replaces the need for external tool proxies like Toolman and gives fine-grained control over which tools each agent can access based on the specific task requirements. The proxy will support both internal Claude tools and external MCP servers.
+
+# Test Strategy:
+
+
+# Subtasks:
+## 1. Design MCP Proxy Architecture [pending]
+### Dependencies: None
+### Description: Create detailed design for orchestrator-integrated MCP proxy
+### Details:
+Define how proxy integrates with TaskRun, tool configuration schema, API for dynamic management, context isolation strategy
+
+## 2. Implement Core MCP Proxy Server [pending]
+### Dependencies: 10.1
+### Description: Build the base MCP proxy server in Rust
+### Details:
+HTTP/stdio server that implements MCP protocol, tool registry, selective exposure logic, request routing to upstream servers
+
+## 3. Add Tool Configuration to TaskRun [pending]
+### Dependencies: 10.1
+### Description: Extend TaskRun CRD to include tool specifications
+### Details:
+Add toolConfig field to TaskRunSpec for specifying allowed tools, internal tool permissions, MCP server configurations
+
+## 4. Integrate Proxy with Agent Deployment [pending]
+### Dependencies: 10.2, 10.3
+### Description: Configure agents to use the MCP proxy
+### Details:
+Update agent deployment to point to proxy, pass tool configuration from TaskRun, ensure proper service discovery
+
+## 5. Implement Dynamic Tool Management [pending]
+### Dependencies: 10.2
+### Description: Add runtime tool enable/disable capabilities
+### Details:
+API endpoints for tool management, integration with add-context flow, state persistence across agent restarts
+
+## 6. Add Built-in MCP Server Support [pending]
+### Dependencies: 10.2
+### Description: Include common MCP servers out of the box
+### Details:
+Package filesystem, memory, and other essential MCP servers, configuration for GitHub, database, and other common tools
+
+## 7. Create MCP Server Registry [pending]
+### Dependencies: 10.6
+### Description: Registry for available MCP servers and their tools
+### Details:
+Catalog of MCP servers with metadata, tool descriptions and permissions, easy discovery for task configuration
+

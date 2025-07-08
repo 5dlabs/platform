@@ -1,0 +1,31 @@
+# Task ID: 13
+# Title: Implement Health Check Endpoint
+# Status: pending
+# Dependencies: 11
+# Priority: medium
+# Description: Create GET /health endpoint that returns service status and timestamp
+# Details:
+Create src/routes/health.ts with a simple GET handler. Return JSON with status 'ok' and current timestamp.
+
+# Test Strategy:
+Manual test with curl or Postman to verify 200 response
+
+# Subtasks:
+## 1. Create health route file [pending]
+### Dependencies: None
+### Description: Create src/routes/health.ts with Express router setup
+### Details:
+
+
+## 2. Implement health handler [pending]
+### Dependencies: None
+### Description: Create GET /health handler that returns status and timestamp
+### Details:
+
+
+## 3. Wire health routes to app [pending]
+### Dependencies: None
+### Description: Import and use health router in main Express app
+### Details:
+
+

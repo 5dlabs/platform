@@ -1,0 +1,31 @@
+# Task ID: 1
+# Title: Update Helm Chart to Init Container Pattern
+# Status: done
+# Dependencies: None
+# Priority: critical
+# Description: Convert infra/claude-code chart from separate prepare job to init container pattern
+# Details:
+Update templates/job.yaml to use init container, remove prepareJob from values.yaml, add task-specific values (taskConfigMapName, service, taskId, attempt)
+
+# Test Strategy:
+
+
+# Subtasks:
+## 1. Convert prepare job to init container [done]
+### Dependencies: None
+### Description: Update job.yaml to use init container pattern
+### Details:
+Add init container that copies files from ConfigMap to workspace
+
+## 2. Update values.yaml structure [done]
+### Dependencies: 1.1
+### Description: Remove prepareJob section and add new values
+### Details:
+Add taskConfigMapName, service, taskId, attempt values
+
+## 3. Test init container workflow [done]
+### Dependencies: 1.2
+### Description: Deploy test job with init container
+### Details:
+Create test ConfigMap and verify files are copied correctly
+

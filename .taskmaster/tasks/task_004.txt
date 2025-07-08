@@ -1,0 +1,25 @@
+# Task ID: 4
+# Title: Implement Helm Binary Wrapper
+# Status: done
+# Dependencies: 1
+# Priority: critical
+# Description: Create wrapper around helm binary for deployments
+# Details:
+Use Command::new("helm") to deploy charts with generated values
+
+# Test Strategy:
+
+
+# Subtasks:
+## 1. Create HelmClient struct [done]
+### Dependencies: None
+### Description: Wrapper for helm operations
+### Details:
+Store chart_path and namespace
+
+## 2. Implement deploy_task method [done]
+### Dependencies: 4.1
+### Description: Deploy chart with generated values
+### Details:
+Generate values.yaml, run helm install
+

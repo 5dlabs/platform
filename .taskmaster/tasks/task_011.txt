@@ -1,0 +1,11 @@
+# Task ID: 11
+# Title: Implement Claude Agent Output Extraction to Markdown
+# Status: pending
+# Dependencies: 7
+# Priority: medium
+# Description: Create a service that extracts Claude's JSON stream output into readable Markdown files for inter-agent communication
+# Details:
+Investigate extracting Claude's verbose JSON stream output into clean Markdown documentation. The JSON contains actual terminal messages within structured objects. Build a parser/service that: 1) Reads stream-json output from Claude agent logs, 2) Extracts conversation flow, tools used, files modified, and decisions made, 3) Generates formatted Markdown with sections for: conversation summary, actions taken, files changed, test results, and outcomes, 4) Stores output in workspace for other agents to consume, 5) Enables better agent-to-agent task handoffs and visibility
+
+# Test Strategy:
+

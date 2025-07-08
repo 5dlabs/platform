@@ -1,0 +1,37 @@
+# Task ID: 14
+# Title: Implement User Routes
+# Status: pending
+# Dependencies: 11, 12
+# Priority: high
+# Description: Create GET /users and POST /users endpoints with in-memory storage
+# Details:
+Create src/routes/users.ts with handlers for listing and creating users. Use array for in-memory storage. Implement basic validation for POST.
+
+# Test Strategy:
+Test both endpoints with curl/Postman. Verify data persists between requests.
+
+# Subtasks:
+## 1. Create users route file [pending]
+### Dependencies: None
+### Description: Create src/routes/users.ts with Express router setup and in-memory storage array
+### Details:
+
+
+## 2. Implement GET /users handler [pending]
+### Dependencies: None
+### Description: Create handler to return all users from in-memory array
+### Details:
+
+
+## 3. Implement POST /users handler [pending]
+### Dependencies: None
+### Description: Create handler to add new users with validation
+### Details:
+
+
+## 4. Wire user routes to app [pending]
+### Dependencies: None
+### Description: Import and use user router in main Express app
+### Details:
+
+
