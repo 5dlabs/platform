@@ -5,12 +5,14 @@ FROM summerwind/actions-runner-dind:latest
 # Switch to root for installations
 USER root
 
-# Add LLVM repository for modern clang/lld
+# Add LLVM repository for modern clang/lld (early in build for better caching)
 RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
     && echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-15 main" >> /etc/apt/sources.list.d/llvm.list
 
-# Install additional system dependencies for Rust builds
-RUN apt-get update && apt-get install -y \
+# Install system dependencies in a single layer for better caching
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y \
     # Build essentials (some may already be installed)
     build-essential \
     pkg-config \
@@ -31,44 +33,54 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install mold linker (fastest linker for Rust) - UPDATED VERSION
-RUN wget -qO- https://github.com/rui314/mold/releases/download/v2.4.0/mold-2.4.0-x86_64-linux.tar.gz | tar xz \
-    && cp mold-2.4.0-x86_64-linux/bin/mold /usr/local/bin/ \
-    && chmod +x /usr/local/bin/mold \
-    && rm -rf mold-2.4.0-x86_64-linux
+RUN --mount=type=cache,target=/tmp/downloads \
+    cd /tmp/downloads && \
+    wget -qO mold.tar.gz https://github.com/rui314/mold/releases/download/v2.4.0/mold-2.4.0-x86_64-linux.tar.gz && \
+    tar xz -f mold.tar.gz && \
+    cp mold-2.4.0-x86_64-linux/bin/mold /usr/local/bin/ && \
+    chmod +x /usr/local/bin/mold
 
-# Install kubectl
-RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
-    && chmod +x kubectl \
-    && mv kubectl /usr/local/bin/
+# Install kubectl (with caching)
+RUN --mount=type=cache,target=/tmp/downloads \
+    cd /tmp/downloads && \
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+    chmod +x kubectl && \
+    mv kubectl /usr/local/bin/
 
-# Install Helm
-RUN curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 \
-    && chmod 700 get_helm.sh \
-    && ./get_helm.sh \
-    && rm get_helm.sh
+# Install Helm (with caching)
+RUN --mount=type=cache,target=/tmp/downloads \
+    cd /tmp/downloads && \
+    curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 && \
+    chmod 700 get_helm.sh && \
+    ./get_helm.sh
 
-# Install GitHub CLI
-RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-    && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-    && apt-get update \
-    && apt-get install -y gh \
-    && rm -rf /var/lib/apt/lists/*
+# Install GitHub CLI (separate layer for better caching)
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
+    apt-get update && \
+    apt-get install -y gh && \
+    rm -rf /var/lib/apt/lists/*
 
 # Switch to runner user (already exists in summerwind image)
 USER runner
 WORKDIR /home/runner
 
-# Install Rust as runner user
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
-    && echo 'source ~/.cargo/env' >> ~/.bashrc
+# Install Rust as runner user (with caching)
+RUN --mount=type=cache,target=/tmp/rustup,uid=1001,gid=1001 \
+    RUSTUP_HOME=/tmp/rustup curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable && \
+    echo 'source ~/.cargo/env' >> ~/.bashrc
 
 # Add Rust to PATH
 ENV PATH="/home/runner/.cargo/bin:${PATH}"
 
-# Install additional Rust tools
-RUN ~/.cargo/bin/rustup component add clippy rustfmt \
-    && ~/.cargo/bin/cargo install \
+# Install additional Rust tools (with cargo cache)
+RUN --mount=type=cache,target=/home/runner/.cargo/registry,uid=1001,gid=1001 \
+    --mount=type=cache,target=/home/runner/.cargo/git,uid=1001,gid=1001 \
+    ~/.cargo/bin/rustup component add clippy rustfmt && \
+    ~/.cargo/bin/cargo install \
         # Build acceleration tools
         sccache \
         cargo-chef \
@@ -79,24 +91,27 @@ RUN ~/.cargo/bin/rustup component add clippy rustfmt \
         cargo-tree \
         cargo-watch
 
-# Pre-warm common dependencies by building a dummy project
-RUN ~/.cargo/bin/cargo new --bin dummy-project \
-    && cd dummy-project \
-    && echo 'tokio = { version = "1.40", features = ["full"] }' >> Cargo.toml \
-    && echo 'axum = "0.8"' >> Cargo.toml \
-    && echo 'serde = { version = "1.0", features = ["derive"] }' >> Cargo.toml \
-    && echo 'anyhow = "1.0"' >> Cargo.toml \
-    && echo 'tracing = "0.1"' >> Cargo.toml \
-    && ~/.cargo/bin/cargo build \
-    && cd .. \
-    && rm -rf dummy-project
+# Pre-warm common dependencies by building a dummy project (with cargo cache)
+RUN --mount=type=cache,target=/home/runner/.cargo/registry,uid=1001,gid=1001 \
+    --mount=type=cache,target=/home/runner/.cargo/git,uid=1001,gid=1001 \
+    --mount=type=cache,target=/home/runner/dummy-project/target,uid=1001,gid=1001 \
+    ~/.cargo/bin/cargo new --bin dummy-project && \
+    cd dummy-project && \
+    echo 'tokio = { version = "1.40", features = ["full"] }' >> Cargo.toml && \
+    echo 'axum = "0.8"' >> Cargo.toml && \
+    echo 'serde = { version = "1.0", features = ["derive"] }' >> Cargo.toml && \
+    echo 'anyhow = "1.0"' >> Cargo.toml && \
+    echo 'tracing = "0.1"' >> Cargo.toml && \
+    ~/.cargo/bin/cargo build && \
+    cd .. && \
+    rm -rf dummy-project
 
 # Switch back to root for final setup
 USER root
 
 # Create cache directories
-RUN mkdir -p /cache/{cargo,rustup,sccache} \
-    && chown -R runner:runner /cache
+RUN mkdir -p /cache/{cargo,rustup,sccache} && \
+    chown -R runner:runner /cache
 
 # Set up default Cargo config with optimizations
 RUN mkdir -p /home/runner/.cargo && cat > /home/runner/.cargo/config.toml << 'EOF'

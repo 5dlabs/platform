@@ -1,0 +1,125 @@
+name: Cleanup Build Cache
+
+on:
+  schedule:
+    # Run every Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      max_age_days:
+        description: 'Maximum age of cache entries to keep (days)'
+        required: false
+        default: '7'
+        type: string
+
+jobs:
+  cleanup-cache:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Cleanup GitHub Actions Cache
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const maxAgeDays = parseInt('${{ inputs.max_age_days || '7' }}');
+            const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
+            const cutoffDate = new Date(Date.now() - maxAgeMs);
+
+            console.log(`Cleaning up cache entries older than ${maxAgeDays} days (${cutoffDate.toISOString()})`);
+
+            // Get all cache entries
+            const caches = await github.rest.actions.getActionsCacheList({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+
+            let deletedCount = 0;
+            let totalSize = 0;
+
+            for (const cache of caches.data.actions_caches) {
+              const cacheDate = new Date(cache.created_at);
+
+              if (cacheDate < cutoffDate) {
+                console.log(`Deleting cache: ${cache.key} (${cache.size_in_bytes} bytes, created: ${cache.created_at})`);
+
+                try {
+                  await github.rest.actions.deleteActionsCacheById({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    cache_id: cache.id
+                  });
+                  deletedCount++;
+                  totalSize += cache.size_in_bytes;
+                } catch (error) {
+                  console.error(`Failed to delete cache ${cache.key}:`, error.message);
+                }
+              } else {
+                console.log(`Keeping cache: ${cache.key} (created: ${cache.created_at})`);
+              }
+            }
+
+            const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+            console.log(`Cleanup complete: Deleted ${deletedCount} cache entries, freed ${totalSizeMB} MB`);
+
+            // Create job summary
+            await core.summary
+              .addHeading('Cache Cleanup Summary')
+              .addTable([
+                [{data: 'Metric', header: true}, {data: 'Value', header: true}],
+                ['Cache entries deleted', deletedCount.toString()],
+                ['Storage freed', `${totalSizeMB} MB`],
+                ['Cutoff date', cutoffDate.toISOString()],
+                ['Max age', `${maxAgeDays} days`]
+              ])
+              .write();
+
+      - name: Cleanup Container Registry Cache
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const maxAgeDays = parseInt('${{ inputs.max_age_days || '7' }}');
+            const cutoffDate = new Date(Date.now() - (maxAgeDays * 24 * 60 * 60 * 1000));
+
+            console.log(`Cleaning up container registry cache images older than ${maxAgeDays} days`);
+
+            try {
+              // Get package versions for the rust-builder image
+              const packageName = 'rust-builder';
+              const versions = await github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg({
+                package_type: 'container',
+                package_name: packageName,
+                org: context.repo.owner,
+                per_page: 100
+              });
+
+              let deletedImages = 0;
+
+              for (const version of versions.data) {
+                const createdDate = new Date(version.created_at);
+
+                // Only delete cache tags (not main image tags)
+                if (version.metadata?.container?.tags?.some(tag => tag === 'cache') && createdDate < cutoffDate) {
+                  console.log(`Deleting cache image version: ${version.id} (created: ${version.created_at})`);
+
+                  try {
+                    await github.rest.packages.deletePackageVersionForOrg({
+                      package_type: 'container',
+                      package_name: packageName,
+                      org: context.repo.owner,
+                      package_version_id: version.id
+                    });
+                    deletedImages++;
+                  } catch (error) {
+                    console.error(`Failed to delete image version ${version.id}:`, error.message);
+                  }
+                }
+              }
+
+              console.log(`Container registry cleanup complete: Deleted ${deletedImages} cache images`);
+
+            } catch (error) {
+              console.log(`Container registry cleanup skipped: ${error.message}`);
+            }
