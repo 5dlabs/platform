@@ -71,7 +71,7 @@ jobs:
         working-directory: ./orchestrator
         env:
           CARGO_INCREMENTAL: "1"
-          CARGO_BUILD_JOBS: "0"  # Use all cores
+          # CARGO_BUILD_JOBS not set = auto-detect all cores
         run: |
           echo "🏗️ Building orchestrator binary with enhanced resources..."
 
