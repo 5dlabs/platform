@@ -21,14 +21,14 @@ jobs:
       short-sha: ${{ steps.version.outputs.short-sha }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Generate quick version
         id: version
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           VERSION="quick-${TIMESTAMP}-${SHORT_SHA}"
-          
+
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "short-sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
@@ -45,10 +45,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.9
-      
+
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: orchestrator -> target
@@ -97,7 +97,7 @@ jobs:
   # Deploy immediately
   deploy:
     needs: [version, build-orchestrator]
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, rust-fast]
     steps:
       - uses: actions/checkout@v4
 
@@ -123,7 +123,7 @@ jobs:
       - name: Quick Deploy Orchestrator
         run: |
           echo "🚀 Quick deploying version ${{ needs.version.outputs.version }}"
-          
+
           # Deploy with quick version tag
           helm upgrade --install orchestrator ./infra/charts/orchestrator \
             --namespace orchestrator \
@@ -146,7 +146,7 @@ jobs:
           echo "🔍 Quick deployment verification..."
           kubectl get pods -n orchestrator -o wide
           kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=orchestrator -n orchestrator --timeout=120s || true
-          
+
           echo ""
           echo "✅ Quick deployment complete!"
           echo "📦 Deployed: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.version }}"
