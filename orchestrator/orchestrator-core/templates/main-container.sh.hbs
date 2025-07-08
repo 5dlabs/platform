@@ -36,24 +36,36 @@ echo '=== WORKSPACE VALIDATION ==='
 {{#if is_docs_generation}}
 # Documentation generation task - minimal validation
 echo "Documentation generation task detected - using minimal validation"
+
+# Determine the working directory for Claude
+WORKING_DIR="{{working_dir}}"
+if [ -n "$WORKING_DIR" ] && [ "$WORKING_DIR" != "." ]; then
+  CLAUDE_WORK_DIR="/workspace/$WORKING_DIR/.taskmaster"
+else
+  CLAUDE_WORK_DIR="/workspace/.taskmaster"
+fi
+
+echo "Claude working directory: $CLAUDE_WORK_DIR"
+
+# Check for required files in Claude's working directory
 MISSING_FILES=""
 REQUIRED_FILES="CLAUDE.md"
 
 echo "Checking for required files..."
 for file in $REQUIRED_FILES; do
-  if [ ! -f "/workspace/$file" ]; then
-    echo "ERROR: Missing required file: $file"
+  if [ ! -f "$CLAUDE_WORK_DIR/$file" ]; then
+    echo "ERROR: Missing required file: $CLAUDE_WORK_DIR/$file"
     MISSING_FILES="$MISSING_FILES $file"
   else
-    echo "✓ Found: $file"
+    echo "✓ Found: $CLAUDE_WORK_DIR/$file"
   fi
 done
 
-# For docs generation, create prompt.md from CLAUDE.md
-echo "Documentation generation workspace prepared by prep job"
-if [ -f "/workspace/CLAUDE.md" ]; then
-  cp /workspace/CLAUDE.md /workspace/prompt.md
-  echo "✓ Created prompt.md from CLAUDE.md for docs generation"
+# For docs generation, create prompt.md from CLAUDE.md in Claude's working directory
+echo "Creating prompt.md in Claude's working directory"
+if [ -f "$CLAUDE_WORK_DIR/CLAUDE.md" ]; then
+  cp "$CLAUDE_WORK_DIR/CLAUDE.md" "$CLAUDE_WORK_DIR/prompt.md"
+  echo "✓ Created prompt.md from CLAUDE.md in $CLAUDE_WORK_DIR"
 fi
 {{else}}
 # Validate that prep job completed successfully
@@ -132,10 +144,18 @@ if [ "$DEBUG_SHOW_FILES" = "true" ]; then
 fi
 
 # Check if prompt.md exists (should always exist from prep job)
+{{#if is_docs_generation}}
+# For docs generation, check in Claude's working directory
+if [ ! -f "$CLAUDE_WORK_DIR/prompt.md" ]; then
+  echo "ERROR: prompt.md not found in $CLAUDE_WORK_DIR - prep job may have failed"
+  exit 1
+fi
+{{else}}
 if [ ! -f /workspace/prompt.md ]; then
   echo 'ERROR: prompt.md not found - prep job may have failed'
   exit 1
 fi
+{{/if}}
 
 echo '=== STARTING CLAUDE ==='
 
@@ -166,4 +186,8 @@ echo 'Adding --continue flag for attempt {{attempts}}'
 
 # Use stdin to pass the prompt content
 echo "Final Claude command: $CLAUDE_CMD (with prompt from stdin)"
+{{#if is_docs_generation}}
+exec $CLAUDE_CMD < "$CLAUDE_WORK_DIR/prompt.md"
+{{else}}
 exec $CLAUDE_CMD < /workspace/prompt.md
+{{/if}}

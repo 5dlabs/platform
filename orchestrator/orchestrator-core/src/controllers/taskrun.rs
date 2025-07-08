@@ -1016,9 +1016,15 @@ else
     exit 1
 fi
 
-# Copy ConfigMap files to workspace root for Claude access
+# Copy ConfigMap files to where Claude will be working
 echo "Copying ConfigMap files..."
-cp -v /config/* /workspace/
+if [ -n "{working_dir}" ] && [ "{working_dir}" != "." ]; then
+    echo "Copying files to /workspace/{working_dir}/.taskmaster/"
+    cp -v /config/* /workspace/{working_dir}/.taskmaster/
+else
+    echo "Copying files to /workspace/.taskmaster/"
+    cp -v /config/* /workspace/.taskmaster/
+fi
 
 echo "✓ Documentation workspace prepared"
 echo "Claude will use --cwd flag to restrict access to the appropriate directory"

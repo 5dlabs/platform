@@ -50,7 +50,7 @@ Chart.lock
 *.old
 
 # Taskmaster directory (local task management)
-.taskmaster/
+# .taskmaster/
 
 # Claude configuration file
 CLAUDE.md
@@ -58,4 +58,4 @@ orchestrator/target/
 
 # Task files
 # tasks.json
-# tasks/ 
+# tasks/
