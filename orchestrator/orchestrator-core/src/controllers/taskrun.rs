@@ -922,15 +922,18 @@ fn build_docs_prep_job(
     // Extract repository info from markdown files
     let mut repo_url = String::new();
     let mut working_dir = String::new();
+    let mut branch = String::new();
     
     // Parse CLAUDE.md to get repo info
     if let Some(claude_md) = tr.spec.markdown_files.iter().find(|f| f.filename == "CLAUDE.md") {
-        // Extract repository URL and working directory from content
+        // Extract repository URL, working directory, and branch from content
         for line in claude_md.content.lines() {
             if line.starts_with("- **Repository**: ") {
                 repo_url = line.trim_start_matches("- **Repository**: ").to_string();
             } else if line.starts_with("- **Working Directory**: ") {
                 working_dir = line.trim_start_matches("- **Working Directory**: ").to_string();
+            } else if line.starts_with("- **Source Branch**: ") {
+                branch = line.trim_start_matches("- **Source Branch**: ").to_string();
             }
         }
     }
@@ -946,37 +949,41 @@ echo "=== DOCS PREP JOB STARTING ==="
 echo "Repository: {repo_url}"
 echo "Working directory: {working_dir}"
 
-# Clone repository
-echo "Cloning repository..."
-git clone --depth 1 {repo_url} /tmp/repo
-cd /tmp/repo
+# Clone repository directly into workspace with the correct branch
+echo "Cloning repository into workspace..."
+BRANCH="{branch}"
+if [ -n "$BRANCH" ]; then
+    echo "Cloning branch: $BRANCH"
+    git clone --depth 1 --branch "$BRANCH" {repo_url} /workspace
+else
+    echo "Cloning default branch"
+    git clone --depth 1 {repo_url} /workspace
+fi
+cd /workspace
 
-# Navigate to working directory and copy taskmaster
-echo "Copying .taskmaster directory to workspace..."
+# Navigate to working directory if specified
 if [ -n "{working_dir}" ] && [ "{working_dir}" != "." ]; then
-    echo "Navigating to working directory: {working_dir}"
-    if [ -d "{working_dir}" ]; then
-        cd "{working_dir}"
-    else
-        echo "ERROR: Working directory {working_dir} not found in repository"
-        exit 1
-    fi
+    echo "Working directory specified: {working_dir}"
+    TASKMASTER_PATH="/workspace/{working_dir}/.taskmaster"
+else
+    echo "Using repository root"
+    TASKMASTER_PATH="/workspace/.taskmaster"
 fi
 
-# Now check for .taskmaster in the current directory
-if [ -d ".taskmaster" ]; then
-    cp -r .taskmaster /workspace/
-    echo "✓ Copied .taskmaster directory from $(pwd)"
+# Verify .taskmaster exists
+if [ -d "$TASKMASTER_PATH" ]; then
+    echo "✓ Found .taskmaster directory at $TASKMASTER_PATH"
 else
-    echo "ERROR: .taskmaster directory not found in $(pwd)"
+    echo "ERROR: .taskmaster directory not found at $TASKMASTER_PATH"
     exit 1
 fi
 
-# Copy ConfigMap files
+# Copy ConfigMap files to workspace root for Claude access
 echo "Copying ConfigMap files..."
 cp -v /config/* /workspace/
 
 echo "✓ Documentation workspace prepared"
+echo "Claude will use --cwd flag to restrict access to the appropriate directory"
 "#
     );
     
