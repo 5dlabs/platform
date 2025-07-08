@@ -3,6 +3,7 @@ name: Build Pre-staged Rust Image
 on:
   workflow_dispatch:  # Manual trigger
   push:
+    branches: [ 'feature/example-project-and-cli' ]  # Trigger on your branch
     paths:
       - 'infra/images/rust-builder/**'
       - '.github/workflows/build-rust-image.yml'
