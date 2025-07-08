@@ -1,0 +1,98 @@
+---
+# Simple fast runners based on working agent-platform config
+# Just adds optimized labels and enhanced resources
+
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: org-runners-fast
+  namespace: arc-systems-optimized
+spec:
+  replicas: 2
+  template:
+    spec:
+      # Repository-specific like the working agent-platform runners
+      repository: 5dlabs/agent-platform
+
+      # GitHub authentication
+      githubAPICredentialsFrom:
+        secretRef:
+          name: arc-github-token
+
+      # Enhanced labels for identification
+      labels:
+        - self-hosted
+        - linux
+        - x64
+        - k8s-runner
+        - rust-fast
+        - enhanced
+
+      # Enhanced resources (more than standard)
+      resources:
+        limits:
+          cpu: "4"
+          memory: "8Gi"
+        requests:
+          cpu: "1"
+          memory: "2Gi"
+
+      # Standard working image
+      image: summerwind/actions-runner-dind:latest
+      dockerEnabled: true
+      dockerdWithinRunnerContainer: true
+
+      # Environment
+      env:
+        - name: RUNNER_FEATURE_FLAG_EPHEMERAL
+          value: "true"
+        - name: PATH
+          value: "/shared:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+      # Service account
+      serviceAccountName: github-runner-optimized
+
+      # Simple init container for tools (based on working config)
+      initContainers:
+        - name: install-tools
+          image: alpine:3.19
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "Installing tools..."
+              apk add --no-cache wget tar curl
+
+              echo "Installing kubectl..."
+              wget -q -O /shared/kubectl https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl
+              chmod +x /shared/kubectl
+
+              echo "Installing helm..."
+              wget -q -O /tmp/helm.tar.gz https://get.helm.sh/helm-v3.14.0-linux-amd64.tar.gz
+              tar -xzf /tmp/helm.tar.gz -C /tmp
+              mv /tmp/linux-amd64/helm /shared/helm
+              chmod +x /shared/helm
+
+              # Install Rust quickly (no pre-built image needed)
+              echo "Installing Rust..."
+              curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+
+              echo "Tools installed successfully"
+              ls -la /shared/
+          volumeMounts:
+            - name: shared-tools
+              mountPath: /shared
+
+      # Simple volumes
+      volumes:
+        - name: shared-tools
+          emptyDir: {}
+
+      volumeMounts:
+        - name: shared-tools
+          mountPath: /shared
+
+      # Security context
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000

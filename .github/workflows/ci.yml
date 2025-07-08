@@ -8,7 +8,7 @@ name: Unified Platform CI/CD
 
 on:
   push:
-    branches: [ main, 'feature/*' ]
+    branches: [ main ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]

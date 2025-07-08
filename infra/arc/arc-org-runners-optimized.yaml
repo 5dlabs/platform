@@ -79,7 +79,7 @@ metadata:
   namespace: arc-systems-optimized
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 50Gi
@@ -92,7 +92,7 @@ metadata:
   namespace: arc-systems-optimized
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 20Gi
@@ -105,7 +105,7 @@ metadata:
   namespace: arc-systems-optimized
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 30Gi
@@ -121,23 +121,23 @@ data:
   cargo-config.toml: |
     [build]
     jobs = 0  # Use all available cores
-    
+
     [target.x86_64-unknown-linux-gnu]
     linker = "/usr/bin/clang-15"
     rustflags = ["-C", "link-arg=--ld-path=/usr/local/bin/mold"]
-    
+
     [profile.dev]
     debug = 0
     strip = "debuginfo"
     incremental = true
-    
+
     [profile.dev.package."*"]
     opt-level = 3
     debug = 2
-    
+
     [profile.dev.build-override]
     opt-level = 3
-    
+
     [net]
     git-fetch-with-cli = true
 
@@ -162,7 +162,7 @@ metadata:
   name: org-runners-optimized
   namespace: arc-systems-optimized
 spec:
-  replicas: 6  # Increased for better parallelism
+  replicas: 2  # Increased for better parallelism
   template:
     spec:
       # Organization-level configuration
@@ -192,14 +192,14 @@ spec:
           memory: "4Gi"
 
       # Pre-staged image with Rust toolchain and tools
-      image: ghcr.io/5dlabs/agent-platform/rust-builder:latest
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:feature-example-project-and-cli-52f7227
       dockerEnabled: true
       dockerdWithinRunnerContainer: true
 
       # Environment optimizations
       env:
         - name: RUNNER_FEATURE_FLAG_EPHEMERAL
-          value: "true"
+          value: "false"
         - name: PATH
           value: "/shared/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
         # Rust optimizations
@@ -229,7 +229,7 @@ spec:
       # Init container for setup
       initContainers:
         - name: setup-build-env
-          image: ghcr.io/5dlabs/agent-platform/rust-builder:latest
+          image: ghcr.io/5dlabs/agent-platform/rust-builder:feature-example-project-and-cli-52f7227
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -310,6 +310,11 @@ spec:
       # Node affinity for NVMe nodes (optional)
       affinity:
         nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: DoesNotExist
           preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 100
             preference:
