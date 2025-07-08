@@ -74,6 +74,39 @@ echo ""
 echo "✓ All required files present. Workspace is valid."
 echo ""
 
+echo '=== MARKDOWN FILES PROVIDED ==='
+echo "The following documentation files are available to Claude:"
+echo ""
+# List all markdown files with their sizes
+find /workspace -maxdepth 1 -name "*.md" -type f | sort | while read -r file; do
+  filename=$(basename "$file")
+  size=$(wc -c < "$file" | xargs)
+  echo "📄 $filename ($size bytes)"
+done
+echo ""
+
+# Debug mode - show file contents if DEBUG_SHOW_FILES is set
+if [ "$DEBUG_SHOW_FILES" = "true" ]; then
+  echo '=== DEBUG: FILE CONTENTS ==='
+  echo "Showing contents of all markdown files:"
+  echo ""
+  
+  find /workspace -maxdepth 1 -name "*.md" -type f | sort | while read -r file; do
+    filename=$(basename "$file")
+    echo "════════════════════════════════════════════════════════════════"
+    echo "║ FILE: $filename"
+    echo "════════════════════════════════════════════════════════════════"
+    cat "$file"
+    echo ""
+    echo ""
+  done
+  
+  echo "════════════════════════════════════════════════════════════════"
+  echo "║ END OF FILE CONTENTS"
+  echo "════════════════════════════════════════════════════════════════"
+  echo ""
+fi
+
 # Check if prompt.md exists (should always exist from prep job)
 if [ ! -f /workspace/prompt.md ]; then
   echo 'ERROR: prompt.md not found - prep job may have failed'

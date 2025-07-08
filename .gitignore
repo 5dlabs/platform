@@ -55,3 +55,7 @@ Chart.lock
 # Claude configuration file
 CLAUDE.md
 orchestrator/target/
+
+# Task files
+# tasks.json
+# tasks/ 
