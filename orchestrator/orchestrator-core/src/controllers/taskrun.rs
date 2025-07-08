@@ -938,6 +938,9 @@ fn build_docs_prep_job(
         }
     }
     
+    // Debug output
+    info!("Docs prep job - repo_url: {}, working_dir: {}, branch: {}", repo_url, working_dir, branch);
+    
     let service_name = &tr.spec.service_name;
     let pvc_name = format!("workspace-{service_name}");
     
@@ -948,38 +951,53 @@ set -e
 echo "=== DOCS PREP JOB STARTING ==="
 echo "Repository: {repo_url}"
 echo "Working directory: {working_dir}"
+echo "Source branch: {branch}"
 
 # Check if repository already exists
 if [ -d "/workspace/.git" ]; then
     echo "Repository already exists, updating..."
     cd /workspace
     
-    # Fetch latest changes
+    # Reset any local changes and fetch latest
+    git reset --hard
+    git clean -fd
     git fetch origin
     
-    # Checkout the correct branch
-    BRANCH="{branch}"
-    if [ -n "$BRANCH" ]; then
-        echo "Checking out branch: $BRANCH"
-        git checkout "$BRANCH" || git checkout -b "$BRANCH" "origin/$BRANCH"
-        git pull origin "$BRANCH"
+    # Checkout the source branch
+    SOURCE_BRANCH="{branch}"
+    if [ -n "$SOURCE_BRANCH" ]; then
+        echo "Checking out source branch: $SOURCE_BRANCH"
+        git checkout "$SOURCE_BRANCH" || git checkout -b "$SOURCE_BRANCH" "origin/$SOURCE_BRANCH"
+        git pull origin "$SOURCE_BRANCH"
     else
-        echo "Using default branch"
-        git pull
+        echo "ERROR: Source branch not specified"
+        exit 1
     fi
 else
     # Clone repository if it doesn't exist
     echo "Cloning repository into workspace..."
-    BRANCH="{branch}"
-    if [ -n "$BRANCH" ]; then
-        echo "Cloning branch: $BRANCH"
-        git clone --depth 1 --branch "$BRANCH" {repo_url} /workspace
+    SOURCE_BRANCH="{branch}"
+    if [ -n "$SOURCE_BRANCH" ]; then
+        echo "Cloning source branch: $SOURCE_BRANCH"
+        git clone --branch "$SOURCE_BRANCH" {repo_url} /workspace
     else
-        echo "Cloning default branch"
-        git clone --depth 1 {repo_url} /workspace
+        echo "ERROR: Source branch not specified"
+        exit 1
     fi
     cd /workspace
 fi
+
+# Create a new branch for documentation changes
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+DOC_BRANCH="docs/task-master-docs-$TIMESTAMP"
+echo "Creating documentation branch: $DOC_BRANCH"
+git checkout -b "$DOC_BRANCH"
+
+# Configure git for commits
+git config user.email "claude@5dlabs.com"
+git config user.name "Claude (5D Labs)"
+
+echo "✓ Prepared documentation branch: $DOC_BRANCH from source: $SOURCE_BRANCH"
 
 # Navigate to working directory if specified
 if [ -n "{working_dir}" ] && [ "{working_dir}" != "." ]; then
