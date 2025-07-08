@@ -42,14 +42,25 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+            - uses: actions/checkout@v4
 
       - name: Setup optimized Rust environment
         run: |
           echo "🚀 Setting up optimized Rust build environment..."
 
-          # Rust should already be installed in the fast runner init container
-          rustc --version || echo "⚠️ Rust not found, installing..."
+          # Install Rust if not available (fast on enhanced resources)
+          if ! command -v cargo &> /dev/null; then
+            echo "📦 Installing Rust toolchain..."
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+            source ~/.cargo/env
+            echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          else
+            echo "✅ Rust already available"
+          fi
+
+          # Verify Rust installation
+          rustc --version
+          cargo --version
 
           # Show available resources
           echo "💾 Available resources:"
