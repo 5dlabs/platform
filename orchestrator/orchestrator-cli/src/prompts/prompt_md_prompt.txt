@@ -1,0 +1,17 @@
+Generate a prompt.md with step-by-step implementation instructions that:
+1. Provides exact commands to run for each subtask
+2. Includes code examples and boilerplate where helpful
+3. Explains common pitfalls and how to avoid them
+4. Shows how to verify each step is completed correctly
+5. Integrates with Task Master commands (task-master set-status, next, etc.)
+6. Concludes with instructions for creating a pull request
+
+Structure the document as follows:
+- Brief introduction
+- Prerequisites/setup requirements
+- Step-by-step instructions for each subtask
+- Verification steps after each major milestone
+- Git workflow instructions
+- Final steps including PR creation
+
+The target audience is an AI agent (Claude) that will implement these instructions autonomously. Be specific, include exact commands, and provide clear success criteria for each step.

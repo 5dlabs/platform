@@ -1,0 +1,17 @@
+Generate a comprehensive task.md that:
+1. Explains the task's purpose and its role in the larger project
+2. Provides a narrative overview of what needs to be accomplished
+3. Breaks down each subtask with context about why it's important
+4. Shows how subtasks relate to and depend on each other
+5. Includes relevant commands, code snippets, and examples
+6. Maintains a helpful, instructional tone
+
+The document should be structured as follows:
+- Title and overview
+- Goal/objective section
+- Detailed subtasks breakdown with implementation guidance
+- Dependencies and relationships
+- Success criteria
+- Common pitfalls to avoid
+
+Format the output as a well-structured Markdown document. Make it comprehensive and actionable for an AI agent that will implement this task.

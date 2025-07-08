@@ -1,0 +1,30 @@
+Generate a design-spec.md that covers:
+1. Technical architecture for this component
+2. Data models and structures
+3. API contracts (if applicable)
+4. File structure and organization
+5. Integration points with other components
+6. Technology choices and rationale
+7. Performance and security considerations
+
+Structure the document as follows:
+- Overview
+- Architecture
+  - Technology stack
+  - Component diagram (if relevant)
+  - Data flow
+- Implementation Details
+  - Core modules/classes
+  - Data models
+  - API specifications
+  - File organization
+- Integration
+  - Dependencies
+  - External interfaces
+  - Configuration requirements
+- Non-functional Requirements
+  - Performance considerations
+  - Security considerations
+  - Scalability
+
+Focus on providing clear technical guidance for implementation. Be specific about design decisions and their rationale.

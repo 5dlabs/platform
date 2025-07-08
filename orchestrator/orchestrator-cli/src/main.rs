@@ -2,6 +2,7 @@
 
 mod api;
 mod commands;
+mod docs_generator;
 mod interactive;
 mod output;
 mod validation;
@@ -149,6 +150,33 @@ enum TaskCommands {
         /// Filter by status
         #[arg(long)]
         status: Option<String>,
+    },
+    /// Initialize documentation for Task Master tasks using Claude
+    InitDocs {
+        /// Path to Task Master directory
+        #[arg(long, short = 'd', default_value = ".taskmaster")]
+        taskmaster_dir: String,
+        /// Claude model to use (sonnet, opus)
+        #[arg(long, short = 'm', default_value = "sonnet")]
+        model: String,
+        /// Overwrite existing documentation
+        #[arg(long, short = 'f')]
+        force: bool,
+        /// Generate docs for specific task only
+        #[arg(long, short = 't')]
+        task_id: Option<u32>,
+        /// Update existing docs (regenerate from current tasks.json)
+        #[arg(long, short = 'u')]
+        update: bool,
+        /// Force update all docs regardless of changes
+        #[arg(long)]
+        update_all: bool,
+        /// Preview what would be generated without creating files
+        #[arg(long)]
+        dry_run: bool,
+        /// Show detailed generation progress
+        #[arg(long, short = 'v')]
+        verbose: bool,
     },
 }
 
@@ -302,6 +330,29 @@ async fn main() -> Result<()> {
                     &output_manager,
                     service.as_deref(),
                     status.as_deref(),
+                )
+                .await
+            }
+            TaskCommands::InitDocs {
+                taskmaster_dir,
+                model,
+                force,
+                task_id,
+                update,
+                update_all,
+                dry_run,
+                verbose,
+            } => {
+                commands::task::init_docs(
+                    &output_manager,
+                    &taskmaster_dir,
+                    &model,
+                    force,
+                    task_id,
+                    update,
+                    update_all,
+                    dry_run,
+                    verbose,
                 )
                 .await
             }

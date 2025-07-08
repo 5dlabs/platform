@@ -41,12 +41,27 @@ pub mod task {
         );
         info!("Task Master directory: {}", taskmaster_dir);
 
+        // Check if task-specific docs exist first
+        let task_docs_dir = Path::new(taskmaster_dir).join("docs").join(format!("task-{task_id}"));
+        let use_task_specific_docs = task_docs_dir.exists();
+
         // Construct paths based on Task Master structure
         let tasks_json_path = Path::new(taskmaster_dir).join("tasks/tasks.json");
-        let design_spec_path = Path::new(taskmaster_dir).join("docs/design-spec.md");
-        let prompt_path = Path::new(taskmaster_dir).join("docs/prompt.md");
-        let acceptance_criteria_path =
-            Path::new(taskmaster_dir).join("docs/acceptance-criteria.md");
+        let design_spec_path = if use_task_specific_docs {
+            task_docs_dir.join("design-spec.md")
+        } else {
+            Path::new(taskmaster_dir).join("docs/design-spec.md")
+        };
+        let prompt_path = if use_task_specific_docs {
+            task_docs_dir.join("prompt.md")
+        } else {
+            Path::new(taskmaster_dir).join("docs/prompt.md")
+        };
+        let acceptance_criteria_path = if use_task_specific_docs {
+            task_docs_dir.join("acceptance-criteria.md")
+        } else {
+            Path::new(taskmaster_dir).join("docs/acceptance-criteria.md")
+        };
         let regression_testing_path = Path::new(taskmaster_dir).join("docs/regression-testing.md");
 
         // Read Task Master JSON file
@@ -72,12 +87,40 @@ pub mod task {
 
         output.info(&format!("Found task: {}", task.title))?;
 
+        if use_task_specific_docs {
+            output.info(&format!("Using task-specific documentation from: {}", task_docs_dir.display()))?;
+        }
+
         // Prepare markdown files
-        let mut markdown_files = vec![MarkdownPayload {
-            content: task_to_markdown(&task),
-            filename: "task.md".to_string(),
-            file_type: "task".to_string(),
-        }];
+        let mut markdown_files = vec![];
+
+        // Use task-specific task.md if available, otherwise generate from JSON
+        if use_task_specific_docs {
+            let task_md_path = task_docs_dir.join("task.md");
+            if task_md_path.exists() {
+                let task_md = fs::read_to_string(&task_md_path).with_context(|| {
+                    format!("Failed to read task.md: {}", task_md_path.display())
+                })?;
+                markdown_files.push(MarkdownPayload {
+                    content: task_md,
+                    filename: "task.md".to_string(),
+                    file_type: "task".to_string(),
+                });
+            } else {
+                // Fallback to generated version
+                markdown_files.push(MarkdownPayload {
+                    content: task_to_markdown(&task),
+                    filename: "task.md".to_string(),
+                    file_type: "task".to_string(),
+                });
+            }
+        } else {
+            markdown_files.push(MarkdownPayload {
+                content: task_to_markdown(&task),
+                filename: "task.md".to_string(),
+                file_type: "task".to_string(),
+            });
+        }
 
         // Add design spec if exists
         if design_spec_path.exists() {
@@ -381,7 +424,7 @@ pub mod task {
                         st.id,
                         st.title,
                         st.description,
-                        if st.dependencies.is_empty() { "None".to_string() } else { 
+                        if st.dependencies.is_empty() { "None".to_string() } else {
                             st.dependencies.iter().map(|d| d.to_string()).collect::<Vec<_>>().join(", ")
                         },
                         st.details,
@@ -395,8 +438,8 @@ pub mod task {
         format!(
             r#"# Task {}: {}
 
-**Priority:** {}  
-**Status:** {}  
+**Priority:** {}
+**Status:** {}
 **Dependencies:** {}
 
 ## Description
@@ -637,6 +680,39 @@ pub mod task {
 
         Ok(tools)
     }
+
+    /// Initialize documentation for Task Master tasks using Claude
+    #[allow(clippy::too_many_arguments)]
+    pub async fn init_docs(
+        output: &OutputManager,
+        taskmaster_dir: &str,
+        model: &str,
+        force: bool,
+        task_id: Option<u32>,
+        update: bool,
+        update_all: bool,
+        dry_run: bool,
+        verbose: bool,
+    ) -> Result<()> {
+        use crate::docs_generator::DocsGenerator;
+
+        output.info("Initializing documentation generator...")?;
+
+        let generator = DocsGenerator::new(taskmaster_dir, model, output)?;
+
+        if let Some(id) = task_id {
+            // Generate docs for specific task
+            output.info(&format!("Generating documentation for task {id}..."))?;
+            generator.generate_task_docs(id, force || update || update_all, dry_run, verbose).await?;
+        } else {
+            // Generate docs for all tasks
+            output.info("Generating documentation for all tasks...")?;
+            generator.generate_all_docs(force || update_all, dry_run, verbose).await?;
+        }
+
+        output.success("Documentation generation complete!")?;
+        Ok(())
+    }
 }
 
 /// Job command handlers
@@ -706,7 +782,7 @@ pub mod job {
             }
             Err(e) => {
                 output.error(&format!("Failed to get job: {e}"))?;
-                Err(e)
+                Err(e.into())
             }
         }
     }
