@@ -951,19 +951,24 @@ echo "Cloning repository..."
 git clone --depth 1 {repo_url} /tmp/repo
 cd /tmp/repo
 
-# Copy only the taskmaster directory
+# Navigate to working directory and copy taskmaster
 echo "Copying .taskmaster directory to workspace..."
-if [ -d "{working_dir}" ]; then
-    cd "{working_dir}"
-    if [ -d ".taskmaster" ]; then
-        cp -r .taskmaster /workspace/
-        echo "✓ Copied .taskmaster directory"
+if [ -n "{working_dir}" ] && [ "{working_dir}" != "." ]; then
+    echo "Navigating to working directory: {working_dir}"
+    if [ -d "{working_dir}" ]; then
+        cd "{working_dir}"
     else
-        echo "ERROR: .taskmaster directory not found in {working_dir}"
+        echo "ERROR: Working directory {working_dir} not found in repository"
         exit 1
     fi
+fi
+
+# Now check for .taskmaster in the current directory
+if [ -d ".taskmaster" ]; then
+    cp -r .taskmaster /workspace/
+    echo "✓ Copied .taskmaster directory from $(pwd)"
 else
-    echo "ERROR: Working directory {working_dir} not found"
+    echo "ERROR: .taskmaster directory not found in $(pwd)"
     exit 1
 fi
 
