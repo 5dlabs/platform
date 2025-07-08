@@ -13,8 +13,19 @@ if [ -f /workspace/.github-env ]; then
   if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USER" ]; then
     git config --global user.name "$GITHUB_USER"
     git config --global user.email "${GITHUB_USER}@users.noreply.github.com"
+    
+    # Ensure git credentials file exists with correct format
+    echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+    chmod 600 /workspace/.git-credentials
+    
+    # Configure git to use the credentials
     git config --global credential.helper 'store --file=/workspace/.git-credentials'
+    
+    # Also configure the repository-specific credential helper
+    cd /workspace && git config credential.helper 'store --file=/workspace/.git-credentials'
+    
     echo "✓ Git credentials configured for user: $GITHUB_USER"
+    echo "✓ Git push should now work with HTTPS"
   fi
 fi
 
