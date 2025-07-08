@@ -78,7 +78,10 @@ jobs:
   lint-rust:
     needs: changes
     if: needs.changes.outputs.orchestrator == 'true' || needs.changes.outputs.taskrun == 'true' || github.event_name == 'push'
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, k8s-runner]
+    container:
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:latest
+      options: --user 1001:1001 --volume /tmp/cargo-cache:/home/runner/.cargo --volume /tmp/sccache:/home/runner/.cache/sccache
     outputs:
       format-needed: ${{ steps.format-check.outputs.format-needed }}
     steps:
@@ -120,7 +123,10 @@ jobs:
   auto-format:
     needs: [changes, lint-rust]
     if: always() && needs.lint-rust.outputs.format-needed == 'true' && github.event_name == 'push'
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, k8s-runner]
+    container:
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:latest
+      options: --user 1001:1001 --volume /tmp/cargo-cache:/home/runner/.cargo --volume /tmp/sccache:/home/runner/.cache/sccache
     permissions:
       contents: write
     steps:
@@ -193,7 +199,10 @@ jobs:
   lint-rust-retry:
     needs: [changes, auto-format]
     if: always() && needs.auto-format.result == 'success'
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, k8s-runner]
+    container:
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:latest
+      options: --user 1001:1001 --volume /tmp/cargo-cache:/home/runner/.cargo --volume /tmp/sccache:/home/runner/.cache/sccache
     steps:
       - uses: actions/checkout@v4
         with:
@@ -222,7 +231,10 @@ jobs:
   test-rust:
     needs: changes
     if: needs.changes.outputs.orchestrator == 'true' || needs.changes.outputs.taskrun == 'true' || github.event_name == 'push'
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, k8s-runner]
+    container:
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:latest
+      options: --user 1001:1001 --volume /tmp/cargo-cache:/home/runner/.cargo --volume /tmp/sccache:/home/runner/.cache/sccache
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -366,7 +378,10 @@ jobs:
   test-coverage:
     needs: changes
     if: needs.changes.outputs.orchestrator == 'true' || needs.changes.outputs.taskrun == 'true' || github.event_name == 'push'
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, k8s-runner]
+    container:
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:latest
+      options: --user 1001:1001 --volume /tmp/cargo-cache:/home/runner/.cargo --volume /tmp/sccache:/home/runner/.cache/sccache
     continue-on-error: true  # Non-blocking
     steps:
       - uses: actions/checkout@v4

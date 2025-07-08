@@ -105,8 +105,8 @@ spec:
           cpu: "1"
           memory: "2Gi"
 
-      # Docker-in-Docker image
-      image: summerwind/actions-runner-dind:latest
+      # Docker-in-Docker image with Rust pre-warmed
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:feature-example-project-and-cli-75991d8
       dockerEnabled: true
       dockerdWithinRunnerContainer: true
 
@@ -119,6 +119,10 @@ spec:
 
       # Service account
       serviceAccountName: github-runner
+
+      # Image pull secrets for private registries
+      imagePullSecrets:
+        - name: ghcr-secret
 
       # Init container to install tools
       initContainers:
