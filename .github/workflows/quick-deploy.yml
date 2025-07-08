@@ -97,7 +97,7 @@ jobs:
   # Deploy immediately
   deploy:
     needs: [version, build-orchestrator]
-    runs-on: [self-hosted, rust-fast]
+    runs-on: [self-hosted]
     steps:
       - uses: actions/checkout@v4
 
