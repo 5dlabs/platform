@@ -919,21 +919,21 @@ fn build_docs_prep_job(
     job_name: &str,
     config: &ControllerConfig,
 ) -> Result<Job> {
-    // Extract repository info from markdown files
-    let mut repo_url = String::new();
+    // Extract repository info from TaskRun spec and markdown files
+    let repo_url = tr.spec.repository.as_ref()
+        .map(|r| r.url.clone())
+        .unwrap_or_default();
+    let branch = tr.spec.repository.as_ref()
+        .map(|r| r.branch.clone())
+        .unwrap_or_else(|| "main".to_string());
     let mut working_dir = String::new();
-    let mut branch = String::new();
     
-    // Parse CLAUDE.md to get repo info
+    // Parse CLAUDE.md to get working directory (repo and branch come from spec)
     if let Some(claude_md) = tr.spec.markdown_files.iter().find(|f| f.filename == "CLAUDE.md") {
-        // Extract repository URL, working directory, and branch from content
+        // Extract working directory from content
         for line in claude_md.content.lines() {
-            if line.starts_with("- **Repository**: ") {
-                repo_url = line.trim_start_matches("- **Repository**: ").to_string();
-            } else if line.starts_with("- **Working Directory**: ") {
+            if line.starts_with("- **Working Directory**: ") {
                 working_dir = line.trim_start_matches("- **Working Directory**: ").to_string();
-            } else if line.starts_with("- **Source Branch**: ") {
-                branch = line.trim_start_matches("- **Source Branch**: ").to_string();
             }
         }
     }
