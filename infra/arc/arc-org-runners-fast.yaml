@@ -102,6 +102,10 @@ spec:
       initContainers:
         - name: install-tools
           image: alpine:3.19
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: true
           command: ["sh", "-c"]
           args:
             - |
@@ -119,8 +123,12 @@ spec:
               chmod +x /shared/helm
 
               # Create cache directories with proper permissions
+              echo "Setting up cache directories..."
               mkdir -p /cache/cargo /cache/sccache /cache/rustup
-              chown -R 1000:1000 /cache
+
+              # Set ownership to runner user (1000:1000)
+              chown -R 1000:1000 /cache || echo "Warning: Could not set cache ownership"
+              chmod -R 755 /cache || echo "Warning: Could not set cache permissions"
 
               echo "Tools installed successfully"
               ls -la /shared/

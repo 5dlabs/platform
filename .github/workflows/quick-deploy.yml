@@ -48,12 +48,22 @@ jobs:
         run: |
           echo "🚀 Setting up ULTRA-OPTIMIZED Rust build environment..."
 
-          # Install system dependencies first
+          # Install system dependencies first (critical for OpenSSL)
           echo "📦 Installing system dependencies..."
           sudo apt-get update -qq
-          sudo apt-get install -y pkg-config libssl-dev build-essential clang mold
+          sudo apt-get install -y pkg-config libssl-dev build-essential clang
 
-          # Install Rust if not available (fast on enhanced resources)
+          # Try to install mold (fallback if not available)
+          echo "⚡ Installing mold linker..."
+          if ! sudo apt-get install -y mold; then
+            echo "⚠️ Mold not available in apt, trying manual install..."
+            wget -q https://github.com/rui314/mold/releases/download/v2.4.0/mold-2.4.0-x86_64-linux.tar.gz
+            tar -xzf mold-2.4.0-x86_64-linux.tar.gz
+            sudo cp mold-2.4.0-x86_64-linux/bin/mold /usr/local/bin/
+            sudo chmod +x /usr/local/bin/mold
+          fi
+
+          # Install Rust if not available
           if ! command -v cargo &> /dev/null; then
             echo "📦 Installing Rust toolchain..."
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
@@ -69,10 +79,14 @@ jobs:
             cargo install sccache --locked
           fi
 
-          # Setup build optimizations
+          # Setup build optimizations (with fallbacks)
           echo "🔧 Configuring build optimizations..."
           mkdir -p ~/.cargo
-          cat > ~/.cargo/config.toml << 'EOF'
+
+          # Create cargo config with conditional mold support
+          if command -v mold &> /dev/null; then
+            echo "✅ Using mold linker"
+            cat > ~/.cargo/config.toml << 'EOF'
           [build]
           rustc-wrapper = "sccache"
 
@@ -83,14 +97,33 @@ jobs:
           [registries.crates-io]
           protocol = "sparse"
           EOF
+          else
+            echo "⚠️ Falling back to default linker"
+            cat > ~/.cargo/config.toml << 'EOF'
+          [build]
+          rustc-wrapper = "sccache"
+
+          [target.x86_64-unknown-linux-gnu]
+          linker = "clang"
+          rustflags = ["-C", "target-cpu=native"]
+
+          [registries.crates-io]
+          protocol = "sparse"
+          EOF
+          fi
 
           # Verify installations
+          echo "🔍 Verifying installations..."
           rustc --version
           cargo --version
           pkg-config --version
           openssl version
           clang --version
-          mold --version
+          if command -v mold &> /dev/null; then
+            mold --version
+          else
+            echo "⚠️ mold not available"
+          fi
           sccache --version
 
           # Show available resources
