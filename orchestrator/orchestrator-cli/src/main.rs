@@ -159,6 +159,18 @@ enum TaskCommands {
         /// Claude model to use (sonnet, opus)
         #[arg(long, short = 'm', default_value = "sonnet")]
         model: String,
+        /// Repository URL (auto-detected if not specified)
+        #[arg(long, short = 'r')]
+        repo: Option<String>,
+        /// Source branch to base documentation branch from
+        #[arg(long, default_value = "main")]
+        source_branch: String,
+        /// Target branch for PR (defaults to source branch)
+        #[arg(long)]
+        target_branch: Option<String>,
+        /// Working directory within repo (auto-detected if not specified)
+        #[arg(long, short = 'w')]
+        working_dir: Option<String>,
         /// Overwrite existing documentation
         #[arg(long, short = 'f')]
         force: bool,
@@ -336,6 +348,10 @@ async fn main() -> Result<()> {
             TaskCommands::InitDocs {
                 taskmaster_dir,
                 model,
+                repo,
+                source_branch,
+                target_branch,
+                working_dir,
                 force,
                 task_id,
                 update,
@@ -347,6 +363,10 @@ async fn main() -> Result<()> {
                     &output_manager,
                     &taskmaster_dir,
                     &model,
+                    repo.as_deref(),
+                    &source_branch,
+                    target_branch.as_deref(),
+                    working_dir.as_deref(),
                     force,
                     task_id,
                     update,

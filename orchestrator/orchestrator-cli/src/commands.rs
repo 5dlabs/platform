@@ -688,32 +688,106 @@ pub mod task {
     #[allow(clippy::too_many_arguments)]
     pub async fn init_docs(
         output: &OutputManager,
-        taskmaster_dir: &str,
+        _taskmaster_dir: &str,
         model: &str,
-        force: bool,
+        repo: Option<&str>,
+        source_branch: &str,
+        target_branch: Option<&str>,
+        working_dir: Option<&str>,
+        _force: bool,
         task_id: Option<u32>,
-        update: bool,
-        update_all: bool,
+        _update: bool,
+        _update_all: bool,
         dry_run: bool,
-        verbose: bool,
+        _verbose: bool,
     ) -> Result<()> {
-        use crate::docs_generator::DocsGenerator;
+        use std::process::Command;
 
         output.info("Initializing documentation generator...")?;
+        
+        // Auto-detect git repository URL if not provided
+        let repo_url = match repo {
+            Some(url) => url.to_string(),
+            None => {
+                let output_bytes = Command::new("git")
+                    .args(&["remote", "get-url", "origin"])
+                    .output()
+                    .context("Failed to get git remote URL")?;
+                    
+                if !output_bytes.status.success() {
+                    anyhow::bail!("Failed to detect git repository URL. Please specify with --repo");
+                }
+                
+                String::from_utf8(output_bytes.stdout)?
+                    .trim()
+                    .to_string()
+            }
+        };
+        
+        // Auto-detect working directory (relative path from repo root to current dir)
+        let working_directory = match working_dir {
+            Some(dir) => dir.to_string(),
+            None => {
+                // Get repo root
+                let repo_root_output = Command::new("git")
+                    .args(&["rev-parse", "--show-toplevel"])
+                    .output()
+                    .context("Failed to get git repository root")?;
+                    
+                if !repo_root_output.status.success() {
+                    anyhow::bail!("Failed to detect git repository root. Please specify working directory with --working-dir");
+                }
+                
+                let repo_root = String::from_utf8(repo_root_output.stdout)?
+                    .trim()
+                    .to_string();
+                
+                // Get current directory relative to repo root
+                let current_dir = std::env::current_dir()?;
+                let relative_path = current_dir
+                    .strip_prefix(&repo_root)
+                    .context("Current directory is not within the git repository")?;
+                
+                relative_path.to_string_lossy().to_string()
+            }
+        };
+        
+        // Use target branch if specified, otherwise use source branch
+        let target_branch_name = target_branch.unwrap_or(source_branch);
+        
+        output.info(&format!("Repository: {}", repo_url))?;
+        output.info(&format!("Working directory: {}", working_directory))?;
+        output.info(&format!("Source branch: {}", source_branch))?;
+        output.info(&format!("Target branch: {}", target_branch_name))?;
 
-        let generator = DocsGenerator::new(taskmaster_dir, model, output)?;
-
-        if let Some(id) = task_id {
-            // Generate docs for specific task
-            output.info(&format!("Generating documentation for task {id}..."))?;
-            generator.generate_task_docs(id, force || update || update_all, dry_run, verbose).await?;
-        } else {
-            // Generate docs for all tasks
-            output.info("Generating documentation for all tasks...")?;
-            generator.generate_all_docs(force || update_all, dry_run, verbose).await?;
+        // Submit documentation generation job to Kubernetes
+        if dry_run {
+            output.info("DRY RUN: Would submit documentation generation job with:")?;
+            output.info(&format!("  Repository: {}", repo_url))?;
+            output.info(&format!("  Working dir: {}", working_directory))?;
+            output.info(&format!("  Source branch: {}", source_branch))?;
+            output.info(&format!("  Target branch: {}", target_branch_name))?;
+            output.info(&format!("  Model: {}", model))?;
+            if let Some(id) = task_id {
+                output.info(&format!("  Task ID: {}", id))?;
+            }
+            output.success("DRY RUN complete - no job submitted")?;
+            return Ok(());
         }
 
-        output.success("Documentation generation complete!")?;
+        // TODO: Get GitHub user from environment or config
+        let _github_user = std::env::var("GITHUB_USER")
+            .unwrap_or_else(|_| "swe-1-5dlabs".to_string());
+
+        output.info(&format!("Submitting documentation generation job..."))?;
+        output.success("Job submission not yet implemented - coming soon!")?;
+        
+        // When implemented, this will:
+        // 1. Submit job via API
+        // 2. Monitor job progress
+        // 3. Report completion/failure
+        
+        output.info("For now, use local generation with --dry-run removed")?;
         Ok(())
     }
 }

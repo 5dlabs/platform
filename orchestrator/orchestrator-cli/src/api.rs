@@ -2,7 +2,7 @@
 
 use anyhow::{Context, Result};
 use orchestrator_common::models::{
-    pm_task::PmTaskRequest,
+    pm_task::{DocsGenerationRequest, PmTaskRequest},
     request::CreateTaskRequest,
     response::{ApiResponse, JobResponse, ResponseMetadata, ResponseStatus, TaskResponse},
 };
@@ -96,6 +96,25 @@ impl ApiClient {
             .send()
             .await
             .context("Failed to send PM task submission request")?;
+
+        self.handle_simple_response(response).await
+    }
+
+    /// Submit a documentation generation job
+    pub async fn submit_docs_generation(&self, request: &DocsGenerationRequest) -> Result<SimpleApiResponse> {
+        info!(
+            "Submitting documentation generation job for repository: {}",
+            request.repository_url
+        );
+        debug!("Docs generation request: {:?}", request);
+
+        let response = self
+            .client
+            .post(format!("{}/pm/docs/generate", self.base_url))
+            .json(request)
+            .send()
+            .await
+            .context("Failed to send documentation generation request")?;
 
         self.handle_simple_response(response).await
     }

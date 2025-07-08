@@ -87,6 +87,47 @@ fn default_model() -> String {
     "sonnet".to_string()
 }
 
+/// Documentation generation request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocsGenerationRequest {
+    /// Repository URL to clone
+    pub repository_url: String,
+    
+    /// Working directory within the repository (path to .taskmaster)
+    pub working_directory: String,
+    
+    /// Source branch to checkout and base new branch from
+    pub source_branch: String,
+    
+    /// Target branch for the PR
+    pub target_branch: String,
+    
+    /// Service name for the job
+    pub service_name: String,
+    
+    /// Agent name for the job
+    pub agent_name: String,
+    
+    /// Claude model selection (sonnet, opus)
+    #[serde(default = "default_model")]
+    pub model: String,
+    
+    /// GitHub user for authentication
+    pub github_user: String,
+    
+    /// Optional specific task ID to generate docs for (if None, generates all)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub task_id: Option<u32>,
+    
+    /// Force overwrite existing documentation
+    #[serde(default)]
+    pub force: bool,
+    
+    /// Dry run mode (preview only)
+    #[serde(default)]
+    pub dry_run: bool,
+}
+
 /// Task Master JSON file structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskMasterFile {
