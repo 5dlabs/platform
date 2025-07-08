@@ -46,6 +46,9 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
       
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+      
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: orchestrator -> target
@@ -57,6 +60,9 @@ jobs:
 
       - name: Build release binary (no tests)
         working-directory: ./orchestrator
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
         run: |
           echo "🏗️ Building orchestrator binary (skipping tests)..."
           cargo build --release --package orchestrator-core
