@@ -77,8 +77,8 @@ spec:
           cpu: "1"
           memory: "2Gi"
 
-      # Standard working image (custom image doesn't have runner software)
-      image: summerwind/actions-runner-dind:latest
+      # Use our optimized Rust builder image with pre-installed tools
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:latest
       dockerEnabled: true
       dockerdWithinRunnerContainer: true
 
