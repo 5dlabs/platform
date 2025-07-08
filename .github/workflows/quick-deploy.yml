@@ -26,11 +26,12 @@ jobs:
         id: version
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
-          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          VERSION="quick-${SHORT_SHA}"
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          VERSION="quick-${TIMESTAMP}-${SHORT_SHA}"
           
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "short-sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
           echo "📦 Quick deploy version: ${VERSION}"
 
   # Build only orchestrator (skip Claude Code for now)
@@ -78,6 +79,7 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.version }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:quick-latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:quick-${{ needs.version.outputs.short-sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
