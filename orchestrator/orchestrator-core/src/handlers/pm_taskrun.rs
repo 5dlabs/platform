@@ -2,14 +2,14 @@
 //!
 //! This handler replaces the Helm-based deployment with TaskRun CRD management
 
-use crate::crds::{AgentTool, MarkdownFile, MarkdownFileType, TaskRun, TaskRunSpec};
+use crate::crds::{AgentTool, MarkdownFile, MarkdownFileType, RepositorySpec, TaskRun, TaskRunSpec};
 use axum::{extract::State, http::StatusCode, response::Json};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 use kube::{
     api::{Api, ListParams, PostParams},
     Client,
 };
-use orchestrator_common::models::pm_task::PmTaskRequest;
+use orchestrator_common::models::pm_task::{DocsGenerationRequest, PmTaskRequest};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -757,6 +757,175 @@ pub async fn update_session(
             Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ApiResponse::error("Failed to update session ID")),
+            ))
+        }
+    }
+}
+
+/// Generate documentation for Task Master tasks
+pub async fn generate_docs(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<DocsGenerationRequest>,
+) -> Result<(StatusCode, Json<ApiResponse>), (StatusCode, Json<ApiResponse>)> {
+    info!("Generate documentation request received for repository: {}", request.repository_url);
+
+    // Generate a unique TaskRun name using timestamp
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let taskrun_name = format!("docs-gen-{timestamp}");
+    
+    // Create TaskRun spec for documentation generation
+    let spec = TaskRunSpec {
+        task_id: request.task_id.unwrap_or(0), // Use 0 for "all tasks"
+        service_name: request.service_name.clone(),
+        agent_name: request.agent_name.clone(),
+        model: request.model.clone(),
+        context_version: 1,
+        repository: Some(RepositorySpec {
+            url: request.repository_url.clone(),
+            branch: request.source_branch.clone(),
+            github_user: request.github_user.clone(),
+            token: None,
+        }),
+        markdown_files: vec![
+            MarkdownFile {
+                content: format!(
+                    r#"# Documentation Generation Task
+
+## Repository Information
+- **Repository**: {}
+- **Working Directory**: {}
+- **Source Branch**: {}
+- **Target Branch**: {}
+
+## Task Details
+- **Generate docs for**: {}
+- **Model**: {}
+- **Force overwrite**: {}
+- **Dry run**: {}
+
+## Instructions
+
+You are tasked with generating comprehensive documentation for Task Master tasks. Follow these steps:
+
+1. Clone the repository and checkout the source branch
+2. Navigate to the working directory: `{}`
+3. Read the `.taskmaster/tasks/tasks.json` file
+4. For each task {}, generate the following documentation files:
+   - `task.md`: Comprehensive task overview and implementation guide
+   - `prompt.md`: Autonomous prompt for AI agents
+   - `design-spec.md`: Technical design specification
+   - `acceptance-criteria.md`: Clear acceptance criteria and test cases
+
+5. Create a new branch from the source branch with name: `docs/task-{{task-id}}-{{timestamp}}`
+6. Commit all generated documentation files
+7. Push the branch and create a pull request to the target branch
+
+## Important Notes
+
+- Each document should be well-structured, comprehensive, and actionable
+- Include code examples, commands, and implementation details where relevant
+- Maintain consistency across all generated documents
+- Ensure all markdown is properly formatted
+- Working directory is relative to repository root
+"#,
+                    request.repository_url,
+                    request.working_directory,
+                    request.source_branch,
+                    request.target_branch,
+                    request.task_id.map(|id| format!("task {id}")).unwrap_or_else(|| "all tasks".to_string()),
+                    request.model,
+                    request.force,
+                    request.dry_run,
+                    request.working_directory,
+                    if request.task_id.is_some() { "(specified task only)" } else { "(all tasks)" }
+                ),
+                filename: "CLAUDE.md".to_string(),
+                file_type: Some(MarkdownFileType::Context),
+            },
+        ],
+        agent_tools: vec![
+            AgentTool {
+                name: "bash".to_string(),
+                enabled: true,
+                config: None,
+                restrictions: vec![],
+            },
+            AgentTool {
+                name: "edit".to_string(),
+                enabled: true,
+                config: None,
+                restrictions: vec![],
+            },
+            AgentTool {
+                name: "read".to_string(),
+                enabled: true,
+                config: None,
+                restrictions: vec![],
+            },
+            AgentTool {
+                name: "write".to_string(),
+                enabled: true,
+                config: None,
+                restrictions: vec![],
+            },
+            AgentTool {
+                name: "glob".to_string(),
+                enabled: true,
+                config: None,
+                restrictions: vec![],
+            },
+        ],
+    };
+
+    // Create TaskRun
+    let taskrun = TaskRun {
+        metadata: ObjectMeta {
+            name: Some(taskrun_name.clone()),
+            namespace: Some(state.namespace.clone()),
+            labels: Some({
+                let mut labels = BTreeMap::new();
+                labels.insert("app".to_string(), "orchestrator".to_string());
+                labels.insert("type".to_string(), "docs-generation".to_string());
+                labels.insert("service".to_string(), request.service_name.clone());
+                labels
+            }),
+            ..Default::default()
+        },
+        spec,
+        status: None,
+    };
+
+    // Create TaskRun in Kubernetes
+    let api: Api<TaskRun> = Api::namespaced(state.k8s_client.clone(), &state.namespace);
+    
+    match api.create(&PostParams::default(), &taskrun).await {
+        Ok(created) => {
+            info!("Created documentation generation TaskRun: {}", taskrun_name);
+            Ok((
+                StatusCode::CREATED,
+                Json(ApiResponse {
+                    success: true,
+                    message: "Documentation generation job submitted successfully".to_string(),
+                    data: Some(json!({
+                        "taskrun_name": taskrun_name,
+                        "task_id": created.spec.task_id,
+                        "namespace": state.namespace,
+                    })),
+                }),
+            ))
+        }
+        Err(e) => {
+            error!("Failed to create documentation generation TaskRun: {}", e);
+            let status_code = StatusCode::from(AppError::from(e));
+            Err((
+                status_code,
+                Json(ApiResponse::error(&format!(
+                    "Failed to submit documentation generation job: {}",
+                    status_code.canonical_reason().unwrap_or("Unknown error")
+                ))),
             ))
         }
     }

@@ -12,7 +12,7 @@ use axum::{
 use kube::Client;
 use orchestrator_core::{
     handlers::pm_taskrun::{
-        add_context, get_task, get_task_status, list_tasks, submit_task, update_session,
+        add_context, generate_docs, get_task, get_task_status, list_tasks, submit_task, update_session,
         AppState as TaskRunAppState,
     },
     run_taskrun_controller,
@@ -121,6 +121,13 @@ fn api_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
             post({
                 let taskrun_state = state.taskrun_state.clone();
                 move |path, req| update_session(State(taskrun_state), path, req)
+            }),
+        )
+        .route(
+            "/pm/docs/generate",
+            post({
+                let taskrun_state = state.taskrun_state.clone();
+                move |req| generate_docs(State(taskrun_state), req)
             }),
         )
 }

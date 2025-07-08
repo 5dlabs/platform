@@ -687,6 +687,7 @@ pub mod task {
     /// Initialize documentation for Task Master tasks using Claude
     #[allow(clippy::too_many_arguments)]
     pub async fn init_docs(
+        api_client: &crate::api::ApiClient,
         output: &OutputManager,
         _taskmaster_dir: &str,
         model: &str,
@@ -694,7 +695,7 @@ pub mod task {
         source_branch: &str,
         target_branch: Option<&str>,
         working_dir: Option<&str>,
-        _force: bool,
+        force: bool,
         task_id: Option<u32>,
         _update: bool,
         _update_all: bool,
@@ -710,7 +711,7 @@ pub mod task {
             Some(url) => url.to_string(),
             None => {
                 let output_bytes = Command::new("git")
-                    .args(&["remote", "get-url", "origin"])
+                    .args(["remote", "get-url", "origin"])
                     .output()
                     .context("Failed to get git remote URL")?;
                     
@@ -730,7 +731,7 @@ pub mod task {
             None => {
                 // Get repo root
                 let repo_root_output = Command::new("git")
-                    .args(&["rev-parse", "--show-toplevel"])
+                    .args(["rev-parse", "--show-toplevel"])
                     .output()
                     .context("Failed to get git repository root")?;
                     
@@ -755,39 +756,76 @@ pub mod task {
         // Use target branch if specified, otherwise use source branch
         let target_branch_name = target_branch.unwrap_or(source_branch);
         
-        output.info(&format!("Repository: {}", repo_url))?;
-        output.info(&format!("Working directory: {}", working_directory))?;
-        output.info(&format!("Source branch: {}", source_branch))?;
-        output.info(&format!("Target branch: {}", target_branch_name))?;
+        output.info(&format!("Repository: {repo_url}"))?;
+        output.info(&format!("Working directory: {working_directory}"))?;
+        output.info(&format!("Source branch: {source_branch}"))?;
+        output.info(&format!("Target branch: {target_branch_name}"))?;
 
         // Submit documentation generation job to Kubernetes
         if dry_run {
             output.info("DRY RUN: Would submit documentation generation job with:")?;
-            output.info(&format!("  Repository: {}", repo_url))?;
-            output.info(&format!("  Working dir: {}", working_directory))?;
-            output.info(&format!("  Source branch: {}", source_branch))?;
-            output.info(&format!("  Target branch: {}", target_branch_name))?;
-            output.info(&format!("  Model: {}", model))?;
+            output.info(&format!("  Repository: {repo_url}"))?;
+            output.info(&format!("  Working dir: {working_directory}"))?;
+            output.info(&format!("  Source branch: {source_branch}"))?;
+            output.info(&format!("  Target branch: {target_branch_name}"))?;
+            output.info(&format!("  Model: {model}"))?;
             if let Some(id) = task_id {
-                output.info(&format!("  Task ID: {}", id))?;
+                output.info(&format!("  Task ID: {id}"))?;
             }
             output.success("DRY RUN complete - no job submitted")?;
             return Ok(());
         }
 
-        // TODO: Get GitHub user from environment or config
-        let _github_user = std::env::var("GITHUB_USER")
+        // Get GitHub user from environment or config
+        let github_user = std::env::var("GITHUB_USER")
             .unwrap_or_else(|_| "swe-1-5dlabs".to_string());
 
-        output.info(&format!("Submitting documentation generation job..."))?;
-        output.success("Job submission not yet implemented - coming soon!")?;
+        // Create documentation generation request
+        use orchestrator_common::models::pm_task::DocsGenerationRequest;
         
-        // When implemented, this will:
-        // 1. Submit job via API
-        // 2. Monitor job progress
-        // 3. Report completion/failure
+        let request = DocsGenerationRequest {
+            repository_url: repo_url.clone(),
+            working_directory: working_directory.clone(),
+            source_branch: source_branch.to_string(),
+            target_branch: target_branch_name.to_string(),
+            service_name: "docs-generator".to_string(),
+            agent_name: format!("claude-docs-{model}"),
+            model: model.to_string(),
+            github_user,
+            task_id,
+            force,
+            dry_run: false, // The API dry_run is different from CLI dry_run
+        };
+
+        output.info("Submitting documentation generation job...")?;
         
-        output.info("For now, use local generation with --dry-run removed")?;
+        match api_client.submit_docs_generation(&request).await {
+            Ok(response) => {
+                if response.success {
+                    output.success(&response.message)?;
+                    let mut namespace = "orchestrator".to_string();
+                    
+                    if let Some(data) = response.data {
+                        if let Some(taskrun_name) = data.get("taskrun_name").and_then(|n| n.as_str()) {
+                            output.info(&format!("TaskRun name: {taskrun_name}"))?;
+                        }
+                        if let Some(ns) = data.get("namespace").and_then(|n| n.as_str()) {
+                            namespace = ns.to_string();
+                            output.info(&format!("Namespace: {namespace}"))?;
+                        }
+                    }
+                    output.info("You can monitor the job with:")?;
+                    output.info(&format!("  kubectl -n {namespace} get taskrun"))?;
+                } else {
+                    output.error(&response.message)?;
+                    return Err(anyhow::anyhow!(response.message));
+                }
+            }
+            Err(e) => {
+                output.error(&format!("Failed to submit documentation generation job: {e}"))?;
+                return Err(e);
+            }
+        }
         Ok(())
     }
 }
@@ -859,7 +897,7 @@ pub mod job {
             }
             Err(e) => {
                 output.error(&format!("Failed to get job: {e}"))?;
-                Err(e.into())
+                Err(e)
             }
         }
     }

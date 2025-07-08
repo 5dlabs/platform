@@ -1,4 +1,9 @@
 //! Documentation generator for Task Master tasks using Claude CLI
+//! 
+//! NOTE: This module is kept for reference but is not actively used.
+//! Documentation generation is now handled by Kubernetes jobs.
+
+#![allow(dead_code)]
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -206,7 +211,7 @@ impl<'a> DocsGenerator<'a> {
             _ => {
                 // Try to get from Kubernetes secret as fallback
                 match Command::new("kubectl")
-                    .args(&["get", "secret", "claude-api-key", "-n", "orchestrator", "-o", "jsonpath={.data.api-key}"])
+                    .args(["get", "secret", "claude-api-key", "-n", "orchestrator", "-o", "jsonpath={.data.api-key}"])
                     .output()
                 {
                     Ok(output) if output.status.success() => {

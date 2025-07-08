@@ -360,6 +360,7 @@ async fn main() -> Result<()> {
                 verbose,
             } => {
                 commands::task::init_docs(
+                    &api_client,
                     &output_manager,
                     &taskmaster_dir,
                     &model,
