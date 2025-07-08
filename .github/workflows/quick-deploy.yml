@@ -46,12 +46,12 @@ jobs:
 
       - name: Setup optimized Rust environment
         run: |
-          echo "🚀 Setting up optimized Rust build environment..."
+          echo "🚀 Setting up ULTRA-OPTIMIZED Rust build environment..."
 
           # Install system dependencies first
           echo "📦 Installing system dependencies..."
           sudo apt-get update -qq
-          sudo apt-get install -y pkg-config libssl-dev build-essential
+          sudo apt-get install -y pkg-config libssl-dev build-essential clang mold
 
           # Install Rust if not available (fast on enhanced resources)
           if ! command -v cargo &> /dev/null; then
@@ -63,35 +63,140 @@ jobs:
             echo "✅ Rust already available"
           fi
 
+          # Install sccache for compilation caching
+          echo "⚡ Installing sccache..."
+          if ! command -v sccache &> /dev/null; then
+            cargo install sccache --locked
+          fi
+
+          # Setup build optimizations
+          echo "🔧 Configuring build optimizations..."
+          mkdir -p ~/.cargo
+          cat > ~/.cargo/config.toml << 'EOF'
+          [build]
+          rustc-wrapper = "sccache"
+
+          [target.x86_64-unknown-linux-gnu]
+          linker = "clang"
+          rustflags = ["-C", "link-arg=-fuse-ld=mold", "-C", "target-cpu=native"]
+
+          [registries.crates-io]
+          protocol = "sparse"
+          EOF
+
           # Verify installations
           rustc --version
           cargo --version
           pkg-config --version
           openssl version
+          clang --version
+          mold --version
+          sccache --version
 
           # Show available resources
           echo "💾 Available resources:"
           echo "CPU cores: $(nproc)"
           echo "Memory: $(free -h | grep '^Mem:' | awk '{print $2}')"
+          echo "Disk space: $(df -h . | tail -1 | awk '{print $4}')"
+
+      - name: Setup sccache
+        run: |
+          echo "🗄️ Configuring persistent sccache..."
+
+          # Use persistent cache if available, fallback to temp
+          if [ -d "/cache/sccache" ]; then
+            export SCCACHE_DIR="/cache/sccache"
+            echo "✅ Using persistent sccache at /cache/sccache"
+          else
+            export SCCACHE_DIR="$HOME/.cache/sccache"
+            mkdir -p "$SCCACHE_DIR"
+            echo "⚠️ Using temporary sccache at $HOME/.cache/sccache"
+          fi
+
+          export SCCACHE_CACHE_SIZE="8G"
+
+          # Start sccache server
+          sccache --start-server || true
+          echo "📊 Current sccache stats:"
+          sccache --show-stats
+
+      - name: Setup cargo cache
+        run: |
+          echo "📦 Configuring cargo cache..."
+
+          # Use persistent cargo cache if available
+          if [ -d "/cache/cargo" ]; then
+            export CARGO_HOME="/cache/cargo"
+            echo "✅ Using persistent cargo cache at /cache/cargo"
+          else
+            echo "⚠️ Using default cargo cache"
+          fi
+
+          # Show cache status
+          if [ -d "$CARGO_HOME" ]; then
+            echo "Cargo cache size: $(du -sh $CARGO_HOME 2>/dev/null || echo 'Empty')"
+          fi
 
       - name: Build release binary (ultra-fast)
         working-directory: ./orchestrator
         env:
           CARGO_INCREMENTAL: "1"
-          # CARGO_BUILD_JOBS not set = auto-detect all cores
+          RUSTC_WRAPPER: "sccache"
+          # Use persistent cache if available
+          SCCACHE_DIR: "/cache/sccache"
+          SCCACHE_CACHE_SIZE: "8G"
+          CARGO_HOME: "/cache/cargo"
+          # Optimize for build speed
+          CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+          CARGO_REGISTRIES_CRATES_IO_PROTOCOL: "sparse"
+          # Use all available cores
+          CARGO_BUILD_JOBS: "0"
+          # Memory and performance optimizations
+          RUSTFLAGS: "-C target-cpu=native -C opt-level=3 -C lto=thin -C codegen-units=1"
         run: |
-          echo "🏗️ Building orchestrator binary with enhanced resources..."
+          echo "🏗️ Building orchestrator binary with MAXIMUM OPTIMIZATION..."
+
+          # Ensure cache directories exist (fallback to temp if persistent not available)
+          if [ ! -d "/cache/sccache" ]; then
+            export SCCACHE_DIR="$HOME/.cache/sccache"
+            mkdir -p "$SCCACHE_DIR"
+            echo "⚠️ Using temporary sccache"
+          fi
+
+          if [ ! -d "/cache/cargo" ]; then
+            export CARGO_HOME="$HOME/.cargo"
+            echo "⚠️ Using default cargo home"
+          fi
 
           # Show build environment
           echo "Build environment:"
-          echo "CARGO_BUILD_JOBS: $CARGO_BUILD_JOBS"
+          echo "CARGO_BUILD_JOBS: $CARGO_BUILD_JOBS (0 = use all cores)"
           echo "Available cores: $(nproc)"
+          echo "RUSTFLAGS: $RUSTFLAGS"
+          echo "RUSTC_WRAPPER: $RUSTC_WRAPPER"
+          echo "SCCACHE_DIR: $SCCACHE_DIR"
+          echo "CARGO_HOME: $CARGO_HOME"
 
-          # Time the build
+          # Pre-warm sccache
+          sccache --start-server || true
+          echo "📊 Initial sccache stats:"
+          sccache --show-stats
+
+          # Time the build with detailed output
+          echo "⏱️ Starting timed build..."
           time cargo build --release --package orchestrator-core
+
+          # Show final sccache stats
+          echo "📊 Final sccache stats:"
+          sccache --show-stats
 
           # Copy binary
           cp target/release/orchestrator-core orchestrator
+
+          # Show binary info
+          echo "📦 Built binary info:"
+          ls -lh orchestrator
+          file orchestrator
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

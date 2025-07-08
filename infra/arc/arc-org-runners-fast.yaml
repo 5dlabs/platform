@@ -2,6 +2,46 @@
 # Simple fast runners based on working agent-platform config
 # Just adds optimized labels and enhanced resources
 
+# Persistent Volume Claims for caching
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cargo-cache-pvc
+  namespace: arc-systems-optimized
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: local-path
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sccache-cache-pvc
+  namespace: arc-systems-optimized
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: local-path
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rustup-cache-pvc
+  namespace: arc-systems-optimized
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: local-path
+---
 apiVersion: actions.summerwind.dev/v1alpha1
 kind: RunnerDeployment
 metadata:
@@ -42,25 +82,31 @@ spec:
       dockerEnabled: true
       dockerdWithinRunnerContainer: true
 
-      # Environment
+      # Environment with cache optimizations
       env:
         - name: RUNNER_FEATURE_FLAG_EPHEMERAL
           value: "true"
         - name: PATH
           value: "/shared:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        - name: CARGO_HOME
+          value: "/cache/cargo"
+        - name: SCCACHE_DIR
+          value: "/cache/sccache"
+        - name: RUSTUP_HOME
+          value: "/cache/rustup"
 
       # Service account
       serviceAccountName: github-runner-optimized
 
-      # Simple init container for tools (based on working config)
+      # Optimized init container for tools
       initContainers:
         - name: install-tools
           image: alpine:3.19
           command: ["sh", "-c"]
           args:
             - |
-              echo "Installing tools..."
-              apk add --no-cache wget tar curl
+              echo "Installing tools and optimizations..."
+              apk add --no-cache wget tar curl build-base
 
               echo "Installing kubectl..."
               wget -q -O /shared/kubectl https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl
@@ -72,24 +118,45 @@ spec:
               mv /tmp/linux-amd64/helm /shared/helm
               chmod +x /shared/helm
 
-              # Install Rust quickly (no pre-built image needed)
-              echo "Installing Rust..."
-              curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+              # Create cache directories with proper permissions
+              mkdir -p /cache/cargo /cache/sccache /cache/rustup
+              chown -R 1000:1000 /cache
 
               echo "Tools installed successfully"
               ls -la /shared/
           volumeMounts:
             - name: shared-tools
               mountPath: /shared
+            - name: cargo-cache
+              mountPath: /cache/cargo
+            - name: sccache-cache
+              mountPath: /cache/sccache
+            - name: rustup-cache
+              mountPath: /cache/rustup
 
-      # Simple volumes
+      # Persistent volumes for caching
       volumes:
         - name: shared-tools
           emptyDir: {}
+        - name: cargo-cache
+          persistentVolumeClaim:
+            claimName: cargo-cache-pvc
+        - name: sccache-cache
+          persistentVolumeClaim:
+            claimName: sccache-cache-pvc
+        - name: rustup-cache
+          persistentVolumeClaim:
+            claimName: rustup-cache-pvc
 
       volumeMounts:
         - name: shared-tools
           mountPath: /shared
+        - name: cargo-cache
+          mountPath: /cache/cargo
+        - name: sccache-cache
+          mountPath: /cache/sccache
+        - name: rustup-cache
+          mountPath: /cache/rustup
 
       # Security context
       securityContext:
