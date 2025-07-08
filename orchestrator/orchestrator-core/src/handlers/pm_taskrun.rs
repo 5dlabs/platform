@@ -778,7 +778,7 @@ pub async fn generate_docs(
     
     // Create TaskRun spec for documentation generation
     let spec = TaskRunSpec {
-        task_id: request.task_id.unwrap_or(0), // Use 0 for "all tasks"
+        task_id: request.task_id.unwrap_or(999999), // Use high number for "all tasks" (CRD requires >= 1)
         service_name: request.service_name.clone(),
         agent_name: request.agent_name.clone(),
         model: request.model.clone(),
