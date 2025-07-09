@@ -114,7 +114,7 @@ spec:
       # GitHub credentials
       githubAPICredentialsFrom:
         secretRef:
-          name: arc-github-token
+          name: controller-manager
 
       # Security context
       securityContext:
