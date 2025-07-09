@@ -164,9 +164,9 @@ RUN rm -rf /tmp/warmup-project
 # Switch back to root for final setup
 USER root
 
-# Create cache directories
-RUN mkdir -p /cache/{cargo,rustup,sccache} && \
-    chown -R runner:runner /cache
+# Create sccache directory
+RUN mkdir -p /home/runner/.cache/sccache && \
+    chown -R runner:runner /home/runner/.cache
 
 # Set up default Cargo config with optimizations
 RUN mkdir -p /home/runner/.cargo && cat > /home/runner/.cargo/config.toml << 'EOF'
@@ -201,11 +201,11 @@ EOF
 # Set ownership
 RUN chown -R runner:runner /home/runner
 
-# Environment variables
-ENV CARGO_HOME="/cache/cargo"
-ENV RUSTUP_HOME="/cache/rustup"
-ENV SCCACHE_DIR="/cache/sccache"
-ENV SCCACHE_CACHE_SIZE="20G"
+# Environment variables (use pre-warmed locations, not /cache PVCs)
+ENV CARGO_HOME="/home/runner/.cargo"
+ENV RUSTUP_HOME="/home/runner/.rustup"
+ENV SCCACHE_DIR="/home/runner/.cache/sccache"
+ENV SCCACHE_CACHE_SIZE="2G"
 ENV RUSTC_WRAPPER="sccache"
 
 # Health check
