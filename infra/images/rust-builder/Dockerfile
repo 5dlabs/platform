@@ -40,7 +40,9 @@ RUN --mount=type=cache,target=/tmp/downloads \
     wget -qO mold.tar.gz https://github.com/rui314/mold/releases/download/v2.4.0/mold-2.4.0-x86_64-linux.tar.gz && \
     tar xz -f mold.tar.gz && \
     cp mold-2.4.0-x86_64-linux/bin/mold /usr/local/bin/ && \
-    chmod +x /usr/local/bin/mold
+    chmod +x /usr/local/bin/mold && \
+    # Create symlink so clang can find mold
+    ln -sf /usr/local/bin/mold /usr/bin/mold
 
 # Install kubectl (with caching)
 RUN --mount=type=cache,target=/tmp/downloads \
@@ -173,7 +175,7 @@ jobs = 16  # Use all cores
 [target.x86_64-unknown-linux-gnu]
 linker = "clang"
 rustflags = [
-    "-C", "link-arg=-fuse-ld=mold",
+    "-C", "link-arg=-fuse-ld=/usr/local/bin/mold",
     "-C", "link-arg=-Wl,--threads=16",  # Parallel linking with mold
     "-C", "target-cpu=x86-64-v2",  # Modern baseline CPU
 ]
