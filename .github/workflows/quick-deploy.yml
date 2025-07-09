@@ -38,36 +38,14 @@ jobs:
   build-orchestrator:
     needs: [version]
     runs-on: [self-hosted, k8s-runner]
+    container:
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:latest
+      options: --user 1001:1001
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
-
-      - name: Initialize Rust toolchain
-        run: |
-          echo "🦀 Initializing Rust toolchain..."
-
-          # Set up rustup and install stable toolchain
-          if command -v rustup >/dev/null 2>&1; then
-            echo "✅ rustup found, setting up default toolchain..."
-            rustup default stable || rustup install stable
-            rustup component add clippy rustfmt || true
-          else
-            echo "⚠️ rustup not found, attempting to install..."
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-            source $HOME/.cargo/env
-            rustup default stable
-          fi
-
-          # Verify installation
-          echo "🔍 Verifying Rust installation..."
-          rustup show
-          rustc --version
-          cargo --version
-
-          # Add cargo bin to PATH for subsequent steps
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Setup optimized Rust environment
         run: |
@@ -97,20 +75,11 @@ jobs:
 
       - name: Setup sccache
         run: |
-          echo "🗄️ Configuring persistent sccache..."
-
-          # Use persistent cache if available, fallback to temp
-          if [ -d "/cache/sccache" ]; then
-            export SCCACHE_DIR="/cache/sccache"
-            echo "✅ Using persistent sccache at /cache/sccache"
-          else
-            export SCCACHE_DIR="$HOME/.cache/sccache"
-            mkdir -p "$SCCACHE_DIR"
-            echo "⚠️ Using temporary sccache at $HOME/.cache/sccache"
-          fi
-
+          echo "🗄️ Checking sccache..."
+          
+          # The container already has sccache configured
           export SCCACHE_CACHE_SIZE="8G"
-
+          
           # Start sccache server
           sccache --start-server || true
           echo "📊 Current sccache stats:"

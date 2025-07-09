@@ -82,3 +82,19 @@ jobs:
           echo "- **Registry Cache**: Fallback cache stored in container registry" >> $GITHUB_STEP_SUMMARY
           echo "- **Cache Scopes**: \`rust-builder\` (global), \`rust-builder-${{ github.ref_name }}\` (branch)" >> $GITHUB_STEP_SUMMARY
           echo "- **Built Image**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+  
+  # Update self-hosted runners with new image
+  update-runners:
+    needs: build-and-push
+    runs-on: [self-hosted, k8s-runner]
+    steps:
+      - name: Pull latest rust-builder image
+        run: |
+          echo "🔄 Updating runner with latest rust-builder image..."
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest || true
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }} || true
+          
+          echo "📦 Image updated on runner"
+          echo "🏷️ Tags pulled:"
+          echo "  - ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          echo "  - ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
