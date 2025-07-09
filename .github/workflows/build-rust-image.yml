@@ -47,8 +47,9 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            # For main branch, tag as 'main' and 'latest'
-            type=raw,value=latest,enable={{is_default_branch}}
+            # Always tag as 'latest' for any push (branch or tag)
+            type=raw,value=latest
+            # For main branch, also tag as 'main'
             type=raw,value=main,enable={{is_default_branch}}
             # For feature branches, use branch name
             type=ref,event=branch

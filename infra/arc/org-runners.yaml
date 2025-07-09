@@ -1,0 +1,117 @@
+---
+# Organization-level GitHub runners for 5dlabs
+# Single consolidated configuration with rust-builder image and persistent storage
+# This replaces all other runner configurations
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: arc-systems
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: privileged
+    pod-security.kubernetes.io/audit: privileged
+
+---
+# GitHub token secret - MUST BE CREATED MANUALLY
+# kubectl create secret generic arc-github-token -n arc-systems --from-literal=github-token=YOUR_PAT_TOKEN
+# The PAT needs: admin:org, repo, workflow
+
+---
+# TODO: Add persistent storage when cluster supports ReadWriteMany volumes
+# Currently using emptyDir volumes which are ephemeral
+
+---
+# Organization-level runners
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: org-runners
+  namespace: arc-systems
+spec:
+  replicas: 4  # Adjust based on workload
+
+  template:
+    spec:
+      # Organization-level runners for all repos under 5dlabs
+      organization: 5dlabs
+      
+      # Runner labels
+      labels:
+        - self-hosted
+        - linux
+        - x64
+        - k8s-runner
+        - rust-builder
+        - org-runner
+
+      # Use the rust-builder image with pre-installed tools
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:latest
+      imagePullPolicy: Always
+      
+      # Image pull secret for ghcr.io
+      imagePullSecrets:
+        - name: ghcr-secret
+
+      # Resources
+      resources:
+        limits:
+          cpu: "4"
+          memory: "8Gi"
+        requests:
+          cpu: "2"
+          memory: "4Gi"
+
+      # Enable Docker-in-Docker
+      dockerEnabled: true
+      dockerdWithinRunnerContainer: true
+
+      # Environment variables
+      env:
+        - name: RUNNER_FEATURE_FLAG_EPHEMERAL
+          value: "true"
+        - name: PATH
+          value: "/home/runner/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        - name: CARGO_HOME
+          value: "/home/runner/.cargo"
+        - name: RUSTUP_HOME
+          value: "/home/runner/.rustup"
+        - name: SCCACHE_DIR
+          value: "/cache/sccache"
+        - name: SCCACHE_CACHE_SIZE
+          value: "40G"
+        - name: RUSTC_WRAPPER
+          value: "sccache"
+
+      # Volume mounts - using emptyDir for now
+      # TODO: Add persistent storage when available
+      volumeMounts:
+        - name: sccache-cache
+          mountPath: /cache/sccache
+        - name: cargo-target-cache
+          mountPath: /cache/target
+
+      # Volumes - using emptyDir for now
+      volumes:
+        - name: sccache-cache
+          emptyDir: {}
+        - name: cargo-target-cache
+          emptyDir: {}
+
+      # GitHub credentials
+      githubAPICredentialsFrom:
+        secretRef:
+          name: arc-github-token
+
+      # Security context
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+
+---
+# Image pull secret for ghcr.io (if needed)
+# kubectl create secret docker-registry ghcr-secret -n arc-systems \
+#   --docker-server=ghcr.io \
+#   --docker-username=YOUR_GITHUB_USERNAME \
+#   --docker-password=YOUR_GITHUB_TOKEN
