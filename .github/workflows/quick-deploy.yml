@@ -44,6 +44,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Initialize Rust toolchain
+        run: |
+          echo "🦀 Initializing Rust toolchain..."
+
+          # Set up rustup and install stable toolchain
+          if command -v rustup >/dev/null 2>&1; then
+            echo "✅ rustup found, setting up default toolchain..."
+            rustup default stable || rustup install stable
+            rustup component add clippy rustfmt || true
+          else
+            echo "⚠️ rustup not found, attempting to install..."
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+            source $HOME/.cargo/env
+            rustup default stable
+          fi
+
+          # Verify installation
+          echo "🔍 Verifying Rust installation..."
+          rustup show
+          rustc --version
+          cargo --version
+
+          # Add cargo bin to PATH for subsequent steps
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
       - name: Setup optimized Rust environment
         run: |
           echo "🚀 Setting up ULTRA-OPTIMIZED Rust build environment..."
