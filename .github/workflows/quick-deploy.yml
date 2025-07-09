@@ -116,21 +116,21 @@ jobs:
           echo "📊 Current sccache stats:"
           sccache --show-stats
 
-      - name: Setup cargo cache
+      - name: Verify pre-warmed dependencies
         run: |
-          echo "📦 Configuring cargo cache..."
+          echo "🗂️ Checking pre-warmed dependency cache..."
 
-          # Use persistent cargo cache if available
-          if [ -d "/cache/cargo" ]; then
-            export CARGO_HOME="/cache/cargo"
-            echo "✅ Using persistent cargo cache at /cache/cargo"
+          # Check if dependencies are pre-warmed in the image
+          if [ -d "$CARGO_HOME/registry" ] && [ "$(ls -A $CARGO_HOME/registry 2>/dev/null)" ]; then
+            echo "✅ Pre-warmed dependencies found in image"
+            echo "Registry cache size: $(du -sh $CARGO_HOME/registry 2>/dev/null || echo '0B')"
+            echo "Git cache size: $(du -sh $CARGO_HOME/git 2>/dev/null || echo '0B')"
+            echo "📦 Sample pre-warmed packages:"
+            find $CARGO_HOME/registry -name "*.crate" 2>/dev/null | head -5 | xargs -I {} basename {} .crate || echo "Unable to list packages"
           else
-            echo "⚠️ Using default cargo cache"
-          fi
-
-          # Show cache status
-          if [ -d "$CARGO_HOME" ]; then
-            echo "Cargo cache size: $(du -sh $CARGO_HOME 2>/dev/null || echo 'Empty')"
+            echo "⚠️ No pre-warmed dependencies found - will download at build time"
+            echo "CARGO_HOME contents:"
+            ls -la $CARGO_HOME/ 2>/dev/null || echo "CARGO_HOME not found"
           fi
 
       - name: Build release binary (ultra-fast)
@@ -138,38 +138,23 @@ jobs:
         env:
           CARGO_INCREMENTAL: "0"
           RUSTC_WRAPPER: "sccache"
-          # Use persistent cache if available
-          SCCACHE_DIR: "/cache/sccache"
+          # sccache will use default locations
           SCCACHE_CACHE_SIZE: "8G"
-          CARGO_HOME: "/cache/cargo"
           # Optimize for build speed
           CARGO_NET_GIT_FETCH_WITH_CLI: "true"
           CARGO_REGISTRIES_CRATES_IO_PROTOCOL: "sparse"
-          # Use all available cores (default behavior)
           # Memory and performance optimizations
           RUSTFLAGS: "-C target-cpu=native -C opt-level=3 -C codegen-units=1"
         run: |
-          echo "🏗️ Building orchestrator binary with MAXIMUM OPTIMIZATION..."
-
-          # Ensure cache directories exist (fallback to temp if persistent not available)
-          if [ ! -d "/cache/sccache" ]; then
-            export SCCACHE_DIR="$HOME/.cache/sccache"
-            mkdir -p "$SCCACHE_DIR"
-            echo "⚠️ Using temporary sccache"
-          fi
-
-          if [ ! -d "/cache/cargo" ]; then
-            export CARGO_HOME="$HOME/.cargo"
-            echo "⚠️ Using default cargo home"
-          fi
+          echo "🏗️ Building orchestrator binary with pre-warmed dependencies..."
 
           # Show build environment
           echo "Build environment:"
           echo "Available cores: $(nproc)"
           echo "RUSTFLAGS: $RUSTFLAGS"
           echo "RUSTC_WRAPPER: $RUSTC_WRAPPER"
-          echo "SCCACHE_DIR: $SCCACHE_DIR"
-          echo "CARGO_HOME: $CARGO_HOME"
+          echo "CARGO_HOME: ${CARGO_HOME:-$HOME/.cargo}"
+          echo "SCCACHE_DIR: ${SCCACHE_DIR:-$HOME/.cache/sccache}"
 
           # Pre-warm sccache
           sccache --start-server || true

@@ -146,17 +146,16 @@ EOF
 # Create minimal main.rs
 RUN mkdir -p src && echo 'fn main() { println!("warmup"); }' > src/main.rs
 
-# Use cargo-chef to prepare dependencies (this creates the optimal caching layer)
-RUN --mount=type=cache,target=/tmp/cargo-registry,uid=1001,gid=1001 \
-    --mount=type=cache,target=/tmp/cargo-git,uid=1001,gid=1001 \
-    # Ensure cache links are active
-    ln -sf /tmp/cargo-registry /home/runner/.cargo/registry && \
-    ln -sf /tmp/cargo-git /home/runner/.cargo/git && \
-    # Use cargo-chef for optimal dependency caching
-    cargo chef prepare --recipe-path recipe.json && \
-    cargo chef cook --release --recipe-path recipe.json
+# Pre-warm dependencies directly to the final cache location (NO cache mounts)
+# This ensures dependencies are baked into the image layers
+ENV CARGO_HOME="/home/runner/.cargo"
+RUN ~/.cargo/bin/cargo chef prepare --recipe-path recipe.json && \
+    ~/.cargo/bin/cargo chef cook --release --recipe-path recipe.json
 
-# Clean up warmup project
+# Build the warmup project to ensure all deps are compiled and cached
+RUN ~/.cargo/bin/cargo build --release
+
+# Clean up warmup project but KEEP the cargo cache
 WORKDIR /home/runner
 RUN rm -rf /tmp/warmup-project
 
