@@ -88,14 +88,11 @@ RUN mkdir -p /home/runner/.cargo/registry /home/runner/.cargo/git && \
     chown -R runner:runner /home/runner/.cargo
 
 # Install additional Rust tools (NO cache mounts to preserve pre-warmed deps)
-RUN # Install components and tools
-    ~/.cargo/bin/rustup component add clippy rustfmt && \
+RUN ~/.cargo/bin/rustup component add clippy rustfmt && \
     ~/.cargo/bin/cargo install \
-        # Build acceleration tools
         sccache \
         cargo-chef \
         cargo-nextest \
-        # Utility tools
         cargo-audit \
         cargo-outdated \
         cargo-tree \
