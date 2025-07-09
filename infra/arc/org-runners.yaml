@@ -55,6 +55,7 @@ spec:
         - k8s-runner
         - rust-builder
         - org-runner
+        - agent-platform
 
       # Use the versioned rust-builder image
       image: ghcr.io/5dlabs/agent-platform/rust-builder:1.1.0
