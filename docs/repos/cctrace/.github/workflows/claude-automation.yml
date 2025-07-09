@@ -1,0 +1,89 @@
+name: Claude Automation
+
+on:
+  # Run on pushes to main
+  push:
+    branches: [main]
+  # Run weekly to update documentation
+  schedule:
+    - cron: '0 0 * * 0'
+  # Allow manual triggers
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Task for Claude to perform'
+        required: false
+        default: 'update-docs'
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.task == 'update-docs')
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Update Documentation with Claude
+        uses: anthropics/claude-code-base-action@beta
+        with:
+          api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Review the README.md and documentation files.
+            Update any outdated information.
+            Ensure all features are documented.
+            Add any missing examples.
+            Keep the tone consistent and professional.
+          allowed_tools: |
+            view
+            str_replace_editor
+
+  test-export:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.task == 'test-export')
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Test Export Functionality
+        uses: anthropics/claude-code-base-action@beta
+        with:
+          api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Test the export_claude_session.py script:
+            1. Check if all command line arguments work
+            2. Verify the script handles errors gracefully
+            3. Test with sample JSONL data if available
+            Report any issues found.
+          allowed_tools: |
+            bash
+            view
+            str_replace_editor
+
+  code-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Review Code Changes
+        uses: anthropics/claude-code-base-action@beta
+        with:
+          api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Review the changes in this pull request:
+            1. Check for bugs or potential issues
+            2. Suggest improvements for code quality
+            3. Verify documentation is updated if needed
+            4. Check if tests should be added
+            Focus on the export_claude_session.py file and related changes.
+          allowed_tools: |
+            view
+            bash
