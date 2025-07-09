@@ -99,7 +99,7 @@ jobs:
           # This works because k8s-runners have kubectl access
           kubectl delete pods -n arc-systems-rust-builder \
             -l runner-deployment-name=org-runners-rust-builder \
-            --force --grace-period=30 || echo "No rust-builder pods found yet"
+            --grace-period=30 || echo "No rust-builder pods found yet"
           
           echo "✅ Runners will restart with latest rust-builder image"
           echo "Note: It may take 1-2 minutes for all runners to be ready"
