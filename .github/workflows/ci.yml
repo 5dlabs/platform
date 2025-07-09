@@ -92,6 +92,14 @@ jobs:
           workspaces: orchestrator -> target
           # Share cache between jobs
           shared-key: "rust-cache-agent-platform"
+      - name: Setup sccache
+        run: |
+          # Start sccache server (may already be running from runner setup)
+          sccache --start-server || echo "sccache server already running or failed to start"
+
+          echo "📊 Initial sccache stats:"
+          sccache --show-stats
+
       - name: Check formatting
         id: format-check
         working-directory: ./orchestrator
@@ -115,7 +123,12 @@ jobs:
       - name: Run Clippy
         if: env.FORMATTING_FAILED == 'false' || github.event_name == 'push'
         working-directory: ./orchestrator
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: |
+          echo "🔍 Running Clippy with optimized caching..."
+          cargo clippy --all-targets --all-features -- -D warnings
+
+          echo "📊 Final sccache stats:"
+          sccache --show-stats
 
   # Auto-format job that runs when formatting fails
   auto-format:
@@ -135,6 +148,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
+
+      - name: Setup sccache
+        run: |
+          # Start sccache server (may already be running from runner setup)
+          sccache --start-server || echo "sccache server already running or failed to start"
 
       - name: Auto-format Rust code
         working-directory: ./orchestrator
@@ -212,6 +230,14 @@ jobs:
           workspaces: orchestrator -> target
           shared-key: "rust-cache-agent-platform"
 
+      - name: Setup sccache
+        run: |
+          # Start sccache server (may already be running from runner setup)
+          sccache --start-server || echo "sccache server already running or failed to start"
+
+          echo "📊 Initial sccache stats:"
+          sccache --show-stats
+
       - name: Verify formatting is now correct
         working-directory: ./orchestrator
         run: |
@@ -220,7 +246,12 @@ jobs:
 
       - name: Run Clippy
         working-directory: ./orchestrator
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: |
+          echo "🔍 Running Clippy after auto-format..."
+          cargo clippy --all-targets --all-features -- -D warnings
+
+          echo "📊 Final sccache stats:"
+          sccache --show-stats
 
   test-rust:
     needs: changes
@@ -235,12 +266,22 @@ jobs:
           workspaces: orchestrator -> target
           # Share cache between jobs
           shared-key: "rust-cache-agent-platform"
+      - name: Setup sccache
+        run: |
+          # Start sccache server (may already be running from runner setup)
+          sccache --start-server || echo "sccache server already running or failed to start"
+
+          echo "📊 Initial sccache stats:"
+          sccache --show-stats
+
       - name: Run tests
         working-directory: ./orchestrator
-        env:
-          CARGO_TARGET_DIR: "/cache/target/orchestrator"
-          RUSTC_WRAPPER: "sccache"
-        run: cargo test --all-features --all-targets
+        run: |
+          echo "🧪 Running tests with optimized caching..."
+          cargo test --all-features --all-targets
+
+          echo "📊 Final sccache stats:"
+          sccache --show-stats
 
   # Integration tests
   integration-tests:
@@ -399,12 +440,23 @@ jobs:
         if: steps.cargo-llvm-cov-cache.outputs.cache-hit != 'true'
         run: cargo install cargo-llvm-cov --version 0.6.8
 
+      - name: Setup sccache
+        run: |
+          # Start sccache server (may already be running from runner setup)
+          sccache --start-server || echo "sccache server already running or failed to start"
+
+          echo "📊 Initial sccache stats:"
+          sccache --show-stats
+
       - name: Generate test coverage
         working-directory: ./orchestrator
         run: |
           echo "📊 Generating test coverage report..."
           cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info || true
           cargo llvm-cov --all-features --workspace --html --output-dir coverage-html || true
+
+          echo "📊 Final sccache stats:"
+          sccache --show-stats
 
           # Generate summary
           echo "## Test Coverage Summary" > coverage-summary.md
@@ -513,26 +565,66 @@ jobs:
   build-orchestrator:
     needs: [version, lint-rust, test-rust, integration-tests, lint-rust-retry]
     if: always() && !cancelled() && (needs.changes.outputs.orchestrator == 'true' || github.event_name == 'push')
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, k8s-runner, rust-builder, agent-platform]
     permissions:
       contents: read
       packages: write
+    env:
+      # Optimized build environment
+      CARGO_INCREMENTAL: 0
+      RUSTC_WRAPPER: sccache
+      SCCACHE_CACHE_SIZE: 50G
+      SCCACHE_IDLE_TIMEOUT: 0
+      CARGO_NET_GIT_FETCH_WITH_CLI: true
+      CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: orchestrator -> target
-          # Share cache with other jobs and cache release artifacts
-          shared-key: "rust-cache"
-          cache-targets: true
+      - name: Setup optimized Rust environment
+        run: |
+          echo "🏗️ Building orchestrator binary with pre-warmed dependencies..."
+          echo "Build environment:"
+          echo "Available cores: $(nproc)"
+          echo "RUSTFLAGS: $RUSTFLAGS"
+          echo "RUSTC_WRAPPER: $RUSTC_WRAPPER"
+          echo "CARGO_HOME: $CARGO_HOME"
+          echo "SCCACHE_DIR: $SCCACHE_DIR"
 
-      - name: Build release binary
+      - name: Setup sccache
+        run: |
+          # Start sccache server (may already be running from runner setup)
+          sccache --start-server || echo "sccache server already running or failed to start"
+
+          echo "📊 Initial sccache stats:"
+          sccache --show-stats
+
+      - name: Verify pre-warmed dependencies
         working-directory: ./orchestrator
         run: |
+          echo "🔍 Verifying pre-warmed dependencies..."
+          echo "Cargo cache contents:"
+          ls -la $CARGO_HOME/registry/cache/ | head -10 || echo "No cache found"
+          echo ""
+          echo "Target cache contents:"
+          ls -la /cache/target/ | head -10 || echo "No target cache found"
+
+      - name: Build release binary (ultra-fast)
+        working-directory: ./orchestrator
+        run: |
+          echo "⏱️ Starting build..."
           cargo build --release --package orchestrator-core
-          cp target/release/orchestrator-core orchestrator
+
+          # Show final sccache stats
+          echo "📊 Final sccache stats:"
+          sccache --show-stats
+
+          # Copy binary from cache target dir (where CARGO_TARGET_DIR points)
+          cp /cache/target/release/orchestrator-core orchestrator
+
+          # Show binary info
+          echo "📦 Built binary info:"
+          ls -lh orchestrator
+          file orchestrator
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
