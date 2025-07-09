@@ -37,8 +37,10 @@ jobs:
   # Build only orchestrator (skip Claude Code for now)
   build-orchestrator:
     needs: [version]
-    runs-on: [self-hosted, k8s-runner, rust-builder]
-    # No container needed - the runner itself IS the rust-builder image!
+    runs-on: [self-hosted, k8s-runner]
+    # TODO: Add rust-builder label once Arc runners are deployed
+    container:
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:latest
     permissions:
       contents: read
       packages: write
