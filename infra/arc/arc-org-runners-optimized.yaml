@@ -192,7 +192,7 @@ spec:
           memory: "4Gi"
 
       # Pre-staged image with Rust toolchain and tools
-      image: ghcr.io/5dlabs/agent-platform/rust-builder:feature-example-project-and-cli-52f7227
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:feature-example-project-and-cli
       dockerEnabled: true
       dockerdWithinRunnerContainer: true
 
@@ -229,7 +229,7 @@ spec:
       # Init container for setup
       initContainers:
         - name: setup-build-env
-          image: ghcr.io/5dlabs/agent-platform/rust-builder:feature-example-project-and-cli-52f7227
+          image: ghcr.io/5dlabs/agent-platform/rust-builder:feature-example-project-and-cli
           command: ["/bin/bash", "-c"]
           args:
             - |

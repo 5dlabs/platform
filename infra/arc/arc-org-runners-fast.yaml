@@ -78,7 +78,7 @@ spec:
           memory: "2Gi"
 
       # Use our optimized Rust builder image with pre-installed tools
-      image: ghcr.io/5dlabs/agent-platform/rust-builder:latest
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:feature-example-project-and-cli
       dockerEnabled: true
       dockerdWithinRunnerContainer: true
 

@@ -106,7 +106,7 @@ spec:
           memory: "2Gi"
 
       # Docker-in-Docker image with Rust pre-warmed
-      image: ghcr.io/5dlabs/agent-platform/rust-builder:feature-example-project-and-cli-75991d8
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:feature-example-project-and-cli
       dockerEnabled: true
       dockerdWithinRunnerContainer: true
 
