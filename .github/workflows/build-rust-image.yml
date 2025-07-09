@@ -54,8 +54,8 @@ jobs:
             type=ref,event=branch
             # For PRs
             type=ref,event=pr
-            # Include SHA for traceability
-            type=sha,prefix={{branch}}-,format=short
+            # Include SHA for traceability (only for branch builds, not tags)
+            type=sha,prefix={{branch}}-,format=short,enable=${{ github.ref_type != 'tag' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
