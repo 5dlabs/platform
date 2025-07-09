@@ -49,10 +49,15 @@ jobs:
       - name: Setup optimized Rust environment
         run: |
           echo "🚀 Setting up ULTRA-OPTIMIZED Rust build environment..."
-          
+
           # Add cargo bin to PATH for this step and all subsequent steps
           echo "/home/runner/.cargo/bin" >> $GITHUB_PATH
           export PATH="/home/runner/.cargo/bin:$PATH"
+
+          # Set up Rust toolchain (required for rust-builder image)
+          echo "🦀 Setting up Rust toolchain..."
+          rustup default stable
+          rustup update stable
 
           # Custom image already has most tools pre-installed, just verify
           echo "🔍 Verifying pre-installed tools..."
@@ -79,21 +84,21 @@ jobs:
       - name: Setup sccache
         run: |
           echo "🗄️ Setting up sccache for ULTRA-FAST builds..."
-          
+
           # Ensure cargo bin is in PATH
           export PATH="/home/runner/.cargo/bin:$PATH"
-          
+
           # Configure sccache
           export SCCACHE_CACHE_SIZE="50G"
           export SCCACHE_IDLE_TIMEOUT="0"
-          
+
           # Ensure sccache is running
           sccache --stop-server 2>/dev/null || true
           sccache --start-server
-          
+
           echo "📊 Initial sccache stats:"
           sccache --show-stats
-          
+
           # Verify mold is available
           echo "🔗 Verifying mold linker:"
           mold --version
