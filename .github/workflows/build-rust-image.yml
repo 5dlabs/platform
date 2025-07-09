@@ -95,17 +95,17 @@ jobs:
         run: |
           echo "🔄 Rolling restart of Arc runners to use new rust-builder image..."
           
-          # Update the runnerdeployment to use the latest image
-          LATEST_TAG="${{ github.ref_name }}-$(echo '${{ github.sha }}' | cut -c1-7)"
-          echo "📦 Updating to image tag: $LATEST_TAG"
-          
-          kubectl patch runnerdeployment agent-platform-runner-deployment -n arc-systems \
-            --type='json' -p='[{"op": "replace", "path": "/spec/template/spec/image", "value": "ghcr.io/5dlabs/agent-platform/rust-builder:'$LATEST_TAG'"}]'
+          # Note: The runnerdeployment should use imagePullPolicy: Always
+          # and the 'latest' tag to automatically get new images
           
           # Delete pods to force recreation with new image
           kubectl delete pods -n arc-systems \
             -l runner-deployment-name=agent-platform-runner-deployment \
             --grace-period=30 || echo "No runner pods found"
           
-          echo "✅ Runners will restart with latest rust-builder image"
+          echo "✅ Runners will restart and pull the latest rust-builder image"
           echo "Note: It may take 1-2 minutes for all runners to be ready"
+          echo ""
+          echo "⚠️  Make sure the runnerdeployment uses:"
+          echo "   - imagePullPolicy: Always"
+          echo "   - A tag that gets updated (e.g., 'latest' or branch tag)"
