@@ -145,8 +145,7 @@ jobs:
           # Optimize for build speed
           CARGO_NET_GIT_FETCH_WITH_CLI: "true"
           CARGO_REGISTRIES_CRATES_IO_PROTOCOL: "sparse"
-          # Use all available cores
-          CARGO_BUILD_JOBS: "0"
+          # Use all available cores (default behavior)
           # Memory and performance optimizations
           RUSTFLAGS: "-C target-cpu=native -C opt-level=3 -C lto=thin -C codegen-units=1"
         run: |
@@ -166,7 +165,6 @@ jobs:
 
           # Show build environment
           echo "Build environment:"
-          echo "CARGO_BUILD_JOBS: $CARGO_BUILD_JOBS (0 = use all cores)"
           echo "Available cores: $(nproc)"
           echo "RUSTFLAGS: $RUSTFLAGS"
           echo "RUSTC_WRAPPER: $RUSTC_WRAPPER"
