@@ -156,6 +156,11 @@ jobs:
           echo "📊 Final sccache stats:"
           sccache --show-stats
 
+          # Debug: Show what's in the target directory
+          echo "🔍 Checking target directory contents:"
+          ls -la target/release/ || echo "target/release/ not found"
+          find target -name "*orchestrator*" -type f || echo "No orchestrator files found"
+
           # Copy binary from default target dir
           cp target/release/orchestrator-core orchestrator
 
