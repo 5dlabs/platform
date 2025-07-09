@@ -78,8 +78,7 @@ jobs:
   lint-rust:
     needs: changes
     if: needs.changes.outputs.orchestrator == 'true' || needs.changes.outputs.taskrun == 'true' || github.event_name == 'push'
-    runs-on: [self-hosted, k8s-runner, rust-builder]
-    # No container needed - the runner itself uses the rust-builder image with pre-warmed cache!
+    runs-on: ubuntu-22.04
     outputs:
       format-needed: ${{ steps.format-check.outputs.format-needed }}
     steps:
@@ -122,21 +121,7 @@ jobs:
   auto-format:
     needs: [changes, lint-rust]
     if: always() && needs.lint-rust.outputs.format-needed == 'true' && github.event_name == 'push'
-    runs-on: [self-hosted, k8s-runner, rust-builder, agent-platform]
-    # No container needed - the runner itself uses the rust-builder image with pre-warmed cache!
-    env:
-      # Optimized build environment
-      CARGO_INCREMENTAL: 0
-      RUSTC_WRAPPER: sccache
-      SCCACHE_CACHE_SIZE: 50G
-      SCCACHE_IDLE_TIMEOUT: 0
-      CARGO_NET_GIT_FETCH_WITH_CLI: true
-      CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
-      # PVC-based cache locations
-      CARGO_HOME: /cache/cargo
-      RUSTUP_HOME: /cache/rustup
-      SCCACHE_DIR: /cache/sccache
-      CARGO_TARGET_DIR: /cache/target
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
     steps:
@@ -146,20 +131,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Setup sccache
-        run: |
-          # Add cargo bin to PATH
-          echo "/home/runner/.cargo/bin" >> $GITHUB_PATH
-          export PATH="/home/runner/.cargo/bin:$PATH"
-
-          # Start sccache server (may already be running from runner setup)
-          sccache --start-server || echo "sccache server already running or failed to start"
-
-      - name: Setup Rust toolchain
-        run: |
-          # Set up Rust toolchain (required for rust-builder image)
-          rustup default stable
-          rustup update stable
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
 
       - name: Auto-format Rust code
         working-directory: ./orchestrator
@@ -220,44 +194,21 @@ jobs:
   lint-rust-retry:
     needs: [changes, auto-format]
     if: always() && needs.auto-format.result == 'success'
-    runs-on: [self-hosted, k8s-runner, rust-builder, agent-platform]
-    # No container needed - the runner itself uses the rust-builder image with pre-warmed cache!
-    env:
-      # Optimized build environment
-      CARGO_INCREMENTAL: 0
-      RUSTC_WRAPPER: sccache
-      SCCACHE_CACHE_SIZE: 50G
-      SCCACHE_IDLE_TIMEOUT: 0
-      CARGO_NET_GIT_FETCH_WITH_CLI: true
-      CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
-      # PVC-based cache locations
-      CARGO_HOME: /cache/cargo
-      RUSTUP_HOME: /cache/rustup
-      SCCACHE_DIR: /cache/sccache
-      CARGO_TARGET_DIR: /cache/target
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
           # Fetch the latest commit (including auto-format changes)
           ref: ${{ github.ref }}
 
-      - name: Setup sccache
-        run: |
-          # Add cargo bin to PATH
-          echo "/home/runner/.cargo/bin" >> $GITHUB_PATH
-          export PATH="/home/runner/.cargo/bin:$PATH"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
-          # Start sccache server (may already be running from runner setup)
-          sccache --start-server || echo "sccache server already running or failed to start"
-
-          echo "📊 Initial sccache stats:"
-          sccache --show-stats
-
-      - name: Setup Rust toolchain
-        run: |
-          # Set up Rust toolchain (required for rust-builder image)
-          rustup default stable
-          rustup update stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: orchestrator -> target
+          shared-key: "rust-cache-agent-platform"
 
       - name: Verify formatting is now correct
         working-directory: ./orchestrator
@@ -267,18 +218,12 @@ jobs:
 
       - name: Run Clippy
         working-directory: ./orchestrator
-        run: |
-          echo "🔍 Running Clippy after auto-format..."
-          cargo clippy --all-targets --all-features -- -D warnings
-
-          echo "📊 Final sccache stats:"
-          sccache --show-stats
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
   test-rust:
     needs: changes
     if: needs.changes.outputs.orchestrator == 'true' || needs.changes.outputs.taskrun == 'true' || github.event_name == 'push'
-    runs-on: [self-hosted, k8s-runner, rust-builder]
-    # No container needed - the runner itself uses the rust-builder image with pre-warmed cache!
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -290,9 +235,6 @@ jobs:
 
       - name: Run tests
         working-directory: ./orchestrator
-        env:
-          CARGO_TARGET_DIR: "/cache/target/orchestrator"
-          RUSTC_WRAPPER: "sccache"
         run: cargo test --all-features --all-targets
 
   # Integration tests
@@ -426,24 +368,18 @@ jobs:
   test-coverage:
     needs: changes
     if: needs.changes.outputs.orchestrator == 'true' || needs.changes.outputs.taskrun == 'true' || github.event_name == 'push'
-    runs-on: [self-hosted, k8s-runner, rust-builder, agent-platform]
-    # No container needed - the runner itself uses the rust-builder image with pre-warmed cache!
-    env:
-      # Optimized build environment
-      CARGO_INCREMENTAL: 0
-      RUSTC_WRAPPER: sccache
-      SCCACHE_CACHE_SIZE: 50G
-      SCCACHE_IDLE_TIMEOUT: 0
-      CARGO_NET_GIT_FETCH_WITH_CLI: true
-      CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
-      # PVC-based cache locations
-      CARGO_HOME: /cache/cargo
-      RUSTUP_HOME: /cache/rustup
-      SCCACHE_DIR: /cache/sccache
-      CARGO_TARGET_DIR: /cache/target
+    runs-on: ubuntu-22.04
     continue-on-error: true  # Non-blocking
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: orchestrator -> target
+          # Share cache between jobs
+          shared-key: "rust-cache-agent-platform"
 
       # Install cargo-llvm-cov for coverage
       - name: Cache cargo-llvm-cov
@@ -457,33 +393,12 @@ jobs:
         if: steps.cargo-llvm-cov-cache.outputs.cache-hit != 'true'
         run: cargo install cargo-llvm-cov --version 0.6.8
 
-      - name: Setup sccache
-        run: |
-          # Add cargo bin to PATH
-          echo "/home/runner/.cargo/bin" >> $GITHUB_PATH
-          export PATH="/home/runner/.cargo/bin:$PATH"
-
-          # Start sccache server (may already be running from runner setup)
-          sccache --start-server || echo "sccache server already running or failed to start"
-
-          echo "📊 Initial sccache stats:"
-          sccache --show-stats
-
-      - name: Setup Rust toolchain
-        run: |
-          # Set up Rust toolchain (required for rust-builder image)
-          rustup default stable
-          rustup update stable
-
       - name: Generate test coverage
         working-directory: ./orchestrator
         run: |
           echo "📊 Generating test coverage report..."
           cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info || true
           cargo llvm-cov --all-features --workspace --html --output-dir coverage-html || true
-
-          echo "📊 Final sccache stats:"
-          sccache --show-stats
 
           # Generate summary
           echo "## Test Coverage Summary" > coverage-summary.md
