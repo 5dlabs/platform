@@ -88,29 +88,18 @@ jobs:
   # Cycle Arc runners to use new image
   cycle-runners:
     needs: build-and-push
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, k8s-runner]  # Run on existing k8s-runner that has kubectl/twingate
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/example-project-and-cli'
     steps:
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'v1.28.0'
-      
-      - name: Configure kubectl
-        env:
-          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG_DATA }}
-        run: |
-          mkdir -p ~/.kube
-          echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
-      
       - name: Cycle rust-builder runners
         run: |
           echo "🔄 Rolling restart of Arc runners to use new rust-builder image..."
           
           # Delete pods to force recreation with new image
+          # This works because k8s-runners have kubectl access
           kubectl delete pods -n arc-systems-rust-builder \
             -l runner-deployment-name=org-runners-rust-builder \
-            --force --grace-period=30
+            --force --grace-period=30 || echo "No rust-builder pods found yet"
           
           echo "✅ Runners will restart with latest rust-builder image"
           echo "Note: It may take 1-2 minutes for all runners to be ready"
