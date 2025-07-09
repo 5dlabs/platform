@@ -66,13 +66,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get install -y gh && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Twingate client for Kubernetes access
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    curl -fsSL https://binaries.twingate.com/client/linux/install.sh | bash && \
-    apt-get update && \
-    apt-get install -y twingate && \
-    rm -rf /var/lib/apt/lists/*
 
 # Switch to runner user (already exists in summerwind image)
 USER runner
