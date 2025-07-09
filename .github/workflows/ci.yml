@@ -237,6 +237,9 @@ jobs:
           shared-key: "rust-cache-agent-platform"
       - name: Run tests
         working-directory: ./orchestrator
+        env:
+          CARGO_TARGET_DIR: "/cache/target/orchestrator"
+          RUSTC_WRAPPER: "sccache"
         run: cargo test --all-features --all-targets
 
   # Integration tests
