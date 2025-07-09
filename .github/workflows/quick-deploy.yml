@@ -122,8 +122,8 @@ jobs:
           RUSTC_WRAPPER: "sccache"
           SCCACHE_CACHE_SIZE: "50G"
           SCCACHE_IDLE_TIMEOUT: "0"
-          # Use shared target directory for incremental builds
-          CARGO_TARGET_DIR: "/cache/target/orchestrator"
+          # Let cargo use default target dir with pre-warmed cache
+          # CARGO_TARGET_DIR is not set - will use ./target
           # Let config.toml handle all optimizations
           CARGO_NET_GIT_FETCH_WITH_CLI: "true"
           CARGO_REGISTRIES_CRATES_IO_PROTOCOL: "sparse"
@@ -151,8 +151,8 @@ jobs:
           echo "📊 Final sccache stats:"
           sccache --show-stats
 
-          # Copy binary from our custom target dir
-          cp ${CARGO_TARGET_DIR:-target}/release/orchestrator-core orchestrator
+          # Copy binary from default target dir
+          cp target/release/orchestrator-core orchestrator
 
           # Show binary info
           echo "📦 Built binary info:"
