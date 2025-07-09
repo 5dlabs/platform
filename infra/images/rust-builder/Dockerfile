@@ -132,7 +132,7 @@ reqwest = { version = "=0.12.22", features = ["json"] }
 uuid = { version = "=1.17.0", features = ["v4"] }
 chrono = { version = "=0.4.41", features = ["serde"] }
 kube = "=0.93.1"
-k8s-openapi = "=0.22.0"
+k8s-openapi = { version = "=0.22.0", features = ["v1_30"] }
 handlebars = "=6.3.2"
 opentelemetry = "=0.30.0"
 opentelemetry_sdk = "=0.30.0"
