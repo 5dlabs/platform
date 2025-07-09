@@ -30,7 +30,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     ca-certificates \
     gnupg \
     software-properties-common \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/bin/clang-15 /usr/bin/clang \
+    && ln -sf /usr/bin/clang++-15 /usr/bin/clang++
 
 # Install mold linker (fastest linker for Rust) - UPDATED VERSION
 RUN --mount=type=cache,target=/tmp/downloads \
@@ -172,7 +174,7 @@ RUN mkdir -p /home/runner/.cargo && cat > /home/runner/.cargo/config.toml << 'EO
 rustc-wrapper = "sccache"
 
 [target.x86_64-unknown-linux-gnu]
-linker = "clang-15"
+linker = "clang"
 rustflags = ["-C", "link-arg=-fuse-ld=mold"]
 
 [profile.dev]
