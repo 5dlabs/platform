@@ -158,11 +158,14 @@ jobs:
 
           # Debug: Show what's in the target directory
           echo "🔍 Checking target directory contents:"
+          echo "CARGO_TARGET_DIR is: ${CARGO_TARGET_DIR:-not set}"
           ls -la target/release/ || echo "target/release/ not found"
-          find target -name "*orchestrator*" -type f || echo "No orchestrator files found"
+          ls -la /cache/target/release/ || echo "/cache/target/release/ not found"
+          find target -name "*orchestrator*" -type f 2>/dev/null || echo "No orchestrator files found in target/"
+          find /cache/target -name "*orchestrator*" -type f 2>/dev/null || echo "No orchestrator files found in /cache/target/"
 
-          # Copy binary from default target dir
-          cp target/release/orchestrator-core orchestrator
+          # Copy binary from cache target dir (where CARGO_TARGET_DIR points)
+          cp /cache/target/release/orchestrator-core orchestrator
 
           # Show binary info
           echo "📦 Built binary info:"
