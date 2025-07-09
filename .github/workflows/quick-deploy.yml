@@ -148,9 +148,9 @@ jobs:
           echo "📊 Initial sccache stats:"
           sccache --show-stats
 
-          # Time the build with detailed output
-          echo "⏱️ Starting timed build..."
-          time cargo build --release --package orchestrator-core
+                    # Build with detailed output
+          echo "⏱️ Starting build..."
+          cargo build --release --package orchestrator-core
 
           # Show final sccache stats
           echo "📊 Final sccache stats:"
