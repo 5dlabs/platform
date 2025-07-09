@@ -84,3 +84,33 @@ jobs:
           echo "- **Built Image**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "The pre-warmed dependencies are now baked into the image and will be used by CI/CD workflows." >> $GITHUB_STEP_SUMMARY
+
+  # Cycle Arc runners to use new image
+  cycle-runners:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/example-project-and-cli'
+    steps:
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+      
+      - name: Configure kubectl
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG_DATA }}
+        run: |
+          mkdir -p ~/.kube
+          echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+      
+      - name: Cycle rust-builder runners
+        run: |
+          echo "🔄 Rolling restart of Arc runners to use new rust-builder image..."
+          
+          # Delete pods to force recreation with new image
+          kubectl delete pods -n arc-systems-rust-builder \
+            -l runner-deployment-name=org-runners-rust-builder \
+            --force --grace-period=30
+          
+          echo "✅ Runners will restart with latest rust-builder image"
+          echo "Note: It may take 1-2 minutes for all runners to be ready"

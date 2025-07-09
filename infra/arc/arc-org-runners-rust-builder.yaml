@@ -94,6 +94,7 @@ spec:
 
       # Use our pre-warmed rust-builder image
       image: ghcr.io/5dlabs/agent-platform/rust-builder:latest
+      imagePullPolicy: Always  # Always pull latest
       dockerEnabled: true
       dockerdWithinRunnerContainer: true
 
