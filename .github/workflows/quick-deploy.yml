@@ -147,7 +147,7 @@ jobs:
           CARGO_REGISTRIES_CRATES_IO_PROTOCOL: "sparse"
           # Use all available cores (default behavior)
           # Memory and performance optimizations
-          RUSTFLAGS: "-C target-cpu=native -C opt-level=3 -C lto=thin -C codegen-units=1"
+          RUSTFLAGS: "-C target-cpu=native -C opt-level=3 -C codegen-units=1"
         run: |
           echo "🏗️ Building orchestrator binary with MAXIMUM OPTIMIZATION..."
 
