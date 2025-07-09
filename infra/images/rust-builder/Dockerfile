@@ -41,8 +41,10 @@ RUN --mount=type=cache,target=/tmp/downloads \
     tar xz -f mold.tar.gz && \
     cp mold-2.4.0-x86_64-linux/bin/mold /usr/local/bin/ && \
     chmod +x /usr/local/bin/mold && \
-    # Create symlink so clang can find mold
-    ln -sf /usr/local/bin/mold /usr/bin/mold
+    # Create wrapper script for clang to use mold
+    echo '#!/bin/sh' > /usr/local/bin/clang-mold && \
+    echo 'exec clang -fuse-ld=/usr/local/bin/mold "$@"' >> /usr/local/bin/clang-mold && \
+    chmod +x /usr/local/bin/clang-mold
 
 # Install kubectl (with caching)
 RUN --mount=type=cache,target=/tmp/downloads \
@@ -85,13 +87,8 @@ ENV PATH="/home/runner/.cargo/bin:${PATH}"
 RUN mkdir -p /home/runner/.cargo/registry /home/runner/.cargo/git && \
     chown -R runner:runner /home/runner/.cargo
 
-# Install additional Rust tools (with cargo cache)
-RUN --mount=type=cache,target=/tmp/cargo-registry,uid=1001,gid=1001 \
-    --mount=type=cache,target=/tmp/cargo-git,uid=1001,gid=1001 \
-    # Link cache directories
-    ln -sf /tmp/cargo-registry /home/runner/.cargo/registry && \
-    ln -sf /tmp/cargo-git /home/runner/.cargo/git && \
-    # Install components and tools
+# Install additional Rust tools (NO cache mounts to preserve pre-warmed deps)
+RUN # Install components and tools
     ~/.cargo/bin/rustup component add clippy rustfmt && \
     ~/.cargo/bin/cargo install \
         # Build acceleration tools
@@ -173,9 +170,9 @@ rustc-wrapper = "sccache"
 jobs = 16  # Use all cores
 
 [target.x86_64-unknown-linux-gnu]
-linker = "clang"
+# Use a wrapper script that calls clang with mold
+linker = "/usr/local/bin/clang-mold"
 rustflags = [
-    "-C", "link-arg=-fuse-ld=/usr/local/bin/mold",
     "-C", "link-arg=-Wl,--threads=16",  # Parallel linking with mold
     "-C", "target-cpu=x86-64-v2",  # Modern baseline CPU
 ]
