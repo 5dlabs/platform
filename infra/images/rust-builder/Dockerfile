@@ -108,7 +108,7 @@ RUN --mount=type=cache,target=/tmp/cargo-registry,uid=1001,gid=1001 \
 RUN mkdir -p /tmp/warmup-project
 WORKDIR /tmp/warmup-project
 
-# Create Cargo.toml with common dependencies
+# Create Cargo.toml with EXACT versions from orchestrator Cargo.lock
 RUN cat > Cargo.toml << 'EOF'
 [package]
 name = "warmup"
@@ -116,33 +116,28 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# Web frameworks
-axum = "0.8"
-tokio = { version = "1.40", features = ["full"] }
-tower = "0.5"
-tower-http = "0.6"
-
-# Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
-# Error handling
-anyhow = "1.0"
-thiserror = "1.0"
-
-# Logging
-tracing = "0.1"
-tracing-subscriber = "0.3"
-
-# Database (common ones)
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
-
-# HTTP client
-reqwest = { version = "0.12", features = ["json"] }
-
-# Utilities
-uuid = { version = "1.0", features = ["v4"] }
-chrono = { version = "0.4", features = ["serde"] }
+# EXACT versions from orchestrator/Cargo.lock to ensure cache hits
+tokio = { version = "=1.45.1", features = ["full"] }
+axum = "=0.8.4"
+tower = "=0.5.2"
+tower-http = "=0.6.6"
+hyper = "=1.6.0"
+serde = { version = "=1.0.219", features = ["derive"] }
+serde_json = "=1.0.140"
+anyhow = "=1.0.98"
+thiserror = "=2.0.12"
+tracing = "=0.1.41"
+tracing-subscriber = "=0.3.19"
+reqwest = { version = "=0.12.22", features = ["json"] }
+uuid = { version = "=1.17.0", features = ["v4"] }
+chrono = { version = "=0.4.41", features = ["serde"] }
+kube = "=0.93.1"
+k8s-openapi = "=0.22.0"
+handlebars = "=6.3.2"
+opentelemetry = "=0.30.0"
+opentelemetry_sdk = "=0.30.0"
+opentelemetry-otlp = "=0.17.0"
+tracing-opentelemetry = "=0.31.0"
 EOF
 
 # Create minimal main.rs
