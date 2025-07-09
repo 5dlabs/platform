@@ -143,8 +143,8 @@ jobs:
           # Optimize for build speed
           CARGO_NET_GIT_FETCH_WITH_CLI: "true"
           CARGO_REGISTRIES_CRATES_IO_PROTOCOL: "sparse"
-          # Memory and performance optimizations
-          RUSTFLAGS: "-C target-cpu=native -C opt-level=3 -C codegen-units=1"
+          # Memory and performance optimizations (removed target-cpu=native for compatibility)
+          RUSTFLAGS: "-C opt-level=3 -C codegen-units=1"
         run: |
           echo "🏗️ Building orchestrator binary with pre-warmed dependencies..."
 
