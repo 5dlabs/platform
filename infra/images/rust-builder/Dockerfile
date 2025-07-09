@@ -163,19 +163,38 @@ USER root
 RUN mkdir -p /home/runner/.cache/sccache && \
     chown -R runner:runner /home/runner/.cache
 
-# Set up default Cargo config with optimizations
+# Set up ULTRA-OPTIMIZED Cargo config
 RUN mkdir -p /home/runner/.cargo && cat > /home/runner/.cargo/config.toml << 'EOF'
 [build]
 rustc-wrapper = "sccache"
+jobs = 16  # Use all cores
 
 [target.x86_64-unknown-linux-gnu]
 linker = "clang"
-rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+rustflags = [
+    "-C", "link-arg=-fuse-ld=mold",
+    "-C", "link-arg=-Wl,--threads=16",  # Parallel linking with mold
+    "-C", "target-cpu=x86-64-v2",  # Modern baseline CPU
+]
 
+# ULTRA-FAST release profile
+[profile.release]
+codegen-units = 256  # Maximum parallelism
+lto = false  # Disable LTO for faster builds
+debug = false
+strip = true
+opt-level = 2  # Good enough, much faster than 3
+
+[profile.release.build-override]
+opt-level = 3
+codegen-units = 1
+
+# Fast dev builds too
 [profile.dev]
 debug = 0
 strip = "debuginfo"
 incremental = true
+codegen-units = 256
 
 [profile.dev.package."*"]
 opt-level = 3
@@ -188,6 +207,7 @@ protocol = "sparse"
 
 [net]
 git-fetch-with-cli = true
+jobs = 16
 
 [cargo-new]
 vcs = "none"

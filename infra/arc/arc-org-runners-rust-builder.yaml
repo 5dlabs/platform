@@ -119,10 +119,51 @@ spec:
 
       # No init containers needed - everything is pre-installed in the image!
       
-      # No volume mounts needed - the image has pre-warmed dependencies baked in!
-      # This means the dependencies are immediately available without any mounting
+      volumes:
+        - name: sccache-cache
+          persistentVolumeClaim:
+            claimName: sccache-rust-builder
+        - name: cargo-target-cache
+          persistentVolumeClaim:
+            claimName: cargo-target-rust-builder
+
+      volumeMounts:
+        # Mount sccache for compiled artifact caching
+        - name: sccache-cache
+          mountPath: /home/runner/.cache/sccache
+        # Mount target cache for incremental builds
+        - name: cargo-target-cache
+          mountPath: /cache/target
 
       securityContext:
         runAsUser: 1001
         runAsGroup: 1001
         fsGroup: 1001
+---
+# Persistent cache for sccache (compiled artifacts)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sccache-rust-builder
+  namespace: arc-systems-rust-builder
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: local-path
+---
+# Persistent cache for cargo target directory
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cargo-target-rust-builder
+  namespace: arc-systems-rust-builder
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 30Gi
+  storageClassName: local-path

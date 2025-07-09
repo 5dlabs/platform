@@ -73,15 +73,22 @@ jobs:
 
       - name: Setup sccache
         run: |
-          echo "🗄️ Checking sccache..."
+          echo "🗄️ Setting up sccache for ULTRA-FAST builds..."
           
-          # The container already has sccache configured
-          export SCCACHE_CACHE_SIZE="8G"
+          # Configure sccache
+          export SCCACHE_CACHE_SIZE="50G"
+          export SCCACHE_IDLE_TIMEOUT="0"
           
-          # Start sccache server
-          sccache --start-server || true
-          echo "📊 Current sccache stats:"
+          # Ensure sccache is running
+          sccache --stop-server 2>/dev/null || true
+          sccache --start-server
+          
+          echo "📊 Initial sccache stats:"
           sccache --show-stats
+          
+          # Verify mold is available
+          echo "🔗 Verifying mold linker:"
+          mold --version
 
       - name: Verify pre-warmed dependencies
         run: |
@@ -103,15 +110,15 @@ jobs:
       - name: Build release binary (ultra-fast)
         working-directory: ./orchestrator
         env:
-          CARGO_INCREMENTAL: "0"
+          CARGO_INCREMENTAL: "0"  # Disable for better sccache hits
           RUSTC_WRAPPER: "sccache"
-          # sccache will use default locations
-          SCCACHE_CACHE_SIZE: "8G"
-          # Optimize for build speed
+          SCCACHE_CACHE_SIZE: "50G"
+          SCCACHE_IDLE_TIMEOUT: "0"
+          # Use shared target directory for incremental builds
+          CARGO_TARGET_DIR: "/cache/target/orchestrator"
+          # Let config.toml handle all optimizations
           CARGO_NET_GIT_FETCH_WITH_CLI: "true"
           CARGO_REGISTRIES_CRATES_IO_PROTOCOL: "sparse"
-          # Memory and performance optimizations (removed target-cpu=native for compatibility)
-          RUSTFLAGS: "-C opt-level=3 -C codegen-units=1"
         run: |
           echo "🏗️ Building orchestrator binary with pre-warmed dependencies..."
 
@@ -136,8 +143,8 @@ jobs:
           echo "📊 Final sccache stats:"
           sccache --show-stats
 
-          # Copy binary
-          cp target/release/orchestrator-core orchestrator
+          # Copy binary from our custom target dir
+          cp ${CARGO_TARGET_DIR:-target}/release/orchestrator-core orchestrator
 
           # Show binary info
           echo "📦 Built binary info:"
