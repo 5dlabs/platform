@@ -40,7 +40,8 @@ jobs:
     runs-on: [self-hosted, k8s-runner]
     container:
       image: ghcr.io/5dlabs/agent-platform/rust-builder:latest
-      options: --user 1001:1001
+      # Remove --user to allow checkout to work properly
+      # The image already has the right permissions set up
     permissions:
       contents: read
       packages: write
