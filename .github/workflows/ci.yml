@@ -75,7 +75,7 @@ jobs:
           fi
 
   # Parallel linting and testing
-    lint-rust:
+  lint-rust:
     needs: changes
     if: needs.changes.outputs.orchestrator == 'true' || needs.changes.outputs.taskrun == 'true' || github.event_name == 'push'
     runs-on: [self-hosted, k8s-runner, rust-builder, agent-platform]
