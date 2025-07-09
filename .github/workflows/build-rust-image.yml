@@ -3,11 +3,16 @@ name: Build Rust Builder Image
 on:
   push:
     branches: [ 'main', 'feature/example-project-and-cli' ]
-    tags: [ 'v*' ]
+    tags: [ 'rust-builder-v*' ]
     paths:
       - 'infra/images/rust-builder/**'
       - '.github/workflows/build-rust-image.yml'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to tag the image (e.g., 1.0.3)'
+        required: false
+        type: string
 
 env:
   REGISTRY: ghcr.io
@@ -43,10 +48,12 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # For version tags (v1.0.0), create versioned image
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            # For version tags (rust-builder-v1.0.0), create versioned image
+            type=semver,pattern={{version}},prefix=rust-builder-v
+            type=semver,pattern={{major}}.{{minor}},prefix=rust-builder-v
+            type=semver,pattern={{major}},prefix=rust-builder-v
+            # For manual version from workflow_dispatch
+            type=raw,value=${{ inputs.version }},enable=${{ inputs.version != '' }}
             # Always tag as 'latest' for any push (branch or tag)
             type=raw,value=latest
             # For main branch, also tag as 'main'
