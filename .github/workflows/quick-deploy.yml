@@ -38,9 +38,7 @@ jobs:
   build-orchestrator:
     needs: [version]
     runs-on: [self-hosted, k8s-runner]
-    # TODO: Add rust-builder label once Arc runners are deployed
-    container:
-      image: ghcr.io/5dlabs/agent-platform/rust-builder:latest
+    # No container - just use the runner directly
     permissions:
       contents: read
       packages: write
