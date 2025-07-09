@@ -45,9 +45,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             # For version tags (rust-builder-v1.0.0), create versioned image
-            type=semver,pattern={{version}},prefix=rust-builder-v
-            type=semver,pattern={{major}}.{{minor}},prefix=rust-builder-v
-            type=semver,pattern={{major}},prefix=rust-builder-v
+            type=match,pattern=rust-builder-v(.*),group=1,enable=${{ startsWith(github.ref, 'refs/tags/rust-builder-v') }}
             # For manual version from workflow_dispatch
             type=raw,value=${{ inputs.version }},enable=${{ inputs.version != '' }}
             # Always tag as 'latest' for any push (branch or tag)
@@ -99,15 +97,15 @@ jobs:
       - name: Cycle rust-builder runners
         run: |
           echo "🔄 Rolling restart of Arc runners to use new rust-builder image..."
-          
+
           # Note: The runnerdeployment should use imagePullPolicy: Always
           # and the 'latest' tag to automatically get new images
-          
+
           # Delete pods to force recreation with new image
           kubectl delete pods -n arc-systems \
             -l runner-deployment-name=agent-platform-runner-deployment \
             --grace-period=30 || echo "No runner pods found"
-          
+
           echo "✅ Runners will restart and pull the latest rust-builder image"
           echo "Note: It may take 1-2 minutes for all runners to be ready"
           echo ""
