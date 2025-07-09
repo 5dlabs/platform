@@ -18,8 +18,19 @@ metadata:
 # The PAT needs: admin:org, repo, workflow
 
 ---
-# TODO: Add persistent storage when cluster supports ReadWriteMany volumes
-# Currently using emptyDir volumes which are ephemeral
+# Persistent storage for caching
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rust-cache-pvc
+  namespace: arc-systems
+spec:
+  accessModes:
+    - ReadWriteOnce  # local-path doesn't support ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi  # Adjust based on your needs
+  storageClassName: local-path  # Use the available storage class
 
 ---
 # Organization-level runners
@@ -29,13 +40,13 @@ metadata:
   name: org-runners
   namespace: arc-systems
 spec:
-  replicas: 4  # Adjust based on workload
+  replicas: 1  # Adjust based on workload
 
   template:
     spec:
       # Organization-level runners for all repos under 5dlabs
       organization: 5dlabs
-      
+
       # Runner labels
       labels:
         - self-hosted
@@ -45,10 +56,10 @@ spec:
         - rust-builder
         - org-runner
 
-      # Use the rust-builder image with pre-installed tools
-      image: ghcr.io/5dlabs/agent-platform/rust-builder:latest
+      # Use the versioned rust-builder image
+      image: ghcr.io/5dlabs/agent-platform/rust-builder:1.1.0
       imagePullPolicy: Always
-      
+
       # Image pull secret for ghcr.io
       imagePullSecrets:
         - name: ghcr-secret
@@ -62,41 +73,42 @@ spec:
           cpu: "2"
           memory: "4Gi"
 
-      # Enable Docker-in-Docker
+      # Enable Docker-in-Docker (using DinD container approach for Talos)
       dockerEnabled: true
       dockerdWithinRunnerContainer: true
 
-      # Environment variables
+      # Environment variables for PVC-based caching
       env:
         - name: RUNNER_FEATURE_FLAG_EPHEMERAL
           value: "true"
         - name: PATH
           value: "/home/runner/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        # PVC-based cache locations
         - name: CARGO_HOME
-          value: "/home/runner/.cargo"
+          value: "/cache/cargo"
         - name: RUSTUP_HOME
-          value: "/home/runner/.rustup"
+          value: "/cache/rustup"
         - name: SCCACHE_DIR
           value: "/cache/sccache"
         - name: SCCACHE_CACHE_SIZE
           value: "40G"
         - name: RUSTC_WRAPPER
           value: "sccache"
+        # Additional cache directories
+        - name: CARGO_TARGET_DIR
+          value: "/cache/target"
 
-      # Volume mounts - using emptyDir for now
-      # TODO: Add persistent storage when available
+      # Volume mounts for persistent caching
       volumeMounts:
-        - name: sccache-cache
-          mountPath: /cache/sccache
-        - name: cargo-target-cache
-          mountPath: /cache/target
+        - name: rust-cache
+          mountPath: /cache
+          subPath: rust-cache  # Use subPath to organize cache within PVC
 
-      # Volumes - using emptyDir for now
+      # Volumes with persistent storage
       volumes:
-        - name: sccache-cache
-          emptyDir: {}
-        - name: cargo-target-cache
-          emptyDir: {}
+        - name: rust-cache
+          persistentVolumeClaim:
+            claimName: rust-cache-pvc
 
       # GitHub credentials
       githubAPICredentialsFrom:
@@ -108,6 +120,26 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
+
+      # Init container to set up cache directories with proper permissions
+      initContainers:
+        - name: setup-cache
+          image: ghcr.io/5dlabs/agent-platform/rust-builder:1.1.0
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Setting up cache directories..."
+              mkdir -p /cache/cargo /cache/rustup /cache/sccache /cache/target
+              chown -R 1000:1000 /cache
+              chmod -R 755 /cache
+              echo "Cache setup complete"
+          volumeMounts:
+            - name: rust-cache
+              mountPath: /cache
+              subPath: rust-cache
+          securityContext:
+            runAsUser: 0  # Run as root to set permissions
+            runAsGroup: 0
 
 ---
 # Image pull secret for ghcr.io (if needed)
