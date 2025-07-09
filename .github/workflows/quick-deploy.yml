@@ -37,8 +37,8 @@ jobs:
   # Build only orchestrator (skip Claude Code for now)
   build-orchestrator:
     needs: [version]
-    runs-on: [self-hosted, k8s-runner, rust-builder]
-    # No container needed - the runner pod IS the rust-builder image with pre-warmed deps!
+    runs-on: [self-hosted, k8s-runner]
+    # TODO: Change to rust-builder once those runners are deployed
     permissions:
       contents: read
       packages: write
