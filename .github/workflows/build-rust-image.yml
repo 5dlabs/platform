@@ -2,7 +2,8 @@ name: Build Rust Builder Image
 
 on:
   push:
-    branches: [ 'feature/example-project-and-cli' ]
+    branches: [ 'main', 'feature/example-project-and-cli' ]
+    tags: [ 'v*' ]
     paths:
       - 'infra/images/rust-builder/**'
       - '.github/workflows/build-rust-image.yml'
@@ -42,10 +43,19 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
+            # For version tags (v1.0.0), create versioned image
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            # For main branch, tag as 'main' and 'latest'
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=main,enable={{is_default_branch}}
+            # For feature branches, use branch name
             type=ref,event=branch
+            # For PRs
             type=ref,event=pr
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest
+            # Include SHA for traceability
+            type=sha,prefix={{branch}}-,format=short
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
