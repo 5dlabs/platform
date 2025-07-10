@@ -604,8 +604,8 @@ fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Resul
 
     // Generate Claude Code configuration file for tool permissions (using correct filename)
     let settings_json = generate_claude_settings(tr, config)?;
-    // Use .claude/settings.local.json for higher precedence over auto-generated configs
-    data.insert(".claude/settings.local.json".to_string(), settings_json);
+    // Use claude-settings-local-json for ConfigMap (/ not allowed in keys)
+    data.insert("claude-settings-local-json".to_string(), settings_json);
 
 
     // CLAUDE.md should always be provided by the client
