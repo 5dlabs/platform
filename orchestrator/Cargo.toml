@@ -3,7 +3,8 @@ resolver = "2"
 members = [
     "orchestrator-core",
     "orchestrator-cli", 
-    "orchestrator-common"
+    "orchestrator-common",
+    "mcp-server"
 ]
 
 [workspace.package]
