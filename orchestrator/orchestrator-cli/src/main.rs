@@ -153,11 +153,8 @@ enum TaskCommands {
     },
     /// Initialize documentation for Task Master tasks using Claude
     InitDocs {
-        /// Path to Task Master directory
-        #[arg(long, short = 'd', default_value = ".taskmaster")]
-        taskmaster_dir: String,
         /// Claude model to use (sonnet, opus)
-        #[arg(long, short = 'm', default_value = "sonnet")]
+        #[arg(long, short = 'm', default_value = "opus")]
         model: String,
         /// Repository URL (auto-detected if not specified)
         #[arg(long, short = 'r')]
@@ -165,12 +162,6 @@ enum TaskCommands {
         /// Source branch to base documentation branch from (auto-detected if not specified)
         #[arg(long)]
         source_branch: Option<String>,
-        /// Target branch for PR (defaults to source branch)
-        #[arg(long)]
-        target_branch: Option<String>,
-        /// Working directory within repo (auto-detected if not specified)
-        #[arg(long, short = 'w')]
-        working_dir: Option<String>,
         /// Overwrite existing documentation
         #[arg(long, short = 'f')]
         force: bool,
@@ -189,6 +180,9 @@ enum TaskCommands {
         /// Show detailed generation progress
         #[arg(long, short = 'v')]
         verbose: bool,
+        /// GitHub user account for commits and PRs
+        #[arg(long, default_value = "pm0-5dlabs")]
+        github_user: String,
     },
 }
 
@@ -346,34 +340,30 @@ async fn main() -> Result<()> {
                 .await
             }
             TaskCommands::InitDocs {
-                taskmaster_dir,
                 model,
                 repo,
                 source_branch,
-                target_branch,
-                working_dir,
                 force,
                 task_id,
                 update,
                 update_all,
                 dry_run,
                 verbose,
+                github_user,
             } => {
                 commands::task::init_docs(
                     &api_client,
                     &output_manager,
-                    &taskmaster_dir,
                     &model,
                     repo.as_deref(),
                     source_branch.as_deref(),
-                    target_branch.as_deref(),
-                    working_dir.as_deref(),
                     force,
                     task_id,
                     update,
                     update_all,
                     dry_run,
                     verbose,
+                    &github_user,
                 )
                 .await
             }

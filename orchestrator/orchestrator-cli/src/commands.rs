@@ -677,22 +677,19 @@ pub mod task {
     }
 
     /// Initialize documentation for Task Master tasks using Claude
-    #[allow(clippy::too_many_arguments)]
     pub async fn init_docs(
         api_client: &crate::api::ApiClient,
         output: &OutputManager,
-        _taskmaster_dir: &str,
         model: &str,
         repo: Option<&str>,
         source_branch: Option<&str>,
-        target_branch: Option<&str>,
-        working_dir: Option<&str>,
         force: bool,
         task_id: Option<u32>,
         _update: bool,
         _update_all: bool,
         dry_run: bool,
         _verbose: bool,
+        github_user: &str,
     ) -> Result<()> {
         use std::process::Command;
 
@@ -718,36 +715,35 @@ pub mod task {
         };
 
         // Auto-detect working directory (relative path from repo root to current dir)
-        let working_directory = match working_dir {
-            Some(wd) => wd.to_string(),
-            None => {
-                let current_dir = std::env::current_dir()?;
-                let repo_root = Command::new("git")
-                    .args(["rev-parse", "--show-toplevel"])
-                    .output()
-                    .context("Failed to get git repo root")?
-                    .stdout;
-                let repo_root = String::from_utf8(repo_root)?.trim().to_string();
+        let current_dir = std::env::current_dir()?;
+        let repo_root = Command::new("git")
+            .args(["rev-parse", "--show-toplevel"])
+            .output()
+            .context("Failed to get git repo root")?
+            .stdout;
+        let repo_root = String::from_utf8(repo_root)?.trim().to_string();
 
-                let rel_path = current_dir.strip_prefix(&repo_root)
-                    .context("Current directory is not in repo")?
-                    .to_string_lossy()
-                    .to_string();
+        let rel_path = current_dir.strip_prefix(&repo_root)
+            .context("Current directory is not in repo")?
+            .to_string_lossy()
+            .to_string();
 
-                if rel_path.is_empty() {
-                    ".".to_string()
-                } else {
-                    rel_path
-                }
-            }
+        let working_directory = if rel_path.is_empty() {
+            ".".to_string()
+        } else {
+            rel_path
         };
 
         // Check if tasks.json needs to be committed
-        let tasks_json_path = ".taskmaster/tasks/tasks.json";
+        let tasks_json_path = if working_directory == "." {
+            ".taskmaster/tasks/tasks.json".to_string()
+        } else {
+            format!("{}/.taskmaster/tasks/tasks.json", working_directory)
+        };
         output.info(&format!("Checking status of {}", tasks_json_path))?;
 
         let status_output = Command::new("git")
-            .args(["status", "--porcelain", tasks_json_path])
+            .args(["status", "--porcelain", &tasks_json_path])
             .output()
             .context("Failed to check git status")?;
 
@@ -763,7 +759,7 @@ pub mod task {
             let current_branch = String::from_utf8(current_branch_output.stdout)?.trim().to_string();
 
             Command::new("git")
-                .args(["add", tasks_json_path])
+                .args(["add", &tasks_json_path])
                 .status()
                 .context("Failed to git add tasks.json")?;
 
@@ -804,8 +800,9 @@ pub mod task {
             }
         };
 
-        // Use target branch if specified, otherwise use source branch
-        let target_branch_name = target_branch.unwrap_or(&source_branch_name);
+        // Generate unique target branch name with timestamp
+        let timestamp = chrono::Utc::now().format("%Y%m%d-%H%M%S");
+        let target_branch_name = format!("docs-generation-{}", timestamp);
 
         output.info(&format!("Repository: {repo_url}"))?;
         output.info(&format!("Working directory: {working_directory}"))?;
@@ -813,101 +810,194 @@ pub mod task {
         output.info(&format!("Target branch: {target_branch_name}"))?;
 
         // Auto-commit .taskmaster directory if it exists and has uncommitted changes
-        if !working_directory.is_empty() {
-            let taskmaster_path = if working_directory == "." {
-                ".taskmaster".to_string()
-            } else {
-                format!("{working_directory}/.taskmaster")
-            };
+        let taskmaster_path = if working_directory == "." {
+            ".taskmaster".to_string()
+        } else {
+            format!("{}/.taskmaster", working_directory)
+        };
 
-            // Check if .taskmaster directory exists
-            if std::path::Path::new(&taskmaster_path).exists() {
-                output.info("Checking for uncommitted .taskmaster changes...")?;
+        // Check if .taskmaster directory exists
+        if std::path::Path::new(&taskmaster_path).exists() {
+            output.info("Checking for uncommitted .taskmaster changes...")?;
 
-                // Check git status for .taskmaster directory
-                let status_output = Command::new("git")
-                    .args(["status", "--porcelain", &taskmaster_path])
-                    .output()
-                    .context("Failed to check git status")?;
+            // Check git status for .taskmaster directory
+            let status_output = Command::new("git")
+                .args(["status", "--porcelain", &taskmaster_path])
+                .output()
+                .context("Failed to check git status")?;
 
-                if !status_output.stdout.is_empty() {
-                    output.info("Found uncommitted changes in .taskmaster directory")?;
+            if !status_output.stdout.is_empty() {
+                output.info("Found uncommitted changes in .taskmaster directory")?;
 
-                    // Add all .taskmaster files
-                    let add_result = Command::new("git")
-                        .args(["add", &taskmaster_path])
+                // Add all .taskmaster files
+                let add_result = Command::new("git")
+                    .args(["add", &taskmaster_path])
+                    .status()
+                    .context("Failed to add .taskmaster files")?;
+
+                if !add_result.success() {
+                    output.warning("Failed to add .taskmaster files to git")?;
+                } else {
+                    // Commit the changes
+                    let commit_result = Command::new("git")
+                        .args(["commit", "-m", "chore: auto-commit .taskmaster directory for documentation generation"])
                         .status()
-                        .context("Failed to add .taskmaster files")?;
+                        .context("Failed to commit .taskmaster files")?;
 
-                    if !add_result.success() {
-                        output.warning("Failed to add .taskmaster files to git")?;
-                    } else {
-                        // Commit the changes
-                        let commit_result = Command::new("git")
-                            .args(["commit", "-m", "chore: auto-commit .taskmaster directory for documentation generation"])
+                    if commit_result.success() {
+                        output.success("Auto-committed .taskmaster directory")?;
+
+                        // Push the commit to ensure Claude gets the latest version
+                        output.info("Pushing commit to remote...")?;
+                        let push_result = Command::new("git")
+                            .args(["push", "origin", &source_branch_name])
                             .status()
-                            .context("Failed to commit .taskmaster files")?;
+                            .context("Failed to push commits")?;
 
-                        if commit_result.success() {
-                            output.success("Auto-committed .taskmaster directory")?;
+                        if !push_result.success() {
+                            return Err(anyhow::anyhow!("Failed to push .taskmaster commit. Claude won't have access to your local tasks.json"));
+                        }
+                        output.success("Pushed .taskmaster directory to remote")?;
 
-                            // Push the commit to ensure Claude gets the latest version
-                            output.info("Pushing commit to remote...")?;
-                            let push_result = Command::new("git")
-                                .args(["push", "origin", &source_branch_name])
-                                .status()
-                                .context("Failed to push commits")?;
+                        // Verify the content matches what we expect
+                        output.info("Verifying tasks.json content...")?;
+                        let tasks_json_path = format!("{}/tasks/tasks.json", taskmaster_path);
+                        if std::path::Path::new(&tasks_json_path).exists() {
+                            let content = std::fs::read_to_string(&tasks_json_path)
+                                .context("Failed to read tasks.json for verification")?;
 
-                            if !push_result.success() {
-                                return Err(anyhow::anyhow!("Failed to push .taskmaster commit. Claude won't have access to your local tasks.json"));
+                            // Quick content verification
+                            if content.contains("Express TypeScript") || content.contains("Node.js") {
+                                output.error("WARNING: tasks.json contains Node.js/Express content!")?;
+                                output.error("This appears to be an old version. Documentation will be incorrect.")?;
+                                output.error("Please update your tasks.json with the correct project tasks.")?;
+                                return Err(anyhow::anyhow!("Outdated tasks.json detected"));
                             }
-                            output.success("Pushed .taskmaster directory to remote")?;
 
-                            // Verify the content matches what we expect
-                            output.info("Verifying tasks.json content...")?;
-                            let tasks_json_path = format!("{}/tasks/tasks.json", taskmaster_path);
-                            if std::path::Path::new(&tasks_json_path).exists() {
-                                let content = std::fs::read_to_string(&tasks_json_path)
-                                    .context("Failed to read tasks.json for verification")?;
-
-                                // Quick content verification
-                                if content.contains("Express TypeScript") || content.contains("Node.js") {
-                                    output.error("WARNING: tasks.json contains Node.js/Express content!")?;
-                                    output.error("This appears to be an old version. Documentation will be incorrect.")?;
-                                    output.error("Please update your tasks.json with the correct project tasks.")?;
-                                    return Err(anyhow::anyhow!("Outdated tasks.json detected"));
-                                }
-
-                                // Show first task for verification
-                                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
-                                    if let Some(first_task) = json.get("master")
-                                        .and_then(|m| m.get("tasks"))
-                                        .and_then(|t| t.get(0))
-                                        .and_then(|t| t.get("title"))
-                                        .and_then(|t| t.as_str()) {
-                                        output.info(&format!("✓ First task verified: \"{}\"", first_task))?;
-                                    }
+                            // Show first task for verification
+                            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                                if let Some(first_task) = json.get("master")
+                                    .and_then(|m| m.get("tasks"))
+                                    .and_then(|t| t.get(0))
+                                    .and_then(|t| t.get("title"))
+                                    .and_then(|t| t.as_str()) {
+                                    output.info(&format!("✓ First task verified: \"{}\"", first_task))?;
                                 }
                             }
-                        } else {
-                            output.warning("No changes to commit in .taskmaster directory")?;
+                        }
+                    } else {
+                        output.warning("No changes to commit in .taskmaster directory")?;
+                    }
+                }
+            } else {
+                // No uncommitted changes, but we should verify the committed version
+                output.info("No uncommitted changes in .taskmaster directory")?;
+
+                // Still verify the committed content
+                let tasks_json_path = format!("{}/tasks/tasks.json", taskmaster_path);
+                if std::path::Path::new(&tasks_json_path).exists() {
+                    let content = std::fs::read_to_string(&tasks_json_path)
+                        .context("Failed to read tasks.json for verification")?;
+
+                    if content.contains("Express TypeScript") || content.contains("Node.js") {
+                        output.error("WARNING: Your committed tasks.json contains old Node.js/Express content!")?;
+                        output.error("Please update and commit the correct tasks for your project.")?;
+                        return Err(anyhow::anyhow!("Outdated tasks.json in repository"));
+                    }
+                }
+            }
+        }
+
+        // Create documentation directory structure and placeholder files
+        output.info("Creating documentation directory structure...")?;
+        
+        // Read tasks.json to get all task IDs
+        let tasks_json_path = format!("{}/tasks/tasks.json", taskmaster_path);
+        if std::path::Path::new(&tasks_json_path).exists() {
+            let content = std::fs::read_to_string(&tasks_json_path)
+                .context("Failed to read tasks.json for directory creation")?;
+            
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(tasks) = json.get("tasks").and_then(|t| t.as_array()) {
+                    let docs_dir = format!("{}/docs", taskmaster_path);
+                    std::fs::create_dir_all(&docs_dir)
+                        .context("Failed to create docs directory")?;
+                    
+                    let mut created_count = 0;
+                    for task in tasks {
+                        if let Some(task_id) = task.get("id").and_then(|id| id.as_u64()) {
+                            if let Some(title) = task.get("title").and_then(|t| t.as_str()) {
+                                // Create task directory
+                                let task_dir = format!("{}/task-{}", docs_dir, task_id);
+                                std::fs::create_dir_all(&task_dir)
+                                    .context(format!("Failed to create directory for task {}", task_id))?;
+                                
+                                // Create placeholder files
+                                let task_md = format!("{}/task.md", task_dir);
+                                if !std::path::Path::new(&task_md).exists() {
+                                    let task_content = format!(
+                                        "# Task {}: {}\n\n<!-- This file contains comprehensive task overview and implementation guide -->\n<!-- TODO: Fill in content based on architecture.md, prd.txt, and tasks.json -->\n\n## Overview\n\n## Architecture Context\n\n## Implementation Details\n\n## Dependencies\n\n## Testing Strategy\n",
+                                        task_id, title
+                                    );
+                                    std::fs::write(&task_md, task_content)
+                                        .context(format!("Failed to create task.md for task {}", task_id))?;
+                                }
+                                
+                                let prompt_md = format!("{}/prompt.md", task_dir);
+                                if !std::path::Path::new(&prompt_md).exists() {
+                                    let prompt_content = format!(
+                                        "# Autonomous Prompt for Task {}: {}\n\n<!-- This file contains autonomous prompt for AI agents -->\n<!-- TODO: Fill in content based on architecture.md, prd.txt, and tasks.json -->\n\n## Context\n\n## Task Requirements\n\n## Implementation Instructions\n\n## Success Criteria\n",
+                                        task_id, title
+                                    );
+                                    std::fs::write(&prompt_md, prompt_content)
+                                        .context(format!("Failed to create prompt.md for task {}", task_id))?;
+                                }
+                                
+                                let acceptance_md = format!("{}/acceptance-criteria.md", task_dir);
+                                if !std::path::Path::new(&acceptance_md).exists() {
+                                    let acceptance_content = format!(
+                                        "# Acceptance Criteria for Task {}: {}\n\n<!-- This file contains clear acceptance criteria and test cases -->\n<!-- TODO: Fill in content based on architecture.md, prd.txt, and tasks.json -->\n\n## Functional Requirements\n\n## Technical Requirements\n\n## Test Cases\n\n## Verification Steps\n",
+                                        task_id, title
+                                    );
+                                    std::fs::write(&acceptance_md, acceptance_content)
+                                        .context(format!("Failed to create acceptance-criteria.md for task {}", task_id))?;
+                                }
+                                
+                                created_count += 1;
+                            }
                         }
                     }
-                } else {
-                    // No uncommitted changes, but we should verify the committed version
-                    output.info("No uncommitted changes in .taskmaster directory")?;
-
-                    // Still verify the committed content
-                    let tasks_json_path = format!("{}/tasks/tasks.json", taskmaster_path);
-                    if std::path::Path::new(&tasks_json_path).exists() {
-                        let content = std::fs::read_to_string(&tasks_json_path)
-                            .context("Failed to read tasks.json for verification")?;
-
-                        if content.contains("Express TypeScript") || content.contains("Node.js") {
-                            output.error("WARNING: Your committed tasks.json contains old Node.js/Express content!")?;
-                            output.error("Please update and commit the correct tasks for your project.")?;
-                            return Err(anyhow::anyhow!("Outdated tasks.json in repository"));
+                    
+                    output.success(&format!("Created documentation structure for {} tasks", created_count))?;
+                    
+                    // Commit the directory structure
+                    output.info("Committing documentation structure...")?;
+                    Command::new("git")
+                        .args(["add", &format!("{}/docs", taskmaster_path)])
+                        .status()
+                        .context("Failed to add documentation structure")?;
+                    
+                    let commit_result = Command::new("git")
+                        .args(["commit", "-m", "feat: create documentation structure for Task Master tasks"])
+                        .status()
+                        .context("Failed to commit documentation structure")?;
+                    
+                    if commit_result.success() {
+                        output.success("Committed documentation structure")?;
+                        
+                        // Push the structure to remote
+                        let push_result = Command::new("git")
+                            .args(["push", "origin", &source_branch_name])
+                            .status()
+                            .context("Failed to push documentation structure")?;
+                        
+                        if push_result.success() {
+                            output.success("Pushed documentation structure to remote")?;
+                        } else {
+                            output.warning("Failed to push documentation structure, continuing anyway...")?;
                         }
+                    } else {
+                        output.info("No new documentation structure to commit")?;
                     }
                 }
             }
@@ -928,9 +1018,7 @@ pub mod task {
             return Ok(());
         }
 
-        // Get GitHub user from environment or config
-        let github_user = std::env::var("GITHUB_USER")
-            .unwrap_or_else(|_| "swe-1-5dlabs".to_string());
+        // Use provided GitHub user (passed as parameter with default "pm0-5dlabs")
 
         // Create documentation generation request
         use orchestrator_common::models::pm_task::DocsGenerationRequest;
@@ -943,7 +1031,7 @@ pub mod task {
             service_name: "docs-generator".to_string(),
             agent_name: format!("claude-docs-{model}"),
             model: model.to_string(),
-            github_user,
+            github_user: github_user.to_string(),
             task_id,
             force,
             dry_run: false, // The API dry_run is different from CLI dry_run
