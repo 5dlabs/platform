@@ -38,6 +38,12 @@ spec:
                 type: string
                 minLength: 1
                 description: "Agent to execute the task"
+              model:
+                type: string
+                minLength: 1
+                default: "sonnet"
+                enum: ["sonnet", "opus", "haiku"]
+                description: "Claude model to use (sonnet, opus, haiku)"
               contextVersion:
                 type: integer
                 minimum: 1
