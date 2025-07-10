@@ -127,15 +127,15 @@ cp /config/*.md /workspace/.task/{{task_id}}/ 2>/dev/null || true
 # Copy all markdown files to workspace root for @import access
 cp /workspace/.task/{{task_id}}/attempt-{{attempts}}/*.md /workspace/ 2>/dev/null || echo 'No markdown files to copy to root'
 
-# Copy Claude configuration to workspace
-cp /config/.claude.json /workspace/.claude.json 2>/dev/null || echo 'No .claude.json to copy'
+# Copy Claude configuration to workspace with correct hierarchy
+mkdir -p /workspace/.claude
+cp /config/.claude/settings.local.json /workspace/.claude/settings.local.json 2>/dev/null || echo 'No settings.local.json to copy'
 
 
 # Create .gitignore to prevent committing Claude internal files
 cat > /workspace/.gitignore << 'EOF'
 # Claude Code internal files - do not commit
 .claude/
-.claude.json
 .task/
 # Allow Claude session exports to be committed
 !.task/*/attempt-*/claude-session.md

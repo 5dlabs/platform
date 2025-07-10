@@ -70,7 +70,7 @@ fi
 {{else}}
 # Validate that prep job completed successfully
 MISSING_FILES=""
-REQUIRED_FILES="CLAUDE.md task.md design-spec.md prompt.md acceptance-criteria.md .claude.json"
+REQUIRED_FILES="CLAUDE.md task.md design-spec.md prompt.md acceptance-criteria.md .claude/settings.local.json"
 
 echo "Checking for required files..."
 for file in $REQUIRED_FILES; do
@@ -200,7 +200,7 @@ echo "=== END DIAGNOSTICS ==="
 echo ""
 {{/if}}
 
-# Model is now configured via .claude.json config file
+# Model is now configured via .claude/settings.local.json config file
 
 {{#if is_retry}}
 CLAUDE_CMD="$CLAUDE_CMD --continue"
