@@ -41,28 +41,12 @@ pub mod task {
         );
         info!("Task Master directory: {}", taskmaster_dir);
 
-        // Check if task-specific docs exist first
+        // Set up directory paths
         let task_docs_dir = Path::new(taskmaster_dir).join("docs").join(format!("task-{task_id}"));
-        let use_task_specific_docs = task_docs_dir.exists();
+        let root_docs_dir = Path::new(taskmaster_dir).join("docs");
 
-        // Construct paths based on Task Master structure
+        // Construct paths
         let tasks_json_path = Path::new(taskmaster_dir).join("tasks/tasks.json");
-        let design_spec_path = if use_task_specific_docs {
-            task_docs_dir.join("design-spec.md")
-        } else {
-            Path::new(taskmaster_dir).join("docs/design-spec.md")
-        };
-        let prompt_path = if use_task_specific_docs {
-            task_docs_dir.join("prompt.md")
-        } else {
-            Path::new(taskmaster_dir).join("docs/prompt.md")
-        };
-        let acceptance_criteria_path = if use_task_specific_docs {
-            task_docs_dir.join("acceptance-criteria.md")
-        } else {
-            Path::new(taskmaster_dir).join("docs/acceptance-criteria.md")
-        };
-        let regression_testing_path = Path::new(taskmaster_dir).join("docs/regression-testing.md");
 
         // Read Task Master JSON file
         info!("Reading tasks JSON from: {}", tasks_json_path.display());
@@ -87,54 +71,35 @@ pub mod task {
 
         output.info(&format!("Found task: {}", task.title))?;
 
-        if use_task_specific_docs {
-            output.info(&format!("Using task-specific documentation from: {}", task_docs_dir.display()))?;
-        }
-
         // Prepare markdown files
         let mut markdown_files = vec![];
 
-        // Use task-specific task.md if available, otherwise generate from JSON
-        if use_task_specific_docs {
-            let task_md_path = task_docs_dir.join("task.md");
-            if task_md_path.exists() {
-                let task_md = fs::read_to_string(&task_md_path).with_context(|| {
-                    format!("Failed to read task.md: {}", task_md_path.display())
-                })?;
-                markdown_files.push(MarkdownPayload {
-                    content: task_md,
-                    filename: "task.md".to_string(),
-                    file_type: "task".to_string(),
-                });
-            } else {
-                // Fallback to generated version
-                markdown_files.push(MarkdownPayload {
-                    content: task_to_markdown(&task),
-                    filename: "task.md".to_string(),
-                    file_type: "task".to_string(),
-                });
-            }
+        // 1. Task-specific files (required to be in task directory)
+
+        // task.md - Always from task directory or generated
+        let task_md_path = task_docs_dir.join("task.md");
+        if task_md_path.exists() {
+            let task_md = fs::read_to_string(&task_md_path).with_context(|| {
+                format!("Failed to read task.md: {}", task_md_path.display())
+            })?;
+            markdown_files.push(MarkdownPayload {
+                content: task_md,
+                filename: "task.md".to_string(),
+                file_type: "task".to_string(),
+            });
+            output.info(&format!("Using task.md from: {}", task_md_path.display()))?;
         } else {
+            // Generate from JSON if no task.md exists
             markdown_files.push(MarkdownPayload {
                 content: task_to_markdown(&task),
                 filename: "task.md".to_string(),
                 file_type: "task".to_string(),
             });
+            output.info("Generated task.md from tasks.json")?;
         }
 
-        // Add design spec if exists
-        if design_spec_path.exists() {
-            let design_spec = fs::read_to_string(&design_spec_path).with_context(|| {
-                format!("Failed to read design spec: {}", design_spec_path.display())
-            })?;
-            markdown_files.push(MarkdownPayload {
-                content: design_spec,
-                filename: "design-spec.md".to_string(),
-                file_type: "design-spec".to_string(),
-            });
-        }
-
-        // Add prompt if exists
+        // prompt.md - Task-specific only
+        let prompt_path = task_docs_dir.join("prompt.md");
         if prompt_path.exists() {
             let prompt = fs::read_to_string(&prompt_path)
                 .with_context(|| format!("Failed to read prompt: {}", prompt_path.display()))?;
@@ -143,41 +108,55 @@ pub mod task {
                 filename: "prompt.md".to_string(),
                 file_type: "prompt".to_string(),
             });
+            output.info(&format!("Using prompt.md from: {}", prompt_path.display()))?;
         }
 
-        // Add acceptance criteria if exists
+        // acceptance-criteria.md - Task-specific only
+        let acceptance_criteria_path = task_docs_dir.join("acceptance-criteria.md");
         if acceptance_criteria_path.exists() {
             let criteria = fs::read_to_string(&acceptance_criteria_path).with_context(|| {
-                format!(
-                    "Failed to read acceptance criteria: {}",
-                    acceptance_criteria_path.display()
-                )
+                format!("Failed to read acceptance criteria: {}", acceptance_criteria_path.display())
             })?;
             markdown_files.push(MarkdownPayload {
                 content: criteria,
                 filename: "acceptance-criteria.md".to_string(),
                 file_type: "acceptance-criteria".to_string(),
             });
+            output.info(&format!("Using acceptance-criteria.md from: {}", acceptance_criteria_path.display()))?;
         }
 
-        // Add regression testing guide if exists
-        if regression_testing_path.exists() {
-            let regression_guide =
-                fs::read_to_string(&regression_testing_path).with_context(|| {
-                    format!(
-                        "Failed to read regression testing guide: {}",
-                        regression_testing_path.display()
-                    )
-                })?;
+        // 2. Files with fallback (check task-specific first, then root)
+
+        // design-spec.md - Task-specific with root fallback
+        let task_design_spec_path = task_docs_dir.join("design-spec.md");
+        let root_design_spec_path = root_docs_dir.join("design-spec.md");
+
+        if task_design_spec_path.exists() {
+            let design_spec = fs::read_to_string(&task_design_spec_path).with_context(|| {
+                format!("Failed to read task-specific design spec: {}", task_design_spec_path.display())
+            })?;
             markdown_files.push(MarkdownPayload {
-                content: regression_guide,
-                filename: "regression-testing.md".to_string(),
-                file_type: "context".to_string(),
+                content: design_spec,
+                filename: "design-spec.md".to_string(),
+                file_type: "design-spec".to_string(),
             });
+            output.info(&format!("Using task-specific design-spec.md from: {}", task_design_spec_path.display()))?;
+        } else if root_design_spec_path.exists() {
+            let design_spec = fs::read_to_string(&root_design_spec_path).with_context(|| {
+                format!("Failed to read root design spec: {}", root_design_spec_path.display())
+            })?;
+            markdown_files.push(MarkdownPayload {
+                content: design_spec,
+                filename: "design-spec.md".to_string(),
+                file_type: "design-spec".to_string(),
+            });
+            output.info("Using root-level design-spec.md")?;
         }
 
-        // Add CLAUDE.md if exists
-        let claude_md_path = Path::new(taskmaster_dir).join("docs/CLAUDE.md");
+        // 3. Always from root (project-wide files)
+
+        // CLAUDE.md - Always from root
+        let claude_md_path = root_docs_dir.join("CLAUDE.md");
         if claude_md_path.exists() {
             let claude_md = fs::read_to_string(&claude_md_path).with_context(|| {
                 format!("Failed to read CLAUDE.md: {}", claude_md_path.display())
@@ -189,8 +168,8 @@ pub mod task {
             });
         }
 
-        // Add git-guidelines.md if exists
-        let git_guidelines_path = Path::new(taskmaster_dir).join("docs/git-guidelines.md");
+        // git-guidelines.md - Always from root
+        let git_guidelines_path = root_docs_dir.join("git-guidelines.md");
         if git_guidelines_path.exists() {
             let git_guidelines = fs::read_to_string(&git_guidelines_path).with_context(|| {
                 format!(
@@ -202,6 +181,19 @@ pub mod task {
                 content: git_guidelines,
                 filename: "git-guidelines.md".to_string(),
                 file_type: "git-guidelines".to_string(),
+            });
+        }
+
+        // regression-testing.md - From root if exists (optional)
+        let regression_testing_path = root_docs_dir.join("regression-testing.md");
+        if regression_testing_path.exists() {
+            let regression_guide = fs::read_to_string(&regression_testing_path).with_context(|| {
+                format!("Failed to read regression testing guide: {}", regression_testing_path.display())
+            })?;
+            markdown_files.push(MarkdownPayload {
+                content: regression_guide,
+                filename: "regression-testing.md".to_string(),
+                file_type: "context".to_string(),
             });
         }
 
@@ -692,7 +684,7 @@ pub mod task {
         _taskmaster_dir: &str,
         model: &str,
         repo: Option<&str>,
-        source_branch: &str,
+        source_branch: Option<&str>,
         target_branch: Option<&str>,
         working_dir: Option<&str>,
         force: bool,
@@ -705,7 +697,7 @@ pub mod task {
         use std::process::Command;
 
         output.info("Initializing documentation generator...")?;
-        
+
         // Auto-detect git repository URL if not provided
         let repo_url = match repo {
             Some(url) => url.to_string(),
@@ -714,59 +706,219 @@ pub mod task {
                     .args(["remote", "get-url", "origin"])
                     .output()
                     .context("Failed to get git remote URL")?;
-                    
+
                 if !output_bytes.status.success() {
                     anyhow::bail!("Failed to detect git repository URL. Please specify with --repo");
                 }
-                
+
                 String::from_utf8(output_bytes.stdout)?
                     .trim()
                     .to_string()
             }
         };
-        
+
         // Auto-detect working directory (relative path from repo root to current dir)
         let working_directory = match working_dir {
-            Some(dir) => dir.to_string(),
+            Some(wd) => wd.to_string(),
             None => {
-                // Get repo root
-                let repo_root_output = Command::new("git")
+                let current_dir = std::env::current_dir()?;
+                let repo_root = Command::new("git")
                     .args(["rev-parse", "--show-toplevel"])
                     .output()
-                    .context("Failed to get git repository root")?;
-                    
-                if !repo_root_output.status.success() {
-                    anyhow::bail!("Failed to detect git repository root. Please specify working directory with --working-dir");
-                }
-                
-                let repo_root = String::from_utf8(repo_root_output.stdout)?
-                    .trim()
+                    .context("Failed to get git repo root")?
+                    .stdout;
+                let repo_root = String::from_utf8(repo_root)?.trim().to_string();
+
+                let rel_path = current_dir.strip_prefix(&repo_root)
+                    .context("Current directory is not in repo")?
+                    .to_string_lossy()
                     .to_string();
-                
-                // Get current directory relative to repo root
-                let current_dir = std::env::current_dir()?;
-                let relative_path = current_dir
-                    .strip_prefix(&repo_root)
-                    .context("Current directory is not within the git repository")?;
-                
-                relative_path.to_string_lossy().to_string()
+
+                if rel_path.is_empty() {
+                    ".".to_string()
+                } else {
+                    rel_path
+                }
             }
         };
-        
+
+        // Check if tasks.json needs to be committed
+        let tasks_json_path = ".taskmaster/tasks/tasks.json";
+        output.info(&format!("Checking status of {}", tasks_json_path))?;
+
+        let status_output = Command::new("git")
+            .args(["status", "--porcelain", tasks_json_path])
+            .output()
+            .context("Failed to check git status")?;
+
+        let status = String::from_utf8(status_output.stdout)?;
+        if !status.is_empty() {
+            output.info("tasks.json has changes; committing and pushing...")?;
+
+            // Get current branch
+            let current_branch_output = Command::new("git")
+                .args(["rev-parse", "--abbrev-ref", "HEAD"])
+                .output()
+                .context("Failed to get current branch")?;
+            let current_branch = String::from_utf8(current_branch_output.stdout)?.trim().to_string();
+
+            Command::new("git")
+                .args(["add", tasks_json_path])
+                .status()
+                .context("Failed to git add tasks.json")?;
+
+            Command::new("git")
+                .args(["commit", "-m", "Add/update tasks.json for documentation generation"])
+                .status()
+                .context("Failed to commit tasks.json")?;
+
+            Command::new("git")
+                .args(["push", "origin", &current_branch])
+                .status()
+                .context("Failed to push tasks.json")?;
+
+            output.success("Successfully committed and pushed tasks.json")?;
+        } else {
+            output.info("tasks.json is already up to date")?;
+        }
+
+        // Auto-detect source branch if not provided
+        let source_branch_name = match source_branch {
+            Some(branch) => branch.to_string(),
+            None => {
+                let output_bytes = Command::new("git")
+                    .args(["rev-parse", "--abbrev-ref", "HEAD"])
+                    .output()
+                    .context("Failed to get current git branch")?;
+
+                if !output_bytes.status.success() {
+                    output.warning("Failed to detect current git branch, defaulting to 'main'")?;
+                    "main".to_string()
+                } else {
+                    let branch = String::from_utf8(output_bytes.stdout)?
+                        .trim()
+                        .to_string();
+                    output.info(&format!("Auto-detected current branch: {branch}"))?;
+                    branch
+                }
+            }
+        };
+
         // Use target branch if specified, otherwise use source branch
-        let target_branch_name = target_branch.unwrap_or(source_branch);
-        
+        let target_branch_name = target_branch.unwrap_or(&source_branch_name);
+
         output.info(&format!("Repository: {repo_url}"))?;
         output.info(&format!("Working directory: {working_directory}"))?;
-        output.info(&format!("Source branch: {source_branch}"))?;
+        output.info(&format!("Source branch: {source_branch_name}"))?;
         output.info(&format!("Target branch: {target_branch_name}"))?;
+
+        // Auto-commit .taskmaster directory if it exists and has uncommitted changes
+        if !working_directory.is_empty() {
+            let taskmaster_path = if working_directory == "." {
+                ".taskmaster".to_string()
+            } else {
+                format!("{working_directory}/.taskmaster")
+            };
+
+            // Check if .taskmaster directory exists
+            if std::path::Path::new(&taskmaster_path).exists() {
+                output.info("Checking for uncommitted .taskmaster changes...")?;
+
+                // Check git status for .taskmaster directory
+                let status_output = Command::new("git")
+                    .args(["status", "--porcelain", &taskmaster_path])
+                    .output()
+                    .context("Failed to check git status")?;
+
+                if !status_output.stdout.is_empty() {
+                    output.info("Found uncommitted changes in .taskmaster directory")?;
+
+                    // Add all .taskmaster files
+                    let add_result = Command::new("git")
+                        .args(["add", &taskmaster_path])
+                        .status()
+                        .context("Failed to add .taskmaster files")?;
+
+                    if !add_result.success() {
+                        output.warning("Failed to add .taskmaster files to git")?;
+                    } else {
+                        // Commit the changes
+                        let commit_result = Command::new("git")
+                            .args(["commit", "-m", "chore: auto-commit .taskmaster directory for documentation generation"])
+                            .status()
+                            .context("Failed to commit .taskmaster files")?;
+
+                        if commit_result.success() {
+                            output.success("Auto-committed .taskmaster directory")?;
+
+                            // Push the commit to ensure Claude gets the latest version
+                            output.info("Pushing commit to remote...")?;
+                            let push_result = Command::new("git")
+                                .args(["push", "origin", &source_branch_name])
+                                .status()
+                                .context("Failed to push commits")?;
+
+                            if !push_result.success() {
+                                return Err(anyhow::anyhow!("Failed to push .taskmaster commit. Claude won't have access to your local tasks.json"));
+                            }
+                            output.success("Pushed .taskmaster directory to remote")?;
+
+                            // Verify the content matches what we expect
+                            output.info("Verifying tasks.json content...")?;
+                            let tasks_json_path = format!("{}/tasks/tasks.json", taskmaster_path);
+                            if std::path::Path::new(&tasks_json_path).exists() {
+                                let content = std::fs::read_to_string(&tasks_json_path)
+                                    .context("Failed to read tasks.json for verification")?;
+
+                                // Quick content verification
+                                if content.contains("Express TypeScript") || content.contains("Node.js") {
+                                    output.error("WARNING: tasks.json contains Node.js/Express content!")?;
+                                    output.error("This appears to be an old version. Documentation will be incorrect.")?;
+                                    output.error("Please update your tasks.json with the correct project tasks.")?;
+                                    return Err(anyhow::anyhow!("Outdated tasks.json detected"));
+                                }
+
+                                // Show first task for verification
+                                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                                    if let Some(first_task) = json.get("master")
+                                        .and_then(|m| m.get("tasks"))
+                                        .and_then(|t| t.get(0))
+                                        .and_then(|t| t.get("title"))
+                                        .and_then(|t| t.as_str()) {
+                                        output.info(&format!("✓ First task verified: \"{}\"", first_task))?;
+                                    }
+                                }
+                            }
+                        } else {
+                            output.warning("No changes to commit in .taskmaster directory")?;
+                        }
+                    }
+                } else {
+                    // No uncommitted changes, but we should verify the committed version
+                    output.info("No uncommitted changes in .taskmaster directory")?;
+
+                    // Still verify the committed content
+                    let tasks_json_path = format!("{}/tasks/tasks.json", taskmaster_path);
+                    if std::path::Path::new(&tasks_json_path).exists() {
+                        let content = std::fs::read_to_string(&tasks_json_path)
+                            .context("Failed to read tasks.json for verification")?;
+
+                        if content.contains("Express TypeScript") || content.contains("Node.js") {
+                            output.error("WARNING: Your committed tasks.json contains old Node.js/Express content!")?;
+                            output.error("Please update and commit the correct tasks for your project.")?;
+                            return Err(anyhow::anyhow!("Outdated tasks.json in repository"));
+                        }
+                    }
+                }
+            }
+        }
 
         // Submit documentation generation job to Kubernetes
         if dry_run {
             output.info("DRY RUN: Would submit documentation generation job with:")?;
             output.info(&format!("  Repository: {repo_url}"))?;
             output.info(&format!("  Working dir: {working_directory}"))?;
-            output.info(&format!("  Source branch: {source_branch}"))?;
+            output.info(&format!("  Source branch: {source_branch_name}"))?;
             output.info(&format!("  Target branch: {target_branch_name}"))?;
             output.info(&format!("  Model: {model}"))?;
             if let Some(id) = task_id {
@@ -782,11 +934,11 @@ pub mod task {
 
         // Create documentation generation request
         use orchestrator_common::models::pm_task::DocsGenerationRequest;
-        
+
         let request = DocsGenerationRequest {
             repository_url: repo_url.clone(),
             working_directory: working_directory.clone(),
-            source_branch: source_branch.to_string(),
+            source_branch: source_branch_name.to_string(),
             target_branch: target_branch_name.to_string(),
             service_name: "docs-generator".to_string(),
             agent_name: format!("claude-docs-{model}"),
@@ -798,13 +950,13 @@ pub mod task {
         };
 
         output.info("Submitting documentation generation job...")?;
-        
+
         match api_client.submit_docs_generation(&request).await {
             Ok(response) => {
                 if response.success {
                     output.success(&response.message)?;
                     let mut namespace = "orchestrator".to_string();
-                    
+
                     if let Some(data) = response.data {
                         if let Some(taskrun_name) = data.get("taskrun_name").and_then(|n| n.as_str()) {
                             output.info(&format!("TaskRun name: {taskrun_name}"))?;

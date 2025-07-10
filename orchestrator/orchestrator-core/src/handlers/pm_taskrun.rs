@@ -819,14 +819,13 @@ Follow these steps:
 3. For each task {}, generate the following documentation files in `.taskmaster/docs/task-{{id}}/`:
    - `task.md`: Comprehensive task overview and implementation guide
    - `prompt.md`: Autonomous prompt for AI agents
-   - `design-spec.md`: Technical design specification
    - `acceptance-criteria.md`: Clear acceptance criteria and test cases
 
 4. After generating all documentation:
    - Stage all changes: `git add .`
    - Commit with message: `docs: auto-generate Task Master documentation for all tasks`
    - Push the branch: `git push origin HEAD`
-   - Create a PR using: `gh pr create --title "docs: auto-generate Task Master documentation" --body "Auto-generated documentation for Task Master tasks"`
+   - Create a PR targeting the source branch: `gh pr create --base "{2}" --title "docs: auto-generate Task Master documentation" --body "Auto-generated documentation for Task Master tasks"`
 
 ## Important Notes
 
@@ -834,7 +833,7 @@ Follow these steps:
 - Include code examples, commands, and implementation details where relevant
 - Maintain consistency across all generated documents
 - Ensure all markdown is properly formatted
-- Generate ALL FOUR files (task.md, prompt.md, design-spec.md, acceptance-criteria.md) for EACH task
+- Generate ALL THREE files (task.md, prompt.md, acceptance-criteria.md) for EACH task
 - Working directory is relative to repository root
 "#,
                     request.repository_url,

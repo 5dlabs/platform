@@ -162,9 +162,9 @@ enum TaskCommands {
         /// Repository URL (auto-detected if not specified)
         #[arg(long, short = 'r')]
         repo: Option<String>,
-        /// Source branch to base documentation branch from
-        #[arg(long, default_value = "main")]
-        source_branch: String,
+        /// Source branch to base documentation branch from (auto-detected if not specified)
+        #[arg(long)]
+        source_branch: Option<String>,
         /// Target branch for PR (defaults to source branch)
         #[arg(long)]
         target_branch: Option<String>,
@@ -365,7 +365,7 @@ async fn main() -> Result<()> {
                     &taskmaster_dir,
                     &model,
                     repo.as_deref(),
-                    &source_branch,
+                    source_branch.as_deref(),
                     target_branch.as_deref(),
                     working_dir.as_deref(),
                     force,
