@@ -1102,6 +1102,7 @@ echo "Claude will use --cwd flag to restrict access to the appropriate directory
 // Template constants
 const PREP_JOB_TEMPLATE: &str = include_str!("../../templates/prep-job.sh.hbs");
 const MAIN_CONTAINER_TEMPLATE: &str = include_str!("../../templates/main-container.sh.hbs");
+const DOCS_GENERATION_CONTAINER_TEMPLATE: &str = include_str!("../../templates/docs-generation-container.sh.hbs");
 
 
 /// Build prep job script for workspace preparation
@@ -1132,9 +1133,17 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
 
     // Export script is now created by prep job, no need to render it here
 
-    // Register the main container template
+    // Choose template based on task type
+    let is_docs_generation = tr.spec.task_id == 999999;
+    let template = if is_docs_generation {
+        DOCS_GENERATION_CONTAINER_TEMPLATE
+    } else {
+        MAIN_CONTAINER_TEMPLATE
+    };
+
+    // Register the appropriate container template
     handlebars
-        .register_template_string("main", MAIN_CONTAINER_TEMPLATE)
+        .register_template_string("main", template)
         .map_err(|e| Error::ConfigError(format!("Failed to register main template: {e}")))?;
 
     // Build the Claude command
@@ -1338,7 +1347,8 @@ fn generate_claude_settings(tr: &TaskRun, _config: &ControllerConfig) -> Result<
                 "allowedTools": allow_rules.iter().map(|rule| {
                     // Convert "Bash(*)" format to "Bash" format
                     rule.replace("(*)", "")
-                }).collect::<Vec<String>>()
+                }).collect::<Vec<String>>(),
+                "model": tr.spec.model
             }
         }
     });

@@ -1,0 +1,216 @@
+#!/bin/sh
+
+echo '════════════════════════════════════════════════════════════════'
+echo '║                    CLAUDE AGENT STARTING                     ║'
+echo '════════════════════════════════════════════════════════════════'
+
+# Source GitHub environment if it exists
+if [ -f /workspace/.github-env ]; then
+  . /workspace/.github-env
+  echo "✓ GitHub authentication configured"
+  
+  # Configure git credentials for HTTPS authentication
+  if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USER" ]; then
+    git config --global user.name "$GITHUB_USER"
+    git config --global user.email "${GITHUB_USER}@users.noreply.github.com"
+    
+    # Ensure git credentials file exists with correct format
+    echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+    chmod 600 /workspace/.git-credentials
+    
+    # Configure git to use the credentials
+    git config --global credential.helper 'store --file=/workspace/.git-credentials'
+    
+    # Also configure the repository-specific credential helper
+    cd /workspace && git config credential.helper 'store --file=/workspace/.git-credentials'
+    
+    echo "✓ Git credentials configured for user: $GITHUB_USER"
+    echo "✓ Git push should now work with HTTPS"
+  fi
+fi
+
+# Export script should already be created by prep job
+
+echo '=== WORKSPACE VALIDATION ==='
+
+{{#if is_docs_generation}}
+# Documentation generation task - minimal validation
+echo "Documentation generation task detected - using minimal validation"
+
+# Determine the working directory for Claude
+WORKING_DIR="{{working_dir}}"
+if [ -n "$WORKING_DIR" ] && [ "$WORKING_DIR" != "." ]; then
+  CLAUDE_WORK_DIR="/workspace/$WORKING_DIR/.taskmaster"
+else
+  CLAUDE_WORK_DIR="/workspace/.taskmaster"
+fi
+
+echo "Claude working directory: $CLAUDE_WORK_DIR"
+
+# Check for required files in Claude's working directory
+MISSING_FILES=""
+REQUIRED_FILES="CLAUDE.md"
+
+echo "Checking for required files..."
+for file in $REQUIRED_FILES; do
+  if [ ! -f "$CLAUDE_WORK_DIR/$file" ]; then
+    echo "ERROR: Missing required file: $CLAUDE_WORK_DIR/$file"
+    MISSING_FILES="$MISSING_FILES $file"
+  else
+    echo "✓ Found: $CLAUDE_WORK_DIR/$file"
+  fi
+done
+
+# For docs generation, create prompt.md from CLAUDE.md in Claude's working directory
+echo "Creating prompt.md in Claude's working directory"
+if [ -f "$CLAUDE_WORK_DIR/CLAUDE.md" ]; then
+  cp "$CLAUDE_WORK_DIR/CLAUDE.md" "$CLAUDE_WORK_DIR/prompt.md"
+  echo "✓ Created prompt.md from CLAUDE.md in $CLAUDE_WORK_DIR"
+fi
+{{else}}
+# Validate that prep job completed successfully
+MISSING_FILES=""
+REQUIRED_FILES="CLAUDE.md task.md design-spec.md prompt.md acceptance-criteria.md .claude.json"
+
+echo "Checking for required files..."
+for file in $REQUIRED_FILES; do
+  if [ ! -f "/workspace/$file" ]; then
+    echo "ERROR: Missing required file: $file"
+    MISSING_FILES="$MISSING_FILES $file"
+  else
+    echo "✓ Found: $file"
+  fi
+done
+{{/if}}
+
+# Check for git repository (optional - only needed for tasks that push code)
+if [ ! -d "/workspace/.git" ]; then
+  echo "! Note: No git repository found (okay for non-code tasks)"
+else
+  echo "✓ Found: git repository"
+fi
+
+# If any files are missing, abort
+if [ -n "$MISSING_FILES" ]; then
+  echo ""
+  echo "═══════════════════════════════════════════════════════════════"
+  echo "║                 WORKSPACE VALIDATION FAILED                  ║"
+  echo "═══════════════════════════════════════════════════════════════"
+  echo ""
+  echo "The following required files/directories are missing:"
+  echo "$MISSING_FILES"
+  echo ""
+  echo "This indicates the prep job didn't complete successfully."
+  echo "Claude will NOT be started to avoid wasting API credits."
+  echo ""
+  exit 1
+fi
+
+echo ""
+echo "✓ All required files present. Workspace is valid."
+echo ""
+
+echo '=== MARKDOWN FILES PROVIDED ==='
+echo "The following documentation files are available to Claude:"
+echo ""
+# List all markdown files with their sizes
+find /workspace -maxdepth 1 -name "*.md" -type f | sort | while read -r file; do
+  filename=$(basename "$file")
+  size=$(wc -c < "$file" | xargs)
+  echo "📄 $filename ($size bytes)"
+done
+echo ""
+
+# Debug mode - show file contents if DEBUG_SHOW_FILES is set
+if [ "$DEBUG_SHOW_FILES" = "true" ]; then
+  echo '=== DEBUG: FILE CONTENTS ==='
+  echo "Showing contents of all markdown files:"
+  echo ""
+  
+  find /workspace -maxdepth 1 -name "*.md" -type f | sort | while read -r file; do
+    filename=$(basename "$file")
+    echo "════════════════════════════════════════════════════════════════"
+    echo "║ FILE: $filename"
+    echo "════════════════════════════════════════════════════════════════"
+    cat "$file"
+    echo ""
+    echo ""
+  done
+  
+  echo "════════════════════════════════════════════════════════════════"
+  echo "║ END OF FILE CONTENTS"
+  echo "════════════════════════════════════════════════════════════════"
+  echo ""
+fi
+
+# Check if prompt.md exists (should always exist from prep job)
+{{#if is_docs_generation}}
+# For docs generation, check in Claude's working directory
+if [ ! -f "$CLAUDE_WORK_DIR/prompt.md" ]; then
+  echo "ERROR: prompt.md not found in $CLAUDE_WORK_DIR - prep job may have failed"
+  exit 1
+fi
+{{else}}
+if [ ! -f /workspace/prompt.md ]; then
+  echo 'ERROR: prompt.md not found - prep job may have failed'
+  exit 1
+fi
+{{/if}}
+
+echo '=== STARTING CLAUDE ==='
+
+# Build Claude command with print mode, streaming output, and explicit tools
+CLAUDE_CMD="{{command}} -p --output-format stream-json --verbose"
+
+{{#if is_docs_generation}}
+# For docs generation, change to the .taskmaster directory before running Claude
+# The working_dir variable comes from the TaskRun spec
+WORKING_DIR="{{working_dir}}"
+if [ -n "$WORKING_DIR" ] && [ "$WORKING_DIR" != "." ]; then
+  echo "Changing to working directory: /workspace/$WORKING_DIR/.taskmaster for docs generation"
+  cd "/workspace/$WORKING_DIR/.taskmaster"
+else
+  echo "Changing to working directory: /workspace/.taskmaster for docs generation"
+  cd "/workspace/.taskmaster"
+fi
+
+echo ""
+echo "=== DOCUMENTATION GENERATION DIAGNOSTICS ==="
+echo "Current directory: $(pwd)"
+echo "Directory contents:"
+ls -la
+echo ""
+echo "Checking for tasks.json:"
+if [ -f "tasks/tasks.json" ]; then
+  echo "✓ Found tasks/tasks.json"
+  echo "First 5 lines:"
+  head -5 tasks/tasks.json
+else
+  echo "✗ ERROR: tasks/tasks.json not found!"
+fi
+echo ""
+echo "Checking for prompt.md:"
+if [ -f "prompt.md" ]; then
+  echo "✓ Found prompt.md"
+  echo "File size: $(wc -c < prompt.md) bytes"
+else
+  echo "✗ ERROR: prompt.md not found!"
+fi
+echo "=== END DIAGNOSTICS ==="
+echo ""
+{{/if}}
+
+# Model is now configured via .claude.json config file
+
+{{#if is_retry}}
+CLAUDE_CMD="$CLAUDE_CMD --continue"
+echo 'Adding --continue flag for attempt {{attempts}}'
+{{/if}}
+
+# Use stdin to pass the prompt content
+echo "Final Claude command: $CLAUDE_CMD (with prompt from stdin)"
+{{#if is_docs_generation}}
+exec $CLAUDE_CMD < "$CLAUDE_WORK_DIR/prompt.md"
+{{else}}
+exec $CLAUDE_CMD < /workspace/prompt.md
+{{/if}}

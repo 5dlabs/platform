@@ -810,11 +810,8 @@ pub mod task {
         output.info(&format!("Target branch: {target_branch_name}"))?;
 
         // Auto-commit .taskmaster directory if it exists and has uncommitted changes
-        let taskmaster_path = if working_directory == "." {
-            ".taskmaster".to_string()
-        } else {
-            format!("{}/.taskmaster", working_directory)
-        };
+        // Always use ".taskmaster" since we're running from the working directory
+        let taskmaster_path = ".taskmaster".to_string();
 
         // Check if .taskmaster directory exists
         if std::path::Path::new(&taskmaster_path).exists() {
