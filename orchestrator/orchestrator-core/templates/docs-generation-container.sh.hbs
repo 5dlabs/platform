@@ -163,19 +163,7 @@ echo '=== CLAUDE CONFIGURATION DIAGNOSTICS ==='
 echo "Checking all Claude configuration file locations:"
 echo ""
 
-CONFIG_LOCATIONS=(
-    "/workspace/.claude.json"
-    "/workspace/.claude/config.json"
-    "/workspace/.claude/settings.json"
-    "/workspace/.claude/settings.local.json"
-    "~/.claude.json"
-    "~/.claude/config.json"
-    "~/.claude/settings.json"
-    "~/.config/claude/config.json"
-    "/etc/claude/config.json"
-)
-
-for location in "${CONFIG_LOCATIONS[@]}"; do
+for location in "/workspace/.claude.json" "/workspace/.claude/config.json" "/workspace/.claude/settings.json" "/workspace/.claude/settings.local.json" "~/.claude.json" "~/.claude/config.json" "~/.claude/settings.json" "~/.config/claude/config.json" "/etc/claude/config.json"; do
     # Expand ~ to actual home directory
     expanded_location=$(eval echo "$location")
     
