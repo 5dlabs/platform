@@ -157,6 +157,42 @@ if [ ! -f /workspace/prompt.md ]; then
 fi
 {{/if}}
 
+echo '=== CLAUDE CONFIGURATION DIAGNOSTICS ==='
+
+# Log all potential Claude configuration files for debugging
+echo "Checking all Claude configuration file locations:"
+echo ""
+
+CONFIG_LOCATIONS=(
+    "/workspace/.claude.json"
+    "/workspace/.claude/config.json"
+    "/workspace/.claude/settings.json"
+    "/workspace/.claude/settings.local.json"
+    "~/.claude.json"
+    "~/.claude/config.json"
+    "~/.claude/settings.json"
+    "~/.config/claude/config.json"
+    "/etc/claude/config.json"
+)
+
+for location in "${CONFIG_LOCATIONS[@]}"; do
+    # Expand ~ to actual home directory
+    expanded_location=$(eval echo "$location")
+    
+    if [ -f "$expanded_location" ]; then
+        echo "✓ FOUND: $expanded_location"
+        echo "  File size: $(wc -c < "$expanded_location") bytes"
+        echo "  Contents:"
+        cat "$expanded_location" | head -20 | sed 's/^/    /'
+        echo ""
+    else
+        echo "✗ NOT FOUND: $expanded_location"
+    fi
+done
+
+echo "=== END CLAUDE CONFIG DIAGNOSTICS ==="
+echo ""
+
 echo '=== STARTING CLAUDE ==='
 
 # Build Claude command with print mode, streaming output, and explicit tools
@@ -208,7 +244,16 @@ echo 'Adding --continue flag for attempt {{attempts}}'
 {{/if}}
 
 # Use stdin to pass the prompt content
-echo "Final Claude command: $CLAUDE_CMD (with prompt from stdin)"
+echo "=== FINAL CLAUDE EXECUTION ==="
+echo "Command: $CLAUDE_CMD"
+echo "Working directory: $(pwd)"
+echo "Prompt file: {{#if is_docs_generation}}$CLAUDE_WORK_DIR/prompt.md{{else}}/workspace/prompt.md{{/if}}"
+echo "Environment variables:"
+env | grep -E '^(CLAUDE|ANTHROPIC|HOME|USER)' | sort || echo "No relevant env vars found"
+echo ""
+echo "Starting Claude execution..."
+echo "=========================="
+
 {{#if is_docs_generation}}
 exec $CLAUDE_CMD < "$CLAUDE_WORK_DIR/prompt.md"
 {{else}}
