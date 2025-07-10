@@ -1,0 +1,22 @@
+{
+    "claude.permissions": {
+        "allow": [
+            "Read",
+            "Edit",
+            "Bash(git *)",
+            "Bash(npm *)",
+            "Bash(yarn *)",
+            "Bash(pnpm *)",
+            "Bash(ls *)",
+            "Bash(cat *)",
+            "Bash(grep *)",
+            "Bash(find *)",
+            "Bash(which *)",
+            "Bash(echo *)",
+            "Bash(pwd)",
+            "Bash(cd *)"
+        ],
+        "defaultMode": "acceptEdits"
+    },
+    "claude.autoAcceptPermissions": true
+}

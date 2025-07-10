@@ -606,9 +606,6 @@ fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Resul
     let settings_json = generate_claude_settings(tr, config)?;
     data.insert(".claude.json".to_string(), settings_json);
 
-    // Generate export script from template
-    let export_script = render_export_script(tr)?;
-    data.insert("export-session.sh".to_string(), export_script);
 
     // CLAUDE.md should always be provided by the client
     // This allows task-specific instructions and Git workflows
@@ -1105,26 +1102,7 @@ echo "Claude will use --cwd flag to restrict access to the appropriate directory
 // Template constants
 const PREP_JOB_TEMPLATE: &str = include_str!("../../templates/prep-job.sh.hbs");
 const MAIN_CONTAINER_TEMPLATE: &str = include_str!("../../templates/main-container.sh.hbs");
-const EXPORT_SCRIPT_TEMPLATE: &str = include_str!("../../templates/export-session.sh.hbs");
 
-/// Render export script from template
-fn render_export_script(tr: &TaskRun) -> Result<String, Error> {
-    let mut handlebars = Handlebars::new();
-    handlebars.set_strict_mode(false);
-
-    handlebars
-        .register_template_string("export_script", EXPORT_SCRIPT_TEMPLATE)
-        .map_err(|e| Error::ConfigError(format!("Failed to register export template: {e}")))?;
-
-    let data = json!({
-        "task_id": tr.spec.task_id,
-        "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
-    });
-
-    handlebars
-        .render("export_script", &data)
-        .map_err(|e| Error::ConfigError(format!("Failed to render export script: {e}")))
-}
 
 /// Build prep job script for workspace preparation
 fn build_prep_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String, Error> {
@@ -1362,19 +1340,6 @@ fn generate_claude_settings(tr: &TaskRun, _config: &ControllerConfig) -> Result<
                     rule.replace("(*)", "")
                 }).collect::<Vec<String>>()
             }
-        },
-        "hooks": {
-            "Stop": [
-                {
-                    "matcher": "",
-                    "hooks": [
-                        {
-                            "type": "command",
-                            "command": "/workspace/.claude-scripts/export-session.sh"
-                        }
-                    ]
-                }
-            ]
         }
     });
 

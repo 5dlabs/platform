@@ -12,7 +12,7 @@ pub mod webhook;
 pub use config::{AgentConfig, AgentType, ResourceLimits};
 pub use job::{Job, JobSpec, JobStatus, JobType};
 pub use pm_task::{
-    MarkdownPayload, PmTaskRequest, Subtask, Task as PmTask, TaskMaster, TaskMasterFile,
+    DocsGenerationRequest, MarkdownPayload, PmTaskRequest, Subtask, Task as PmTask, TaskMaster, TaskMasterFile,
 };
 pub use request::{ParsedRequest, Request, RequestAction, RequestSource};
 pub use response::{ApiResponse, JobResponse, TaskResponse};

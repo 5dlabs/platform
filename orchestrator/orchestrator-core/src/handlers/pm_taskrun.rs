@@ -812,25 +812,59 @@ You are tasked with generating comprehensive documentation for Task Master tasks
 
 IMPORTANT: You are already in a workspace with access ONLY to the Task Master directory. DO NOT clone any repositories or navigate outside the current directory.
 
+## Context Documents
+
+Before generating task documentation, familiarize yourself with these key project documents:
+
+- **Architecture & Design**: @.taskmaster/docs/architecture.md - Overall system design and architecture
+- **Product Requirements**: @.taskmaster/docs/prd.txt or @.taskmaster/docs/prd.md - Product requirements document  
+- **Task List**: @.taskmaster/tasks/tasks.json - Complete task definitions and relationships
+
+## Documentation Generation Process
+
 Follow these steps:
 
 1. You are already in the correct directory - no need to clone or navigate
-2. Read the `.taskmaster/tasks/tasks.json` file (it's in the current directory)
-3. For each task {}, generate the following documentation files in `.taskmaster/docs/task-{{id}}/`:
+
+2. **Read Context Documents First**:
+   - Read @.taskmaster/docs/architecture.md to understand the system architecture
+   - Read @.taskmaster/docs/prd.txt (or prd.md) to understand product requirements
+   - Read @.taskmaster/tasks/tasks.json to understand all tasks and their relationships
+
+3. **Generate Documentation**: For each task {}, create these files in `.taskmaster/docs/task-{{id}}/`:
    - `task.md`: Comprehensive task overview and implementation guide
    - `prompt.md`: Autonomous prompt for AI agents
    - `acceptance-criteria.md`: Clear acceptance criteria and test cases
 
-4. After generating all documentation:
+4. **Git Workflow**:
    - Stage all changes: `git add .`
    - Commit with message: `docs: auto-generate Task Master documentation for all tasks`
    - Push the branch: `git push origin HEAD`
    - Create a PR targeting the source branch: `gh pr create --base "{2}" --title "docs: auto-generate Task Master documentation" --body "Auto-generated documentation for Task Master tasks"`
 
+## Documentation Requirements
+
+### For each task document, ensure you:
+
+- **Include Architecture Context**: Reference relevant parts of the architecture document
+- **Align with PRD**: Ensure task implementation aligns with product requirements
+- **Show Task Relationships**: Reference dependencies and related tasks from tasks.json
+- **Provide Implementation Details**: Include specific code examples and commands
+- **Define Clear Acceptance Criteria**: Based on architecture constraints and PRD requirements
+- **Maintain Consistency**: Use consistent terminology from architecture and PRD documents
+
+### File-Specific Guidelines:
+
+- **task.md**: Include architecture diagrams references, system integration points, and PRD alignment
+- **prompt.md**: Include architecture context and PRD requirements in the autonomous prompt
+- **acceptance-criteria.md**: Validate against both functional requirements (PRD) and technical constraints (architecture)
+
 ## Important Notes
 
 - Each document should be well-structured, comprehensive, and actionable
 - Include code examples, commands, and implementation details where relevant
+- Reference architecture patterns and design decisions from architecture.md
+- Ensure task implementation supports overall product goals from PRD
 - Maintain consistency across all generated documents
 - Ensure all markdown is properly formatted
 - Generate ALL THREE files (task.md, prompt.md, acceptance-criteria.md) for EACH task
