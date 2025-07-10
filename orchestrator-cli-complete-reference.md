@@ -100,7 +100,7 @@ Initialize documentation for Task Master tasks using Claude.
 | Option | Short | Type | Default | Required | Description |
 |--------|-------|------|---------|----------|-------------|
 | `--taskmaster-dir` | `-d` | String | `.taskmaster` | No | Path to Task Master directory |
-| `--model` | `-m` | String | `sonnet` | No | Claude model to use (sonnet, opus) |
+| `--model` | `-m` | String | `opus` | No | Claude model to use (sonnet, opus) |
 | `--repo` | `-r` | String | None | No | Repository URL (auto-detected if not specified) |
 | `--source-branch` | - | String | None | No | Source branch to base documentation branch from |
 | `--target-branch` | - | String | None | No | Target branch for PR (defaults to source branch) |
