@@ -2,265 +2,929 @@
   "master": {
     "tasks": [
       {
-        "id": 11,
-        "title": "Initialize Express TypeScript Project",
-        "description": "Set up a new Express.js project with TypeScript configuration, including package.json, tsconfig.json, and basic project structure",
-        "status": "pending",
-        "dependencies": [],
+        "id": 1,
+        "title": "Setup Project Repository and Toolchain",
+        "description": "Initialize the Rust project, configure Cargo.toml, and set up essential development tools including Docker, SQLx, Tonic, Tokio, and CI/CD pipeline scripts.",
+        "details": "Create a new Rust project with `cargo new`. Add dependencies: `tonic = \"0.10\"`, `prost = \"0.12\"`, `tokio = { version = \"1.0\", features = [\"full\"] }`, `sqlx = { version = \"0.7\", features = [\"postgres\", \"runtime-tokio-native-tls\"] }`. Set up Docker Compose for PostgreSQL and Redis. Configure CI/CD (GitHub Actions or GitLab CI) with quality gates for linting, formatting, and test coverage. Use `cargo-watch` for hot reloading.",
+        "testStrategy": "Verify project builds, dependencies resolve, and Docker Compose starts PostgreSQL and Redis. Run `cargo check` and `cargo clippy -- -D warnings`.",
         "priority": "high",
-        "details": "Create package.json with Express, TypeScript, and necessary dev dependencies. Configure tsconfig.json for Node.js development. Set up src directory structure.",
-        "testStrategy": "Verify project builds and starts without errors",
+        "dependencies": [],
+        "status": "pending",
         "subtasks": [
           {
             "id": 1,
-            "title": "Initialize npm project",
-            "description": "Run npm init and configure package.json with appropriate metadata",
-            "details": "",
-            "status": "pending",
+            "title": "Initialize Rust gRPC Repository",
+            "description": "Create a new Rust project repository following gRPC template standards. Set up the initial directory structure, including separate folders for server, client, and proto definitions.",
             "dependencies": [],
-            "parentTaskId": 11
+            "details": "Use `cargo new` or `cargo init` to create the project. Establish directories for `src/`, `proto/`, and any build scripts needed for code generation. Ensure the repository is initialized with version control (e.g., git).",
+            "status": "pending",
+            "testStrategy": ""
           },
           {
             "id": 2,
-            "title": "Install dependencies",
-            "description": "Install Express, TypeScript, and development dependencies",
-            "details": "",
+            "title": "Configure Cargo.toml and Project Structure",
+            "description": "Edit Cargo.toml to define package metadata, binaries, and workspace structure. Add build scripts for protocol buffer compilation.",
+            "dependencies": [
+              1
+            ],
+            "details": "Set up `[package]`, `[dependencies]`, and `[build-dependencies]` sections in Cargo.toml. Specify binaries for server and client. Add a `build.rs` script to automate proto compilation. Ensure the file structure matches Rust gRPC best practices.",
             "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 11
+            "testStrategy": ""
           },
           {
             "id": 3,
-            "title": "Configure TypeScript",
-            "description": "Create tsconfig.json with Node.js and Express appropriate settings",
-            "details": "",
+            "title": "Add and Pin Dependencies",
+            "description": "Add all required dependencies for gRPC, async runtime, and code generation. Pin versions to ensure reproducibility and zero linting warnings.",
+            "dependencies": [
+              2
+            ],
+            "details": "Include `tonic`, `prost`, `tokio`, `futures`, and `tonic-build` in Cargo.toml. Enable necessary features (e.g., TLS, macros). Ensure all dependencies are compatible and up-to-date to avoid warnings.",
             "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 11
+            "testStrategy": ""
           },
           {
             "id": 4,
-            "title": "Create project structure",
-            "description": "Set up src directory with routes, middleware, and types subdirectories",
-            "details": "",
+            "title": "Set Up Docker Compose for Local Development",
+            "description": "Create Docker and Docker Compose configurations to run the Rust gRPC server, client, and any supporting services (e.g., databases) in containers.",
+            "dependencies": [
+              3
+            ],
+            "details": "Write a Dockerfile for the Rust project with multi-stage builds for production-grade images. Create a docker-compose.yml to orchestrate the server, client, and dependencies. Ensure health checks and volume mounts for development.",
             "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Configure CI/CD Scripts for Testing and Linting",
+            "description": "Set up CI/CD pipelines to enforce 100% test coverage, zero linting warnings, and real integration testing.",
+            "dependencies": [
+              4
+            ],
+            "details": "Write scripts or configuration files for CI/CD platforms (e.g., GitHub Actions, GitLab CI). Include steps for building, running tests (unit and integration), checking code coverage, and running linters (e.g., Clippy). Fail builds on coverage or linting issues.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Integrate Development Tools (cargo-watch, etc.)",
+            "description": "Add and configure development tools to improve productivity and code quality, such as cargo-watch for live reloading and additional linters.",
+            "dependencies": [
+              5
+            ],
+            "details": "Install and configure `cargo-watch` for automatic rebuilds and test runs on file changes. Optionally add tools like `cargo-audit`, `cargo-tarpaulin` for security and coverage. Document usage in README.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Define gRPC Protocol Buffers and Generate Rust Code",
+        "description": "Design and implement the gRPC service and message definitions in .proto files, then generate Rust code.",
+        "details": "Create `proto/task_management.proto` with all service and message definitions as per PRD. Use `tonic-build` in `build.rs` to generate Rust code. Ensure generated code is placed in `src/` for easy access. Use `protoc` version 3.21+ for compatibility.",
+        "testStrategy": "Validate generated Rust code compiles and matches the proto definitions. Check for correct trait and struct generation.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Protobuf Service and Message Definitions",
+            "description": "Create a .proto file that defines the gRPC service, including all RPC methods and message types, following Rust gRPC template standards. Ensure the design is clear, extensible, and production-ready.",
             "dependencies": [],
-            "parentTaskId": 11
+            "details": "Specify service names, RPC methods, input/output messages, and field types. Use proto3 syntax and organize the file in a dedicated protos directory. Validate the proto file for correctness and clarity.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Configure tonic-build for Protobuf Compilation",
+            "description": "Set up tonic-build in the Rust project to automatically compile the .proto file into Rust code during the build process, ensuring compatibility and maintainability.",
+            "dependencies": [
+              1
+            ],
+            "details": "Add tonic and prost dependencies to Cargo.toml. Create or update build.rs to invoke tonic_build::compile_protos with correct paths. Ensure generated code is placed in the appropriate src/ module and is included via tonic::include_proto! macro.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Integrate and Verify Generated Rust Code",
+            "description": "Import and use the generated Rust code in server and client modules, implementing the service logic and ensuring seamless integration with the application.",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement server and client using the generated stubs. Ensure all modules compile without errors or lint warnings. Follow Rust gRPC template standards for code organization and quality.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Comprehensive Testing and Quality Assurance",
+            "description": "Develop unit, integration, and end-to-end tests to achieve 100% test coverage, zero linting warnings, and production-grade reliability for the gRPC service.",
+            "dependencies": [
+              3
+            ],
+            "details": "Write tests for all service methods, including edge cases and error handling. Use real integration tests to validate client-server interactions. Run clippy and other linters to ensure zero warnings. Document test coverage and quality checks.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Implement Database Schema and Migrations",
+        "description": "Create and manage PostgreSQL database schema and migrations using SQLx.",
+        "details": "Write SQL migration files for `users`, `tasks`, and `task_audit_log` tables as per PRD. Use `sqlx migrate add` to create migrations. Implement a script to run migrations on startup. Use `sqlx::query!` for compile-time verified queries.",
+        "testStrategy": "Run migrations and verify tables are created. Test schema with sample data insertion and retrieval.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Normalized Database Schema",
+            "description": "Create a normalized relational schema that models all required entities and relationships, ensuring referential integrity and efficient querying. Use SQLx-compatible types and document the schema with diagrams and rationale.",
+            "dependencies": [],
+            "details": "Analyze the domain requirements and identify all tables, columns, primary/foreign keys, and indexes. Ensure the schema supports future extensibility and aligns with Rust gRPC template standards. Prepare an ER diagram and a detailed schema specification document.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Write and Review Migration Files",
+            "description": "Author SQL migration files for schema creation and updates, following best practices for idempotency and reversibility. Ensure all migrations are compatible with SQLx and can be applied in sequence.",
+            "dependencies": [
+              1
+            ],
+            "details": "Write initial migration scripts for table creation, constraints, and indexes. Include rollback scripts. Peer-review migration files for correctness and maintainability. Validate against the schema specification.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement and Test Migration Scripts",
+            "description": "Integrate migration scripts using a migration tool (e.g., sqlx-cli or refinery) and implement Rust code to apply migrations programmatically. Ensure compile-time query safety and zero linting warnings.",
+            "dependencies": [
+              2
+            ],
+            "details": "Set up migration runner in Rust, ensuring migrations are applied at build or startup. Write unit and integration tests to verify migrations succeed and schema matches expectations. Achieve 100% test coverage and resolve all linting issues.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Integrate Migrations with Application Startup",
+            "description": "Modify the application startup sequence to automatically run migrations before serving gRPC requests, ensuring the database is always up-to-date.",
+            "dependencies": [
+              3
+            ],
+            "details": "Update main.rs or the service entrypoint to invoke migration logic. Ensure robust error handling, logging, and production-grade configuration (e.g., connection pooling, timeouts). Add integration tests to verify startup behavior under various scenarios.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Verify Schema with Sample Data and Integration Tests",
+            "description": "Populate the database with representative sample data and write comprehensive integration tests to validate schema correctness, data integrity, and gRPC endpoint functionality.",
+            "dependencies": [
+              4
+            ],
+            "details": "Seed the database with test fixtures. Write integration tests that exercise all CRUD operations via gRPC endpoints, ensuring end-to-end correctness. Achieve 100% test coverage, zero linting warnings, and production-grade reliability.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Implement User Management Service",
+        "description": "Implement gRPC endpoints for user registration, authentication, profile management, and listing.",
+        "details": "Implement `CreateUser`, `GetUser`, `UpdateUser`, `ListUsers` gRPC methods. Use `sqlx` for database operations. Add JWT-based authentication with `jsonwebtoken = \"9.0\"` and password hashing with `bcrypt = \"0.15\"`. Validate inputs and return structured errors with `thiserror`.",
+        "testStrategy": "Write unit and integration tests for each endpoint. Test user creation, authentication, and profile updates. Validate error handling and input validation.",
+        "priority": "high",
+        "dependencies": [
+          2,
+          3
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Each gRPC Method",
+            "description": "Develop all required gRPC service methods according to the .proto definitions, ensuring adherence to Rust gRPC (tonic) standards.",
+            "dependencies": [],
+            "details": "Define service and message types in .proto files, generate Rust code using tonic-build, and implement each method's business logic in the service handler.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Integrate Authentication",
+            "description": "Add authentication mechanisms to the gRPC service, such as TLS and token-based authentication, ensuring secure access to all endpoints.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use tonic's support for TLS and interceptors to enforce authentication on incoming requests. Validate credentials and reject unauthorized access.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Password Hashing",
+            "description": "Securely hash and verify user passwords using a production-grade hashing algorithm (e.g., Argon2 or bcrypt) within the service logic.",
+            "dependencies": [
+              2
+            ],
+            "details": "Integrate a Rust crate for password hashing, ensure all password storage and verification uses hashed values, and never store plaintext passwords.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Add Input Validation",
+            "description": "Validate all incoming gRPC request data for correctness, completeness, and security before processing.",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement validation logic for each request type, checking for required fields, valid formats, and rejecting malformed or malicious input.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Robust Error Handling",
+            "description": "Ensure all service methods handle errors gracefully, returning appropriate gRPC status codes and messages.",
+            "dependencies": [
+              4
+            ],
+            "details": "Map internal errors to gRPC error responses, log errors securely, and avoid leaking sensitive information in error messages.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Write Comprehensive Unit and Integration Tests",
+            "description": "Develop tests for all service logic, covering edge cases, authentication, validation, and error scenarios to achieve 100% test coverage.",
+            "dependencies": [
+              5
+            ],
+            "details": "Use Rust's test framework and tonic's test utilities to write unit and integration tests. Ensure tests cover all code paths and gRPC methods.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Ensure Production-Grade Quality and Lint Compliance",
+            "description": "Refactor and polish code to meet production standards, resolve all lint warnings, and verify real integration testing with external systems.",
+            "dependencies": [],
+            "details": "Run clippy and other linters to eliminate warnings, review code for best practices, and perform integration tests against a real database or external services.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Implement Task Management Service",
+        "description": "Implement gRPC endpoints for task creation, retrieval, listing, updates, assignment, and deletion.",
+        "details": "Implement `CreateTask`, `GetTask`, `UpdateTask`, `DeleteTask`, `ListTasks` gRPC methods. Use `sqlx` for database operations. Support soft delete and audit logging. Validate inputs and return structured errors.",
+        "testStrategy": "Write unit and integration tests for each endpoint. Test task lifecycle, assignment, and soft delete. Validate audit logging.",
+        "priority": "high",
+        "dependencies": [
+          2,
+          3
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement CRUD gRPC Methods",
+            "description": "Develop all Create, Read, Update, and Delete (CRUD) methods in the Rust gRPC service using Tonic, following proto definitions and Rust gRPC template standards.",
+            "dependencies": [],
+            "details": "Define and implement each RPC method in the service, ensuring correct request/response types and adherence to proto3 syntax. Methods include Create, Get, List, Update, and Delete operations.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Integrate Soft Delete Logic",
+            "description": "Add soft delete functionality to the Delete operations, ensuring records are marked as deleted rather than physically removed.",
+            "dependencies": [
+              1
+            ],
+            "details": "Modify the Delete gRPC method to update a 'deleted' flag or timestamp in the database instead of removing records. Ensure all read operations filter out soft-deleted records.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Audit Logging",
+            "description": "Add audit logging for all CRUD operations to track changes, including who performed the action and when.",
+            "dependencies": [
+              1
+            ],
+            "details": "Log each operation (create, update, delete, soft delete) with relevant metadata such as user ID, timestamp, and operation details. Ensure logs are stored securely and efficiently.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Add Input Validation",
+            "description": "Implement comprehensive input validation for all gRPC method inputs to prevent invalid or malicious data.",
+            "dependencies": [
+              1
+            ],
+            "details": "Validate all incoming requests for required fields, data types, and business logic constraints. Return appropriate gRPC errors for invalid input.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Robust Error Handling",
+            "description": "Ensure all gRPC methods handle errors gracefully and return meaningful, production-grade error responses.",
+            "dependencies": [
+              1,
+              4
+            ],
+            "details": "Map internal errors to appropriate gRPC status codes. Handle database, validation, and logic errors with clear messages and no panics. Ensure no sensitive information is leaked in error responses.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Achieve 100% Test Coverage with Comprehensive Testing",
+            "description": "Write unit, integration, and property-based tests to cover all code paths, including edge cases and error scenarios.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "details": "Develop tests for each CRUD method, soft delete logic, audit logging, input validation, and error handling. Use real integration tests with a test database. Ensure all code is covered and no linting warnings remain.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Enforce Production-Grade Quality and Linting Standards",
+            "description": "Ensure the codebase meets Rust gRPC template standards, with zero linting warnings and production-ready practices.",
+            "dependencies": [],
+            "details": "Run all linting tools (e.g., clippy) and fix warnings. Review code for idiomatic Rust, security, and maintainability. Document all public APIs and ensure readiness for deployment.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Implement Advanced Task Features",
+        "description": "Implement gRPC endpoints for task filtering, search, bulk operations, and dependencies.",
+        "details": "Implement `AssignTask`, `SearchTasks`, `BulkUpdateTasks` gRPC methods. Use `sqlx` for database operations. Add full-text search with PostgreSQL `tsvector`. Support batch updates and task dependencies. Validate inputs and return structured errors.",
+        "testStrategy": "Write unit and integration tests for each endpoint. Test filtering, search, bulk updates, and dependency management.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          3,
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design and Implement Advanced gRPC Endpoints",
+            "description": "Define and implement advanced gRPC endpoints in Rust using the tonic framework, ensuring they support required features such as full-text search, batch operations, and dependency management.",
+            "dependencies": [],
+            "details": "Endpoints should be specified in .proto files and compiled using tonic-build. Ensure endpoints are idiomatic, efficient, and follow Rust gRPC template standards.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Integrate Full-Text Search Functionality",
+            "description": "Implement full-text search capabilities within the Rust service, leveraging efficient indexing and ranking algorithms suitable for production use.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use Rust crates or custom logic for tokenization, indexing, and ranking. Ensure the search is performant and can be tested via the gRPC endpoints. Consider approaches such as those used in tinysearch or mdbook for efficient search.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Batch Operations Support",
+            "description": "Add support for batch operations (bulk create, update, delete) to the gRPC API, ensuring atomicity and proper error handling.",
+            "dependencies": [
+              1
+            ],
+            "details": "Design batch request/response messages in .proto files. Implement transactional logic in Rust to handle batch semantics, ensuring consistency and rollback on failure.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Develop Task Dependency Management Logic",
+            "description": "Implement logic for managing dependencies between tasks, including validation, cycle detection, and correct execution ordering.",
+            "dependencies": [
+              1
+            ],
+            "details": "Design data structures and algorithms to represent and enforce dependencies. Ensure endpoints expose dependency management features and handle edge cases robustly.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Write Comprehensive Unit and Integration Tests",
+            "description": "Develop exhaustive unit and integration tests for all endpoints and features, targeting 100% test coverage and real integration scenarios.",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Use Rust testing frameworks to cover all code paths, including error cases and edge conditions. Integration tests should interact with the running gRPC server and validate end-to-end behavior.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Ensure Production-Grade Quality and Lint Compliance",
+            "description": "Refactor and polish codebase to meet production standards, ensuring zero lint warnings and robust error handling.",
+            "dependencies": [
+              5
+            ],
+            "details": "Run clippy and other linters, address all warnings, and review code for maintainability, security, and performance. Document all endpoints and provide usage examples.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Implement Real-time Streaming and Notifications",
+        "description": "Implement gRPC streaming endpoints for real-time task updates and user notifications.",
+        "details": "Implement `StreamTaskUpdates` and `StreamUserNotifications` gRPC streaming methods. Use `tonic` streaming support. Broadcast updates using channels or a lightweight pub/sub system. Integrate with notification logic for task assignments and updates.",
+        "testStrategy": "Write integration tests for streaming endpoints. Test real-time updates and notification delivery.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Streaming gRPC Endpoints",
+            "description": "Define and implement streaming endpoints in the Rust gRPC service using the Tonic framework, ensuring efficient handling of concurrent client connections and real-time data delivery.",
+            "dependencies": [],
+            "details": "Follow Rust gRPC template standards. Use async/await and stream macros for efficient streaming. Ensure endpoints are documented and support both server-side and bidirectional streaming as required.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Set Up Pub/Sub or Channel Infrastructure",
+            "description": "Establish a robust pub/sub or channel-based system for broadcasting messages to multiple clients, supporting efficient and concurrent message delivery.",
+            "dependencies": [
+              1
+            ],
+            "details": "Utilize Rust async channels or a pub/sub crate. Ensure thread safety and scalability. Integrate with the streaming endpoints to enable real-time notifications to all subscribed clients.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Integrate Notification Logic",
+            "description": "Develop the core notification logic that triggers and routes messages through the pub/sub or channel system to the appropriate streaming endpoints.",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement logic for event detection, message formatting, and delivery guarantees. Ensure the notification system is decoupled and testable. Handle edge cases such as dropped connections and backpressure.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Write Integration Tests for Streaming and Notifications",
+            "description": "Develop comprehensive integration tests covering all streaming and notification scenarios, ensuring 100% test coverage and production-grade reliability.",
+            "dependencies": [
+              3
+            ],
+            "details": "Test concurrent client connections, message ordering, delivery guarantees, and error handling. Use real gRPC clients and servers in tests. Ensure tests run cleanly with zero linting warnings.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Enforce Linting and Production-Grade Quality Standards",
+            "description": "Apply strict linting, code review, and quality assurance processes to ensure zero linting warnings and adherence to production-grade Rust gRPC template standards.",
+            "dependencies": [
+              4
+            ],
+            "details": "Integrate clippy and rustfmt in CI. Review code for idiomatic Rust, concurrency safety, and maintainability. Document all public APIs and ensure all code paths are covered by tests.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Implement Security and Authentication Middleware",
+        "description": "Add JWT-based authentication middleware and role-based access control.",
+        "details": "Implement middleware for JWT validation and role checks. Use `jsonwebtoken` for token handling. Secure all endpoints. Add rate limiting with `governor = \"0.6\"` or similar. Validate all inputs and sanitize outputs.",
+        "testStrategy": "Write integration tests for authentication and authorization. Test rate limiting and input validation.",
+        "priority": "high",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement JWT Validation Middleware",
+            "description": "Develop a middleware/interceptor for the Rust gRPC server that validates JWT tokens on every request, ensuring only authenticated requests are processed.",
+            "dependencies": [],
+            "details": "Use the `jsonwebtoken` crate for token parsing and validation. The middleware should extract the token from the request metadata, validate its signature and claims, and reject requests with invalid or missing tokens. Ensure the implementation follows Rust gRPC (tonic) standards and is fully covered by unit and integration tests.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Integrate Role-Based Access Control (RBAC)",
+            "description": "Extend the JWT validation middleware to enforce role-based access control, restricting endpoint access based on user roles embedded in the JWT.",
+            "dependencies": [
+              1
+            ],
+            "details": "Parse user roles from JWT claims and implement logic to check required roles for each gRPC method. Deny access with appropriate gRPC status codes if the user lacks sufficient permissions. Ensure RBAC logic is thoroughly tested and lint-free.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Secure gRPC Endpoints with TLS",
+            "description": "Configure the gRPC server to use TLS for all communications, ensuring data in transit is encrypted and protected from interception.",
+            "dependencies": [
+              1
+            ],
+            "details": "Generate or obtain valid TLS certificates and configure the server using tonic's TLS support. Ensure all endpoints require secure connections and reject unencrypted requests. Include integration tests that verify TLS enforcement and certificate validation.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Rate Limiting Middleware",
+            "description": "Add middleware to limit the rate of incoming requests per user or IP, protecting the service from abuse and denial-of-service attacks.",
+            "dependencies": [
+              1
+            ],
+            "details": "Choose a suitable rate limiting algorithm (e.g., token bucket or leaky bucket) and implement it as a tonic interceptor. Ensure rate limits are configurable and enforced per user or client. Provide comprehensive tests for normal and edge cases.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Add Input Validation for All Endpoints",
+            "description": "Implement strict input validation for all gRPC request messages to prevent injection attacks and malformed data from reaching business logic.",
+            "dependencies": [
+              1
+            ],
+            "details": "Define validation rules for each message type and enforce them in service handlers or interceptors. Reject invalid requests with clear error messages and appropriate gRPC status codes. Achieve 100% test coverage for all validation logic.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Conduct Security Testing and Achieve 100% Test Coverage",
+            "description": "Perform comprehensive security testing, including automated tests, manual penetration testing, and code audits, to ensure all implemented security features are robust and production-ready.",
+            "dependencies": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "details": "Write integration and unit tests covering all security scenarios, including authentication failures, authorization denials, rate limit breaches, and invalid input. Use security testing tools to simulate attacks. Ensure zero linting warnings and document all test cases.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Implement Monitoring, Logging, and Health Checks",
+        "description": "Add structured logging, metrics collection, and health check endpoints.",
+        "details": "Integrate `tracing = \"0.1\"` for structured logging. Add Prometheus metrics with `metrics = \"0.21\"` and `metrics-exporter-prometheus = \"0.12\"`. Implement health check endpoints. Add request duration and throughput tracking.",
+        "testStrategy": "Test logging, metrics, and health check endpoints. Validate monitoring integration.",
+        "priority": "medium",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Integrate Structured Logging",
+            "description": "Implement structured logging throughout the Rust gRPC service using a production-grade logging crate (e.g., tracing). Ensure all log statements include contextual metadata and are consistent with the Rust gRPC template standards.",
+            "dependencies": [],
+            "details": "Configure the logging system in main.rs and propagate context through all service layers. Add log statements for key events, errors, and request/response cycles. Ensure zero linting warnings and 100% test coverage for logging-related code paths.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Add Metrics Collection",
+            "description": "Instrument the gRPC service with metrics collection using a library compatible with Prometheus (e.g., autometrics). Track key metrics such as request counts, latencies, and error rates.",
+            "dependencies": [
+              1
+            ],
+            "details": "Integrate metrics middleware into the gRPC server. Expose a /metrics endpoint for Prometheus scraping. Ensure all critical paths are instrumented and covered by integration tests. Maintain zero linting warnings.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Health Checks",
+            "description": "Add health check endpoints to the gRPC service following production standards. Ensure the service exposes readiness and liveness probes suitable for orchestration platforms.",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement gRPC health check service as per the gRPC health checking protocol. Add integration tests to validate health check behavior under normal and failure scenarios. Ensure 100% test coverage and zero linting warnings.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Validate Monitoring and Observability Setup",
+            "description": "Verify that structured logging, metrics, and health checks are correctly integrated and observable in a production-like environment. Ensure all observability features meet the Rust gRPC template standards.",
+            "dependencies": [
+              3
+            ],
+            "details": "Deploy the service in a test environment with Prometheus and log aggregation. Confirm that logs are structured, metrics are collected and exposed, and health checks respond as expected. Run real integration tests to validate end-to-end observability. Address any gaps to achieve 100% test coverage and zero linting warnings.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Implement Comprehensive Testing Strategy",
+        "description": "Develop unit, integration, and load tests to ensure 100% coverage and performance targets.",
+        "details": "Write unit tests for all business logic. Implement integration tests with real database and gRPC client. Add load tests with `locust` or `k6`. Enforce 100% coverage with `tarpaulin` or `grcov`. Test security and input validation.",
+        "testStrategy": "Run all tests in CI/CD. Validate coverage and performance targets.",
+        "priority": "high",
+        "dependencies": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Develop Unit Tests for Rust gRPC Services",
+            "description": "Write comprehensive unit tests for all core logic, message handling, and utility functions in the Rust gRPC codebase, ensuring each function and module is tested in isolation.",
+            "dependencies": [],
+            "details": "Focus on pure functions and business logic. Use Rust's #[test] framework and mock dependencies where possible. Ensure all edge cases and error handling paths are covered.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Integration Tests for gRPC Endpoints",
+            "description": "Create integration tests that spin up the actual gRPC server and client, validating real request/response cycles, streaming endpoints, and cross-service interactions.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use async test harnesses to launch the server and client in test mode. Cover all gRPC methods, including streaming and error scenarios, to ensure end-to-end correctness according to the Rust gRPC template standards.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Design and Execute Load Tests",
+            "description": "Develop load testing scripts to simulate high concurrency and throughput on all gRPC endpoints, measuring system behavior under stress.",
+            "dependencies": [
+              2
+            ],
+            "details": "Use tools like grpcurl, ghz, or custom Rust-based clients to generate load. Collect metrics on latency, throughput, and error rates. Identify bottlenecks and ensure the service meets production-grade performance requirements.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Enforce 100% Test Coverage and Zero Linting Warnings",
+            "description": "Integrate code coverage tools and linting into the workflow, enforcing 100% test coverage and zero linting warnings as required by the Rust gRPC template standards.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Use cargo-tarpaulin or grcov for coverage, and cargo clippy for linting. Set up CI checks to fail builds if coverage drops below 100% or if any linting warnings are present.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Conduct Security Testing",
+            "description": "Perform security assessments on the gRPC service, including fuzzing, input validation checks, and authentication/authorization verification.",
+            "dependencies": [
+              2
+            ],
+            "details": "Use automated tools and manual review to check for vulnerabilities such as injection, improper input handling, and insecure transport. Ensure all endpoints enforce proper authentication and authorization.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Integrate with CI/CD Pipeline",
+            "description": "Set up continuous integration and deployment pipelines to automate building, testing, linting, and deploying the Rust gRPC service.",
+            "dependencies": [
+              4,
+              5
+            ],
+            "details": "Configure workflows (e.g., GitHub Actions, GitLab CI) to run all tests, enforce coverage and linting, and deploy artifacts on successful builds. Ensure integration with code review and release processes.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Validate Production-Grade Performance",
+            "description": "Analyze and validate the service's performance under realistic production scenarios, ensuring it meets latency, throughput, and resource usage targets.",
+            "dependencies": [
+              3,
+              6
+            ],
+            "details": "Profile the application using Rust performance tools, monitor resource consumption, and optimize code paths as needed. Document performance benchmarks and confirm readiness for production deployment.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Optimize Performance and Scalability",
+        "description": "Optimize database queries, add caching, and ensure horizontal scaling readiness.",
+        "details": "Add database indexes for performance. Implement in-memory caching with `redis = \"0.23\"` for frequently accessed data. Optimize connection pooling. Test under load and tune configuration.",
+        "testStrategy": "Run load tests and monitor performance. Validate caching and scaling behavior.",
+        "priority": "medium",
+        "dependencies": [
+          3,
+          5,
+          6,
+          7,
+          9
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Analyze and Optimize Database Queries",
+            "description": "Review all database queries used by the Rust gRPC service. Identify slow or inefficient queries using profiling tools, and refactor them for optimal performance. Ensure queries are structured to minimize latency and resource usage.",
+            "dependencies": [],
+            "details": "Use query analyzers and Rust profiling tools to detect bottlenecks. Refactor queries for efficiency, considering join strategies, subquery elimination, and minimizing data transfer.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Design and Implement Database Indexes",
+            "description": "Identify frequently accessed fields and queries that would benefit from indexing. Create and validate appropriate indexes to accelerate query performance without introducing excessive write overhead.",
+            "dependencies": [
+              1
+            ],
+            "details": "Analyze query patterns and database schema. Add indexes to columns used in WHERE, JOIN, and ORDER BY clauses. Benchmark before and after index creation to ensure positive impact.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Integrate and Validate Caching Strategies",
+            "description": "Implement caching at appropriate layers (in-memory, distributed, or database-level) to reduce redundant computations and database hits. Ensure cache invalidation and consistency mechanisms are robust.",
+            "dependencies": [
+              2
+            ],
+            "details": "Select suitable caching libraries for Rust. Integrate cache for read-heavy endpoints. Write tests to verify cache hits/misses and correct invalidation on data changes.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Tune Connection Pooling and gRPC Server Configuration",
+            "description": "Adjust connection pool sizes and gRPC server settings (such as thread counts and concurrency limits) to maximize throughput and minimize latency under load.",
+            "dependencies": [
+              3
+            ],
+            "details": "Profile the service under simulated load. Tune connection pool parameters and gRPC server options (e.g., number of async workers, max concurrent streams) based on observed bottlenecks.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Conduct Load Testing and Performance Validation",
+            "description": "Develop and execute comprehensive load tests to measure system performance, identify bottlenecks, and validate the effectiveness of optimizations.",
+            "dependencies": [
+              4
+            ],
+            "details": "Use tools like k6, Locust, or custom Rust-based load generators. Simulate realistic traffic patterns. Collect metrics on latency, throughput, error rates, and resource utilization.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Ensure Production-Grade Quality and Test Coverage",
+            "description": "Achieve 100% test coverage, zero linting warnings, and robust integration tests for all performance-critical paths. Validate that all optimizations are covered by tests and meet Rust gRPC template standards.",
+            "dependencies": [
+              5
+            ],
+            "details": "Expand unit and integration tests to cover all code paths, including error handling and edge cases. Run linters and fix all warnings. Ensure integration tests run against real or emulated infrastructure.",
+            "status": "pending",
+            "testStrategy": ""
           }
         ]
       },
       {
         "id": 12,
-        "title": "Create User Type Definition",
-        "description": "Define the User interface in TypeScript with id, name, email, and createdAt fields",
-        "status": "pending",
-        "dependencies": [
-          11
-        ],
-        "priority": "high",
-        "details": "Create src/types/user.ts with User interface. Include proper TypeScript types for all fields.",
-        "testStrategy": "TypeScript compilation should pass without type errors",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "Create user.ts file",
-            "description": "Create src/types/user.ts file with proper TypeScript structure",
-            "details": "",
-            "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 12
-          },
-          {
-            "id": 2,
-            "title": "Define User interface",
-            "description": "Define the User interface with id, name, email, and createdAt properties",
-            "details": "",
-            "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 12
-          }
-        ]
-      },
-      {
-        "id": 13,
-        "title": "Implement Health Check Endpoint",
-        "description": "Create GET /health endpoint that returns service status and timestamp",
-        "status": "pending",
-        "dependencies": [
-          11
-        ],
+        "title": "Prepare for Production Deployment",
+        "description": "Build Docker images, configure Kubernetes, and finalize deployment scripts.",
+        "details": "Create multi-stage Dockerfile for optimized images. Add health checks and graceful shutdown support. Configure environment-based settings. Prepare Kubernetes manifests. Publish images to a container registry.",
+        "testStrategy": "Test Docker builds and Kubernetes deployment. Validate health checks and configuration management.",
         "priority": "medium",
-        "details": "Create src/routes/health.ts with a simple GET handler. Return JSON with status 'ok' and current timestamp.",
-        "testStrategy": "Manual test with curl or Postman to verify 200 response",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "Create health route file",
-            "description": "Create src/routes/health.ts with Express router setup",
-            "details": "",
-            "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 13
-          },
-          {
-            "id": 2,
-            "title": "Implement health handler",
-            "description": "Create GET /health handler that returns status and timestamp",
-            "details": "",
-            "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 13
-          },
-          {
-            "id": 3,
-            "title": "Wire health routes to app",
-            "description": "Import and use health router in main Express app",
-            "details": "",
-            "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 13
-          }
-        ]
-      },
-      {
-        "id": 14,
-        "title": "Implement User Routes",
-        "description": "Create GET /users and POST /users endpoints with in-memory storage",
-        "status": "pending",
         "dependencies": [
-          11,
-          12
+          1,
+          9,
+          11
         ],
-        "priority": "high",
-        "details": "Create src/routes/users.ts with handlers for listing and creating users. Use array for in-memory storage. Implement basic validation for POST.",
-        "testStrategy": "Test both endpoints with curl/Postman. Verify data persists between requests.",
+        "status": "pending",
         "subtasks": [
           {
             "id": 1,
-            "title": "Create users route file",
-            "description": "Create src/routes/users.ts with Express router setup and in-memory storage array",
-            "details": "",
-            "status": "pending",
+            "title": "Create Optimized Dockerfile for Rust gRPC Service",
+            "description": "Design and implement a Dockerfile that follows best practices for building and running a Rust gRPC service, leveraging multi-stage builds, Docker layer caching, and build optimizations to ensure fast, reproducible, and secure container images.",
             "dependencies": [],
-            "parentTaskId": 14
+            "details": "Ensure the Dockerfile uses a Rust base image for building, copies only necessary files to optimize cache usage, and produces a minimal runtime image. Integrate sccache or similar tools for build speedup. The final image should contain only the compiled binary and runtime dependencies, following Rust gRPC template standards.",
+            "status": "pending",
+            "testStrategy": ""
           },
           {
             "id": 2,
-            "title": "Implement GET /users handler",
-            "description": "Create handler to return all users from in-memory array",
-            "details": "",
+            "title": "Integrate Health Check Mechanisms",
+            "description": "Implement and configure health check endpoints in the Rust gRPC service and expose them in the Dockerfile and container configuration.",
+            "dependencies": [
+              1
+            ],
+            "details": "Add a dedicated health check endpoint to the gRPC service. Update the Dockerfile to include a HEALTHCHECK instruction that periodically verifies the service's health. Ensure the health check logic is robust and production-ready.",
             "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 14
+            "testStrategy": ""
           },
           {
             "id": 3,
-            "title": "Implement POST /users handler",
-            "description": "Create handler to add new users with validation",
-            "details": "",
+            "title": "Configure Environment Variables and Secrets Management",
+            "description": "Set up environment variable handling and secure secrets management for the Rust gRPC service, ensuring all configuration is externalized and production-safe.",
+            "dependencies": [
+              1
+            ],
+            "details": "Define all necessary environment variables in the Dockerfile and document their usage. Ensure sensitive data is not hardcoded and can be injected securely at runtime. Validate that the application reads configuration from the environment and fails gracefully if required variables are missing.",
             "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 14
+            "testStrategy": ""
           },
           {
             "id": 4,
-            "title": "Wire user routes to app",
-            "description": "Import and use user router in main Express app",
-            "details": "",
+            "title": "Prepare Kubernetes Manifests for Deployment",
+            "description": "Create Kubernetes manifests (Deployment, Service, ConfigMap, Secret, etc.) for orchestrating the Rust gRPC service in a production cluster, following best practices for resource management and security.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Write YAML manifests for deploying the containerized service, exposing it via a Kubernetes Service, and managing configuration and secrets. Include readiness and liveness probes that align with the health check integration. Ensure manifests are parameterized for different environments.",
             "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 14
-          }
-        ]
-      },
-      {
-        "id": 15,
-        "title": "Add Error Handling Middleware",
-        "description": "Implement global error handling middleware for consistent error responses",
-        "status": "pending",
-        "dependencies": [
-          11
-        ],
-        "priority": "medium",
-        "details": "Create src/middleware/error.ts with error handling middleware. Catch and format errors with appropriate HTTP status codes.",
-        "testStrategy": "Test with invalid requests to verify error responses",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "Create error middleware file",
-            "description": "Create src/middleware/error.ts with Express error handler setup",
-            "details": "",
-            "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 15
+            "testStrategy": ""
           },
           {
-            "id": 2,
-            "title": "Implement error handler function",
-            "description": "Create error handling middleware function with proper error formatting",
-            "details": "",
+            "id": 5,
+            "title": "Publish and Version Docker Image",
+            "description": "Automate the build, tagging, and publishing of the Docker image to a container registry, ensuring traceability and reproducibility for production deployments.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Set up CI/CD pipelines or scripts to build the Docker image, run all tests (unit, integration, linting), enforce 100% test coverage and zero lint warnings, and push the image to a registry with semantic versioning. Document the publishing process and image usage.",
             "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 15
-          },
-          {
-            "id": 3,
-            "title": "Wire error middleware to app",
-            "description": "Import and use error middleware in main Express app",
-            "details": "",
-            "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 15
-          }
-        ]
-      },
-      {
-        "id": 16,
-        "title": "Create README Documentation",
-        "description": "Write comprehensive README with API documentation, setup instructions, and usage examples",
-        "status": "pending",
-        "dependencies": [
-          13,
-          14,
-          15
-        ],
-        "priority": "low",
-        "details": "Document all endpoints, request/response formats, setup steps, and include curl examples for testing.",
-        "testStrategy": "Follow README instructions on fresh clone to verify accuracy",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "Create README file",
-            "description": "Create README.md with project title and overview",
-            "details": "",
-            "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 16
-          },
-          {
-            "id": 2,
-            "title": "Document API endpoints",
-            "description": "Add sections for all endpoints with request/response examples",
-            "details": "",
-            "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 16
-          },
-          {
-            "id": 3,
-            "title": "Add setup instructions",
-            "description": "Write installation and development setup steps",
-            "details": "",
-            "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 16
+            "testStrategy": ""
           }
         ]
       }
     ],
     "metadata": {
-      "created": "2025-07-08T01:46:12.816Z",
-      "updated": "2025-07-08T01:46:12.816Z",
+      "created": "2025-07-10T04:19:36.539Z",
+      "updated": "2025-07-10T04:19:36.540Z",
       "description": "Tasks for master context"
     }
   }
