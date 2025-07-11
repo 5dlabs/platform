@@ -19,6 +19,7 @@ BINARY_NAME="orchestrator-mcp-server"
 VERSION="latest"
 FORCE=false
 UPDATE_CONFIG=true
+UPDATE_PATH=true
 MCP_CONFIG_FILE="$HOME/.cursor/mcp.json"
 
 # Function to print colored output
@@ -58,6 +59,7 @@ OPTIONS:
     -d, --dir DIR          Installation directory (default: ~/.local/bin)
     -f, --force            Force reinstall even if already installed
     --no-config            Skip MCP configuration update
+    --no-path              Skip updating PATH in shell profile
     --config FILE          Custom MCP config file path
     --repo REPO            GitHub repository (default: 5dlabs/agent-platform)
 
@@ -66,6 +68,7 @@ EXAMPLES:
     $0 --version v1.2.3                  # Install specific version
     $0 --dir /usr/local/bin --force       # System install with force
     $0 --no-config                        # Skip config update
+    $0 --no-path                          # Skip PATH update
 
 The installer will:
   ✅ Auto-detect your platform (Linux, macOS, Windows)
@@ -73,6 +76,7 @@ The installer will:
   ✅ Verify checksums for security
   ✅ Install to specified directory
   ✅ Update your .cursor/mcp.json configuration
+  ✅ Add install directory to PATH (bash/zsh)
   ✅ Provide next steps for usage
 
 EOF
@@ -108,6 +112,10 @@ while [[ $# -gt 0 ]]; do
         --repo)
             REPO="$2"
             shift 2
+            ;;
+        --no-path)
+            UPDATE_PATH=false
+            shift
             ;;
         *)
             print_error "Unknown option: $1"
@@ -324,6 +332,83 @@ update_mcp_config() {
     fi
 }
 
+# Update shell profile to include install directory in PATH
+update_shell_path() {
+    local install_dir="$1"
+
+    # Skip if directory is already in PATH or is a system directory
+    if [[ ":$PATH:" == *":$install_dir:"* ]] || [[ "$install_dir" == "/usr/local/bin" ]]; then
+        return 0
+    fi
+
+    # Detect shell and appropriate profile file
+    local shell_name profile_file
+    shell_name=$(basename "$SHELL")
+
+    case "$shell_name" in
+        bash)
+            # Check for different bash profile files in order of preference
+            if [[ -f "$HOME/.bash_profile" ]]; then
+                profile_file="$HOME/.bash_profile"
+            elif [[ -f "$HOME/.bashrc" ]]; then
+                profile_file="$HOME/.bashrc"
+            else
+                # Create .bashrc if neither exists
+                profile_file="$HOME/.bashrc"
+            fi
+            ;;
+        zsh)
+            profile_file="$HOME/.zshrc"
+            ;;
+        *)
+            print_warning "Unsupported shell: $shell_name"
+            print_info "Supported shells: bash, zsh"
+            print_info "Please manually add $install_dir to your PATH:"
+            print_info "  export PATH=\"\$PATH:$install_dir\""
+            return 0
+            ;;
+    esac
+
+    # Check if PATH export already exists in profile
+    if [[ -f "$profile_file" ]] && grep -q "export PATH.*$install_dir" "$profile_file" 2>/dev/null; then
+        print_info "PATH already configured in $profile_file"
+        return 0
+    fi
+
+    print_warning "⚠️  $install_dir is not in your PATH"
+    echo ""
+    print_info "To use the binary directly from anywhere, we can add it to your PATH."
+
+    # Ask user if they want to update PATH
+    if [[ -t 0 ]]; then  # Only prompt if running interactively
+        echo -n "Add $install_dir to PATH in $profile_file? (y/N): "
+        read -r response
+
+        if [[ "$response" =~ ^[Yy]$ ]]; then
+            # Add PATH export to profile file
+            echo "" >> "$profile_file"
+            echo "# Added by orchestrator-mcp-server installer" >> "$profile_file"
+            echo "export PATH=\"\$PATH:$install_dir\"" >> "$profile_file"
+
+            print_success "✅ PATH updated in $profile_file"
+            echo ""
+            print_info "To use the new PATH in this session, run:"
+            print_info "  source $profile_file"
+            print_info "Or restart your terminal."
+
+            return 0
+        else
+            print_info "Skipped PATH update."
+        fi
+    else
+        print_info "Running non-interactively, skipping PATH update."
+    fi
+
+    echo ""
+    print_info "To manually add to PATH, add this line to $profile_file:"
+    print_info "  export PATH=\"\$PATH:$install_dir\""
+}
+
 # Main installation function
 main() {
     print_header
@@ -387,6 +472,11 @@ main() {
     # Update MCP configuration
     update_mcp_config "$dest_path"
 
+    # Update shell PATH
+    if [[ "$UPDATE_PATH" == true ]]; then
+        update_shell_path "$INSTALL_DIR"
+    fi
+
     # Cleanup
     rm -rf "$temp_dir"
 
@@ -412,14 +502,6 @@ main() {
     print_info "  init_docs({model: 'opus'})       # Use specific model"
     print_info "  init_docs({task_id: 5})          # Generate docs for task 5 only"
     print_info "  ping()                           # Test MCP connectivity"
-
-    # Check PATH
-    if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]] && [[ "$INSTALL_DIR" != "/usr/local/bin" ]]; then
-        echo ""
-        print_warning "⚠️  $INSTALL_DIR is not in your PATH"
-        print_info "To use the binary directly, add this to your shell profile:"
-        print_info "  export PATH=\"\$PATH:$INSTALL_DIR\""
-    fi
 
     echo ""
     print_success "🎉 Ready to use the enhanced MCP server!"
