@@ -160,21 +160,28 @@ fi
 echo '=== CLAUDE CONFIGURATION DIAGNOSTICS ==='
 
 # Log all potential Claude configuration files for debugging
-echo "Checking all Claude configuration file locations:"
+echo "Checking Claude configuration file locations:"
 echo ""
 
-for location in "/workspace/.claude.json" "/workspace/.claude/config.json" "/workspace/.claude/settings.json" "/workspace/.claude/settings.local.json" "~/.claude.json" "~/.claude/config.json" "~/.claude/settings.json" "~/.config/claude/config.json" "/etc/claude/config.json"; do
-    # Expand ~ to actual home directory
-    expanded_location=$(eval echo "$location")
-    
-    if [ -f "$expanded_location" ]; then
-        echo "✓ FOUND: $expanded_location"
-        echo "  File size: $(wc -c < "$expanded_location") bytes"
+# Get the actual project directory where Claude should look for settings
+PROJECT_DIR="/workspace/{{working_dir}}"
+if [ -z "{{working_dir}}" ] || [ "{{working_dir}}" = "." ]; then
+    PROJECT_DIR="/workspace"
+fi
+
+echo "Project directory: $PROJECT_DIR"
+echo ""
+
+# Check correct locations according to Claude documentation
+for location in "$PROJECT_DIR/.claude/settings.json" "$PROJECT_DIR/.claude/settings.local.json"; do
+    if [ -f "$location" ]; then
+        echo "✓ FOUND: $location"
+        echo "  File size: $(wc -c < "$location") bytes"
         echo "  Contents:"
-        cat "$expanded_location" | head -20 | sed 's/^/    /'
+        cat "$location" | head -20 | sed 's/^/    /'
         echo ""
     else
-        echo "✗ NOT FOUND: $expanded_location"
+        echo "✗ NOT FOUND: $location"
     fi
 done
 
@@ -187,38 +194,48 @@ echo '=== STARTING CLAUDE ==='
 CLAUDE_CMD="{{command}} -p --output-format stream-json --verbose --allowedTools Bash,Edit,Read,Write,Glob,Grep,LS,MultiEdit,WebSearch,WebFetch,TodoRead,TodoWrite"
 
 {{#if is_docs_generation}}
-# For docs generation, change to the .taskmaster directory before running Claude
-# The working_dir variable comes from the TaskRun spec
-WORKING_DIR="{{working_dir}}"
-if [ -n "$WORKING_DIR" ] && [ "$WORKING_DIR" != "." ]; then
-  echo "Changing to working directory: /workspace/$WORKING_DIR/.taskmaster for docs generation"
-  cd "/workspace/$WORKING_DIR/.taskmaster"
-else
-  echo "Changing to working directory: /workspace/.taskmaster for docs generation"
-  cd "/workspace/.taskmaster"
+# For docs generation, set the project directory
+PROJECT_DIR="/workspace/{{working_dir}}"
+if [ -z "{{working_dir}}" ] || [ "{{working_dir}}" = "." ]; then
+  PROJECT_DIR="/workspace"
 fi
+
+echo "Using project directory: $PROJECT_DIR for docs generation"
+
+# Add --cwd flag to Claude command
+CLAUDE_CMD="$CLAUDE_CMD --cwd $PROJECT_DIR"
 
 echo ""
 echo "=== DOCUMENTATION GENERATION DIAGNOSTICS ==="
-echo "Current directory: $(pwd)"
-echo "Directory contents:"
-ls -la
+echo "Project directory: $PROJECT_DIR"
+echo "Project directory contents:"
+ls -la "$PROJECT_DIR"
 echo ""
-echo "Checking for tasks.json:"
-if [ -f "tasks/tasks.json" ]; then
-  echo "✓ Found tasks/tasks.json"
-  echo "First 5 lines:"
-  head -5 tasks/tasks.json
+echo "Checking for .taskmaster in project:"
+if [ -d "$PROJECT_DIR/.taskmaster" ]; then
+  echo "✓ Found .taskmaster directory"
+  echo "Checking for tasks.json:"
+  if [ -f "$PROJECT_DIR/.taskmaster/tasks/tasks.json" ]; then
+    echo "✓ Found tasks/tasks.json"
+    echo "First 5 lines:"
+    head -5 "$PROJECT_DIR/.taskmaster/tasks/tasks.json"
+  else
+    echo "✗ ERROR: tasks/tasks.json not found!"
+  fi
 else
-  echo "✗ ERROR: tasks/tasks.json not found!"
+  echo "✗ ERROR: .taskmaster directory not found!"
 fi
 echo ""
-echo "Checking for prompt.md:"
-if [ -f "prompt.md" ]; then
-  echo "✓ Found prompt.md"
-  echo "File size: $(wc -c < prompt.md) bytes"
+echo "Checking for CLAUDE.md in project root:"
+if [ -f "$PROJECT_DIR/CLAUDE.md" ]; then
+  echo "✓ Found CLAUDE.md at project root"
+  echo "File size: $(wc -c < "$PROJECT_DIR/CLAUDE.md") bytes"
 else
-  echo "✗ ERROR: prompt.md not found!"
+  echo "✗ WARNING: CLAUDE.md not found at project root"
+  # Fall back to .taskmaster location
+  if [ -f "$PROJECT_DIR/.taskmaster/CLAUDE.md" ]; then
+    echo "✓ Found CLAUDE.md in .taskmaster (legacy location)"
+  fi
 fi
 echo "=== END DIAGNOSTICS ==="
 echo ""
@@ -246,8 +263,20 @@ echo "Starting Claude execution..."
 echo "=========================="
 
 {{#if is_docs_generation}}
+# Run Claude with CLAUDE.md from project root (or fallback to .taskmaster)
+PROMPT_FILE="$PROJECT_DIR/CLAUDE.md"
+if [ ! -f "$PROMPT_FILE" ]; then
+  # Fallback to .taskmaster location
+  PROMPT_FILE="$PROJECT_DIR/.taskmaster/prompt.md"
+  if [ ! -f "$PROMPT_FILE" ]; then
+    PROMPT_FILE="$PROJECT_DIR/.taskmaster/CLAUDE.md"
+  fi
+fi
+
+echo "Using prompt file: $PROMPT_FILE"
+
 # Run Claude (without exec so we can run stop hook after)
-$CLAUDE_CMD < "$CLAUDE_WORK_DIR/prompt.md"
+$CLAUDE_CMD < "$PROMPT_FILE"
 CLAUDE_EXIT_CODE=$?
 
 # Run stop hook for PR creation if docs generation succeeded

@@ -1,267 +1,124 @@
-use anyhow::Result;
-use clap::Parser;
-use serde_json::{json, Value};
-use std::io::{stdin, stdout, BufRead, BufReader, Write};
-use tracing::info;
-
 mod orchestrator_tools;
 
-#[derive(Parser)]
-#[command(name = "mcp-server")]
-#[command(about = "MCP Server for document generation and task assignment")]
-struct Args {
-    #[arg(long, help = "Enable debug logging")]
-    debug: bool,
+use anyhow::Result;
+use rmcp::{
+    transport::io::stdio,
+    ServiceExt,
+    ServerHandler,
+    model::{
+        CallToolResult,
+        ServerInfo,
+        PaginatedRequestParam,
+        ListResourcesResult,
+        ListResourceTemplatesResult,
+        ListPromptsResult,
+        ReadResourceRequestParam,
+        ReadResourceResult,
+        GetPromptRequestParam,
+        GetPromptResult,
+    },
+    service::{RequestContext, RoleServer},
+    tool,
+    Error as McpError,
+};
+use schemars::JsonSchema;
+use serde::Deserialize;
+
+#[derive(Clone)]
+struct OrchestratorService;
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct InitDocsArgs {
+    #[schemars(description = "Claude model to use (sonnet, opus)")]
+    model: Option<String>,
+    #[schemars(description = "Working directory containing .taskmaster folder (auto-detected if not specified)")]
+    working_directory: Option<String>,
+    #[schemars(description = "Overwrite existing documentation")]
+    force: Option<bool>,
+    #[schemars(description = "Generate docs for specific task only")]
+    task_id: Option<u32>,
 }
 
-struct McpServer {
-    id_counter: u64,
+#[tool(tool_box)]
+impl OrchestratorService {
+    #[tool(description = "Initialize documentation for Task Master tasks using Claude")]
+    async fn init_docs(
+        &self,
+        #[tool(aggr)] args: InitDocsArgs,
+    ) -> Result<CallToolResult, McpError> {
+        let model = args.model.as_deref().unwrap_or("opus");
+        let working_directory = args.working_directory.as_deref();
+        let force = args.force.unwrap_or(false);
+        let task_id = args.task_id;
+
+        match orchestrator_tools::init_docs(model, working_directory, force, task_id) {
+            Ok(output) => Ok(CallToolResult::success(vec![rmcp::model::Content::text(output)])),
+            Err(e) => Err(McpError::internal_error(format!("Failed: {}", e), None)),
+        }
+    }
 }
 
-impl McpServer {
-    fn new() -> Self {
-        Self { id_counter: 0 }
-    }
-
-    fn next_id(&mut self) -> u64 {
-        self.id_counter += 1;
-        self.id_counter
-    }
-
-    fn handle_request(&mut self, request: Value) -> Result<Value> {
-        let method = request["method"].as_str().unwrap_or("");
-        let id = request["id"].clone();
-
-        match method {
-            "initialize" => {
-                let response = json!({
-                    "jsonrpc": "2.0",
-                    "id": id,
-                    "result": {
-                        "protocolVersion": "2024-06-18",
-                        "capabilities": {
-                            "tools": {
-                                "listChanged": false
-                            }
-                        },
-                        "serverInfo": {
-                            "name": "orchestrator-docs",
-                            "version": "0.1.0"
-                        }
-                    }
-                });
-                Ok(response)
-            }
-            "tools/list" => {
-                let response = json!({
-                    "jsonrpc": "2.0", 
-                    "id": id,
-                    "result": {
-                        "tools": [
-                            {
-                                "name": "init_docs",
-                                "description": "Initialize documentation for Task Master tasks using Claude (orchestrator task init-docs)",
-                                "inputSchema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "model": {
-                                            "type": "string",
-                                            "description": "Claude model to use (sonnet, opus)",
-                                            "default": "opus",
-                                            "enum": ["sonnet", "opus"]
-                                        },
-                                        "working_directory": {
-                                            "type": "string",
-                                            "description": "Working directory containing .taskmaster folder (auto-detected if not specified)"
-                                        },
-                                        "force": {
-                                            "type": "boolean",
-                                            "description": "Overwrite existing documentation",
-                                            "default": false
-                                        },
-                                        "task_id": {
-                                            "type": "integer",
-                                            "description": "Generate docs for specific task only"
-                                        }
-                                    }
-                                }
-                            }
-                        ]
-                    }
-                });
-                Ok(response)
-            }
-            "tools/call" => {
-                let params = &request["params"];
-                let tool_name = params["name"].as_str().unwrap_or("");
-                let arguments = &params["arguments"];
-
-                match tool_name {
-                    "init_docs" => {
-                        let model = arguments["model"]
-                            .as_str()
-                            .unwrap_or("opus");
-                        let working_directory = arguments["working_directory"]
-                            .as_str();
-                        let force = arguments["force"]
-                            .as_bool()
-                            .unwrap_or(false);
-                        let task_id = arguments["task_id"]
-                            .as_u64()
-                            .map(|id| id as u32);
-
-                        info!("Initializing documentation with model: {}", model);
-                        
-                        // Log the working directory resolution
-                        match orchestrator_tools::find_taskmaster_root(working_directory) {
-                            Ok(root) => info!("Using Task Master root: {}", root.display()),
-                            Err(e) => info!("Failed to find Task Master root: {}", e),
-                        }
-
-                        match orchestrator_tools::init_docs(model, working_directory, force, task_id) {
-                            Ok(output) => {
-                                let response = json!({
-                                    "jsonrpc": "2.0",
-                                    "id": id,
-                                    "result": {
-                                        "content": [
-                                            {
-                                                "type": "text",
-                                                "text": format!("Documentation generation initiated successfully!\n\n{}", output)
-                                            }
-                                        ]
-                                    }
-                                });
-                                Ok(response)
-                            }
-                            Err(e) => {
-                                let response = json!({
-                                    "jsonrpc": "2.0",
-                                    "id": id,
-                                    "result": {
-                                        "content": [
-                                            {
-                                                "type": "text",
-                                                "text": format!("Failed to initialize documentation: {}", e)
-                                            }
-                                        ],
-                                        "isError": true
-                                    }
-                                });
-                                Ok(response)
-                            }
-                        }
-                    }
-                    _ => {
-                        let error_response = json!({
-                            "jsonrpc": "2.0",
-                            "id": id,
-                            "error": {
-                                "code": -32601,
-                                "message": format!("Unknown tool: {}", tool_name)
-                            }
-                        });
-                        Ok(error_response)
-                    }
-                }
-            }
-            _ => {
-                let error_response = json!({
-                    "jsonrpc": "2.0", 
-                    "id": id,
-                    "error": {
-                        "code": -32601,
-                        "message": format!("Method not found: {}", method)
-                    }
-                });
-                Ok(error_response)
-            }
+impl ServerHandler for OrchestratorService {
+    fn get_info(&self) -> ServerInfo {
+        ServerInfo {
+            name: "Orchestrator MCP Server".to_string(),
+            version: "0.1.0".to_string(),
         }
     }
 
-    fn run(&mut self) -> Result<()> {
-        let stdin = stdin();
-        let mut stdout = stdout();
-        let reader = BufReader::new(stdin);
+    async fn list_resources(
+        &self,
+        _request: PaginatedRequestParam,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListResourcesResult, McpError> {
+        Ok(ListResourcesResult {
+            resources: vec![],
+            next_cursor: None,
+        })
+    }
 
-        info!("MCP server ready, waiting for requests...");
+    async fn read_resource(
+        &self,
+        _request: ReadResourceRequestParam,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ReadResourceResult, McpError> {
+        Err(McpError::method_not_found())
+    }
 
-        for line in reader.lines() {
-            let line = line?;
-            if line.trim().is_empty() {
-                continue;
-            }
+    async fn list_prompts(
+        &self,
+        _request: PaginatedRequestParam,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListPromptsResult, McpError> {
+        Ok(ListPromptsResult {
+            prompts: vec![],
+            next_cursor: None,
+        })
+    }
 
-            info!("Received request: {}", line);
+    async fn get_prompt(
+        &self,
+        _request: GetPromptRequestParam,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<GetPromptResult, McpError> {
+        Err(McpError::method_not_found())
+    }
 
-            match serde_json::from_str::<Value>(&line) {
-                Ok(request) => {
-                    let request_id = request.get("id").cloned().unwrap_or(Value::Null);
-                    match self.handle_request(request) {
-                        Ok(response) => {
-                            let response_str = serde_json::to_string(&response)?;
-                            info!("Sending response: {}", response_str);
-                            writeln!(stdout, "{}", response_str)?;
-                            stdout.flush()?;
-                        }
-                        Err(e) => {
-                            eprintln!("Error handling request: {}", e);
-                            // Send error response
-                            let error_response = json!({
-                                "jsonrpc": "2.0",
-                                "id": request_id,
-                                "error": {
-                                    "code": -32603,
-                                    "message": format!("Internal error: {}", e)
-                                }
-                            });
-                            let error_str = serde_json::to_string(&error_response)?;
-                            writeln!(stdout, "{}", error_str)?;
-                            stdout.flush()?;
-                        }
-                    }
-                }
-                Err(e) => {
-                    eprintln!("Error parsing JSON: {}", e);
-                    // Try to extract ID if possible and send parse error
-                    let error_response = json!({
-                        "jsonrpc": "2.0",
-                        "id": null,
-                        "error": {
-                            "code": -32700,
-                            "message": "Parse error"
-                        }
-                    });
-                    let error_str = serde_json::to_string(&error_response)?;
-                    writeln!(stdout, "{}", error_str)?;
-                    stdout.flush()?;
-                }
-            }
-        }
-
-        Ok(())
+    async fn list_resource_templates(
+        &self,
+        _request: PaginatedRequestParam,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListResourceTemplatesResult, McpError> {
+        Ok(ListResourceTemplatesResult {
+            resource_templates: vec![],
+            next_cursor: None,
+        })
     }
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let args = Args::parse();
-
-    let filter = if args.debug {
-        "debug"
-    } else {
-        "info"
-    };
-
-    tracing_subscriber::fmt()
-        .with_env_filter(filter)
-        .with_writer(std::io::stderr)
-        .init();
-
-    info!("Starting MCP Server for documentation generation");
-
-    let mut server = McpServer::new();
-    server.run()?;
-
+    let service = OrchestratorService;
+    service.serve(stdio()).await?;
     Ok(())
 }

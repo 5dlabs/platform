@@ -266,6 +266,47 @@ CLAUDE.md
 .backup-*
 EOF
 
+{{#if is_docs_generation}}
+# Create Claude settings directory and file in the project directory
+echo "Creating Claude settings for documentation generation..."
+PROJECT_DIR="/workspace/{{working_dir}}"
+if [ -z "{{working_dir}}" ] || [ "{{working_dir}}" = "." ]; then
+    PROJECT_DIR="/workspace"
+fi
+
+# Create .claude directory in project root
+mkdir -p "$PROJECT_DIR/.claude"
+
+# Create settings.local.json with allowed tools
+cat > "$PROJECT_DIR/.claude/settings.local.json" << 'EOF'
+{
+  "allowedTools": [
+    "Bash",
+    "Edit",
+    "Read",
+    "Write",
+    "Glob",
+    "Grep",
+    "LS",
+    "MultiEdit",
+    "WebSearch",
+    "WebFetch",
+    "TodoRead",
+    "TodoWrite"
+  ]
+}
+EOF
+
+echo "✓ Created Claude settings at $PROJECT_DIR/.claude/settings.local.json"
+
+# Also create CLAUDE.md at project root (not in .taskmaster)
+if [ -f "$PROJECT_DIR/.taskmaster/CLAUDE.md" ]; then
+    echo "Moving CLAUDE.md to project root..."
+    cp "$PROJECT_DIR/.taskmaster/CLAUDE.md" "$PROJECT_DIR/CLAUDE.md"
+    echo "✓ Copied CLAUDE.md to $PROJECT_DIR/CLAUDE.md"
+fi
+{{/if}}
+
 # Clean up temporary credentials
 rm -f /tmp/.git-credentials /home/git-credentials 2>/dev/null || true
 
