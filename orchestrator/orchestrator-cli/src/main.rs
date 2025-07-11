@@ -25,7 +25,7 @@ struct Cli {
     #[arg(
         long,
         env = "ORCHESTRATOR_API_URL",
-        default_value = "http://orchestrator.local/api/v1"
+        default_value = "http://orchestrator.orchestrator.svc.cluster.local/api/v1"
     )]
     api_url: String,
 

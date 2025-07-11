@@ -4,6 +4,8 @@ use serde_json::{json, Value};
 use std::io::{stdin, stdout, BufRead, BufReader, Write};
 use tracing::info;
 
+mod orchestrator_tools;
+
 #[derive(Parser)]
 #[command(name = "mcp-server")]
 #[command(about = "MCP Server for document generation and task assignment")]
@@ -57,34 +59,29 @@ impl McpServer {
                     "result": {
                         "tools": [
                             {
-                                "name": "generate_docs",
-                                "description": "Generate documentation for a given task using the Taskmaster system",
+                                "name": "init_docs",
+                                "description": "Initialize documentation for Task Master tasks using Claude (orchestrator task init-docs)",
                                 "inputSchema": {
                                     "type": "object",
                                     "properties": {
-                                        "task": {
-                                            "type": "object",
-                                            "description": "The task object containing all task details"
+                                        "model": {
+                                            "type": "string",
+                                            "description": "Claude model to use (sonnet, opus)",
+                                            "default": "opus",
+                                            "enum": ["sonnet", "opus"]
                                         },
-                                        "output_dir": {
+                                        "working_directory": {
                                             "type": "string",
-                                            "description": "Output directory for generated documentation",
-                                            "default": "./docs"
-                                        }
-                                    },
-                                    "required": ["task"]
-                                }
-                            },
-                            {
-                                "name": "list_tasks",
-                                "description": "List available tasks from the project",
-                                "inputSchema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "project_path": {
-                                            "type": "string",
-                                            "description": "Path to the project directory",
-                                            "default": "."
+                                            "description": "Working directory containing .taskmaster folder (auto-detected if not specified)"
+                                        },
+                                        "force": {
+                                            "type": "boolean",
+                                            "description": "Overwrite existing documentation",
+                                            "default": false
+                                        },
+                                        "task_id": {
+                                            "type": "integer",
+                                            "description": "Generate docs for specific task only"
                                         }
                                     }
                                 }
@@ -100,48 +97,60 @@ impl McpServer {
                 let arguments = &params["arguments"];
 
                 match tool_name {
-                    "generate_docs" => {
-                        let task = &arguments["task"];
-                        let output_dir = arguments["output_dir"]
+                    "init_docs" => {
+                        let model = arguments["model"]
                             .as_str()
-                            .unwrap_or("./docs");
+                            .unwrap_or("opus");
+                        let working_directory = arguments["working_directory"]
+                            .as_str();
+                        let force = arguments["force"]
+                            .as_bool()
+                            .unwrap_or(false);
+                        let task_id = arguments["task_id"]
+                            .as_u64()
+                            .map(|id| id as u32);
 
-                        info!("Generating documentation for task in directory: {}", output_dir);
+                        info!("Initializing documentation with model: {}", model);
+                        
+                        // Log the working directory resolution
+                        match orchestrator_tools::find_taskmaster_root(working_directory) {
+                            Ok(root) => info!("Using Task Master root: {}", root.display()),
+                            Err(e) => info!("Failed to find Task Master root: {}", e),
+                        }
 
-                        let response = json!({
-                            "jsonrpc": "2.0",
-                            "id": id,
-                            "result": {
-                                "content": [
-                                    {
-                                        "type": "text",
-                                        "text": format!("Successfully generated documentation for task in {}\n\nTask details: {}", output_dir, task)
+                        match orchestrator_tools::init_docs(model, working_directory, force, task_id) {
+                            Ok(output) => {
+                                let response = json!({
+                                    "jsonrpc": "2.0",
+                                    "id": id,
+                                    "result": {
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": format!("Documentation generation initiated successfully!\n\n{}", output)
+                                            }
+                                        ]
                                     }
-                                ]
+                                });
+                                Ok(response)
                             }
-                        });
-                        Ok(response)
-                    }
-                    "list_tasks" => {
-                        let project_path = arguments["project_path"]
-                            .as_str()
-                            .unwrap_or(".");
-
-                        info!("Listing tasks from project: {}", project_path);
-
-                        let response = json!({
-                            "jsonrpc": "2.0",
-                            "id": id,
-                            "result": {
-                                "content": [
-                                    {
-                                        "type": "text",
-                                        "text": format!("No tasks found in project: {}\n\nThis is a placeholder - integrate with your task management system.", project_path)
+                            Err(e) => {
+                                let response = json!({
+                                    "jsonrpc": "2.0",
+                                    "id": id,
+                                    "result": {
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": format!("Failed to initialize documentation: {}", e)
+                                            }
+                                        ],
+                                        "isError": true
                                     }
-                                ]
+                                });
+                                Ok(response)
                             }
-                        });
-                        Ok(response)
+                        }
                     }
                     _ => {
                         let error_response = json!({
