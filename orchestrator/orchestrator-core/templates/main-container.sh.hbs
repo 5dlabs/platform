@@ -60,6 +60,11 @@ done
 # Build Claude command with print mode, streaming output
 CLAUDE_CMD="{{command}} -p --output-format stream-json --verbose"
 
+# Add model flag if specified
+{{#if model}}
+CLAUDE_CMD="$CLAUDE_CMD --model {{model}}"
+{{/if}}
+
 {{#if is_retry}}
 CLAUDE_CMD="$CLAUDE_CMD --continue"
 echo 'Adding --continue flag for attempt {{attempts}}'

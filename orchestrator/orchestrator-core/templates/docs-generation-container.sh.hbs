@@ -224,7 +224,10 @@ echo "=== END DIAGNOSTICS ==="
 echo ""
 {{/if}}
 
-# Model is now configured via .claude/settings.local.json config file
+# Add model flag for docs generation
+{{#if model}}
+CLAUDE_CMD="$CLAUDE_CMD --model {{model}}"
+{{/if}}
 
 {{#if is_retry}}
 CLAUDE_CMD="$CLAUDE_CMD --continue"
