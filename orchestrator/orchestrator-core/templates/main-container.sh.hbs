@@ -58,7 +58,7 @@ done
 === STARTING CLAUDE ===
 
 # Build Claude command with print mode, streaming output
-CLAUDE_CMD="{{command}} -p --output-format stream-json --verbose"
+CLAUDE_CMD="{{command}} -p --output-format stream-json --verbose --allowedTools Bash,Edit,Read,Write,Glob,Grep,LS,MultiEdit,WebSearch,WebFetch,TodoRead,TodoWrite"
 
 # Add model flag if specified
 {{#if model}}

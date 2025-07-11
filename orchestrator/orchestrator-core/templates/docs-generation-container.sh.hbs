@@ -184,7 +184,7 @@ echo ""
 echo '=== STARTING CLAUDE ==='
 
 # Build Claude command with print mode, streaming output, and explicit tools
-CLAUDE_CMD="{{command}} -p --output-format stream-json --verbose"
+CLAUDE_CMD="{{command}} -p --output-format stream-json --verbose --allowedTools Bash,Edit,Read,Write,Glob,Grep,LS,MultiEdit,WebSearch,WebFetch,TodoRead,TodoWrite"
 
 {{#if is_docs_generation}}
 # For docs generation, change to the .taskmaster directory before running Claude
