@@ -191,8 +191,8 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.version }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:quick-latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:quick-${{ needs.version.outputs.short-sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.short-sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
