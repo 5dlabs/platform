@@ -45,7 +45,7 @@ struct InitDocsArgs {
 
 #[tool(tool_box)]
 impl OrchestratorService {
-    #[tool(description = "Initialize documentation for Task Master tasks using Claude\n\nExamples:\n- Generate docs for all tasks: init_docs({})\n- Use specific model: init_docs({model: 'opus'})\n- Target specific task: init_docs({task_id: 5})\n- Override directory: init_docs({working_directory: '/path/to/project'})\n- Force overwrite: init_docs({force: true})\n\nParameters (all optional):\n- model: 'opus' (default) | 'sonnet'\n- working_directory: auto-detected from TASKMASTER_ROOT env var\n- force: false (default) - set true to overwrite existing docs\n- task_id: null (default) - generates docs for all tasks")]
+    #[tool(description = "Initialize documentation for Task Master tasks using Claude\n\n**Recommended Usage**: For most cases, call without parameters to use auto-detection from TASKMASTER_ROOT env var.\n\nExamples:\n- All tasks with auto-detection: init_docs({})\n- Specific model: init_docs({model: 'opus'})\n- Specific task: init_docs({task_id: 5})\n- Custom directory: init_docs({working_directory: '/absolute/path/to/project'})  # No trailing slash\n- Force overwrite: init_docs({force: true})\n\nParameters (all optional):\n- model: 'opus' (default) | 'sonnet'\n- working_directory: auto-detected from TASKMASTER_ROOT env var if not specified. Must be absolute path if provided.\n- force: false (default) - set true to overwrite existing docs\n- task_id: null (default) - generates docs for all tasks\n\n**When to Omit Parameters**:\n- Omit working_directory to use auto-detection (recommended unless overriding).\n- Omit all for default behavior.\n\n**Common Errors & Fixes**:\n- If working_directory fails: Ensure path exists, is absolute, and has no trailing slash (e.g., '/path/to/project', not '/path/to/project/').\n- If auto-detection fails: Set TASKMASTER_ROOT in your MCP config env section.\n- Invalid model: Must be 'sonnet' or 'opus'.\n- Directory not found: Verify the path is accessible and contains a .taskmaster folder.")]
     async fn init_docs(
         &self,
         #[tool(aggr)] args: InitDocsArgs,
@@ -54,12 +54,49 @@ impl OrchestratorService {
         let model = args.model.as_deref().unwrap_or("opus");
         if !["sonnet", "opus"].contains(&model) {
             return Err(McpError::invalid_params(
-                format!("Invalid model '{}' - must be 'sonnet' or 'opus'", model),
+                format!("Invalid model '{}' - must be 'sonnet' or 'opus'. See tool description for examples.", model),
                 None
             ));
         }
 
+        // Validate working_directory if provided
         let working_directory = args.working_directory.as_deref();
+        if let Some(dir) = working_directory {
+            if dir.ends_with('/') {
+                return Err(McpError::invalid_params(
+                    "working_directory should not end with a trailing slash. Remove the '/' and try again.".to_string(),
+                    None
+                ));
+            }
+            if !dir.starts_with('/') {
+                return Err(McpError::invalid_params(
+                    "working_directory must be an absolute path starting with '/'. Example: '/path/to/project'".to_string(),
+                    None
+                ));
+            }
+            // Check if directory exists
+            match std::fs::metadata(dir) {
+                Ok(meta) if meta.is_dir() => {},
+                Ok(_) => return Err(McpError::invalid_params(
+                    format!("'{}' exists but is not a directory. Please provide a valid directory path.", dir),
+                    None
+                )),
+                Err(e) => return Err(McpError::invalid_params(
+                    format!("Directory '{}' not found or inaccessible: {}. Verify the path and permissions.", dir, e),
+                    None
+                )),
+            }
+
+            // Check for .taskmaster folder
+            let taskmaster_path = format!("{}/.taskmaster", dir);
+            if !std::path::Path::new(&taskmaster_path).is_dir() {
+                return Err(McpError::invalid_params(
+                    format!("No '.taskmaster' folder found in '{}'. Ensure this is a valid Task Master project directory.", dir),
+                    None
+                ));
+            }
+        }
+
         let force = args.force.unwrap_or(false);
         let task_id = args.task_id;
 
@@ -68,15 +105,15 @@ impl OrchestratorService {
             Err(e) => {
                 // Provide more specific error messages
                 let error_msg = if e.to_string().contains("No such file or directory") {
-                    format!("Directory not found: {}. Please check the working_directory path or TASKMASTER_ROOT env var.", e)
+                    format!("Directory not found: {}. Please check the working_directory path or TASKMASTER_ROOT env var.\nTip: Use absolute paths without trailing slashes. See tool description for examples.", e)
                 } else if e.to_string().contains("tasks.json") {
-                    format!("Task Master tasks.json not found: {}. Please ensure you're in a valid Task Master project directory.", e)
+                    format!("Task Master tasks.json not found: {}. Please ensure you're in a valid Task Master project directory.\nIf using auto-detection, verify TASKMASTER_ROOT is set correctly.", e)
                 } else if e.to_string().contains("orchestrator command") {
-                    format!("Orchestrator CLI not found: {}. Please ensure the orchestrator CLI is installed and in PATH.", e)
+                    format!("Orchestrator CLI not found: {}. Please ensure the orchestrator CLI is installed and in PATH.\nTip: Install with cargo install --path orchestrator/orchestrator-cli", e)
                 } else {
-                    format!("Documentation generation failed: {}", e)
+                    format!("Documentation generation failed: {}. See tool description for common fixes.", e)
                 };
-
+                
                 Err(McpError::internal_error(error_msg, None))
             }
         }

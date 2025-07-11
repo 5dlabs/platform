@@ -87,9 +87,11 @@ if [ -n "$GITHUB_TOKEN" ]; then
   echo '✓ Created .github-env file for main container'
 fi
 
-# Copy stop hook for documentation PR creation
-echo "Creating documentation PR stop hook..."
-cat > /workspace/.stop-hook-docs-pr.sh << 'EOF'
+# Copy stop hook for documentation PR creation in project directory
+echo "Creating documentation PR stop hook in project directory..."
+# Create stop hook in the project directory where Claude will be working
+STOP_HOOK_PATH="$PROJECT_DIR/.stop-hook-docs-pr.sh"
+cat > "$STOP_HOOK_PATH" << 'EOF'
 #!/bin/sh
 set -e
 
@@ -194,8 +196,8 @@ echo "║            DOCUMENTATION PR CREATION COMPLETE                ║"
 echo "════════════════════════════════════════════════════════════════"
 EOF
 
-chmod +x /workspace/.stop-hook-docs-pr.sh
-echo "✓ Created documentation PR stop hook"
+chmod +x "$STOP_HOOK_PATH"
+echo "✓ Created documentation PR stop hook at $STOP_HOOK_PATH"
 {{else}}
 echo 'No repository specified, using empty workspace'
 {{/if}}
@@ -276,7 +278,7 @@ cat > "$PROJECT_DIR/.claude/settings.local.json" << 'EOF'
         "hooks": [
           {
             "type": "command",
-            "command": "/workspace/.stop-hook-docs-pr.sh"
+            "command": "./.stop-hook-docs-pr.sh"
           }
         ]
       }
