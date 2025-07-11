@@ -299,11 +299,15 @@ EOF
 
 echo "✓ Created Claude settings at $PROJECT_DIR/.claude/settings.local.json"
 
-# Also create CLAUDE.md at project root (not in .taskmaster)
-if [ -f "$PROJECT_DIR/.taskmaster/CLAUDE.md" ]; then
-    echo "Moving CLAUDE.md to project root..."
+# Also ensure CLAUDE.md exists at project root
+if [ -f "$PROJECT_DIR/CLAUDE.md" ]; then
+    echo "✓ CLAUDE.md already exists at project root: $PROJECT_DIR/CLAUDE.md"
+elif [ -f "$PROJECT_DIR/.taskmaster/CLAUDE.md" ]; then
+    echo "Copying CLAUDE.md from .taskmaster to project root..."
     cp "$PROJECT_DIR/.taskmaster/CLAUDE.md" "$PROJECT_DIR/CLAUDE.md"
     echo "✓ Copied CLAUDE.md to $PROJECT_DIR/CLAUDE.md"
+else
+    echo "⚠️  WARNING: CLAUDE.md not found in project root or .taskmaster"
 fi
 {{/if}}
 

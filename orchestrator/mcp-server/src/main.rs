@@ -34,31 +34,62 @@ struct OrchestratorService;
 
 #[derive(Debug, Deserialize, JsonSchema)]
 struct InitDocsArgs {
-    #[schemars(description = "Claude model to use (sonnet, opus)")]
+    #[schemars(description = "Claude model to use ('sonnet' or 'opus', default: 'opus')")]
     model: Option<String>,
-    #[schemars(description = "Working directory containing .taskmaster folder (auto-detected if not specified)")]
+    #[schemars(description = "Working directory containing .taskmaster folder (auto-detected from TASKMASTER_ROOT env var if not specified)")]
     working_directory: Option<String>,
-    #[schemars(description = "Overwrite existing documentation")]
+    #[schemars(description = "Overwrite existing documentation (default: false)")]
     force: Option<bool>,
-    #[schemars(description = "Generate docs for specific task only")]
+    #[schemars(description = "Generate docs for specific task only (default: generates for all tasks)")]
     task_id: Option<u32>,
 }
 
 #[tool(tool_box)]
 impl OrchestratorService {
-    #[tool(description = "Initialize documentation for Task Master tasks using Claude")]
+    #[tool(description = "Initialize documentation for Task Master tasks using Claude\n\nExamples:\n- Generate docs for all tasks: init_docs({})\n- Use specific model: init_docs({model: 'opus'})\n- Target specific task: init_docs({task_id: 5})\n- Override directory: init_docs({working_directory: '/path/to/project'})\n- Force overwrite: init_docs({force: true})\n\nParameters (all optional):\n- model: 'opus' (default) | 'sonnet'\n- working_directory: auto-detected from TASKMASTER_ROOT env var\n- force: false (default) - set true to overwrite existing docs\n- task_id: null (default) - generates docs for all tasks")]
     async fn init_docs(
         &self,
         #[tool(aggr)] args: InitDocsArgs,
     ) -> Result<CallToolResult, McpError> {
+        // Validate model parameter
         let model = args.model.as_deref().unwrap_or("opus");
+        if !["sonnet", "opus"].contains(&model) {
+            return Err(McpError::invalid_params(
+                format!("Invalid model '{}' - must be 'sonnet' or 'opus'", model),
+                None
+            ));
+        }
+
         let working_directory = args.working_directory.as_deref();
         let force = args.force.unwrap_or(false);
         let task_id = args.task_id;
 
         match orchestrator_tools::init_docs(model, working_directory, force, task_id) {
             Ok(output) => Ok(CallToolResult::success(vec![Content::text(output)])),
-            Err(e) => Err(McpError::internal_error(format!("Failed: {}", e), None)),
+            Err(e) => {
+                // Provide more specific error messages
+                let error_msg = if e.to_string().contains("No such file or directory") {
+                    format!("Directory not found: {}. Please check the working_directory path or TASKMASTER_ROOT env var.", e)
+                } else if e.to_string().contains("tasks.json") {
+                    format!("Task Master tasks.json not found: {}. Please ensure you're in a valid Task Master project directory.", e)
+                } else if e.to_string().contains("orchestrator command") {
+                    format!("Orchestrator CLI not found: {}. Please ensure the orchestrator CLI is installed and in PATH.", e)
+                } else {
+                    format!("Documentation generation failed: {}", e)
+                };
+
+                Err(McpError::internal_error(error_msg, None))
+            }
+        }
+    }
+
+    #[tool(description = "Test MCP server connectivity and configuration\n\nReturns server status, environment info, and validates orchestrator CLI availability.")]
+    async fn ping(
+        &self,
+    ) -> Result<CallToolResult, McpError> {
+        match orchestrator_tools::ping_test() {
+            Ok(status) => Ok(CallToolResult::success(vec![Content::text(status)])),
+            Err(e) => Err(McpError::internal_error(format!("Ping failed: {}", e), None)),
         }
     }
 }

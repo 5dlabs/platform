@@ -202,8 +202,8 @@ fi
 
 echo "Using project directory: $PROJECT_DIR for docs generation"
 
-# Add --cwd flag to Claude command
-CLAUDE_CMD="$CLAUDE_CMD --cwd $PROJECT_DIR"
+# We'll change to project directory before running Claude
+# (No --cwd flag since it's not supported by the CLI)
 
 echo ""
 echo "=== DOCUMENTATION GENERATION DIAGNOSTICS ==="
@@ -266,14 +266,23 @@ echo "=========================="
 # Run Claude with CLAUDE.md from project root (or fallback to .taskmaster)
 PROMPT_FILE="$PROJECT_DIR/CLAUDE.md"
 if [ ! -f "$PROMPT_FILE" ]; then
+  echo "CLAUDE.md not found at project root, checking fallback locations..."
   # Fallback to .taskmaster location
-  PROMPT_FILE="$PROJECT_DIR/.taskmaster/prompt.md"
+  PROMPT_FILE="$PROJECT_DIR/.taskmaster/CLAUDE.md"
   if [ ! -f "$PROMPT_FILE" ]; then
-    PROMPT_FILE="$PROJECT_DIR/.taskmaster/CLAUDE.md"
+    PROMPT_FILE="$PROJECT_DIR/.taskmaster/prompt.md"
+    if [ ! -f "$PROMPT_FILE" ]; then
+      echo "ERROR: No prompt file found in any expected location!"
+      exit 1
+    fi
   fi
 fi
 
 echo "Using prompt file: $PROMPT_FILE"
+
+# Change to project directory before running Claude
+cd "$PROJECT_DIR"
+echo "Changed to directory: $(pwd)"
 
 # Run Claude (without exec so we can run stop hook after)
 $CLAUDE_CMD < "$PROMPT_FILE"
