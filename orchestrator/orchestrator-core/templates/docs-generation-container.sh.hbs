@@ -193,9 +193,6 @@ echo '=== STARTING CLAUDE ==='
 # Build Claude command with print mode, streaming output, and explicit tools
 CLAUDE_CMD="{{command}} -p --output-format stream-json --verbose --allowedTools Bash,Edit,Read,Write,Glob,Grep,LS,MultiEdit,WebSearch,WebFetch,TodoRead,TodoWrite"
 
-# Add stop hook for documentation PR creation
-CLAUDE_CMD="$CLAUDE_CMD --stop-hook /workspace/.stop-hook-docs-pr.sh"
-
 {{#if is_docs_generation}}
 # For docs generation, set the project directory
 PROJECT_DIR="/workspace/{{working_dir}}"
@@ -298,17 +295,8 @@ chmod +x /workspace/.stop-hook-docs-pr.sh
 cd "$PROJECT_DIR"
 echo "Changed to directory: $(pwd)"
 
-# Run Claude with stop hook (it will be executed automatically on successful completion)
-$CLAUDE_CMD < "$PROMPT_FILE"
-CLAUDE_EXIT_CODE=$?
-
-# Give stop hook time to complete if needed
-if [ $CLAUDE_EXIT_CODE -eq 0 ]; then
-  echo "Claude completed successfully, waiting briefly to ensure stop hook completes..."
-  sleep 5
-fi
-
-exit $CLAUDE_EXIT_CODE
+# Run Claude (Stop hook will be executed automatically on successful completion)
+exec $CLAUDE_CMD < "$PROMPT_FILE"
 {{else}}
 exec $CLAUDE_CMD < /workspace/prompt.md
 {{/if}}
