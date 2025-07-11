@@ -119,6 +119,19 @@ fi
 cd /workspace
 echo "Working directory: $(pwd)"
 
+# Configure git credentials if available
+if [ -f /workspace/.git-credentials ]; then
+  git config --global credential.helper 'store --file=/workspace/.git-credentials'
+  echo "✓ Git credentials configured"
+fi
+
+# Set git user info from environment
+if [ -n "$GITHUB_USER" ]; then
+  git config user.name "Claude (5D Labs)"
+  git config user.email "claude@5dlabs.com"
+  echo "✓ Git user configured"
+fi
+
 # Check if we have any changes
 if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]; then
   echo "✓ Found changes to commit"
@@ -295,8 +308,8 @@ else
     find /workspace -name "CLAUDE.md" -type f 2>/dev/null || echo "No CLAUDE.md found anywhere"
 fi
 
-# Clean up temporary credentials
-rm -f /tmp/.git-credentials /home/git-credentials 2>/dev/null || true
+# Clean up only temporary credentials (keep workspace credentials for main container)
+rm -f /tmp/.git-credentials 2>/dev/null || true
 
 echo '✓ Workspace preparation complete'
 echo 'Workspace contents:'
