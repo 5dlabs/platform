@@ -1102,6 +1102,7 @@ echo "Claude will use --cwd flag to restrict access to the appropriate directory
 
 // Template constants
 const PREP_JOB_TEMPLATE: &str = include_str!("../../templates/prep-job.sh.hbs");
+const DOCS_GENERATION_PREP_JOB_TEMPLATE: &str = include_str!("../../templates/docs-generation-prep-job.sh.hbs");
 const MAIN_CONTAINER_TEMPLATE: &str = include_str!("../../templates/main-container.sh.hbs");
 const DOCS_GENERATION_CONTAINER_TEMPLATE: &str = include_str!("../../templates/docs-generation-container.sh.hbs");
 
@@ -1111,8 +1112,16 @@ fn build_prep_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String,
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false); // Allow missing fields
 
+    // Choose template based on task type
+    let is_docs_generation = tr.spec.task_id == 999999;
+    let template = if is_docs_generation {
+        DOCS_GENERATION_PREP_JOB_TEMPLATE
+    } else {
+        PREP_JOB_TEMPLATE
+    };
+
     handlebars
-        .register_template_string("prep", PREP_JOB_TEMPLATE)
+        .register_template_string("prep", template)
         .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
 
     // Extract working directory for docs generation tasks (same logic as main container)

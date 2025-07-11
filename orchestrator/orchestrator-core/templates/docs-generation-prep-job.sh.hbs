@@ -1,0 +1,326 @@
+#!/bin/sh
+set -e
+
+echo '════════════════════════════════════════════════════════════════'
+echo '║                    PREP JOB STARTING                         ║'
+echo '║              (docs-generation preparation)                    ║'
+echo '════════════════════════════════════════════════════════════════'
+
+# Working directly in the root of the dedicated PVC
+echo "Working in dedicated PVC for service: {{service_name}}"
+cd /workspace
+
+# Clean up old backup directories from previous failed runs
+if ls .backup-* 1> /dev/null 2>&1; then
+  echo "Cleaning up old backup directories..."
+  rm -rf .backup-*
+fi
+
+{{#if repository}}
+echo 'Repository management for: {{repository.url}}'
+
+# Setup GitHub authentication if available
+export GITHUB_TOKEN=$(cat /secrets/github-pat-{{repository.githubUser}}/token 2>/dev/null || echo "")
+if [ -n "$GITHUB_TOKEN" ]; then
+  echo "GitHub token loaded from secret: github-pat-{{repository.githubUser}}"
+  
+  # Configure git for cloning
+  git config --global user.name "{{repository.githubUser}}"
+  git config --global user.email "{{repository.githubUser}}@users.noreply.github.com"
+  git config --global credential.helper store
+  
+  # Write token to temporary credentials file for cloning
+  echo "https://{{repository.githubUser}}:${GITHUB_TOKEN}@github.com" > /tmp/.git-credentials
+  cp /tmp/.git-credentials /home/git-credentials
+  git config --global credential.helper 'store --file=/home/git-credentials'
+  
+  # Also set up persistent credentials in workspace for main container
+  echo "https://{{repository.githubUser}}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+  chmod 600 /workspace/.git-credentials
+else
+  echo "Warning: GitHub token not found in secret: github-pat-{{repository.githubUser}}"
+fi
+
+# Clone repository if not present
+if [ ! -d '.git' ]; then
+  if [ -z "$(ls -A . 2>/dev/null | grep -v '.current-service' | grep -v '.task' | grep -v '.backup')" ]; then
+    echo 'Directory is empty, cloning repository...'
+    git clone --depth 1 --branch {{repository.branch}} {{repository.url}} . || {
+      echo 'Clone failed - checking error'
+      exit 1
+    }
+  else
+    echo 'Directory not empty but not a Git repo, backing up existing files and cloning...'
+    BACKUP_DIR=".backup-$(date +%s)"
+    mkdir -p "$BACKUP_DIR"
+    find . -maxdepth 1 -not -name '.backup*' -not -name '.task' -not -name '.current-service' -not -name '.' -exec mv {} "$BACKUP_DIR/" \; 2>/dev/null || true
+    # Clone to a temp directory first, then move contents
+    TEMP_CLONE_DIR="/tmp/git-clone-$$"
+    git clone --depth 1 --branch {{repository.branch}} {{repository.url}} "$TEMP_CLONE_DIR" || {
+      echo 'Clone failed'
+      exit 1
+    }
+    # Move cloned contents to current directory
+    mv "$TEMP_CLONE_DIR"/.git .
+    mv "$TEMP_CLONE_DIR"/* . 2>/dev/null || true
+    rm -rf "$TEMP_CLONE_DIR"
+  fi
+else
+  echo 'Git repository exists, checking remote...'
+  CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo '')
+  if [ "$CURRENT_REMOTE" != "{{repository.url}}" ]; then
+    echo "Remote URL mismatch. Expected: {{repository.url}}, Got: $CURRENT_REMOTE"
+    echo "Removing old repository and cloning fresh..."
+    rm -rf .git
+    git clone --depth 1 --branch {{repository.branch}} {{repository.url}} . || {
+      echo 'Clone failed'
+      exit 1
+    }
+  fi
+fi
+
+# Create GitHub environment file for main container
+if [ -n "$GITHUB_TOKEN" ]; then
+  echo "export GITHUB_TOKEN='$GITHUB_TOKEN'" > /workspace/.github-env
+  echo "export GITHUB_USER='{{repository.githubUser}}'" >> /workspace/.github-env
+  chmod 644 /workspace/.github-env
+  echo '✓ Created .github-env file for main container'
+fi
+
+# Copy stop hook for documentation PR creation
+echo "Creating documentation PR stop hook..."
+cat > /workspace/.stop-hook-docs-pr.sh << 'EOF'
+#!/bin/sh
+set -e
+
+echo "════════════════════════════════════════════════════════════════"
+echo "║              DOCUMENTATION PR CREATION HOOK                  ║"
+echo "════════════════════════════════════════════════════════════════"
+
+# This hook runs after Claude completes documentation generation
+# It handles git operations from the repository root
+
+# Check if we're in a docs generation job
+if [ "$SERVICE_NAME" != "docs-generator" ]; then
+  echo "Not a documentation generation job, skipping PR creation"
+  exit 0
+fi
+
+# Source GitHub environment if it exists
+if [ -f /workspace/.github-env ]; then
+  . /workspace/.github-env
+  echo "✓ GitHub authentication configured"
+else
+  echo "✗ No GitHub authentication found, skipping PR creation"
+  exit 0
+fi
+
+# Change to repository root
+cd /workspace
+echo "Working directory: $(pwd)"
+
+# Check if we have any changes
+if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]; then
+  echo "✓ Found changes to commit"
+  
+  # Get branch information from environment or use defaults
+  TARGET_BRANCH="${TARGET_BRANCH:-docs-generation-$(date +%Y%m%d-%H%M%S)}"
+  SOURCE_BRANCH="${SOURCE_BRANCH:-main}"
+  
+  echo "Creating documentation branch: $TARGET_BRANCH"
+  
+  # Create and checkout new branch
+  git checkout -b "$TARGET_BRANCH"
+  
+  # Add all documentation changes
+  echo "Adding documentation files..."
+  git add -A
+  
+  # Create commit
+  echo "Creating commit..."
+  git commit -m "docs: generate comprehensive task documentation
+
+- Generated documentation for all Task Master tasks
+- Created structured markdown files in .taskmaster/docs/
+- Added task details, implementation guides, and testing strategies
+
+🤖 Generated with Claude (orchestrator task init-docs)"
+  
+  # Push to remote
+  echo "Pushing to remote..."
+  git push -u origin "$TARGET_BRANCH"
+  
+  # Create pull request
+  echo "Creating pull request..."
+  gh pr create \
+    --title "docs: Task Master documentation update" \
+    --body "## Summary
+
+This PR contains automatically generated documentation for all Task Master tasks.
+
+### Changes
+- Generated comprehensive documentation in \`.taskmaster/docs/\`
+- Each task has its own directory with structured documentation
+- Includes implementation details, dependencies, and testing strategies
+
+### Generated by
+- Command: \`orchestrator task init-docs --model ${MODEL:-opus}\`
+- Branch: $TARGET_BRANCH
+- Time: $(date)
+
+🤖 This documentation was generated automatically using Claude." \
+    --base "$SOURCE_BRANCH"
+  
+  echo "✓ Pull request created successfully!"
+else
+  echo "No changes detected, skipping PR creation"
+fi
+
+echo "════════════════════════════════════════════════════════════════"
+echo "║            DOCUMENTATION PR CREATION COMPLETE                ║"
+echo "════════════════════════════════════════════════════════════════"
+EOF
+
+chmod +x /workspace/.stop-hook-docs-pr.sh
+echo "✓ Created documentation PR stop hook"
+{{else}}
+echo 'No repository specified, using empty workspace'
+{{/if}}
+
+# Create workspace directory structure
+echo "Creating task directories..."
+mkdir -p /workspace/.task/{{task_id}}/attempt-{{attempts}}
+
+# Copy task files to attempt-specific directory
+echo "Copying task files..."
+cp /config/* /workspace/.task/{{task_id}}/attempt-{{attempts}}/ 2>/dev/null || echo 'No config files to copy'
+
+# Also copy markdown files to task root for backward compatibility
+cp /config/*.md /workspace/.task/{{task_id}}/ 2>/dev/null || true
+
+# Copy all markdown files to workspace root for @import access
+cp /workspace/.task/{{task_id}}/attempt-{{attempts}}/*.md /workspace/ 2>/dev/null || echo 'No markdown files to copy to root'
+
+# Create .gitignore to prevent committing Claude internal files
+cat > /workspace/.gitignore << 'EOF'
+# Claude Code internal files - do not commit
+.claude/
+.task/
+# Allow Claude session exports to be committed
+!.task/*/attempt-*/claude-session.md
+!.task/*/attempt-*/claude-session.xml
+!.task/*/attempt-*/claude-session-raw.jsonl
+task.md
+design-spec.md
+prompt.md
+acceptance-criteria.md
+CLAUDE.md
+.github-env
+.gitconfig
+.git-credentials
+.current-service
+.backup-*
+EOF
+
+# Create Claude settings directory and file in the project directory
+echo "Creating Claude settings for documentation generation..."
+PROJECT_DIR="/workspace/{{working_dir}}"
+if [ -z "{{working_dir}}" ] || [ "{{working_dir}}" = "." ]; then
+    PROJECT_DIR="/workspace"
+fi
+
+echo "DEBUG: PROJECT_DIR = $PROJECT_DIR"
+echo "DEBUG: working_dir = {{working_dir}}"
+echo "DEBUG: Contents of $PROJECT_DIR:"
+ls -la "$PROJECT_DIR" || echo "Failed to list $PROJECT_DIR"
+echo "DEBUG: Contents of $PROJECT_DIR/.taskmaster (if exists):"
+ls -la "$PROJECT_DIR/.taskmaster" 2>/dev/null || echo "No .taskmaster directory"
+
+# Create .claude directory in project root
+mkdir -p "$PROJECT_DIR/.claude"
+
+# Create settings.local.json with allowed tools
+cat > "$PROJECT_DIR/.claude/settings.local.json" << 'EOF'
+{
+  "allowedTools": [
+    "Bash",
+    "Edit",
+    "Read",
+    "Write",
+    "Glob",
+    "Grep",
+    "LS",
+    "MultiEdit",
+    "WebSearch",
+    "WebFetch",
+    "TodoRead",
+    "TodoWrite"
+  ]
+}
+EOF
+
+echo "✓ Created Claude settings at $PROJECT_DIR/.claude/settings.local.json"
+
+# Copy CLAUDE.md from /config/ to project root
+echo "DEBUG: Checking for CLAUDE.md..."
+echo "DEBUG: Looking for $PROJECT_DIR/CLAUDE.md"
+if [ -f "$PROJECT_DIR/CLAUDE.md" ]; then
+    echo "✓ CLAUDE.md already exists at project root: $PROJECT_DIR/CLAUDE.md"
+    echo "DEBUG: File size: $(wc -c < "$PROJECT_DIR/CLAUDE.md") bytes"
+elif [ -f "/config/CLAUDE.md" ]; then
+    echo "Found CLAUDE.md in /config (from ConfigMap), copying to project root..."
+    echo "DEBUG: Source file size: $(wc -c < "/config/CLAUDE.md") bytes"
+    cp -v "/config/CLAUDE.md" "$PROJECT_DIR/CLAUDE.md"
+    if [ -f "$PROJECT_DIR/CLAUDE.md" ]; then
+        echo "✓ Successfully copied CLAUDE.md to $PROJECT_DIR/CLAUDE.md"
+        echo "DEBUG: Destination file size: $(wc -c < "$PROJECT_DIR/CLAUDE.md") bytes"
+    else
+        echo "ERROR: Failed to copy CLAUDE.md!"
+    fi
+elif [ -f "$PROJECT_DIR/.taskmaster/CLAUDE.md" ]; then
+    echo "Found CLAUDE.md in .taskmaster, copying to project root..."
+    echo "DEBUG: Source file size: $(wc -c < "$PROJECT_DIR/.taskmaster/CLAUDE.md") bytes"
+    cp -v "$PROJECT_DIR/.taskmaster/CLAUDE.md" "$PROJECT_DIR/CLAUDE.md"
+    if [ -f "$PROJECT_DIR/CLAUDE.md" ]; then
+        echo "✓ Successfully copied CLAUDE.md to $PROJECT_DIR/CLAUDE.md"
+        echo "DEBUG: Destination file size: $(wc -c < "$PROJECT_DIR/CLAUDE.md") bytes"
+    else
+        echo "ERROR: Failed to copy CLAUDE.md!"
+    fi
+else
+    echo "⚠️  WARNING: CLAUDE.md not found in any expected location"
+    echo "DEBUG: Checking all possible locations:"
+    echo "  /config/: $(ls -la /config/ 2>/dev/null || echo 'Directory not found')"
+    echo "  $PROJECT_DIR/.taskmaster/: $(ls -la $PROJECT_DIR/.taskmaster/ 2>/dev/null || echo 'Directory not found')"
+    find /workspace -name "CLAUDE.md" -type f 2>/dev/null || echo "No CLAUDE.md found anywhere"
+fi
+
+# Clean up temporary credentials
+rm -f /tmp/.git-credentials /home/git-credentials 2>/dev/null || true
+
+echo '✓ Workspace preparation complete'
+echo 'Workspace contents:'
+ls -la /workspace/
+echo ''
+echo 'Task files:'
+ls -la /workspace/.task/{{task_id}}/attempt-{{attempts}}/
+
+echo ''
+echo '=== FINAL VERIFICATION FOR DOCS GENERATION ==='
+echo "Project directory: $PROJECT_DIR"
+echo "Checking for required files:"
+echo -n "  - $PROJECT_DIR/.claude/settings.local.json: "
+if [ -f "$PROJECT_DIR/.claude/settings.local.json" ]; then
+    echo "✓ EXISTS"
+else
+    echo "✗ MISSING"
+fi
+echo -n "  - $PROJECT_DIR/CLAUDE.md: "
+if [ -f "$PROJECT_DIR/CLAUDE.md" ]; then
+    echo "✓ EXISTS"
+else
+    echo "✗ MISSING"
+fi
+echo "Contents of $PROJECT_DIR:"
+ls -la "$PROJECT_DIR"
+echo '=== END VERIFICATION ==='
