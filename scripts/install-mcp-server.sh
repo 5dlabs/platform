@@ -213,6 +213,7 @@ download_file() {
 verify_checksum() {
     local binary_file="$1"
     local checksum_file="$2"
+    local expected_filename="$3"
 
     if [[ ! -f "$checksum_file" ]]; then
         print_warning "Checksum file not found, skipping verification"
@@ -221,22 +222,39 @@ verify_checksum() {
 
     print_info "Verifying checksum..."
 
+    # Create a temporary directory for verification
+    local verify_dir
+    verify_dir=$(mktemp -d)
+
+    # Copy binary to verification directory with expected filename
+    cp "$binary_file" "$verify_dir/$expected_filename"
+    cp "$checksum_file" "$verify_dir/"
+
+    # Change to verification directory and verify
+    local verification_result=0
     if command -v shasum >/dev/null 2>&1; then
-        if shasum -a 256 -c "$checksum_file" >/dev/null 2>&1; then
+        if (cd "$verify_dir" && shasum -a 256 -c "$(basename "$checksum_file")" >/dev/null 2>&1); then
             print_success "Checksum verification passed"
         else
             print_error "Checksum verification failed"
-            exit 1
+            verification_result=1
         fi
     elif command -v sha256sum >/dev/null 2>&1; then
-        if sha256sum -c "$checksum_file" >/dev/null 2>&1; then
+        if (cd "$verify_dir" && sha256sum -c "$(basename "$checksum_file")" >/dev/null 2>&1); then
             print_success "Checksum verification passed"
         else
             print_error "Checksum verification failed"
-            exit 1
+            verification_result=1
         fi
     else
         print_warning "No checksum utility found, skipping verification"
+    fi
+
+    # Cleanup verification directory
+    rm -rf "$verify_dir"
+
+    if [[ $verification_result -ne 0 ]]; then
+        exit 1
     fi
 }
 
@@ -359,7 +377,7 @@ main() {
     download_file "$checksum_url" "$temp_checksum" || true
 
     # Verify checksum
-    verify_checksum "$temp_binary" "$temp_checksum"
+    verify_checksum "$temp_binary" "$temp_checksum" "$binary_filename"
 
     # Install binary
     print_info "Installing binary to $dest_path"

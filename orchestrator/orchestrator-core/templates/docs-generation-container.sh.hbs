@@ -193,6 +193,9 @@ echo '=== STARTING CLAUDE ==='
 # Build Claude command with print mode, streaming output, and explicit tools
 CLAUDE_CMD="{{command}} -p --output-format stream-json --verbose --allowedTools Bash,Edit,Read,Write,Glob,Grep,LS,MultiEdit,WebSearch,WebFetch,TodoRead,TodoWrite"
 
+# Add stop hook for documentation PR creation
+CLAUDE_CMD="$CLAUDE_CMD --stop-hook /workspace/.stop-hook-docs-pr.sh"
+
 {{#if is_docs_generation}}
 # For docs generation, set the project directory
 PROJECT_DIR="/workspace/{{working_dir}}"
@@ -280,37 +283,22 @@ fi
 
 echo "Using prompt file: $PROMPT_FILE"
 
+# Export necessary variables for the stop hook
+export SERVICE_NAME="docs-generator"
+export TARGET_BRANCH="{{targetBranch}}"
+export SOURCE_BRANCH="{{repository.branch}}"
+export MODEL="{{model}}"
+export WORKING_DIR="{{working_dir}}"
+
+# Make stop hook executable
+chmod +x /workspace/.stop-hook-docs-pr.sh
+
 # Change to project directory before running Claude
 cd "$PROJECT_DIR"
 echo "Changed to directory: $(pwd)"
 
-# Run Claude (without exec so we can run stop hook after)
-$CLAUDE_CMD < "$PROMPT_FILE"
-CLAUDE_EXIT_CODE=$?
-
-# Run stop hook for PR creation if docs generation succeeded
-if [ $CLAUDE_EXIT_CODE -eq 0 ] && [ -f "/workspace/.stop-hook-docs-pr.sh" ]; then
-  echo ""
-  echo "════════════════════════════════════════════════════════════════"
-  echo "║           RUNNING DOCUMENTATION PR CREATION HOOK             ║"
-  echo "════════════════════════════════════════════════════════════════"
-  
-  # Export necessary variables for the hook
-  export SERVICE_NAME="docs-generator"
-  export TARGET_BRANCH="{{targetBranch}}"
-  export SOURCE_BRANCH="{{repository.branch}}"
-  export MODEL="{{model}}"
-  export WORKING_DIR="{{working_dir}}"
-  
-  # Make hook executable and run it
-  chmod +x /workspace/.stop-hook-docs-pr.sh
-  cd /workspace  # Ensure we're in the repository root
-  sh /workspace/.stop-hook-docs-pr.sh || {
-    echo "Warning: PR creation hook failed, but documentation was generated successfully"
-  }
-fi
-
-exit $CLAUDE_EXIT_CODE
+# Run Claude with stop hook (it will be executed automatically on successful completion)
+exec $CLAUDE_CMD < "$PROMPT_FILE"
 {{else}}
 exec $CLAUDE_CMD < /workspace/prompt.md
 {{/if}}
