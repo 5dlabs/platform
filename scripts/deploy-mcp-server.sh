@@ -28,26 +28,38 @@ USAGE:
     $0 [SCENARIO]
 
 SCENARIOS:
-    dev         Build and install for development (default)
+    download    Download pre-built binary from GitHub (default, fastest)
+    dev         Build and install for development
     local       Install to ~/.local/bin (same as dev)
     system      Install system-wide to /usr/local/bin
     build       Build only, don't install
     help        Show detailed setup options
 
 EXAMPLES:
-    $0              # Quick dev install
-    $0 dev          # Development install to ~/.local/bin
+    $0              # Download pre-built binary (recommended)
+    $0 download     # Download pre-built binary from GitHub releases
+    $0 dev          # Build from source for development
     $0 system       # System-wide install (requires sudo)
     $0 build        # Build only for testing
+
+DOWNLOAD vs BUILD:
+    download: ⚡ Fast installation using pre-built GitHub release binaries
+    dev/build: 🔨 Build from source (requires Rust toolchain)
 
 For advanced options, use: ./scripts/setup-mcp-server.sh --help
 EOF
 }
 
 # Get scenario
-SCENARIO="${1:-dev}"
+SCENARIO="${1:-download}"
 
 case $SCENARIO in
+    download)
+        print_header
+        print_status "⚡ Downloading pre-built binary from GitHub releases"
+        print_status "This is the fastest installation method!"
+        exec ./scripts/install-mcp-server.sh
+        ;;
     dev|local)
         print_header
         print_status "🛠️  Development install to ~/.local/bin"

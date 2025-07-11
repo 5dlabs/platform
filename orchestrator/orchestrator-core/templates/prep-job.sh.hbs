@@ -305,6 +305,16 @@ echo "DEBUG: Looking for $PROJECT_DIR/CLAUDE.md"
 if [ -f "$PROJECT_DIR/CLAUDE.md" ]; then
     echo "✓ CLAUDE.md already exists at project root: $PROJECT_DIR/CLAUDE.md"
     echo "DEBUG: File size: $(wc -c < "$PROJECT_DIR/CLAUDE.md") bytes"
+elif [ -f "/config/CLAUDE.md" ]; then
+    echo "Found CLAUDE.md in /config (from ConfigMap), copying to project root..."
+    echo "DEBUG: Source file size: $(wc -c < "/config/CLAUDE.md") bytes"
+    cp -v "/config/CLAUDE.md" "$PROJECT_DIR/CLAUDE.md"
+    if [ -f "$PROJECT_DIR/CLAUDE.md" ]; then
+        echo "✓ Successfully copied CLAUDE.md to $PROJECT_DIR/CLAUDE.md"
+        echo "DEBUG: Destination file size: $(wc -c < "$PROJECT_DIR/CLAUDE.md") bytes"
+    else
+        echo "ERROR: Failed to copy CLAUDE.md!"
+    fi
 elif [ -f "$PROJECT_DIR/.taskmaster/CLAUDE.md" ]; then
     echo "Found CLAUDE.md in .taskmaster, copying to project root..."
     echo "DEBUG: Source file size: $(wc -c < "$PROJECT_DIR/.taskmaster/CLAUDE.md") bytes"
@@ -316,8 +326,10 @@ elif [ -f "$PROJECT_DIR/.taskmaster/CLAUDE.md" ]; then
         echo "ERROR: Failed to copy CLAUDE.md!"
     fi
 else
-    echo "⚠️  WARNING: CLAUDE.md not found in project root or .taskmaster"
+    echo "⚠️  WARNING: CLAUDE.md not found in any expected location"
     echo "DEBUG: Checking all possible locations:"
+    echo "  /config/: $(ls -la /config/ 2>/dev/null || echo 'Directory not found')"
+    echo "  $PROJECT_DIR/.taskmaster/: $(ls -la $PROJECT_DIR/.taskmaster/ 2>/dev/null || echo 'Directory not found')"
     find /workspace -name "CLAUDE.md" -type f 2>/dev/null || echo "No CLAUDE.md found anywhere"
 fi
 {{/if}}

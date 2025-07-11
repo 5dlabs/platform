@@ -1,35 +1,94 @@
 # Orchestrator Scripts
 
+## 🚀 Quick Start: MCP Server Installation
+
+**One-line installation for the enhanced Orchestrator MCP Server:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/5dlabs/agent-platform/main/scripts/install-mcp-server.sh | bash
+```
+
+This will:
+- ✅ Auto-detect your platform (Linux, macOS, Windows)
+- ✅ Download the latest pre-built binary
+- ✅ Install to `~/.local/bin`
+- ✅ Configure your `.cursor/mcp.json`
+- ✅ Ready to use in seconds!
+
+**Then restart Cursor and test:** `ping()` and `init_docs({})`
+
+---
+
 ## MCP Server Deployment
 
-### deploy-mcp-server.sh
+### install-mcp-server.sh (Recommended)
 
-Quick deployment script for the enhanced Orchestrator MCP Server with common scenarios.
+**🚀 One-line installation using pre-built binaries from GitHub releases.**
+
+#### Quick Install
+```bash
+curl -fsSL https://raw.githubusercontent.com/5dlabs/agent-platform/main/scripts/install-mcp-server.sh | bash
+```
 
 #### What it does
 
-Provides simple deployment scenarios for the MCP server:
-- **dev**: Development install to `~/.local/bin` with auto-detection
-- **system**: System-wide install to `/usr/local/bin`
-- **build**: Build only without installation
-- **help**: Show detailed setup options
+- ✅ **Auto-detects your platform** (Linux, macOS x64/ARM64, Windows)
+- ✅ **Downloads appropriate binary** from GitHub releases
+- ✅ **Verifies checksums** for security
+- ✅ **Installs to ~/.local/bin** (or custom directory)
+- ✅ **Updates MCP configuration** automatically
+- ✅ **No Rust toolchain required** - just download and run!
+
+#### Usage Options
+
+```bash
+# Quick install (recommended)
+curl -fsSL https://raw.githubusercontent.com/5dlabs/agent-platform/main/scripts/install-mcp-server.sh | bash
+
+# Install specific version
+curl -fsSL https://raw.githubusercontent.com/5dlabs/agent-platform/main/scripts/install-mcp-server.sh | bash -s -- --version v1.2.3
+
+# System-wide install
+curl -fsSL https://raw.githubusercontent.com/5dlabs/agent-platform/main/scripts/install-mcp-server.sh | bash -s -- --dir /usr/local/bin
+
+# Download script first for review
+curl -fsSL https://raw.githubusercontent.com/5dlabs/agent-platform/main/scripts/install-mcp-server.sh -o install.sh
+chmod +x install.sh
+./install.sh --help
+```
+
+#### Available Options
+
+```
+OPTIONS:
+    -h, --help              Show help message
+    -v, --version VERSION   Install specific version (default: latest)
+    -d, --dir DIR          Installation directory (default: ~/.local/bin)
+    -f, --force            Force reinstall even if already installed
+    --no-config            Skip MCP configuration update
+    --config FILE          Custom MCP config file path
+```
+
+### deploy-mcp-server.sh
+
+Quick deployment script with common scenarios - **now defaults to downloading pre-built binaries**.
 
 #### Usage
 
 ```bash
-# Quick development install (default)
+# Download pre-built binary (default, fastest)
 ./scripts/deploy-mcp-server.sh
 
-# Specific scenarios
-./scripts/deploy-mcp-server.sh dev      # Development install
-./scripts/deploy-mcp-server.sh system   # System-wide install (requires sudo)
-./scripts/deploy-mcp-server.sh build    # Build only
-./scripts/deploy-mcp-server.sh help     # Show detailed options
+# Alternative scenarios
+./scripts/deploy-mcp-server.sh download   # Download from GitHub releases (same as default)
+./scripts/deploy-mcp-server.sh dev        # Build from source for development
+./scripts/deploy-mcp-server.sh system     # System-wide install
+./scripts/deploy-mcp-server.sh build      # Build only
 ```
 
-### setup-mcp-server.sh
+### setup-mcp-server.sh (Build from Source)
 
-Comprehensive setup script for building, installing, and configuring the enhanced Orchestrator MCP Server.
+Comprehensive setup script for building, installing, and configuring the enhanced Orchestrator MCP Server from source code.
 
 #### Features
 

@@ -1,0 +1,231 @@
+name: Release MCP Server
+
+on:
+  push:
+    tags:
+      - 'mcp-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., mcp-v1.0.0)'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: orchestrator-mcp-server-linux-x86_64
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            name: orchestrator-mcp-server-macos-x86_64
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            name: orchestrator-mcp-server-macos-aarch64
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            name: orchestrator-mcp-server-windows-x86_64.exe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: orchestrator -> target
+          key: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib
+
+      - name: Build binary
+        working-directory: ./orchestrator
+        run: |
+          cargo build --bin mcp-server --release --target ${{ matrix.target }}
+
+      - name: Rename binary (Unix)
+        if: matrix.os != 'windows-latest'
+        working-directory: ./orchestrator
+        run: |
+          mv target/${{ matrix.target }}/release/mcp-server ${{ matrix.name }}
+
+      - name: Rename binary (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: ./orchestrator
+        shell: powershell
+        run: |
+          Move-Item target\${{ matrix.target }}\release\mcp-server.exe ${{ matrix.name }}
+
+      - name: Generate checksum (Unix)
+        if: matrix.os != 'windows-latest'
+        working-directory: ./orchestrator
+        run: |
+          shasum -a 256 ${{ matrix.name }} > ${{ matrix.name }}.sha256
+
+      - name: Generate checksum (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: ./orchestrator
+        shell: powershell
+        run: |
+          $hash = Get-FileHash ${{ matrix.name }} -Algorithm SHA256
+          "$($hash.Hash.ToLower())  ${{ matrix.name }}" | Out-File -FilePath "${{ matrix.name }}.sha256" -Encoding ASCII
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: |
+            orchestrator/${{ matrix.name }}
+            orchestrator/${{ matrix.name }}.sha256
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          find artifacts -type f -exec cp {} release-assets/ \;
+          ls -la release-assets/
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          VERSION=${TAG#mcp-v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          cat << 'EOF' > release_notes.md
+          # Orchestrator MCP Server v${{ steps.version.outputs.version }}
+
+          Enhanced MCP server for Task Master documentation generation with improved error handling and user experience.
+
+          ## 🚀 Features
+
+          - **Enhanced Parameter Validation**: Clear error messages for invalid inputs
+          - **Comprehensive Documentation**: Built-in examples and usage guidance
+          - **Connectivity Testing**: New `ping()` tool for troubleshooting
+          - **Automatic Environment Detection**: Smart TASKMASTER_ROOT discovery
+          - **Improved Error Context**: Detailed, actionable error messages
+
+          ## 📦 Installation
+
+          ### Quick Install (Recommended)
+          ```bash
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install-mcp-server.sh | bash
+          ```
+
+          ### Manual Download
+          Download the appropriate binary for your platform:
+
+          | Platform | Architecture | Download |
+          |----------|--------------|----------|
+          | Linux | x86_64 | [orchestrator-mcp-server-linux-x86_64](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/orchestrator-mcp-server-linux-x86_64) |
+          | macOS | x86_64 (Intel) | [orchestrator-mcp-server-macos-x86_64](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/orchestrator-mcp-server-macos-x86_64) |
+          | macOS | aarch64 (M1/M2) | [orchestrator-mcp-server-macos-aarch64](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/orchestrator-mcp-server-macos-aarch64) |
+          | Windows | x86_64 | [orchestrator-mcp-server-windows-x86_64.exe](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/orchestrator-mcp-server-windows-x86_64.exe) |
+
+          ### Verify Download
+          All binaries include SHA256 checksums for verification:
+          ```bash
+          # Example for macOS ARM64
+          shasum -a 256 -c orchestrator-mcp-server-macos-aarch64.sha256
+          ```
+
+          ## 🔧 Configuration
+
+          Add to your `.cursor/mcp.json`:
+          ```json
+          {
+            "mcpServers": {
+              "orchestrator": {
+                "command": "/path/to/orchestrator-mcp-server",
+                "args": [],
+                "env": {
+                  "TASKMASTER_ROOT": "/path/to/your/project"
+                }
+              }
+            }
+          }
+          ```
+
+          ## 📖 Usage
+
+          ```javascript
+          // Generate docs for all tasks
+          init_docs({})
+
+          // Use specific model
+          init_docs({model: 'opus'})
+
+          // Generate docs for specific task
+          init_docs({task_id: 5})
+
+          // Test connectivity
+          ping()
+          ```
+
+          ## 🔄 Upgrading
+
+          Re-run the installation script or download the new binary and replace the old one.
+
+          ## 📊 Checksums
+
+          Binary checksums are included with each release for security verification.
+          EOF
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: MCP Server v${{ steps.version.outputs.version }}
+          body_path: release_notes.md
+          files: release-assets/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Output release info
+        run: |
+          echo "🎉 Release created successfully!"
+          echo "📦 Version: ${{ steps.version.outputs.version }}"
+          echo "🏷️ Tag: ${{ steps.version.outputs.tag }}"
+          echo "🔗 URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}"
