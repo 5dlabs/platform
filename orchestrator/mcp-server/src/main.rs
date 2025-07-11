@@ -27,7 +27,6 @@ use rmcp::{
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
-use serde_json::json;
 
 #[derive(Clone)]
 struct OrchestratorService;

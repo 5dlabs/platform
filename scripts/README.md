@@ -1,5 +1,171 @@
 # Orchestrator Scripts
 
+## MCP Server Deployment
+
+### deploy-mcp-server.sh
+
+Quick deployment script for the enhanced Orchestrator MCP Server with common scenarios.
+
+#### What it does
+
+Provides simple deployment scenarios for the MCP server:
+- **dev**: Development install to `~/.local/bin` with auto-detection
+- **system**: System-wide install to `/usr/local/bin`
+- **build**: Build only without installation
+- **help**: Show detailed setup options
+
+#### Usage
+
+```bash
+# Quick development install (default)
+./scripts/deploy-mcp-server.sh
+
+# Specific scenarios
+./scripts/deploy-mcp-server.sh dev      # Development install
+./scripts/deploy-mcp-server.sh system   # System-wide install (requires sudo)
+./scripts/deploy-mcp-server.sh build    # Build only
+./scripts/deploy-mcp-server.sh help     # Show detailed options
+```
+
+### setup-mcp-server.sh
+
+Comprehensive setup script for building, installing, and configuring the enhanced Orchestrator MCP Server.
+
+#### Features
+
+- ✅ Enhanced parameter validation with clear error messages
+- ✅ Comprehensive tool documentation with examples
+- ✅ Connectivity testing with ping tool
+- ✅ Automatic environment detection
+- ✅ Improved error handling and logging
+
+#### What it does
+
+1. **Prerequisites Check** - Validates Rust/Cargo installation and directory structure
+2. **Build MCP Server** - Compiles the enhanced MCP server binary with release optimizations
+3. **Install Binary** - Copies to specified location (default: `~/.local/bin`)
+4. **Update Configuration** - Automatically updates MCP configuration in Cursor
+5. **Environment Setup** - Configures TASKMASTER_ROOT and other environment variables
+
+#### Prerequisites
+
+- Rust and Cargo installed ([rustup.rs](https://rustup.rs/))
+- Write access to installation directory
+- For system install: sudo privileges
+
+#### Usage
+
+```bash
+# Development install with auto-detection
+./scripts/setup-mcp-server.sh
+
+# Custom installation directory
+./scripts/setup-mcp-server.sh -d ~/bin
+
+# System-wide installation
+./scripts/setup-mcp-server.sh --system
+
+# Specify custom TASKMASTER_ROOT
+./scripts/setup-mcp-server.sh -t /path/to/project
+
+# Build only (no installation)
+./scripts/setup-mcp-server.sh --build-only
+
+# Custom MCP config file
+./scripts/setup-mcp-server.sh -c ~/.cursor/custom-mcp.json
+
+# Force overwrite existing installation
+./scripts/setup-mcp-server.sh --force
+```
+
+#### Available Options
+
+```
+OPTIONS:
+    -h, --help                  Show help message
+    -d, --install-dir DIR       Installation directory (default: ~/.local/bin)
+    -c, --config FILE           MCP config file to update (default: ~/.cursor/mcp.json)
+    -t, --taskmaster-root DIR   Set TASKMASTER_ROOT environment variable
+    -b, --build-only            Only build, don't install or configure
+    -f, --force                 Force overwrite existing installation
+    --system                    Install system-wide to /usr/local/bin (requires sudo)
+```
+
+#### Enhanced MCP Tools
+
+After installation, the enhanced MCP server provides:
+
+**init_docs tool with improved features:**
+- Parameter validation with specific error messages
+- Comprehensive documentation with usage examples
+- Enhanced logging and error context
+- Automatic environment detection
+
+**New ping tool:**
+- Test MCP server connectivity
+- Validate environment configuration
+- Check CLI availability
+- Show current directory context
+
+#### Usage Examples in Cursor
+
+```javascript
+// Generate docs for all tasks
+init_docs({})
+
+// Use specific model
+init_docs({model: 'opus'})
+
+// Generate docs for specific task
+init_docs({task_id: 5})
+
+// Force overwrite existing docs
+init_docs({force: true})
+
+// Test connectivity and configuration
+ping()
+```
+
+#### Example Output
+
+```
+🔍 Checking prerequisites...
+✅ Prerequisites check passed!
+
+🔨 Building MCP server...
+Running cargo build for mcp-server...
+✅ Build completed successfully!
+Binary size: 8.2M
+
+📦 Installing MCP server...
+✅ Binary installed to ~/.local/bin/orchestrator-mcp-server
+
+⚙️ Updating MCP configuration...
+Auto-detected TASKMASTER_ROOT: /path/to/platform/example
+✅ MCP configuration updated
+
+🎉 Installation completed!
+
+📋 Installation Summary:
+  Binary: ~/.local/bin/orchestrator-mcp-server
+  Size: 8.2M
+  Config: ~/.cursor/mcp.json
+  TASKMASTER_ROOT: /path/to/platform/example
+
+🚀 Enhanced Features Available:
+  ✅ Parameter validation with clear error messages
+  ✅ Comprehensive documentation with examples
+  ✅ Connectivity testing with ping() tool
+  ✅ Automatic environment detection
+  ✅ Enhanced logging and error context
+
+🔄 Next Steps:
+  1. Restart Cursor to load the new MCP server
+  2. Test connectivity: ping()
+  3. Generate docs: init_docs({})
+  4. Try examples: init_docs({model: 'opus', task_id: 5})
+```
+
 ## clean-workspace-and-test.sh
 
 A comprehensive script for testing the orchestrator with a completely clean environment.

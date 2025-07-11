@@ -228,16 +228,9 @@ cp /workspace/.task/{{task_id}}/attempt-{{attempts}}/*.md /workspace/ 2>/dev/nul
 
 # Copy Claude configuration to workspace with correct hierarchy
 {{#if is_docs_generation}}
-# For docs generation, copy to the working directory's .taskmaster/.claude
-WORKING_DIR="{{working_dir}}"
-if [ -n "$WORKING_DIR" ] && [ "$WORKING_DIR" != "." ]; then
-  CLAUDE_CONFIG_DIR="/workspace/$WORKING_DIR/.taskmaster/.claude"
-else
-  CLAUDE_CONFIG_DIR="/workspace/.taskmaster/.claude"
-fi
-mkdir -p "$CLAUDE_CONFIG_DIR"
-cp /config/claude-settings-local.json "$CLAUDE_CONFIG_DIR/settings.local.json" 2>/dev/null || echo 'No claude-settings-local.json to copy'
-echo "✓ Copied Claude config to $CLAUDE_CONFIG_DIR/settings.local.json"
+# For docs generation, we don't copy to .taskmaster/.claude anymore
+# The settings will be created in the project root's .claude directory below
+echo "Skipping legacy .taskmaster/.claude configuration for docs generation"
 {{else}}
 # For regular tasks, copy to workspace root
 mkdir -p /workspace/.claude
@@ -274,6 +267,13 @@ if [ -z "{{working_dir}}" ] || [ "{{working_dir}}" = "." ]; then
     PROJECT_DIR="/workspace"
 fi
 
+echo "DEBUG: PROJECT_DIR = $PROJECT_DIR"
+echo "DEBUG: working_dir = {{working_dir}}"
+echo "DEBUG: Contents of $PROJECT_DIR:"
+ls -la "$PROJECT_DIR" || echo "Failed to list $PROJECT_DIR"
+echo "DEBUG: Contents of $PROJECT_DIR/.taskmaster (if exists):"
+ls -la "$PROJECT_DIR/.taskmaster" 2>/dev/null || echo "No .taskmaster directory"
+
 # Create .claude directory in project root
 mkdir -p "$PROJECT_DIR/.claude"
 
@@ -300,14 +300,25 @@ EOF
 echo "✓ Created Claude settings at $PROJECT_DIR/.claude/settings.local.json"
 
 # Also ensure CLAUDE.md exists at project root
+echo "DEBUG: Checking for CLAUDE.md..."
+echo "DEBUG: Looking for $PROJECT_DIR/CLAUDE.md"
 if [ -f "$PROJECT_DIR/CLAUDE.md" ]; then
     echo "✓ CLAUDE.md already exists at project root: $PROJECT_DIR/CLAUDE.md"
+    echo "DEBUG: File size: $(wc -c < "$PROJECT_DIR/CLAUDE.md") bytes"
 elif [ -f "$PROJECT_DIR/.taskmaster/CLAUDE.md" ]; then
-    echo "Copying CLAUDE.md from .taskmaster to project root..."
-    cp "$PROJECT_DIR/.taskmaster/CLAUDE.md" "$PROJECT_DIR/CLAUDE.md"
-    echo "✓ Copied CLAUDE.md to $PROJECT_DIR/CLAUDE.md"
+    echo "Found CLAUDE.md in .taskmaster, copying to project root..."
+    echo "DEBUG: Source file size: $(wc -c < "$PROJECT_DIR/.taskmaster/CLAUDE.md") bytes"
+    cp -v "$PROJECT_DIR/.taskmaster/CLAUDE.md" "$PROJECT_DIR/CLAUDE.md"
+    if [ -f "$PROJECT_DIR/CLAUDE.md" ]; then
+        echo "✓ Successfully copied CLAUDE.md to $PROJECT_DIR/CLAUDE.md"
+        echo "DEBUG: Destination file size: $(wc -c < "$PROJECT_DIR/CLAUDE.md") bytes"
+    else
+        echo "ERROR: Failed to copy CLAUDE.md!"
+    fi
 else
     echo "⚠️  WARNING: CLAUDE.md not found in project root or .taskmaster"
+    echo "DEBUG: Checking all possible locations:"
+    find /workspace -name "CLAUDE.md" -type f 2>/dev/null || echo "No CLAUDE.md found anywhere"
 fi
 {{/if}}
 
@@ -320,3 +331,25 @@ ls -la /workspace/
 echo ''
 echo 'Task files:'
 ls -la /workspace/.task/{{task_id}}/attempt-{{attempts}}/
+
+{{#if is_docs_generation}}
+echo ''
+echo '=== FINAL VERIFICATION FOR DOCS GENERATION ==='
+echo "Project directory: $PROJECT_DIR"
+echo "Checking for required files:"
+echo -n "  - $PROJECT_DIR/.claude/settings.local.json: "
+if [ -f "$PROJECT_DIR/.claude/settings.local.json" ]; then
+    echo "✓ EXISTS"
+else
+    echo "✗ MISSING"
+fi
+echo -n "  - $PROJECT_DIR/CLAUDE.md: "
+if [ -f "$PROJECT_DIR/CLAUDE.md" ]; then
+    echo "✓ EXISTS"
+else
+    echo "✗ MISSING"
+fi
+echo "Contents of $PROJECT_DIR:"
+ls -la "$PROJECT_DIR"
+echo '=== END VERIFICATION ==='
+{{/if}}
