@@ -298,7 +298,16 @@ cd "$PROJECT_DIR"
 echo "Changed to directory: $(pwd)"
 
 # Run Claude with stop hook (it will be executed automatically on successful completion)
-exec $CLAUDE_CMD < "$PROMPT_FILE"
+$CLAUDE_CMD < "$PROMPT_FILE"
+CLAUDE_EXIT_CODE=$?
+
+# Give stop hook time to complete if needed
+if [ $CLAUDE_EXIT_CODE -eq 0 ]; then
+  echo "Claude completed successfully, waiting briefly to ensure stop hook completes..."
+  sleep 5
+fi
+
+exit $CLAUDE_EXIT_CODE
 {{else}}
 exec $CLAUDE_CMD < /workspace/prompt.md
 {{/if}}
