@@ -128,8 +128,22 @@ cp /config/*.md /workspace/.task/{{task_id}}/ 2>/dev/null || true
 cp /workspace/.task/{{task_id}}/attempt-{{attempts}}/*.md /workspace/ 2>/dev/null || echo 'No markdown files to copy to root'
 
 # Copy Claude configuration to workspace with correct hierarchy
+{{#if is_docs_generation}}
+# For docs generation, copy to the working directory's .taskmaster/.claude
+WORKING_DIR="{{working_dir}}"
+if [ -n "$WORKING_DIR" ] && [ "$WORKING_DIR" != "." ]; then
+  CLAUDE_CONFIG_DIR="/workspace/$WORKING_DIR/.taskmaster/.claude"
+else
+  CLAUDE_CONFIG_DIR="/workspace/.taskmaster/.claude"
+fi
+mkdir -p "$CLAUDE_CONFIG_DIR"
+cp /config/claude-settings-local-json "$CLAUDE_CONFIG_DIR/settings.local.json" 2>/dev/null || echo 'No claude-settings-local-json to copy'
+echo "✓ Copied Claude config to $CLAUDE_CONFIG_DIR/settings.local.json"
+{{else}}
+# For regular tasks, copy to workspace root
 mkdir -p /workspace/.claude
 cp /config/claude-settings-local-json /workspace/.claude/settings.local.json 2>/dev/null || echo 'No claude-settings-local-json to copy'
+{{/if}}
 
 
 # Create .gitignore to prevent committing Claude internal files

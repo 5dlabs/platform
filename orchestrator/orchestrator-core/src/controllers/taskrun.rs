@@ -1115,11 +1115,27 @@ fn build_prep_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String,
         .register_template_string("prep", PREP_JOB_TEMPLATE)
         .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
 
+    // Extract working directory for docs generation tasks (same logic as main container)
+    let mut working_dir = String::new();
+    if tr.spec.task_id == 999999 {
+        // For docs generation, parse working directory from markdown
+        if let Some(claude_md) = tr.spec.markdown_files.iter().find(|f| f.filename == "CLAUDE.md") {
+            for line in claude_md.content.lines() {
+                if line.starts_with("- **Working Directory**: ") {
+                    working_dir = line.trim_start_matches("- **Working Directory**: ").to_string();
+                    break;
+                }
+            }
+        }
+    }
+
     let data = json!({
         "task_id": tr.spec.task_id,
         "service_name": tr.spec.service_name,
         "repository": tr.spec.repository.as_ref(),
         "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
+        "is_docs_generation": tr.spec.task_id == 999999,
+        "working_dir": working_dir,
     });
 
     handlebars
