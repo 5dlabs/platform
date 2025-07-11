@@ -246,7 +246,33 @@ echo "Starting Claude execution..."
 echo "=========================="
 
 {{#if is_docs_generation}}
-exec $CLAUDE_CMD < "$CLAUDE_WORK_DIR/prompt.md"
+# Run Claude (without exec so we can run stop hook after)
+$CLAUDE_CMD < "$CLAUDE_WORK_DIR/prompt.md"
+CLAUDE_EXIT_CODE=$?
+
+# Run stop hook for PR creation if docs generation succeeded
+if [ $CLAUDE_EXIT_CODE -eq 0 ] && [ -f "/workspace/.stop-hook-docs-pr.sh" ]; then
+  echo ""
+  echo "════════════════════════════════════════════════════════════════"
+  echo "║           RUNNING DOCUMENTATION PR CREATION HOOK             ║"
+  echo "════════════════════════════════════════════════════════════════"
+  
+  # Export necessary variables for the hook
+  export SERVICE_NAME="docs-generator"
+  export TARGET_BRANCH="{{targetBranch}}"
+  export SOURCE_BRANCH="{{repository.branch}}"
+  export MODEL="{{model}}"
+  export WORKING_DIR="{{working_dir}}"
+  
+  # Make hook executable and run it
+  chmod +x /workspace/.stop-hook-docs-pr.sh
+  cd /workspace  # Ensure we're in the repository root
+  sh /workspace/.stop-hook-docs-pr.sh || {
+    echo "Warning: PR creation hook failed, but documentation was generated successfully"
+  }
+fi
+
+exit $CLAUDE_EXIT_CODE
 {{else}}
 exec $CLAUDE_CMD < /workspace/prompt.md
 {{/if}}

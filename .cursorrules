@@ -1,0 +1,42 @@
+# Cursor IDE Configuration
+
+## MCP Server Configuration
+
+This project includes an MCP server for orchestrator documentation generation.
+
+### Available MCP Tools
+
+- `init_docs`: Initialize documentation for Task Master tasks using Claude
+  - Parameters:
+    - `model`: Claude model to use (sonnet, opus) - default: opus
+    - `working_directory`: Directory containing .taskmaster folder (auto-detected if not specified)
+    - `force`: Overwrite existing documentation - default: false
+    - `task_id`: Generate docs for specific task only (optional)
+
+### Example Usage
+
+```javascript
+// Generate documentation for all tasks
+init_docs({ model: "opus", force: true })
+
+// Generate docs for a specific task
+init_docs({ model: "opus", task_id: 5 })
+
+// Use from a subdirectory
+init_docs({ working_directory: "/path/to/project", model: "opus" })
+```
+
+### Working Directory Resolution
+
+The MCP server uses the following priority for finding the Task Master root:
+1. Explicit `working_directory` parameter
+2. `TASKMASTER_ROOT` environment variable  
+3. Auto-detect by searching for `.taskmaster` directory (walks up from current directory)
+4. Default to current directory
+
+## Project Context
+
+This is the agent-platform repository containing:
+- Orchestrator service for managing Claude agents
+- Task Master integration for project management
+- Example projects demonstrating Task Master usage

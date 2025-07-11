@@ -3,6 +3,14 @@
 		"task-master-ai": {
 			"command": "npx",
 			"args": ["-y",  "task-master-ai"]
-		}
+		},
+		"orchestrator": {
+			"command": "/Users/jonathonfritz/platform/orchestrator/target/debug/mcp-server",
+			"args": [],
+			"env": {
+			  "ORCHESTRATOR_API_URL": "http://orchestrator.orchestrator.svc.cluster.local/api/v1",
+			  "TASKMASTER_ROOT": "/Users/jonathonfritz/platform/example"
+			}
+		  }
 	}
 }

@@ -45,8 +45,8 @@ impl McpServer {
                             }
                         },
                         "serverInfo": {
-                            "name": "documentation-server",
-                            "version": "1.0.0"
+                            "name": "orchestrator-docs",
+                            "version": "0.1.0"
                         }
                     }
                 });
@@ -184,27 +184,57 @@ impl McpServer {
         let mut stdout = stdout();
         let reader = BufReader::new(stdin);
 
+        info!("MCP server ready, waiting for requests...");
+
         for line in reader.lines() {
             let line = line?;
             if line.trim().is_empty() {
                 continue;
             }
 
+            info!("Received request: {}", line);
+
             match serde_json::from_str::<Value>(&line) {
                 Ok(request) => {
+                    let request_id = request.get("id").cloned().unwrap_or(Value::Null);
                     match self.handle_request(request) {
                         Ok(response) => {
                             let response_str = serde_json::to_string(&response)?;
+                            info!("Sending response: {}", response_str);
                             writeln!(stdout, "{}", response_str)?;
                             stdout.flush()?;
                         }
                         Err(e) => {
                             eprintln!("Error handling request: {}", e);
+                            // Send error response
+                            let error_response = json!({
+                                "jsonrpc": "2.0",
+                                "id": request_id,
+                                "error": {
+                                    "code": -32603,
+                                    "message": format!("Internal error: {}", e)
+                                }
+                            });
+                            let error_str = serde_json::to_string(&error_response)?;
+                            writeln!(stdout, "{}", error_str)?;
+                            stdout.flush()?;
                         }
                     }
                 }
                 Err(e) => {
                     eprintln!("Error parsing JSON: {}", e);
+                    // Try to extract ID if possible and send parse error
+                    let error_response = json!({
+                        "jsonrpc": "2.0",
+                        "id": null,
+                        "error": {
+                            "code": -32700,
+                            "message": "Parse error"
+                        }
+                    });
+                    let error_str = serde_json::to_string(&error_response)?;
+                    writeln!(stdout, "{}", error_str)?;
+                    stdout.flush()?;
                 }
             }
         }
@@ -225,6 +255,7 @@ async fn main() -> Result<()> {
 
     tracing_subscriber::fmt()
         .with_env_filter(filter)
+        .with_writer(std::io::stderr)
         .init();
 
     info!("Starting MCP Server for documentation generation");
