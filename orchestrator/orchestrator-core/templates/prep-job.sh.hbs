@@ -137,12 +137,12 @@ else
   CLAUDE_CONFIG_DIR="/workspace/.taskmaster/.claude"
 fi
 mkdir -p "$CLAUDE_CONFIG_DIR"
-cp /config/claude-settings-local-json "$CLAUDE_CONFIG_DIR/settings.local.json" 2>/dev/null || echo 'No claude-settings-local-json to copy'
+cp /config/claude-settings-local.json "$CLAUDE_CONFIG_DIR/settings.local.json" 2>/dev/null || echo 'No claude-settings-local.json to copy'
 echo "✓ Copied Claude config to $CLAUDE_CONFIG_DIR/settings.local.json"
 {{else}}
 # For regular tasks, copy to workspace root
 mkdir -p /workspace/.claude
-cp /config/claude-settings-local-json /workspace/.claude/settings.local.json 2>/dev/null || echo 'No claude-settings-local-json to copy'
+cp /config/claude-settings-local.json /workspace/.claude/settings.local.json 2>/dev/null || echo 'No claude-settings-local.json to copy'
 {{/if}}
 
 
