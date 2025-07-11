@@ -8,9 +8,14 @@ dev-debug.log
 
 # Dependency directories
 node_modules/
+settings.json
 
 # Environment variables
 .env
+
+# Claude settings
+.claude/settings.local.json
+.claude/settings.json
 
 # Editor directories and files
 .idea

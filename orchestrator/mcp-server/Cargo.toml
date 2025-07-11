@@ -26,7 +26,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 clap = { workspace = true }
 async-trait = { workspace = true }
-rmcp = { version = "0.1.0", features = ["server", "transport-io", "macros"] }
+rmcp = { version = "0.1.5", features = ["server", "transport-io", "macros"] }
 schemars = "0.8"
 
 [dev-dependencies]
