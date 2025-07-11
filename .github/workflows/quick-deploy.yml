@@ -127,9 +127,6 @@ jobs:
           RUSTC_WRAPPER: "sccache"
           SCCACHE_CACHE_SIZE: "50G"
           SCCACHE_IDLE_TIMEOUT: "0"
-          # Let cargo use default target dir with pre-warmed cache
-          # CARGO_TARGET_DIR is not set - will use ./target
-          # Let config.toml handle all optimizations
           CARGO_NET_GIT_FETCH_WITH_CLI: "true"
           CARGO_REGISTRIES_CRATES_IO_PROTOCOL: "sparse"
         run: |
