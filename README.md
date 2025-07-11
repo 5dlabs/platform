@@ -91,32 +91,135 @@ kubectl apply -f infra/crds/taskrun-controller-config.yaml
 helm install orchestrator ./infra/charts/orchestrator \
   --namespace orchestrator \
   --create-namespace \
---values ./infra/charts/orchestrator/values-production.yaml
+  --values ./infra/charts/orchestrator/values-production.yaml
 ```
 
-4. **Submit Tasks via REST API**:
+### Using the Orchestrator CLI
+
+4. **Install Orchestrator CLI**:
 ```bash
-# Submit a task with design specification
-curl -X POST http://orchestrator.local/api/v1/pm/tasks \
-  -H "Content-Type: application/json" \
-  -d @examples/sample-task.json
+# Build from source
+cd orchestrator
+cargo build --release
+cp target/release/orchestrator ~/.local/bin/
+
+# Or use the pre-built binary from releases
+curl -L https://github.com/5dlabs/agent-platform/releases/latest/download/orchestrator-linux-x86_64 -o ~/.local/bin/orchestrator
+chmod +x ~/.local/bin/orchestrator
+```
+
+5. **Configure API Endpoint**:
+```bash
+# Set the orchestrator API URL (defaults to http://localhost:8080)
+export ORCHESTRATOR_API_URL="http://orchestrator.orchestrator.svc.cluster.local/api/v1"
+
+# For local development with port-forward
+kubectl port-forward -n orchestrator svc/orchestrator 8080:80
+export ORCHESTRATOR_API_URL="http://localhost:8080/api/v1"
+```
+
+6. **Submit Tasks via CLI**:
+```bash
+# Submit a task from Task Master
+orchestrator task submit \
+  --task-id 1001 \
+  --service auth-service \
+  --agent claude \
+  --taskmaster-dir .taskmaster
+
+# Submit with additional context files
+orchestrator task submit \
+  --task-id 1002 \
+  --service payment-service \
+  --context-file design-spec.md \
+  --context-file requirements.txt
+
+# Advanced submission with custom files
+orchestrator task submit-advanced \
+  --task-json task-details.json \
+  --design-spec design-spec.md \
+  --prompt autonomous-prompt.md \
+  --service-name user-service
+
+# Generate documentation for Task Master tasks
+orchestrator task init-docs \
+  --model opus \
+  --repo https://github.com/your-org/your-repo \
+  --force
+```
+
+7. **Monitor Tasks**:
+```bash
+# List all tasks
+orchestrator task list
+
+# Filter by service or status
+orchestrator task list --service auth-service
+orchestrator task list --status completed
+
+# Check task status
+orchestrator task status 1001
 
 # Add context to existing task
-curl -X POST http://orchestrator.local/api/v1/pm/tasks/1001/context \
-  -H "Content-Type: application/json" \
-  -d @examples/additional-context.json
+orchestrator task add-context 1001 \
+  --context "Additional implementation notes" \
+  --file updated-spec.md
+
+# View job details
+orchestrator job list --microservice auth-service
+orchestrator job get job-123
+orchestrator job logs job-123 --follow
 ```
 
-5. **Monitor TaskRun Resources**:
+### MCP Server Integration
+
+8. **Install MCP Server for Cursor/Claude Integration**:
 ```bash
-# List all TaskRuns
-kubectl get taskruns -n orchestrator
+# Quick install with script
+curl -fsSL https://raw.githubusercontent.com/5dlabs/agent-platform/main/scripts/install-mcp-server.sh | bash
 
-# Check specific TaskRun status
-kubectl describe taskrun auth-service-task-1001 -n orchestrator
+# Or manual installation
+./scripts/install-mcp-server.sh \
+  --dir ~/.local/bin \
+  --config ~/.cursor/mcp.json
+```
 
-# View agent logs
-kubectl logs -n orchestrator -l app=claude-agent,task-id=1001 -f
+9. **Configure MCP in .mcp.json or .cursor/mcp.json**:
+```json
+{
+  "mcpServers": {
+    "orchestrator": {
+      "command": "/path/to/orchestrator-mcp-server",
+      "args": [],
+      "env": {
+        "ORCHESTRATOR_API_URL": "http://orchestrator.orchestrator.svc.cluster.local/api/v1",
+        "TASKMASTER_ROOT": "/path/to/your/project"
+      }
+    }
+  }
+}
+```
+
+10. **Use MCP Tools in Cursor**:
+```javascript
+// Test connectivity
+ping()
+
+// Generate documentation for all tasks
+init_docs({})
+
+// Generate with specific model
+init_docs({ model: "opus" })
+
+// Generate for specific task
+init_docs({ task_id: 5 })
+
+// Submit a task
+submit_task({
+  task_id: 1001,
+  service_name: "auth-service",
+  agent: "claude"
+})
 ```
 
 ## Taskmaster Integration
@@ -196,10 +299,19 @@ EOF
 # View task details
 task-master show 1
 
+# Option 1: Submit using the Orchestrator CLI (Recommended)
+orchestrator task submit \
+  --task-id 1001 \
+  --service auth-service \
+  --agent claude \
+  --taskmaster-dir .taskmaster \
+  --context-file design-spec.md \
+  --context-file autonomous-prompt.md
+
+# Option 2: Submit via REST API with design specification
 # Extract task information manually or via script
 TASK_DESCRIPTION=$(task-master show 1 | grep -A 20 "Description:" | tail -n +2)
 
-# Submit via REST API with design specification
 curl -X POST http://orchestrator.local/api/v1/pm/tasks \
   -H "Content-Type: application/json" \
   -d '{
@@ -311,6 +423,44 @@ task-master copy-tag auth-feature auth-v2 --description="Version 2 authenticatio
 # List all available tags
 task-master tags --show-metadata
 ```
+
+### Documentation Generation Workflow
+
+The platform includes an automated documentation generation feature for Task Master projects:
+
+**Generate Comprehensive Task Documentation**:
+```bash
+# Using CLI - generates docs for all tasks in example/.taskmaster
+orchestrator task init-docs \
+  --model opus \
+  --repo https://github.com/your-org/your-repo \
+  --source-branch main
+
+# Using MCP in Cursor
+init_docs({
+  model: "opus",
+  repo: "https://github.com/your-org/your-repo",
+  source_branch: "main"
+})
+
+# Generate docs for specific task only
+orchestrator task init-docs \
+  --model sonnet \
+  --task-id 5 \
+  --force
+```
+
+**How It Works**:
+1. Reads tasks from `example/.taskmaster/tasks/tasks.json`
+2. Creates a dedicated Claude agent with the Task Master context
+3. Generates comprehensive documentation for each task
+4. Automatically creates a GitHub PR with the generated docs
+5. Uses `--stop-hook` for secure PR creation after completion
+
+**Prerequisites**:
+- Task Master project initialized in `example/` directory
+- GitHub token configured in Kubernetes secrets
+- Repository access for PR creation
 
 ### Integration Scripts
 
