@@ -252,7 +252,7 @@ ls -la "$PROJECT_DIR/.taskmaster" 2>/dev/null || echo "No .taskmaster directory"
 # Create .claude directory in project root
 mkdir -p "$PROJECT_DIR/.claude"
 
-# Create settings.local.json with allowed tools
+# Create settings.local.json with allowed tools and stop hook
 cat > "$PROJECT_DIR/.claude/settings.local.json" << 'EOF'
 {
   "allowedTools": [
@@ -268,7 +268,8 @@ cat > "$PROJECT_DIR/.claude/settings.local.json" << 'EOF'
     "WebFetch",
     "TodoRead",
     "TodoWrite"
-  ]
+  ],
+  "stopHook": "/workspace/.stop-hook-docs-pr.sh"
 }
 EOF
 

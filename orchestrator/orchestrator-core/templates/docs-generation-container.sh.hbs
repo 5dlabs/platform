@@ -40,9 +40,9 @@ echo "Documentation generation task detected - using minimal validation"
 # Determine the working directory for Claude
 WORKING_DIR="{{working_dir}}"
 if [ -n "$WORKING_DIR" ] && [ "$WORKING_DIR" != "." ]; then
-  CLAUDE_WORK_DIR="/workspace/$WORKING_DIR/.taskmaster"
+  CLAUDE_WORK_DIR="/workspace/$WORKING_DIR"
 else
-  CLAUDE_WORK_DIR="/workspace/.taskmaster"
+  CLAUDE_WORK_DIR="/workspace"
 fi
 
 echo "Claude working directory: $CLAUDE_WORK_DIR"

@@ -5,7 +5,7 @@
 			"args": ["-y",  "task-master-ai"]
 		},
 		"orchestrator": {
-			"command": "/Users/jonathonfritz/platform/orchestrator/target/debug/mcp-server",
+			"command": "orchestrator-mcp-server",
 			"args": [],
 			"env": {
 			  "ORCHESTRATOR_API_URL": "http://orchestrator.orchestrator.svc.cluster.local/api/v1",
