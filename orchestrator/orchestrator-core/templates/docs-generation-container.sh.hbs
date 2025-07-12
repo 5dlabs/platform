@@ -365,8 +365,11 @@ echo "║                    END CONTENT PREVIEW                        ║"
 echo "════════════════════════════════════════════════════════════════"
 echo ""
 
-# Build Claude command - let settings files control the model selection
-CLAUDE_CMD="claude -p --output-format stream-json --verbose"
+# Build Claude command with explicit model and tool permissions for maximum reliability
+# Using CLI arguments ensures these settings are applied regardless of config file issues
+CLAUDE_CMD="claude -p --output-format stream-json --verbose --model claude-opus-4-20250514 --allowedTools 'WebSearch,WebFetch,Edit,Read,Write,Bash(git:*,gh:*,echo:*,ls:*,mkdir:*,cp:*,mv:*,rm:*,find:*,grep:*,cat:*,head:*,tail:*,curl:*,wget:*,jq:*,which:*,pwd:*,whoami:*,date:*,wc:*,sort:*,uniq:*,awk:*,sed:*),Glob,Grep,LS,Task,TodoRead,TodoWrite,NotebookRead,NotebookEdit,MultiEdit'"
+
+echo "✓ Using CLI arguments for guaranteed tool permissions and model selection"
 
 echo "=== 6. ENVIRONMENT VARIABLES ==="
 echo "Environment variables Claude will see:"
@@ -391,7 +394,7 @@ echo "Note: Claude will automatically read CLAUDE.md from the working directory"
 echo "Starting Claude execution..."
 echo "=========================="
 
-# Run Claude with proper separation of memory vs prompt
+A hook is a compelling opening statement or question designed to grab the reader's attention and entice them to continue reading. It serves as an engaging introduction that sets the tone for the rest of the piece, whether in an article, a book, or a speech. A strong hook can be a startling fact, a provocative question, or a vivid description that piques curiosity and encourages deeper exploration of the subject. For example, starting an essay with "Did you know that over 90% of startups fail?" immediately challenges the reader to think critically and want to learn more. The effectiveness of a hook can often determine the reader's investment in the content that follows. # Run Claude with proper separation of memory vs prompt
 # CLAUDE.md = Project memory (automatically loaded by Claude)
 # Prompt = Task-specific instruction from template
 
