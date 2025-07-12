@@ -2,21 +2,29 @@
 //!
 //! This handler replaces the Helm-based deployment with TaskRun CRD management
 
-use crate::crds::{AgentTool, MarkdownFile, MarkdownFileType, RepositorySpec, TaskRun, TaskRunSpec};
-use axum::{extract::State, http::StatusCode, response::Json};
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use axum::Json;
+use k8s_openapi::api::core::v1::Secret;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
-use kube::{
-    api::{Api, ListParams, PostParams},
-    Client,
-};
-use orchestrator_common::models::pm_task::{DocsGenerationRequest, PmTaskRequest};
+use kube::api::{Api, PostParams};
+use kube::{Client, ResourceExt};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio::process::Command;
 use tracing::{error, info, warn};
 
+use crate::crds::taskrun::{
+    AgentTool, MarkdownFile, MarkdownFileType, RepositorySpec, TaskRun, TaskRunSpec,
+};
+use orchestrator_common::models::pm_task::{DocsGenerationRequest, PmTaskRequest};
+
+// Constants for docs generation
+const DOCS_GENERATION_TASK_ID: u32 = 999999;
+
 /// Application state for the handler
+#[derive(Clone)]
 pub struct AppState {
     pub k8s_client: Client,
     pub namespace: String,
@@ -538,7 +546,7 @@ pub async fn list_tasks(
 
     let api: Api<TaskRun> = Api::namespaced(state.k8s_client.clone(), &state.namespace);
 
-    match api.list(&ListParams::default()).await {
+    match api.list(&kube::api::ListParams::default()).await {
         Ok(task_list) => {
             let tasks: Vec<Value> = task_list
                 .items
@@ -775,10 +783,10 @@ pub async fn generate_docs(
         .unwrap()
         .as_secs();
     let taskrun_name = format!("docs-gen-{timestamp}");
-    
+
     // Create TaskRun spec for documentation generation
     let spec = TaskRunSpec {
-        task_id: request.task_id.unwrap_or(999999), // Use high number for "all tasks" (CRD requires >= 1)
+        task_id: DOCS_GENERATION_TASK_ID, // Use high number for "all tasks" (CRD requires >= 1)
         service_name: request.service_name.clone(),
         agent_name: request.agent_name.clone(),
         model: request.model.clone(),
@@ -808,7 +816,7 @@ pub async fn generate_docs(
 
 ## Instructions
 
-You are tasked with generating comprehensive documentation for Task Master tasks. 
+You are tasked with generating comprehensive documentation for Task Master tasks.
 
 IMPORTANT: You are already in a workspace with access ONLY to the Task Master directory. DO NOT clone any repositories or navigate outside the current directory.
 
@@ -817,7 +825,7 @@ IMPORTANT: You are already in a workspace with access ONLY to the Task Master di
 Before generating task documentation, familiarize yourself with these key project documents:
 
 - **Architecture & Design**: @.taskmaster/docs/architecture.md - Overall system design and architecture
-- **Product Requirements**: @.taskmaster/docs/prd.txt or @.taskmaster/docs/prd.md - Product requirements document  
+- **Product Requirements**: @.taskmaster/docs/prd.txt or @.taskmaster/docs/prd.md - Product requirements document
 - **Task List**: @.taskmaster/tasks/tasks.json - Complete task definitions and relationships
 
 ## Documentation Generation Process
@@ -938,7 +946,7 @@ Follow these steps:
 
     // Create TaskRun in Kubernetes
     let api: Api<TaskRun> = Api::namespaced(state.k8s_client.clone(), &state.namespace);
-    
+
     match api.create(&PostParams::default(), &taskrun).await {
         Ok(created) => {
             info!("Created documentation generation TaskRun: {}", taskrun_name);

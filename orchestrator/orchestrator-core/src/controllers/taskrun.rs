@@ -29,6 +29,14 @@ use std::sync::Arc;
 use tokio::time::Duration;
 use tracing::{error, info};
 
+// Constants for docs generation detection
+const DOCS_GENERATION_TASK_ID: u32 = 999999;
+
+/// Check if a TaskRun is for documentation generation
+fn is_docs_generation(tr: &TaskRun) -> bool {
+    tr.spec.task_id == DOCS_GENERATION_TASK_ID
+}
+
 // Error type for the controller
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -270,52 +278,10 @@ async fn reconcile_create_or_update(
     }
 
     // Special handling for documentation generation tasks (task_id = 999999)
-    if tr.spec.task_id == 999999 {
-        info!("Documentation generation task detected, using minimal prep job");
-        // Use a special prep job for docs generation
-        let prep_job_name = format!(
-            "prep-{}-{}-task{}-attempt{}",
-            tr.spec.agent_name.replace('_', "-"),
-            tr.spec.service_name.replace('_', "-"),
-            tr.spec.task_id,
-            tr.spec.context_version
-        );
-        
-        // Check if prep job exists
-        match jobs.get(&prep_job_name).await {
-            Ok(prep_job) => {
-                // Check prep job status
-                if let Some(job_status) = &prep_job.status {
-                    if job_status.succeeded.unwrap_or(0) > 0 {
-                        info!("Docs prep job succeeded, creating Claude job");
-                        create_claude_job(tr, jobs, taskruns, &cm_name, config).await?;
-                    } else if job_status.failed.unwrap_or(0) > 0 {
-                        update_status(
-                            taskruns,
-                            &name,
-                            TaskRunPhase::Failed,
-                            "Documentation prep failed",
-                        )
-                        .await?;
-                    }
-                }
-            }
-            Err(kube::Error::Api(ae)) if ae.code == 404 => {
-                // Create minimal prep job for docs
-                info!("Creating docs prep job: {}", prep_job_name);
-                let prep_job = build_docs_prep_job(&tr, &prep_job_name, config)?;
-                jobs.create(&PostParams::default(), &prep_job).await?;
-                update_status(
-                    taskruns,
-                    &name,
-                    TaskRunPhase::Preparing,
-                    "Preparing documentation workspace",
-                )
-                .await?;
-            }
-            Err(e) => return Err(e.into()),
-        }
-        return Ok(Action::requeue(Duration::from_secs(10)));
+    if is_docs_generation(&tr) {
+        info!("Documentation generation task detected, creating Claude job directly");
+        create_claude_job(tr, jobs, taskruns, &cm_name, config).await?;
+        return Ok(Action::requeue(Duration::from_secs(30)));
     }
 
     // Check prep job status for normal tasks
@@ -604,9 +570,14 @@ fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Resul
 
     // Generate Claude Code configuration file for tool permissions (using correct filename)
     let settings_json = generate_claude_settings(tr, config)?;
-    // Use claude-settings-local.json for ConfigMap (/ not allowed in keys but . is allowed)
-    data.insert("claude-settings-local.json".to_string(), settings_json);
+    // Use settings-local.json for ConfigMap (will be copied to .claude/settings.local.json)
+    data.insert("settings-local.json".to_string(), settings_json);
 
+    // For docs generation jobs, add the post-completion hook script
+    if is_docs_generation(tr) {
+        let hook_script = generate_docs_hook_script(tr)?;
+        data.insert(".stop-hook-docs-pr.sh".to_string(), hook_script);
+    }
 
     // CLAUDE.md should always be provided by the client
     // This allows task-specific instructions and Git workflows
@@ -649,106 +620,8 @@ fn build_claude_job(
         }
     })];
 
-    let mut telemetry_env = vec![];
-
-    if config.telemetry.enabled {
-        telemetry_env.extend(vec![
-            json!({
-                "name": "CLAUDE_CODE_ENABLE_TELEMETRY",
-                "value": "1"
-            }),
-            // OpenTelemetry exporters
-            json!({
-                "name": "OTEL_METRICS_EXPORTER",
-                "value": "otlp"
-            }),
-            json!({
-                "name": "OTEL_LOGS_EXPORTER",
-                "value": "otlp"
-            }),
-            // OTLP endpoints based on protocol
-            json!({
-                "name": "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
-                "value": if config.telemetry.otlp_protocol == "grpc" {
-                    format!("http://{}:4317/v1/logs", config.telemetry.otlp_endpoint.trim_end_matches(":4317"))
-                } else {
-                    format!("http://{}:4318/v1/logs", config.telemetry.otlp_endpoint.trim_end_matches(":4318"))
-                }
-            }),
-            json!({
-                "name": "OTEL_EXPORTER_OTLP_LOGS_PROTOCOL",
-                "value": if config.telemetry.otlp_protocol == "grpc" { "grpc" } else { "http/protobuf" }
-            }),
-            json!({
-                "name": "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
-                "value": if config.telemetry.otlp_protocol == "grpc" {
-                    format!("http://{}:4317/v1/metrics", config.telemetry.otlp_endpoint.trim_end_matches(":4317"))
-                } else {
-                    format!("http://{}:4318/v1/metrics", config.telemetry.otlp_endpoint.trim_end_matches(":4318"))
-                }
-            }),
-            json!({
-                "name": "OTEL_EXPORTER_OTLP_METRICS_PROTOCOL",
-                "value": if config.telemetry.otlp_protocol == "grpc" { "grpc" } else { "http/protobuf" }
-            }),
-            json!({
-                "name": "OTEL_EXPORTER_OTLP_ENDPOINT",
-                "value": format!("http://{}", config.telemetry.otlp_endpoint)
-            }),
-            json!({
-                "name": "OTEL_EXPORTER_OTLP_PROTOCOL",
-                "value": if config.telemetry.otlp_protocol == "grpc" { "grpc" } else { "http/protobuf" }
-            }),
-            json!({
-                "name": "OTEL_EXPORTER_OTLP_INSECURE",
-                "value": config.telemetry.otlp_insecure.to_string()
-            }),
-            // Service identification
-            json!({
-                "name": "OTEL_SERVICE_NAME",
-                "value": format!("{}-{}", config.telemetry.service_name, tr.spec.service_name)
-            }),
-            json!({
-                "name": "OTEL_SERVICE_VERSION",
-                "value": config.telemetry.service_version.clone()
-            }),
-            // Resource attributes
-            json!({
-                "name": "OTEL_RESOURCE_ATTRIBUTES",
-                "value": build_resource_attributes(tr, config)
-            }),
-            // Export intervals
-            json!({
-                "name": "OTEL_METRIC_EXPORT_INTERVAL",
-                "value": config.telemetry.metrics_export_interval.clone()
-            }),
-            json!({
-                "name": "OTEL_METRIC_EXPORT_TIMEOUT",
-                "value": config.telemetry.metrics_export_timeout.clone()
-            }),
-            // Logging configuration
-            json!({
-                "name": "OTEL_LOG_LEVEL",
-                "value": config.telemetry.log_level.clone()
-            }),
-            // Claude Code specific settings
-            json!({
-                "name": "NODE_ENV",
-                "value": "production"
-            }),
-            json!({
-                "name": "DISABLE_AUTOUPDATER",
-                "value": "1"
-            })
-        ]);
-
-        if config.telemetry.log_user_prompts {
-            telemetry_env.push(json!({
-                "name": "OTEL_LOG_USER_PROMPTS",
-                "value": "1"
-            }));
-        }
-    }
+    // Telemetry and environment settings are now handled via settings.json
+    // Only keep essential container-level env vars here
 
     let job_json = json!({
         "apiVersion": "batch/v1",
@@ -776,7 +649,7 @@ fn build_claude_job(
                         "image": format!("{}:{}", config.agent.image.repository, config.agent.image.tag),
                         "command": ["/bin/sh", "-c"],
                         "args": [build_agent_startup_script(tr, config)?],
-                        "env": build_env_vars(tr, telemetry_env, config),
+                        "env": build_env_vars(tr, config),
                         "volumeMounts": [{
                             "name": "workspace",
                             "mountPath": "/workspace"
@@ -911,198 +784,10 @@ fn build_prep_job(
     serde_json::from_value(job_json).map_err(Error::SerializationError)
 }
 
-/// Build minimal prep job for documentation generation
-fn build_docs_prep_job(
-    tr: &TaskRun,
-    job_name: &str,
-    config: &ControllerConfig,
-) -> Result<Job> {
-    // Extract repository info from TaskRun spec and markdown files
-    let repo_url = tr.spec.repository.as_ref()
-        .map(|r| r.url.clone())
-        .unwrap_or_default();
-    let branch = tr.spec.repository.as_ref()
-        .map(|r| r.branch.clone())
-        .unwrap_or_else(|| "main".to_string());
-    let mut working_dir = String::new();
-    
-    // Parse CLAUDE.md to get working directory (repo and branch come from spec)
-    if let Some(claude_md) = tr.spec.markdown_files.iter().find(|f| f.filename == "CLAUDE.md") {
-        // Extract working directory from content
-        for line in claude_md.content.lines() {
-            if line.starts_with("- **Working Directory**: ") {
-                working_dir = line.trim_start_matches("- **Working Directory**: ").to_string();
-            }
-        }
-    }
-    
-    // Debug output
-    info!("Docs prep job - repo_url: {}, working_dir: {}, branch: {}", repo_url, working_dir, branch);
-    
-    let service_name = &tr.spec.service_name;
-    let pvc_name = format!("workspace-{service_name}");
-    
-    let prep_script = format!(
-        r#"#!/bin/sh
-set -e
 
-echo "=== DOCS PREP JOB STARTING ==="
-echo "Repository: {repo_url}"
-echo "Working directory: {working_dir}"
-echo "Source branch: {branch}"
-
-# Check if repository already exists
-if [ -d "/workspace/.git" ]; then
-    echo "Repository already exists, updating..."
-    cd /workspace
-    
-    # Reset any local changes and fetch latest
-    git reset --hard
-    git clean -fd
-    git fetch origin
-    
-    # Checkout the source branch
-    SOURCE_BRANCH="{branch}"
-    if [ -n "$SOURCE_BRANCH" ]; then
-        echo "Checking out source branch: $SOURCE_BRANCH"
-        git checkout "$SOURCE_BRANCH" || git checkout -b "$SOURCE_BRANCH" "origin/$SOURCE_BRANCH"
-        git pull origin "$SOURCE_BRANCH"
-    else
-        echo "ERROR: Source branch not specified"
-        exit 1
-    fi
-else
-    # Clone repository if it doesn't exist
-    echo "Cloning repository into workspace..."
-    SOURCE_BRANCH="{branch}"
-    if [ -n "$SOURCE_BRANCH" ]; then
-        echo "Cloning source branch: $SOURCE_BRANCH"
-        git clone --branch "$SOURCE_BRANCH" {repo_url} /workspace
-    else
-        echo "ERROR: Source branch not specified"
-        exit 1
-    fi
-    cd /workspace
-fi
-
-# Create a new branch for documentation changes
-TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-DOC_BRANCH="docs/task-master-docs-$TIMESTAMP"
-echo "Creating documentation branch: $DOC_BRANCH"
-git checkout -b "$DOC_BRANCH"
-
-# Configure git for commits
-git config user.email "claude@5dlabs.com"
-git config user.name "Claude (5D Labs)"
-
-echo "✓ Prepared documentation branch: $DOC_BRANCH from source: $SOURCE_BRANCH"
-
-# Navigate to working directory if specified
-if [ -n "{working_dir}" ] && [ "{working_dir}" != "." ]; then
-    echo "Working directory specified: {working_dir}"
-    TASKMASTER_PATH="/workspace/{working_dir}/.taskmaster"
-else
-    echo "Using repository root"
-    TASKMASTER_PATH="/workspace/.taskmaster"
-fi
-
-# Verify .taskmaster exists
-if [ -d "$TASKMASTER_PATH" ]; then
-    echo "✓ Found .taskmaster directory at $TASKMASTER_PATH"
-else
-    echo "ERROR: .taskmaster directory not found at $TASKMASTER_PATH"
-    exit 1
-fi
-
-# Copy ConfigMap files to where Claude will be working
-echo "Copying ConfigMap files..."
-if [ -n "{working_dir}" ] && [ "{working_dir}" != "." ]; then
-    echo "Copying files to /workspace/{working_dir}/.taskmaster/"
-    cp -v /config/* /workspace/{working_dir}/.taskmaster/
-else
-    echo "Copying files to /workspace/.taskmaster/"
-    cp -v /config/* /workspace/.taskmaster/
-fi
-
-echo "✓ Documentation workspace prepared"
-echo "Claude will use --cwd flag to restrict access to the appropriate directory"
-"#
-    );
-    
-    let job_json = json!({
-        "apiVersion": "batch/v1",
-        "kind": "Job",
-        "metadata": {
-            "name": job_name,
-            "namespace": tr.namespace().unwrap_or_default(),
-            "labels": {
-                "task-id": tr.spec.task_id.to_string(),
-                "service-name": tr.spec.service_name.clone(),
-                "context-version": tr.spec.context_version.to_string(),
-                "managed-by": "taskrun-controller",
-                "job-type": "docs-prep",
-            }
-        },
-        "spec": {
-            "backoffLimit": 2,
-            "activeDeadlineSeconds": 300,
-            "ttlSecondsAfterFinished": config.job.ttl_seconds_after_finished,
-            "template": {
-                "spec": {
-                    "restartPolicy": "Never",
-                    "imagePullSecrets": [{"name": "ghcr-secret"}],
-                    "containers": [{
-                        "name": "prep-docs",
-                        "image": "alpine/git:latest",
-                        "command": ["/bin/sh", "-c"],
-                        "args": [prep_script],
-                        "volumeMounts": [
-                            {
-                                "name": "workspace",
-                                "mountPath": "/workspace"
-                            },
-                            {
-                                "name": "task-files",
-                                "mountPath": "/config"
-                            }
-                        ],
-                        "securityContext": {
-                            "runAsUser": 0,
-                            "runAsGroup": 0,
-                            "runAsNonRoot": false
-                        }
-                    }],
-                    "volumes": [
-                        {
-                            "name": "workspace",
-                            "persistentVolumeClaim": {
-                                "claimName": pvc_name
-                            }
-                        },
-                        {
-                            "name": "task-files",
-                            "configMap": {
-                                "name": format!(
-                                    "{}-{}-task{}-v{}-files",
-                                    tr.spec.agent_name.replace('_', "-"),
-                                    tr.spec.service_name.replace('_', "-"),
-                                    tr.spec.task_id,
-                                    tr.spec.context_version
-                                )
-                            }
-                        }
-                    ]
-                }
-            }
-        }
-    });
-    
-    serde_json::from_value(job_json).map_err(Error::SerializationError)
-}
 
 // Template constants
 const PREP_JOB_TEMPLATE: &str = include_str!("../../templates/prep-job.sh.hbs");
-const DOCS_GENERATION_PREP_JOB_TEMPLATE: &str = include_str!("../../templates/docs-generation-prep-job.sh.hbs");
 const MAIN_CONTAINER_TEMPLATE: &str = include_str!("../../templates/main-container.sh.hbs");
 const DOCS_GENERATION_CONTAINER_TEMPLATE: &str = include_str!("../../templates/docs-generation-container.sh.hbs");
 
@@ -1113,20 +798,16 @@ fn build_prep_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String,
     handlebars.set_strict_mode(false); // Allow missing fields
 
     // Choose template based on task type
-    let is_docs_generation = tr.spec.task_id == 999999;
-    let template = if is_docs_generation {
-        DOCS_GENERATION_PREP_JOB_TEMPLATE
-    } else {
-        PREP_JOB_TEMPLATE
-    };
+    let template = PREP_JOB_TEMPLATE;
 
     handlebars
         .register_template_string("prep", template)
         .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
 
     // Extract working directory for docs generation tasks (same logic as main container)
+    let is_docs_generation = is_docs_generation(tr);
     let mut working_dir = String::new();
-    if tr.spec.task_id == 999999 {
+    if is_docs_generation {
         // For docs generation, parse working directory from markdown
         if let Some(claude_md) = tr.spec.markdown_files.iter().find(|f| f.filename == "CLAUDE.md") {
             for line in claude_md.content.lines() {
@@ -1143,7 +824,7 @@ fn build_prep_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String,
         "service_name": tr.spec.service_name,
         "repository": tr.spec.repository.as_ref(),
         "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
-        "is_docs_generation": tr.spec.task_id == 999999,
+        "is_docs_generation": is_docs_generation,
         "working_dir": working_dir,
     });
 
@@ -1160,7 +841,7 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
     // Export script is now created by prep job, no need to render it here
 
     // Choose template based on task type
-    let is_docs_generation = tr.spec.task_id == 999999;
+    let is_docs_generation = is_docs_generation(tr);
     let template = if is_docs_generation {
         DOCS_GENERATION_CONTAINER_TEMPLATE
     } else {
@@ -1177,7 +858,7 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
 
     // Extract working directory for docs generation tasks
     let mut working_dir = String::new();
-    if tr.spec.task_id == 999999 {
+    if is_docs_generation {
         // For docs generation, parse working directory from markdown
         if let Some(claude_md) = tr.spec.markdown_files.iter().find(|f| f.filename == "CLAUDE.md") {
             for line in claude_md.content.lines() {
@@ -1197,7 +878,7 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
         "is_retry": tr.status.as_ref().is_some_and(|s| s.attempts > 1),
         "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
         "task_id": tr.spec.task_id,
-        "is_docs_generation": tr.spec.task_id == 999999, // Special docs generation task
+        "is_docs_generation": is_docs_generation, // Special docs generation task
         "working_dir": working_dir,
     });
 
@@ -1209,9 +890,10 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
 /// Build environment variables for the container
 fn build_env_vars(
     tr: &TaskRun,
-    telemetry_env: Vec<serde_json::Value>,
     config: &ControllerConfig,
 ) -> Vec<serde_json::Value> {
+    // Most configuration is now handled via settings.json
+    // Only essential container-level env vars are set here
     let mut env_vars = vec![
         json!({
             "name": "ANTHROPIC_API_KEY",
@@ -1244,9 +926,6 @@ fn build_env_vars(
         }),
     ];
 
-    // Add telemetry environment variables from config
-    env_vars.extend(telemetry_env);
-
     // Add GitHub token if repository is configured
     if let Some(repo) = &tr.spec.repository {
         // Auto-resolve secret name from GitHub user
@@ -1262,9 +941,9 @@ fn build_env_vars(
         }));
     }
 
-    // Note: Tool configuration is now handled via settings.json file creation
-    // Environment variables CLAUDE_ENABLED_TOOLS and CLAUDE_TOOLS_CONFIG are not valid
-    // per Claude Code documentation - tools must be configured via settings.json
+    // Note: Telemetry, tool permissions, and Claude configuration are now handled
+    // via settings.json file creation rather than environment variables
+    // This consolidates all Claude Code configuration in one place
 
     // Add any additional env vars from config
     for env_var in &config.agent.env {
@@ -1277,109 +956,162 @@ fn build_env_vars(
     env_vars
 }
 
-/// Build resource attributes for OTEL
-fn build_resource_attributes(tr: &TaskRun, config: &ControllerConfig) -> String {
-    let mut attributes = vec![
-        format!(
-            "service.name={}-{}",
-            config.telemetry.service_name, tr.spec.service_name
-        ),
-        format!("service.version={}", config.telemetry.service_version),
-        format!(
-            "service.namespace={}",
-            tr.namespace().unwrap_or_else(|| "orchestrator".to_string())
-        ),
-        format!("task.id={}", tr.spec.task_id),
-        format!("agent.name={}", tr.spec.agent_name),
-        format!("team={}", config.telemetry.team_name),
-        format!("department={}", config.telemetry.department),
-        format!("environment={}", config.telemetry.environment),
-        format!("cluster.name={}", config.telemetry.cluster_name),
-    ];
 
-    if !config.telemetry.cost_center.is_empty() {
-        attributes.push(format!("cost_center={}", config.telemetry.cost_center));
-    }
-
-    if !config.telemetry.custom_attributes.is_empty() {
-        attributes.push(config.telemetry.custom_attributes.clone());
-    }
-
-    attributes.join(",")
-}
 
 // CLAUDE.md generation removed - should be provided by client
 // This allows task-specific instructions and Git workflows
 
 /// Generate Claude Code settings.json for tool permissions
-fn generate_claude_settings(tr: &TaskRun, _config: &ControllerConfig) -> Result<String> {
+fn generate_claude_settings(tr: &TaskRun, config: &ControllerConfig) -> Result<String> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false); // Allow missing fields
+
+    // Choose template based on job type
+    let is_docs_generation = is_docs_generation(tr);
+    let template = if is_docs_generation {
+        include_str!("../../templates/claude-settings-docs.json.hbs")
+    } else {
+        include_str!("../../templates/claude-settings-implementation.json.hbs")
+    };
+
+    handlebars
+        .register_template_string("settings", template)
+        .map_err(|e| Error::ConfigError(format!("Failed to register settings template: {e}")))?;
+
+    // Build data for template
+    let data = build_settings_template_data(tr, config)?;
+
+    handlebars
+        .render("settings", &data)
+        .map_err(|e| Error::ConfigError(format!("Failed to render settings template: {e}")))
+}
+
+/// Build template data for Claude settings generation
+fn build_settings_template_data(tr: &TaskRun, config: &ControllerConfig) -> Result<serde_json::Value> {
+    // Build telemetry configuration
+    let telemetry_data = build_telemetry_data(config);
+
+    // Build retry configuration
+    let retry_data = build_retry_data(tr);
+
+    // Model is now handled entirely in the templates
+    // Docs template has hard-coded opus, implementation template uses user-specified model
+
+    // Handle agent_tools override if specified
+    let mut template_data = json!({
+        "telemetry": telemetry_data,
+        "retry": retry_data,
+        "model": tr.spec.model.clone(), // Pass user-specified model to template
+        "agent_tools_override": !tr.spec.agent_tools.is_empty()
+    });
+
+    // Only add permission arrays if agent_tools are specified (override case)
+    if !tr.spec.agent_tools.is_empty() {
+        let (allow_rules, deny_rules) = build_agent_tools_permissions(&tr.spec.agent_tools);
+        template_data["permissions"] = json!({
+            "allow": allow_rules,
+            "deny": deny_rules
+        });
+    }
+
+    Ok(template_data)
+}
+
+/// Translate agent_tools API format to Claude permission format (override case only)
+/// This only handles the translation - templates define what the defaults are
+fn build_agent_tools_permissions(agent_tools: &[crate::crds::AgentTool]) -> (Vec<String>, Vec<String>) {
     let mut allow_rules = Vec::new();
     let mut deny_rules = Vec::new();
 
-    if tr.spec.agent_tools.is_empty() {
-        // Default tool permissions for standard development tasks
-        allow_rules.extend(vec![
-            "Bash(*)".to_string(),
-            "Edit(*)".to_string(),
-            "Read(*)".to_string(),
-            "Write(*)".to_string(),
-            "MultiEdit(*)".to_string(),
-            "Glob(*)".to_string(),
-            "Grep(*)".to_string(),
-            "LS(*)".to_string(),
-            "TodoRead(*)".to_string(),
-            "TodoWrite(*)".to_string(),
-            "WebFetch(*)".to_string(),
-            "WebSearch(*)".to_string(),
-        ]);
-
-        // No deny rules by default - trust Claude to be responsible
-    } else {
-        // Build permissions based on agent_tools specification
-        for tool in &tr.spec.agent_tools {
-            if tool.enabled {
-                let tool_rule = match tool.name.as_str() {
-                    "bash" => {
-                        if tool.restrictions.is_empty() {
-                            "Bash(*)".to_string()
-                        } else {
-                            // Apply restrictions as deny rules
-                            for restriction in &tool.restrictions {
-                                deny_rules.push(format!("Bash({restriction})"));
-                            }
-                            "Bash(*)".to_string()
-                        }
+    for tool in agent_tools {
+        if tool.enabled {
+            // Translate API tool names to Claude permission format
+            let tool_rule = match tool.name.as_str() {
+                "bash" => {
+                    // Add restrictions as deny rules
+                    for restriction in &tool.restrictions {
+                        deny_rules.push(format!("Bash({restriction})"));
                     }
-                    "edit" => "Edit(*)".to_string(),
-                    "read" => "Read(*)".to_string(),
-                    "write" => "Write(*)".to_string(),
-                    "multiedit" => "MultiEdit(*)".to_string(),
-                    "glob" => "Glob(*)".to_string(),
-                    "grep" => "Grep(*)".to_string(),
-                    "webfetch" => "WebFetch(*)".to_string(),
-                    "websearch" => "WebSearch(*)".to_string(),
-                    _ => continue, // Skip unknown tools
-                };
-                allow_rules.push(tool_rule);
-            }
+                    "Bash(*)".to_string()
+                }
+                "edit" => "Edit(*)".to_string(),
+                "read" => "Read(*)".to_string(),
+                "write" => "Write(*)".to_string(),
+                "multiedit" => "MultiEdit(*)".to_string(),
+                "glob" => "Glob(*)".to_string(),
+                "grep" => "Grep(*)".to_string(),
+                "ls" => "LS(*)".to_string(),
+                "webfetch" => "WebFetch(*)".to_string(),
+                "websearch" => "WebSearch(*)".to_string(),
+                _ => {
+                    // Log unknown tools but don't fail - allows for future extensibility
+                    eprintln!("Warning: Unknown agent tool '{}' - skipping", tool.name);
+                    continue;
+                }
+            };
+            allow_rules.push(tool_rule);
         }
     }
 
-    // Use the correct Claude Code configuration format as per claudelog.com documentation
-    // Claude's working directory is set to /workspace/{service_name}
-    let settings = json!({
-        "projects": {
-            "/workspace": {
-                "allowedTools": allow_rules.iter().map(|rule| {
-                    // Convert "Bash(*)" format to "Bash" format
-                    rule.replace("(*)", "")
-                }).collect::<Vec<String>>(),
-                "model": tr.spec.model
-            }
-        }
+    (allow_rules, deny_rules)
+}
+
+/// Build telemetry configuration data
+fn build_telemetry_data(config: &ControllerConfig) -> serde_json::Value {
+    if config.telemetry.enabled {
+        let logs_endpoint = if config.telemetry.otlp_protocol == "grpc" {
+            format!("http://{}:4317/v1/logs", config.telemetry.otlp_endpoint.trim_end_matches(":4317"))
+        } else {
+            format!("http://{}:4318/v1/logs", config.telemetry.otlp_endpoint.trim_end_matches(":4318"))
+        };
+
+        let logs_protocol = if config.telemetry.otlp_protocol == "grpc" {
+            "grpc"
+        } else {
+            "http/protobuf"
+        };
+
+        json!({
+            "enabled": true,
+            "logs_endpoint": logs_endpoint,
+            "logs_protocol": logs_protocol
+        })
+    } else {
+        json!({
+            "enabled": false
+        })
+    }
+}
+
+/// Build retry configuration data
+fn build_retry_data(tr: &TaskRun) -> serde_json::Value {
+    let attempt_number = tr.status.as_ref().map_or(1, |s| s.attempts);
+    json!({
+        "is_retry": attempt_number > 1
+    })
+}
+
+/// Generate the hook script for documentation generation jobs
+fn generate_docs_hook_script(tr: &TaskRun) -> Result<String> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false); // Allow missing fields
+
+    let template = include_str!("../../templates/stop-hook-docs-pr.sh.hbs");
+    handlebars
+        .register_template_string("hook", template)
+        .map_err(|e| Error::ConfigError(format!("Failed to register hook template: {e}")))?;
+
+    let data = json!({
+        "task_id": tr.spec.task_id,
+        "service_name": tr.spec.service_name,
+        "repository": tr.spec.repository.as_ref(),
+        "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
+        "is_docs_generation": is_docs_generation(tr),
     });
 
-    serde_json::to_string_pretty(&settings).map_err(Error::SerializationError)
+    handlebars
+        .render("hook", &data)
+        .map_err(|e| Error::ConfigError(format!("Failed to render hook template: {e}")))
 }
 
 #[cfg(test)]
@@ -1422,5 +1154,114 @@ mod tests {
         assert!(data.contains_key("design-spec.md"));
         assert_eq!(data.get("task.md").unwrap(), "Task content");
         assert_eq!(data.get("design-spec.md").unwrap(), "Design spec");
+    }
+
+    #[test]
+    fn test_generate_claude_settings_implementation() {
+        let tr = TaskRun {
+            metadata: Default::default(),
+            spec: TaskRunSpec {
+                task_id: 1001,
+                service_name: "test-service".to_string(),
+                agent_name: "claude-agent-1".to_string(),
+                model: "sonnet".to_string(),
+                context_version: 1,
+                markdown_files: vec![],
+                agent_tools: vec![],
+                repository: None,
+            },
+            status: None,
+        };
+
+        let config = ControllerConfig::default();
+        let settings_json = generate_claude_settings(&tr, &config).unwrap();
+
+        // Parse the JSON to verify it's valid
+        let settings: serde_json::Value = serde_json::from_str(&settings_json).unwrap();
+
+        // Verify key structure
+        assert!(settings.get("permissions").is_some());
+        assert!(settings.get("env").is_some());
+        assert!(settings.get("model").is_some());
+        assert_eq!(settings["model"], "sonnet");
+        assert_eq!(settings["permissions"]["defaultMode"], "acceptEdits");
+        assert!(!settings.get("hooks").is_some()); // No hooks for implementation jobs
+    }
+
+    #[test]
+    fn test_generate_claude_settings_docs() {
+        let tr = TaskRun {
+            metadata: Default::default(),
+            spec: TaskRunSpec {
+                task_id: DOCS_GENERATION_TASK_ID, // Use docs generation task ID
+                service_name: "docs-generator".to_string(),
+                agent_name: "claude-agent-1".to_string(),
+                model: "sonnet".to_string(), // This should be overridden
+                context_version: 1,
+                markdown_files: vec![],
+                agent_tools: vec![],
+                repository: None,
+            },
+            status: None,
+        };
+
+        let config = ControllerConfig::default();
+        let settings_json = generate_claude_settings(&tr, &config).unwrap();
+
+        // Parse the JSON to verify it's valid
+        let settings: serde_json::Value = serde_json::from_str(&settings_json).unwrap();
+
+        // Verify key structure
+        assert!(settings.get("permissions").is_some());
+        assert!(settings.get("env").is_some());
+        assert!(settings.get("model").is_some());
+        assert!(settings.get("hooks").is_some()); // Docs jobs have hooks
+        assert_eq!(settings["model"], "claude-opus-4-20250514"); // Hard-coded in docs template
+        assert_eq!(settings["permissions"]["defaultMode"], "acceptEdits");
+        assert_eq!(settings["hooks"]["onStop"], "./.stop-hook-docs-pr.sh");
+    }
+
+    #[test]
+    fn test_agent_tools_translation() {
+        // Test that API format is correctly translated to Claude format
+        let agent_tools = vec![
+            crate::crds::AgentTool {
+                name: "bash".to_string(),
+                enabled: true,
+                config: None,
+                restrictions: vec!["rm:*".to_string(), "sudo:*".to_string()],
+            },
+            crate::crds::AgentTool {
+                name: "websearch".to_string(),
+                enabled: true,
+                config: None,
+                restrictions: vec![],
+            },
+            crate::crds::AgentTool {
+                name: "edit".to_string(),
+                enabled: false, // Should be ignored
+                config: None,
+                restrictions: vec![],
+            },
+        ];
+
+        let (allow_rules, deny_rules) = build_agent_tools_permissions(&agent_tools);
+
+        // Should translate enabled tools to Claude format
+        assert!(allow_rules.contains(&"Bash(*)".to_string()));
+        assert!(allow_rules.contains(&"WebSearch(*)".to_string()));
+
+        // Should NOT include disabled tools
+        assert!(!allow_rules.contains(&"Edit(*)".to_string()));
+
+        // Should translate restrictions to deny rules
+        assert!(deny_rules.contains(&"Bash(rm:*)".to_string()));
+        assert!(deny_rules.contains(&"Bash(sudo:*)".to_string()));
+
+        // Should have 2 allow rules (bash + websearch)
+        assert_eq!(allow_rules.len(), 2);
+
+        // Should have 2 deny rules (rm + sudo restrictions)
+        assert_eq!(deny_rules.len(), 2);
     }
 }
