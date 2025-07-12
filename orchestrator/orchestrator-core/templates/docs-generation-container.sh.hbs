@@ -115,21 +115,18 @@ if [ -d "/config" ]; then
   mkdir -p /etc/claude-code
   chmod 755 /etc/claude-code
 
-  cat > /etc/claude-code/managed-settings.json << 'ENTERPRISE_EOF'
-{
-  "model": "claude-opus-4-20250514",
-  "defaultMode": "bypassPermissions",
-  "agentTools": ["WebSearch", "WebFetch", "Edit", "Read", "Write", "Bash", "Glob", "Grep", "LS", "Task", "TodoRead", "TodoWrite", "NotebookRead", "NotebookEdit", "MultiEdit"],
-  "bashCommands": ["git:*", "gh:*", "echo:*", "ls:*", "mkdir:*", "cp:*", "mv:*", "rm:*", "find:*", "grep:*", "cat:*", "head:*", "tail:*", "curl:*", "wget:*", "jq:*", "which:*", "pwd:*", "whoami:*", "date:*", "wc:*", "sort:*", "uniq:*", "awk:*", "sed:*"],
-  "workspaceType": "singleFolder",
-  "autoCommit": false
-}
-ENTERPRISE_EOF
-
-  # Set explicit permissions so Claude Code can read the enterprise settings
-  chmod 644 /etc/claude-code/managed-settings.json
-  echo "✓ Created enterprise managed settings at /etc/claude-code/managed-settings.json"
-  echo "✓ Set readable permissions (644) for enterprise settings"
+  # Copy enterprise settings template from ConfigMap
+  if [ -f "/config/claude-enterprise-settings.json" ]; then
+    cp /config/claude-enterprise-settings.json /etc/claude-code/managed-settings.json
+    # Set explicit permissions so Claude Code can read the enterprise settings
+    chmod 644 /etc/claude-code/managed-settings.json
+    echo "✓ Copied enterprise managed settings template to /etc/claude-code/managed-settings.json"
+    echo "✓ Set readable permissions (644) for enterprise settings"
+  else
+    echo "❌ ERROR: Enterprise settings template not found in ConfigMap!"
+    echo "Expected: /config/claude-enterprise-settings.json"
+    exit 1
+  fi
 
   # Validate the enterprise settings JSON and show bypass configuration
   if jq empty /etc/claude-code/managed-settings.json 2>/dev/null; then
