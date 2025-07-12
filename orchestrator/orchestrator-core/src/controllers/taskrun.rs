@@ -1163,22 +1163,11 @@ fn build_agent_tools_permissions(agent_tools: &[crate::crds::AgentTool]) -> (Vec
 /// Build telemetry configuration data
 fn build_telemetry_data(config: &ControllerConfig) -> serde_json::Value {
     if config.telemetry.enabled {
-        let logs_endpoint = if config.telemetry.otlp_protocol == "grpc" {
-            format!("http://{}:4317/v1/logs", config.telemetry.otlp_endpoint.trim_end_matches(":4317"))
-        } else {
-            format!("http://{}:4318/v1/logs", config.telemetry.otlp_endpoint.trim_end_matches(":4318"))
-        };
-
-        let logs_protocol = if config.telemetry.otlp_protocol == "grpc" {
-            "grpc"
-        } else {
-            "http/protobuf"
-        };
-
+        // Provide the raw endpoint and protocol values for the template
         json!({
             "enabled": true,
-            "logs_endpoint": logs_endpoint,
-            "logs_protocol": logs_protocol
+            "otlpEndpoint": config.telemetry.otlp_endpoint,
+            "otlpProtocol": config.telemetry.otlp_protocol
         })
     } else {
         json!({
