@@ -19,27 +19,77 @@ fi
 {{#if repository}}
 echo 'Repository management for: {{repository.url}}'
 
-# Setup GitHub authentication if available
-export GITHUB_TOKEN=$(cat /secrets/github-pat-{{repository.githubUser}}/token 2>/dev/null || echo "")
-if [ -n "$GITHUB_TOKEN" ]; then
-  echo "GitHub token loaded from secret: github-pat-{{repository.githubUser}}"
-  
-  # Configure git for cloning
-  git config --global user.name "{{repository.githubUser}}"
-  git config --global user.email "{{repository.githubUser}}@users.noreply.github.com"
-  git config --global credential.helper store
-  
-  # Write token to temporary credentials file for cloning
-  echo "https://{{repository.githubUser}}:${GITHUB_TOKEN}@github.com" > /tmp/.git-credentials
-  cp /tmp/.git-credentials /home/git-credentials
-  git config --global credential.helper 'store --file=/home/git-credentials'
-  
-  # Also set up persistent credentials in workspace for main container
-  echo "https://{{repository.githubUser}}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
-  chmod 600 /workspace/.git-credentials
+# Detect if this is an SSH or HTTPS URL
+REPO_URL="{{repository.url}}"
+if echo "$REPO_URL" | grep -q "^git@\|^ssh://"; then
+  echo "SSH repository URL detected"
+  USE_SSH=true
 else
-  echo "Warning: GitHub token not found in secret: github-pat-{{repository.githubUser}}"
+  echo "HTTPS repository URL detected"
+  USE_SSH=false
 fi
+
+# Setup authentication based on URL type
+if [ "$USE_SSH" = "true" ]; then
+  echo "Setting up SSH authentication..."
+
+  # Create .ssh directory
+  mkdir -p ~/.ssh
+  chmod 700 ~/.ssh
+
+  # Try to load SSH private key from secret
+  SSH_KEY_FILE="/secrets/github-ssh-{{repository.githubUser}}/ssh-privatekey"
+  if [ -f "$SSH_KEY_FILE" ]; then
+    echo "SSH private key found in secret: github-ssh-{{repository.githubUser}}"
+    cp "$SSH_KEY_FILE" ~/.ssh/id_rsa
+    chmod 600 ~/.ssh/id_rsa
+
+    # Add GitHub to known hosts
+    ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || echo "Failed to add GitHub to known hosts"
+
+    # Test SSH connection (non-blocking)
+    ssh -T git@github.com 2>&1 | head -3 || echo "SSH test completed (expected to fail with 'successfully authenticated')"
+
+    echo "✅ SSH authentication configured"
+  else
+    echo "⚠️ SSH private key not found in secret: github-ssh-{{repository.githubUser}}"
+    echo "   Expected secret with key 'ssh-privatekey'"
+    echo "   Falling back to HTTPS if available..."
+    USE_SSH=false
+  fi
+else
+  echo "Setting up HTTPS authentication..."
+
+  # Setup GitHub token authentication
+  export GITHUB_TOKEN=$(cat /secrets/github-pat-{{repository.githubUser}}/token 2>/dev/null || echo "")
+  if [ -n "$GITHUB_TOKEN" ]; then
+    echo "GitHub token loaded from secret: github-pat-{{repository.githubUser}}"
+
+    # Configure git for cloning
+    git config --global user.name "{{repository.githubUser}}"
+    git config --global user.email "{{repository.githubUser}}@users.noreply.github.com"
+    git config --global credential.helper store
+
+    # Write token to temporary credentials file for cloning
+    echo "https://{{repository.githubUser}}:${GITHUB_TOKEN}@github.com" > /tmp/.git-credentials
+    cp /tmp/.git-credentials /home/git-credentials
+    git config --global credential.helper 'store --file=/home/git-credentials'
+
+    # Also set up persistent credentials in workspace for main container
+    echo "https://{{repository.githubUser}}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+    chmod 600 /workspace/.git-credentials
+
+    echo "✅ HTTPS authentication configured"
+  else
+    echo "⚠️ GitHub token not found in secret: github-pat-{{repository.githubUser}}"
+    echo "   For SSH repos, use secret: github-ssh-{{repository.githubUser}}"
+    echo "   For HTTPS repos, use secret: github-pat-{{repository.githubUser}}"
+  fi
+fi
+
+# Configure git user (always needed)
+git config --global user.name "{{repository.githubUser}}"
+git config --global user.email "{{repository.githubUser}}@users.noreply.github.com"
 
 # Smart repository management - check if repo already exists
 SKIP_CLONE=false
@@ -103,11 +153,17 @@ else
 fi
 
 # Create GitHub environment file for main container
-if [ -n "$GITHUB_TOKEN" ]; then
-  echo "export GITHUB_TOKEN='$GITHUB_TOKEN'" > /workspace/.github-env
+if [ "$USE_SSH" = "true" ]; then
+  echo "export USE_SSH='true'" > /workspace/.github-env
   echo "export GITHUB_USER='{{repository.githubUser}}'" >> /workspace/.github-env
   chmod 644 /workspace/.github-env
-  echo '✓ Created .github-env file for main container'
+  echo '✓ Created .github-env file for main container (SSH mode)'
+elif [ -n "$GITHUB_TOKEN" ]; then
+  echo "export GITHUB_TOKEN='$GITHUB_TOKEN'" > /workspace/.github-env
+  echo "export GITHUB_USER='{{repository.githubUser}}'" >> /workspace/.github-env
+  echo "export USE_SSH='false'" >> /workspace/.github-env
+  chmod 644 /workspace/.github-env
+  echo '✓ Created .github-env file for main container (HTTPS mode)'
 fi
 
 {{else}}
