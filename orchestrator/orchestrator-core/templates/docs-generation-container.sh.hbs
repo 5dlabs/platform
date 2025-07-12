@@ -318,6 +318,7 @@ echo "════════════════════════�
 echo ""
 
 # Build Claude command (settings.json handles model, permissions, etc.)
+# Claude automatically reads CLAUDE.md from the working directory
 CLAUDE_CMD="claude -p --output-format stream-json --verbose"
 
 echo "=== 6. ENVIRONMENT VARIABLES ==="
@@ -338,9 +339,11 @@ echo "════════════════════════�
 echo "║                    STARTING CLAUDE EXECUTION                  ║"
 echo "════════════════════════════════════════════════════════════════"
 echo "Command: $CLAUDE_CMD"
+echo "Note: Claude will automatically read CLAUDE.md from the working directory"
 echo "Starting Claude execution..."
 echo "=========================="
 
-# Run Claude with CLAUDE.md as input
-# (Stop hook will be executed automatically on successful completion)
-exec $CLAUDE_CMD < "CLAUDE.md"
+# Run Claude with initial prompt
+# Claude will automatically read CLAUDE.md from the working directory for context
+# The prompt tells Claude what to do based on the CLAUDE.md instructions
+exec $CLAUDE_CMD "Please read and follow the instructions in CLAUDE.md to generate comprehensive documentation for the Task Master tasks."
