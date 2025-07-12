@@ -577,6 +577,10 @@ fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Resul
 
         let hook_script = generate_docs_hook_script(tr)?;
         data.insert(".stop-hook-docs-pr.sh".to_string(), hook_script);
+
+        // Add enterprise managed settings template for docs generation
+        let enterprise_settings = generate_enterprise_settings(tr)?;
+        data.insert("claude-enterprise-settings.json".to_string(), enterprise_settings);
     }
 
     // Generate Claude Code configuration file for tool permissions (using correct filename)
@@ -1246,6 +1250,25 @@ fn generate_docs_prompt(tr: &TaskRun) -> Result<String> {
     handlebars
         .render("prompt", &data)
         .map_err(|e| Error::ConfigError(format!("Failed to render prompt template: {e}")))
+}
+
+/// Generate enterprise managed settings for docs generation jobs
+fn generate_enterprise_settings(_tr: &TaskRun) -> Result<String> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false); // Allow missing fields
+
+    let template = include_str!("../../templates/claude-enterprise-settings.json.hbs");
+
+    handlebars
+        .register_template_string("enterprise_settings", template)
+        .map_err(|e| Error::ConfigError(format!("Failed to register enterprise settings template: {e}")))?;
+
+    // Enterprise settings template doesn't need any dynamic data currently
+    let data = json!({});
+
+    handlebars
+        .render("enterprise_settings", &data)
+        .map_err(|e| Error::ConfigError(format!("Failed to render enterprise settings template: {e}")))
 }
 
 #[cfg(test)]
