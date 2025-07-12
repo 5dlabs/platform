@@ -118,6 +118,7 @@ if [ -d "/config" ]; then
   cat > /etc/claude-code/managed-settings.json << 'ENTERPRISE_EOF'
 {
   "model": "claude-opus-4-20250514",
+  "defaultMode": "bypassPermissions",
   "agentTools": ["WebSearch", "WebFetch", "Edit", "Read", "Write", "Bash", "Glob", "Grep", "LS", "Task", "TodoRead", "TodoWrite", "NotebookRead", "NotebookEdit", "MultiEdit"],
   "bashCommands": ["git:*", "gh:*", "echo:*", "ls:*", "mkdir:*", "cp:*", "mv:*", "rm:*", "find:*", "grep:*", "cat:*", "head:*", "tail:*", "curl:*", "wget:*", "jq:*", "which:*", "pwd:*", "whoami:*", "date:*", "wc:*", "sort:*", "uniq:*", "awk:*", "sed:*"],
   "workspaceType": "singleFolder",
@@ -130,14 +131,11 @@ ENTERPRISE_EOF
   echo "✓ Created enterprise managed settings at /etc/claude-code/managed-settings.json"
   echo "✓ Set readable permissions (644) for enterprise settings"
 
-  # Validate the enterprise settings JSON and permissions
+  # Validate the enterprise settings JSON and show bypass configuration
   if jq empty /etc/claude-code/managed-settings.json 2>/dev/null; then
     echo "✓ Enterprise settings JSON is valid"
     echo "✓ This will override ALL other Claude Code settings (highest precedence)"
-
-    # Show file permissions for debugging
-    echo "✓ Enterprise settings file permissions: $(ls -la /etc/claude-code/managed-settings.json | awk '{print $1,$3,$4}')"
-    echo "✓ Directory permissions: $(ls -lad /etc/claude-code | awk '{print $1,$3,$4}')"
+    echo "✓ bypassPermissions mode enabled - no permission prompts will occur"
 
     echo ""
     echo "Enterprise settings contents:"
@@ -149,8 +147,9 @@ ENTERPRISE_EOF
   fi
 
   echo ""
-  echo "=== SIMPLIFIED: Enterprise settings control everything ==="
+  echo "=== SIMPLIFIED: Enterprise settings with permission bypass ==="
   echo "✓ All Claude Code configuration handled by enterprise managed settings"
+  echo "✓ Permission system bypassed - no user prompts will occur"
   echo "✓ No additional settings files needed"
 
   # Copy hook script
@@ -373,7 +372,7 @@ echo ""
 # Enterprise managed settings at /etc/claude-code/managed-settings.json have highest precedence
 CLAUDE_CMD="claude -p --output-format stream-json --verbose"
 
-echo "✓ Using enterprise managed settings for guaranteed tool permissions and model selection"
+echo "✓ Using enterprise managed settings with bypassPermissions mode - no user prompts required"
 
 echo "=== 6. ENVIRONMENT VARIABLES ==="
 echo "Environment variables Claude will see:"
