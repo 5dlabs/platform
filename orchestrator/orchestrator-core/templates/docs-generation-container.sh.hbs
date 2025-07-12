@@ -344,9 +344,9 @@ echo "║                    END CONTENT PREVIEW                        ║"
 echo "════════════════════════════════════════════════════════════════"
 echo ""
 
-# Build Claude command (settings.json handles model, permissions, etc.)
-# Claude automatically reads CLAUDE.md from the working directory
-CLAUDE_CMD="claude -p --output-format stream-json --verbose"
+# Build Claude command with explicit model override to ensure precedence
+# Command line arguments take precedence over settings files
+CLAUDE_CMD="claude -p --output-format stream-json --verbose --model claude-opus-4-20250514"
 
 echo "=== 6. ENVIRONMENT VARIABLES ==="
 echo "Environment variables Claude will see:"
