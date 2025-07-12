@@ -110,9 +110,13 @@ if [ -d "/config" ]; then
   # Copy markdown files (force overwrite any existing files)
   cp -f /config/*.md "$CLAUDE_WORK_DIR/" 2>/dev/null && echo "✓ Copied markdown files (overwriting existing)" || echo "! No markdown files to copy"
 
-  # Copy Claude settings
+  # Copy Claude settings to both locations (Claude looks in /workspace/.claude/)
   mkdir -p "$CLAUDE_WORK_DIR/.claude"
-  cp /config/settings-local.json "$CLAUDE_WORK_DIR/.claude/settings.local.json" 2>/dev/null && echo "✓ Copied Claude settings" || echo "! No Claude settings to copy"
+  cp /config/settings-local.json "$CLAUDE_WORK_DIR/.claude/settings.local.json" 2>/dev/null && echo "✓ Copied Claude settings to project directory" || echo "! No Claude settings to copy"
+
+  # CRITICAL: Copy our settings to where Claude actually looks (/workspace/.claude/settings.json)
+  mkdir -p "/workspace/.claude"
+  cp /config/settings-local.json "/workspace/.claude/settings.json" 2>/dev/null && echo "✓ Copied Claude settings to Claude's expected location (overriding defaults)" || echo "! Failed to copy settings to Claude location"
 
   # Copy hook script
   cp /config/.stop-hook-docs-pr.sh "$CLAUDE_WORK_DIR/.stop-hook-docs-pr.sh" 2>/dev/null && echo "✓ Copied hook script" || echo "! No hook script to copy"
@@ -257,6 +261,17 @@ export GITHUB_USER="{{repository.githubUser}}"
 # Change to project directory before running Claude
 cd "$CLAUDE_WORK_DIR"
 echo "Changed to directory: $(pwd)"
+
+# Verify we're in the correct directory and have required files
+echo "=== WORKING DIRECTORY VERIFICATION ==="
+echo "Current working directory: $(pwd)"
+echo "Expected directory: $CLAUDE_WORK_DIR"
+if [ "$(pwd)" != "$CLAUDE_WORK_DIR" ]; then
+  echo "❌ ERROR: Failed to change to correct working directory!"
+  echo "Attempting to change directory again..."
+  cd "$CLAUDE_WORK_DIR" || exit 1
+  echo "✓ Successfully changed to: $(pwd)"
+fi
 
 # Print all the content Claude will receive
 echo ""
