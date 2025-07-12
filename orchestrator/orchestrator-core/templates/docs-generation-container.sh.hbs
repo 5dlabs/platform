@@ -113,6 +113,7 @@ if [ -d "/config" ]; then
   # Create enterprise managed settings for HIGHEST precedence (guaranteed override)
   echo "=== ENTERPRISE MANAGED SETTINGS (Highest Precedence) ==="
   mkdir -p /etc/claude-code
+  chmod 755 /etc/claude-code
 
   cat > /etc/claude-code/managed-settings.json << 'ENTERPRISE_EOF'
 {
@@ -124,12 +125,20 @@ if [ -d "/config" ]; then
 }
 ENTERPRISE_EOF
 
+  # Set explicit permissions so Claude Code can read the enterprise settings
+  chmod 644 /etc/claude-code/managed-settings.json
   echo "✓ Created enterprise managed settings at /etc/claude-code/managed-settings.json"
+  echo "✓ Set readable permissions (644) for enterprise settings"
 
-  # Validate the enterprise settings JSON
+  # Validate the enterprise settings JSON and permissions
   if jq empty /etc/claude-code/managed-settings.json 2>/dev/null; then
     echo "✓ Enterprise settings JSON is valid"
     echo "✓ This will override ALL other Claude Code settings (highest precedence)"
+
+    # Show file permissions for debugging
+    echo "✓ Enterprise settings file permissions: $(ls -la /etc/claude-code/managed-settings.json | awk '{print $1,$3,$4}')"
+    echo "✓ Directory permissions: $(ls -lad /etc/claude-code | awk '{print $1,$3,$4}')"
+
     echo ""
     echo "Enterprise settings contents:"
     cat /etc/claude-code/managed-settings.json | jq . 2>/dev/null || cat /etc/claude-code/managed-settings.json
