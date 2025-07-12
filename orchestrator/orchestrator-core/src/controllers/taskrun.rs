@@ -233,9 +233,11 @@ async fn reconcile_create_or_update(
         update_status(taskruns, &name, TaskRunPhase::Pending, "TaskRun created").await?;
     }
 
-    // Ensure PVC exists for the service
-    let pvc_name = format!("workspace-{}", tr.spec.service_name);
-    ensure_pvc_exists(pvcs, &pvc_name, &tr.spec.service_name).await?;
+    // Ensure PVC exists for the service (skip for docs generation - uses emptyDir)
+    if !is_docs_generation(&tr) {
+        let pvc_name = format!("workspace-{}", tr.spec.service_name);
+        ensure_pvc_exists(pvcs, &pvc_name, &tr.spec.service_name).await?;
+    }
 
     // Create ConfigMap first (needed by both prep and main jobs)
     let cm_name = format!(
@@ -611,14 +613,23 @@ fn build_claude_job(
     // API key will be injected from secret
     let service_name = &tr.spec.service_name;
 
-    // Build volumes list - use dedicated PVC for this service
-    let pvc_name = format!("workspace-{service_name}");
-    let mut volumes = vec![json!({
-        "name": "workspace",
-        "persistentVolumeClaim": {
-            "claimName": pvc_name
-        }
-    })];
+    // Build volumes list - use dedicated PVC for this service, emptyDir for docs generation
+    let mut volumes = if is_docs_generation(tr) {
+        // Use emptyDir for docs generation (no need for persistent storage)
+        vec![json!({
+            "name": "workspace",
+            "emptyDir": {}
+        })]
+    } else {
+        // Use PVC for implementation tasks (need persistent workspace)
+        let pvc_name = format!("workspace-{service_name}");
+        vec![json!({
+            "name": "workspace",
+            "persistentVolumeClaim": {
+                "claimName": pvc_name
+            }
+        })]
+    };
 
     // For docs generation jobs, also mount the ConfigMap
     let mut volume_mounts = vec![json!({

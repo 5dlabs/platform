@@ -32,6 +32,7 @@ use serde::Deserialize;
 struct OrchestratorService;
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(default)]
 struct InitDocsArgs {
     #[schemars(description = "Claude model to use ('sonnet' or 'opus', default: 'opus')")]
     model: Option<String>,
@@ -43,14 +44,46 @@ struct InitDocsArgs {
     task_id: Option<u32>,
 }
 
+impl Default for InitDocsArgs {
+    fn default() -> Self {
+        Self {
+            model: Some("opus".to_string()),
+            working_directory: None,
+            force: Some(false),
+            task_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+#[serde(default)]
+struct PingArgs {
+    #[schemars(description = "Dummy parameter for no-parameter tools")]
+    random_string: Option<String>,
+}
+
+impl Default for PingArgs {
+    fn default() -> Self {
+        Self {
+            random_string: Some("test".to_string()),
+        }
+    }
+}
+
 #[tool(tool_box)]
 impl OrchestratorService {
-    #[tool(description = "Initialize documentation for Task Master tasks using Claude\n\n**Recommended Usage**: For most cases, call without parameters to use auto-detection from TASKMASTER_ROOT env var.\n\nExamples:\n- All tasks with auto-detection: init_docs({})\n- Specific model: init_docs({model: 'opus'})\n- Specific task: init_docs({task_id: 5})\n- Custom directory: init_docs({working_directory: '/absolute/path/to/project'})  # No trailing slash\n- Force overwrite: init_docs({force: true})\n\nParameters (all optional):\n- model: 'opus' (default) | 'sonnet'\n- working_directory: auto-detected from TASKMASTER_ROOT env var if not specified. Must be absolute path if provided.\n- force: false (default) - set true to overwrite existing docs\n- task_id: null (default) - generates docs for all tasks\n\n**When to Omit Parameters**:\n- Omit working_directory to use auto-detection (recommended unless overriding).\n- Omit all for default behavior.\n\n**Common Errors & Fixes**:\n- If working_directory fails: Ensure path exists, is absolute, and has no trailing slash (e.g., '/path/to/project', not '/path/to/project/').\n- If auto-detection fails: Set TASKMASTER_ROOT in your MCP config env section.\n- Invalid model: Must be 'sonnet' or 'opus'.\n- Directory not found: Verify the path is accessible and contains a .taskmaster folder.")]
+    #[tool(description = "Initialize documentation for Task Master tasks using Claude\n\n**Recommended Usage**: For most cases, call without parameters to use auto-detection from TASKMASTER_ROOT env var.\n\n**Examples**:\n- All tasks with defaults: init_docs()\n- Specific model: init_docs({model: 'opus'})\n- Specific task: init_docs({task_id: 5})\n- Custom directory: init_docs({working_directory: '/absolute/path/to/project'})\n- Force overwrite: init_docs({force: true})\n- Full specification: init_docs({model: 'opus', working_directory: '/path/to/project', force: true, task_id: 5})\n\n**Parameters (all optional with robust defaults)**:\n- model: 'opus' (default) | 'sonnet' - Claude model to use\n- working_directory: auto-detected from TASKMASTER_ROOT env var (default) | '/absolute/path' - must be absolute path if provided\n- force: false (default) | true - set true to overwrite existing docs\n- task_id: null (default, generates docs for all tasks) | number - generate docs for specific task only\n\n**Robust Defaults Applied**:\n- No parameters uses: model='opus', force=false, auto-detect working_directory, all tasks\n- Missing parameters are automatically filled with safe defaults\n- All parameter combinations are supported\n\n**Common Errors & Fixes**:\n- If working_directory fails: Ensure path exists, is absolute, and has no trailing slash\n- If auto-detection fails: Set TASKMASTER_ROOT in your MCP config env section\n- Invalid model: Must be 'sonnet' or 'opus'\n- Directory not found: Verify the path is accessible and contains a .taskmaster folder")]
     async fn init_docs(
         &self,
-        #[tool(aggr)] args: InitDocsArgs,
+        #[tool(aggr)] args: Option<InitDocsArgs>,
     ) -> Result<CallToolResult, McpError> {
-        // Validate model parameter
+                // Log raw input for debugging
+        eprintln!("DEBUG: MCP init_docs called with raw args: {:?}", args);
+
+        // Handle optional parameters - use defaults if none provided
+        let args = args.unwrap_or_default();
+
+        // Provide robust defaults and validate model parameter
         let model = args.model.as_deref().unwrap_or("opus");
         if !["sonnet", "opus"].contains(&model) {
             return Err(McpError::invalid_params(
@@ -58,6 +91,13 @@ impl OrchestratorService {
                 None
             ));
         }
+
+        // Log the resolved parameters for debugging
+        eprintln!("INFO: MCP init_docs called with resolved parameters:");
+        eprintln!("  model: {}", model);
+        eprintln!("  working_directory: {:?}", args.working_directory);
+        eprintln!("  force: {:?}", args.force);
+        eprintln!("  task_id: {:?}", args.task_id);
 
         // Validate working_directory if provided
         let working_directory = args.working_directory.as_deref();
@@ -97,8 +137,26 @@ impl OrchestratorService {
             }
         }
 
+        // Apply robust defaults
         let force = args.force.unwrap_or(false);
         let task_id = args.task_id;
+
+        // Pre-flight validation to catch issues early
+        eprintln!("INFO: Running pre-flight validation...");
+
+        // Check if orchestrator CLI is available
+        if let Err(e) = std::process::Command::new("orchestrator").arg("--version").output() {
+            return Err(McpError::internal_error(
+                format!("Orchestrator CLI not found in PATH: {}. Please install with: cargo install --path orchestrator/orchestrator-cli", e),
+                None
+            ));
+        }
+
+        eprintln!("INFO: Pre-flight validation passed. Calling orchestrator_tools::init_docs with:");
+        eprintln!("  model: '{}' (type: &str)", model);
+        eprintln!("  working_directory: {:?}", working_directory);
+        eprintln!("  force: {}", force);
+        eprintln!("  task_id: {:?}", task_id);
 
         match orchestrator_tools::init_docs(model, working_directory, force, task_id) {
             Ok(output) => Ok(CallToolResult::success(vec![Content::text(output)])),
@@ -113,7 +171,7 @@ impl OrchestratorService {
                 } else {
                     format!("Documentation generation failed: {}. See tool description for common fixes.", e)
                 };
-                
+
                 Err(McpError::internal_error(error_msg, None))
             }
         }
@@ -122,7 +180,9 @@ impl OrchestratorService {
     #[tool(description = "Test MCP server connectivity and configuration\n\nReturns server status, environment info, and validates orchestrator CLI availability.")]
     async fn ping(
         &self,
+        #[tool(aggr)] _args: Option<PingArgs>,
     ) -> Result<CallToolResult, McpError> {
+        eprintln!("DEBUG: MCP ping called");
         match orchestrator_tools::ping_test() {
             Ok(status) => Ok(CallToolResult::success(vec![Content::text(status)])),
             Err(e) => Err(McpError::internal_error(format!("Ping failed: {}", e), None)),
