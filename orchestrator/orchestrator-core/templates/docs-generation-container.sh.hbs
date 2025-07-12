@@ -1,7 +1,7 @@
 #!/bin/sh
 
 echo '════════════════════════════════════════════════════════════════'
-echo '║                    CLAUDE AGENT STARTING                     ║'
+echo '║                 DOCS GENERATION STARTING                     ║'
 echo '════════════════════════════════════════════════════════════════'
 
 # Source GitHub environment if it exists
@@ -20,16 +20,13 @@ if [ -f /workspace/.github-env ]; then
 
     # Configure git to use the credentials
     git config --global credential.helper 'store --file=/workspace/.git-credentials'
-
-    # Also configure the repository-specific credential helper
     cd /workspace && git config credential.helper 'store --file=/workspace/.git-credentials'
 
     echo "✓ Git credentials configured for user: $GITHUB_USER"
-    echo "✓ Git push should now work with HTTPS"
   fi
 fi
 
-# Copy ConfigMap files to working directory (docs generation doesn't use prep job)
+# Copy ConfigMap files to working directory
 echo "=== CONFIGMAP FILE SETUP ==="
 
 # Determine the working directory for Claude
@@ -41,8 +38,6 @@ else
 fi
 
 echo "Setting up files in Claude working directory: $CLAUDE_WORK_DIR"
-
-# Ensure the working directory exists
 mkdir -p "$CLAUDE_WORK_DIR"
 
 # Copy all files from ConfigMap to working directory
@@ -67,20 +62,6 @@ fi
 
 echo '=== WORKSPACE VALIDATION ==='
 
-{{#if is_docs_generation}}
-# Documentation generation task - minimal validation
-echo "Documentation generation task detected - using minimal validation"
-
-# Determine the working directory for Claude
-WORKING_DIR="{{working_dir}}"
-if [ -n "$WORKING_DIR" ] && [ "$WORKING_DIR" != "." ]; then
-  CLAUDE_WORK_DIR="/workspace/$WORKING_DIR"
-else
-  CLAUDE_WORK_DIR="/workspace"
-fi
-
-echo "Claude working directory: $CLAUDE_WORK_DIR"
-
 # Check for required files in Claude's working directory
 MISSING_FILES=""
 REQUIRED_FILES="CLAUDE.md .claude/settings.local.json .stop-hook-docs-pr.sh"
@@ -97,35 +78,6 @@ for file in $REQUIRED_FILES; do
     echo "  File size: $size bytes"
   fi
 done
-
-# For docs generation, create prompt.md from CLAUDE.md in Claude's working directory
-echo "Creating prompt.md in Claude's working directory"
-if [ -f "$CLAUDE_WORK_DIR/CLAUDE.md" ]; then
-  cp "$CLAUDE_WORK_DIR/CLAUDE.md" "$CLAUDE_WORK_DIR/prompt.md"
-  echo "✓ Created prompt.md from CLAUDE.md in $CLAUDE_WORK_DIR"
-fi
-{{else}}
-# Validate that prep job completed successfully
-MISSING_FILES=""
-REQUIRED_FILES="CLAUDE.md task.md design-spec.md prompt.md acceptance-criteria.md .claude/settings.local.json"
-
-echo "Checking for required files..."
-for file in $REQUIRED_FILES; do
-  if [ ! -f "/workspace/$file" ]; then
-    echo "ERROR: Missing required file: $file"
-    MISSING_FILES="$MISSING_FILES $file"
-  else
-    echo "✓ Found: $file"
-  fi
-done
-{{/if}}
-
-# Check for git repository (optional - only needed for tasks that push code)
-if [ ! -d "/workspace/.git" ]; then
-  echo "! Note: No git repository found (okay for non-code tasks)"
-else
-  echo "✓ Found: git repository"
-fi
 
 # If any files are missing, abort
 if [ -n "$MISSING_FILES" ]; then
@@ -155,218 +107,73 @@ if [ -n "$MISSING_FILES" ]; then
   echo "These files should have been created by the ConfigMap setup process."
   echo "Claude will NOT be started to avoid wasting API credits."
   echo ""
-  echo "Debug: Check if ConfigMap was created and mounted correctly."
-  echo ""
   exit 1
 fi
 
-echo ""
 echo "✓ All required files present. Workspace is valid."
-echo ""
 
-echo '=== MARKDOWN FILES PROVIDED ==='
-echo "The following documentation files are available to Claude:"
-echo ""
-# List all markdown files with their sizes
-find /workspace -maxdepth 1 -name "*.md" -type f | sort | while read -r file; do
-  filename=$(basename "$file")
-  size=$(wc -c < "$file" | xargs)
-  echo "📄 $filename ($size bytes)"
-done
-echo ""
-
-# Debug mode - show file contents if DEBUG_SHOW_FILES is set
-if [ "$DEBUG_SHOW_FILES" = "true" ]; then
-  echo '=== DEBUG: FILE CONTENTS ==='
-  echo "Showing contents of all markdown files:"
-  echo ""
-
-  find /workspace -maxdepth 1 -name "*.md" -type f | sort | while read -r file; do
-    filename=$(basename "$file")
-    echo "════════════════════════════════════════════════════════════════"
-    echo "║ FILE: $filename"
-    echo "════════════════════════════════════════════════════════════════"
-    cat "$file"
-    echo ""
-    echo ""
-  done
-
-  echo "════════════════════════════════════════════════════════════════"
-  echo "║ END OF FILE CONTENTS"
-  echo "════════════════════════════════════════════════════════════════"
-  echo ""
-fi
-
-# Check if prompt.md exists (should always exist from prep job)
-{{#if is_docs_generation}}
-# For docs generation, check in Claude's working directory
-if [ ! -f "$CLAUDE_WORK_DIR/prompt.md" ]; then
-  echo "ERROR: prompt.md not found in $CLAUDE_WORK_DIR - prep job may have failed"
-  exit 1
-fi
-{{else}}
-if [ ! -f /workspace/prompt.md ]; then
-  echo 'ERROR: prompt.md not found - prep job may have failed'
-  exit 1
-fi
-{{/if}}
-
-echo '=== CLAUDE CONFIGURATION DIAGNOSTICS ==='
-
-# Log all potential Claude configuration files for debugging
-echo "Checking Claude configuration file locations:"
-echo ""
-
-# Get the actual project directory where Claude should look for settings
-PROJECT_DIR="/workspace/{{working_dir}}"
-if [ -z "{{working_dir}}" ] || [ "{{working_dir}}" = "." ]; then
-    PROJECT_DIR="/workspace"
-fi
-
-echo "Project directory: $PROJECT_DIR"
-echo ""
-
-# Check correct locations according to Claude documentation
-for location in "$PROJECT_DIR/.claude/settings.json" "$PROJECT_DIR/.claude/settings.local.json"; do
-    if [ -f "$location" ]; then
-        echo "✓ FOUND: $location"
-        echo "  File size: $(wc -c < "$location") bytes"
-        echo "  Contents:"
-        cat "$location" | head -20 | sed 's/^/    /'
-        echo ""
-    else
-        echo "✗ NOT FOUND: $location"
-    fi
-done
-
-echo "=== END CLAUDE CONFIG DIAGNOSTICS ==="
-echo ""
-
-echo '=== STARTING CLAUDE ==='
-
-# Build Claude command with print mode, streaming output, and explicit tools
-CLAUDE_CMD="{{command}} -p --output-format stream-json --verbose --allowedTools Bash,Edit,Read,Write,Glob,Grep,LS,MultiEdit,WebSearch,WebFetch,TodoRead,TodoWrite"
-
-{{#if is_docs_generation}}
-# For docs generation, set the project directory
-PROJECT_DIR="/workspace/{{working_dir}}"
-if [ -z "{{working_dir}}" ] || [ "{{working_dir}}" = "." ]; then
-  PROJECT_DIR="/workspace"
-fi
-
-echo "Using project directory: $PROJECT_DIR for docs generation"
-
-# We'll change to project directory before running Claude
-# (No --cwd flag since it's not supported by the CLI)
-
-echo ""
-echo "=== DOCUMENTATION GENERATION DIAGNOSTICS ==="
-echo "Project directory: $PROJECT_DIR"
+echo '=== DOCUMENTATION GENERATION DIAGNOSTICS ==='
+echo "Project directory: $CLAUDE_WORK_DIR"
 echo "Project directory contents:"
-ls -la "$PROJECT_DIR"
+ls -la "$CLAUDE_WORK_DIR"
 echo ""
-echo "Checking for .taskmaster in project:"
-if [ -d "$PROJECT_DIR/.taskmaster" ]; then
+
+# Check for .taskmaster directory and tasks.json
+if [ -d "$CLAUDE_WORK_DIR/.taskmaster" ]; then
   echo "✓ Found .taskmaster directory"
-  echo "Checking for tasks.json:"
-  if [ -f "$PROJECT_DIR/.taskmaster/tasks/tasks.json" ]; then
+  if [ -f "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" ]; then
     echo "✓ Found tasks/tasks.json"
-    echo "First 5 lines:"
-    head -5 "$PROJECT_DIR/.taskmaster/tasks/tasks.json"
+    task_count=$(jq '.tasks | length' "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" 2>/dev/null || echo "unknown")
+    echo "  Task count: $task_count"
   else
     echo "✗ ERROR: tasks/tasks.json not found!"
   fi
 else
   echo "✗ ERROR: .taskmaster directory not found!"
 fi
-echo ""
-echo "Checking for CLAUDE.md in project root:"
-if [ -f "$PROJECT_DIR/CLAUDE.md" ]; then
-  echo "✓ Found CLAUDE.md at project root"
-  echo "File size: $(wc -c < "$PROJECT_DIR/CLAUDE.md") bytes"
-else
-  echo "✗ WARNING: CLAUDE.md not found at project root"
-  # Fall back to .taskmaster location
-  if [ -f "$PROJECT_DIR/.taskmaster/CLAUDE.md" ]; then
-    echo "✓ Found CLAUDE.md in .taskmaster (legacy location)"
-  fi
-fi
-echo "=== END DIAGNOSTICS ==="
-echo ""
-{{/if}}
 
-# Add model flag for docs generation
-{{#if model}}
-CLAUDE_CMD="$CLAUDE_CMD --model {{model}}"
-{{/if}}
+# Check git repository
+if [ ! -d "$CLAUDE_WORK_DIR/.git" ]; then
+  echo "! Note: No git repository found (will be cloned if needed)"
+else
+  echo "✓ Found: git repository"
+fi
+
+echo '=== CLAUDE EXECUTION ==='
+
+# Export necessary variables for the stop hook
+export SERVICE_NAME="{{service_name}}"
+export TARGET_BRANCH="{{targetBranch}}"
+export SOURCE_BRANCH="{{repository.branch}}"
+export WORKING_DIR="{{working_dir}}"
+export GITHUB_USER="{{repository.githubUser}}"
+
+# Change to project directory before running Claude
+cd "$CLAUDE_WORK_DIR"
+echo "Changed to directory: $(pwd)"
+
+# Print the prompt we're about to use
+echo ""
+echo "=== PROMPT CONTENT ==="
+echo "Using prompt file: CLAUDE.md"
+echo "Prompt content (first 10 lines):"
+head -10 "CLAUDE.md" | sed 's/^/  /'
+echo "..."
+echo "=== END PROMPT ==="
+echo ""
+
+# Build Claude command (settings.json handles model, permissions, etc.)
+CLAUDE_CMD="claude-code -p --output-format stream-json --verbose"
 
 {{#if is_retry}}
 CLAUDE_CMD="$CLAUDE_CMD --continue"
 echo 'Adding --continue flag for attempt {{attempts}}'
 {{/if}}
 
-# Use stdin to pass the prompt content
-echo "=== FINAL CLAUDE EXECUTION ==="
 echo "Command: $CLAUDE_CMD"
-echo "Working directory: $(pwd)"
-echo "Prompt file: {{#if is_docs_generation}}$CLAUDE_WORK_DIR/prompt.md{{else}}/workspace/prompt.md{{/if}}"
-echo "Environment variables:"
-env | grep -E '^(CLAUDE|ANTHROPIC|HOME|USER)' | sort || echo "No relevant env vars found"
-echo ""
 echo "Starting Claude execution..."
 echo "=========================="
 
-{{#if is_docs_generation}}
-# Run Claude with CLAUDE.md from project root (or fallback to .taskmaster)
-PROMPT_FILE="$PROJECT_DIR/CLAUDE.md"
-if [ ! -f "$PROMPT_FILE" ]; then
-  echo "CLAUDE.md not found at project root, checking fallback locations..."
-  # Fallback to .taskmaster location
-  PROMPT_FILE="$PROJECT_DIR/.taskmaster/CLAUDE.md"
-  if [ ! -f "$PROMPT_FILE" ]; then
-    PROMPT_FILE="$PROJECT_DIR/.taskmaster/prompt.md"
-    if [ ! -f "$PROMPT_FILE" ]; then
-      echo "ERROR: No prompt file found in any expected location!"
-      exit 1
-    fi
-  fi
-fi
-
-echo "Using prompt file: $PROMPT_FILE"
-
-# Export necessary variables for the stop hook
-export SERVICE_NAME="docs-generator"
-export TARGET_BRANCH="{{targetBranch}}"
-export SOURCE_BRANCH="{{repository.branch}}"
-export MODEL="{{model}}"
-export WORKING_DIR="{{working_dir}}"
-export GITHUB_USER="{{repository.githubUser}}"
-
-# Change to project directory before running Claude
-cd "$PROJECT_DIR"
-echo "Changed to directory: $(pwd)"
-
-# Final validation before starting Claude
-echo ""
-echo "=== FINAL VALIDATION ==="
-if [ ! -f ".claude/settings.local.json" ]; then
-  echo "ERROR: .claude/settings.local.json not found in working directory!"
-  exit 1
-fi
-if [ ! -f ".stop-hook-docs-pr.sh" ]; then
-  echo "ERROR: .stop-hook-docs-pr.sh not found in working directory!"
-  exit 1
-fi
-if [ ! -f "CLAUDE.md" ]; then
-  echo "ERROR: CLAUDE.md not found in working directory!"
-  exit 1
-fi
-echo "✓ All required files present"
-echo "=== END VALIDATION ==="
-echo ""
-
-# Run Claude (Stop hook will be executed automatically on successful completion)
-exec $CLAUDE_CMD < "$PROMPT_FILE"
-{{else}}
-exec $CLAUDE_CMD < /workspace/prompt.md
-{{/if}}
+# Run Claude with CLAUDE.md as input
+# (Stop hook will be executed automatically on successful completion)
+exec $CLAUDE_CMD < "CLAUDE.md"
