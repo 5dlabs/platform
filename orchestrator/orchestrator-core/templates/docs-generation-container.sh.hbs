@@ -140,42 +140,9 @@ ENTERPRISE_EOF
   fi
 
   echo ""
-  echo "=== PROJECT SETTINGS (Backup - Enterprise settings take precedence) ==="
-
-  # Copy Claude settings to ALL possible locations to ensure Claude finds them
-  # We'll put our configured settings everywhere Claude might look
-
-  echo "Installing Claude settings in multiple locations as backup..."
-
-  # Location 1: /workspace/.claude/settings.local.json (most likely)
-  mkdir -p "/workspace/.claude"
-  cp /config/settings-local.json "/workspace/.claude/settings.local.json" 2>/dev/null && echo "✓ Copied to /workspace/.claude/settings.local.json" || echo "! Failed to copy to /workspace/.claude/settings.local.json"
-
-  # Location 2: /workspace/.claude/settings.json (override auto-generated defaults)
-  cp /config/settings-local.json "/workspace/.claude/settings.json" 2>/dev/null && echo "✓ Copied to /workspace/.claude/settings.json (overriding defaults)" || echo "! Failed to copy to /workspace/.claude/settings.json"
-
-  # PRIMARY location: Project directory settings.local.json (this is where CLAUDE_CONFIG_DIR points)
-  mkdir -p "$CLAUDE_WORK_DIR/.claude"
-  if cp /config/settings-local.json "$CLAUDE_WORK_DIR/.claude/settings.local.json" 2>/dev/null; then
-    echo "✓ Copied to $CLAUDE_WORK_DIR/.claude/settings.local.json"
-
-    # Validate JSON syntax to catch malformed files early
-    # (prevents silent failure mentioned in https://github.com/anthropics/claude-code/issues/2835)
-    if jq . "$CLAUDE_WORK_DIR/.claude/settings.local.json" > /dev/null 2>&1; then
-      echo "✓ Settings JSON syntax validated"
-    else
-      echo "❌ ERROR: Malformed JSON in settings.local.json!"
-      echo "   This will cause Claude Code to silently ignore the settings file."
-      echo "   Showing file contents for debugging:"
-      cat "$CLAUDE_WORK_DIR/.claude/settings.local.json"
-      exit 1
-    fi
-  else
-    echo "! Failed to copy to project .claude/settings.local.json"
-  fi
-
-  # BACKUP location: Project directory settings.json (fallback)
-  cp /config/settings-local.json "$CLAUDE_WORK_DIR/.claude/settings.json" 2>/dev/null && echo "✓ Copied backup to $CLAUDE_WORK_DIR/.claude/settings.json" || echo "! Failed to copy backup settings.json"
+  echo "=== SIMPLIFIED: Enterprise settings control everything ==="
+  echo "✓ All Claude Code configuration handled by enterprise managed settings"
+  echo "✓ No additional settings files needed"
 
   # Copy hook script
   cp /config/.stop-hook-docs-pr.sh "$CLAUDE_WORK_DIR/.stop-hook-docs-pr.sh" 2>/dev/null && echo "✓ Copied hook script" || echo "! No hook script to copy"
@@ -190,7 +157,7 @@ echo '=== WORKSPACE VALIDATION ==='
 
 # Check for required files in Claude's working directory
 MISSING_FILES=""
-REQUIRED_FILES="CLAUDE.md .claude/settings.local.json .stop-hook-docs-pr.sh"
+REQUIRED_FILES="CLAUDE.md .stop-hook-docs-pr.sh"
 
 echo "Checking for required files..."
 for file in $REQUIRED_FILES; do
@@ -217,9 +184,6 @@ if [ -n "$MISSING_FILES" ]; then
     case "$missing" in
       "CLAUDE.md")
         echo "  ❌ $missing - Main prompt file with task instructions"
-        ;;
-      ".claude/settings.local.json")
-        echo "  ❌ $missing - Claude Code configuration (permissions, model, etc.)"
         ;;
       ".stop-hook-docs-pr.sh")
         echo "  ❌ $missing - Post-completion hook for auto-commit and PR creation"
@@ -317,10 +281,9 @@ export SOURCE_BRANCH="{{repository.branch}}"
 export WORKING_DIR="{{working_dir}}"
 export GITHUB_USER="{{repository.githubUser}}"
 
-# Explicitly set Claude config directory to ensure settings are found
-# This environment variable tells Claude Code exactly where to look for settings
-export CLAUDE_CONFIG_DIR="$CLAUDE_WORK_DIR/.claude"
-echo "✓ Claude config directory set to: $CLAUDE_CONFIG_DIR"
+# Enterprise managed settings at /etc/claude-code/managed-settings.json take precedence
+# No need to set CLAUDE_CONFIG_DIR - enterprise settings override everything
+echo "✓ Using enterprise managed settings (highest precedence)"
 
 # Change to project directory before running Claude
 cd "$CLAUDE_WORK_DIR"
@@ -344,12 +307,12 @@ echo "║                    FULL CONTENT PREVIEW                       ║"
 echo "════════════════════════════════════════════════════════════════"
 echo ""
 
-echo "=== 1. CLAUDE SETTINGS (.claude/settings.local.json) ==="
-if [ -f ".claude/settings.local.json" ]; then
-  echo "Settings file contents:"
-  cat ".claude/settings.local.json" | jq . 2>/dev/null || cat ".claude/settings.local.json"
+echo "=== 1. ENTERPRISE MANAGED SETTINGS (/etc/claude-code/managed-settings.json) ==="
+if [ -f "/etc/claude-code/managed-settings.json" ]; then
+  echo "Enterprise settings contents:"
+  cat "/etc/claude-code/managed-settings.json" | jq . 2>/dev/null || cat "/etc/claude-code/managed-settings.json"
 else
-  echo "❌ Settings file not found!"
+  echo "❌ Enterprise settings file not found!"
 fi
 echo ""
 
@@ -405,7 +368,6 @@ echo "✓ Using enterprise managed settings for guaranteed tool permissions and 
 
 echo "=== 6. ENVIRONMENT VARIABLES ==="
 echo "Environment variables Claude will see:"
-echo "CLAUDE_CONFIG_DIR: $CLAUDE_CONFIG_DIR"
 env | grep -E '^(CLAUDE|ANTHROPIC|OTEL|SERVICE_NAME|TARGET_BRANCH|SOURCE_BRANCH|WORKING_DIR|GITHUB|NODE_ENV|DISABLE)' | sort || echo "No relevant env vars found"
 echo ""
 
