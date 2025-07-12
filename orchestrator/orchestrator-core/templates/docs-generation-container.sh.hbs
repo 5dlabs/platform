@@ -110,10 +110,42 @@ if [ -d "/config" ]; then
   # Copy markdown files (force overwrite any existing files)
   cp -f /config/*.md "$CLAUDE_WORK_DIR/" 2>/dev/null && echo "✓ Copied markdown files (overwriting existing)" || echo "! No markdown files to copy"
 
+  # Create enterprise managed settings for HIGHEST precedence (guaranteed override)
+  echo "=== ENTERPRISE MANAGED SETTINGS (Highest Precedence) ==="
+  mkdir -p /etc/claude-code
+
+  cat > /etc/claude-code/managed-settings.json << 'ENTERPRISE_EOF'
+{
+  "model": "claude-opus-4-20250514",
+  "agentTools": ["WebSearch", "WebFetch", "Edit", "Read", "Write", "Bash", "Glob", "Grep", "LS", "Task", "TodoRead", "TodoWrite", "NotebookRead", "NotebookEdit", "MultiEdit"],
+  "bashCommands": ["git:*", "gh:*", "echo:*", "ls:*", "mkdir:*", "cp:*", "mv:*", "rm:*", "find:*", "grep:*", "cat:*", "head:*", "tail:*", "curl:*", "wget:*", "jq:*", "which:*", "pwd:*", "whoami:*", "date:*", "wc:*", "sort:*", "uniq:*", "awk:*", "sed:*"],
+  "workspaceType": "singleFolder",
+  "autoCommit": false
+}
+ENTERPRISE_EOF
+
+  echo "✓ Created enterprise managed settings at /etc/claude-code/managed-settings.json"
+
+  # Validate the enterprise settings JSON
+  if jq empty /etc/claude-code/managed-settings.json 2>/dev/null; then
+    echo "✓ Enterprise settings JSON is valid"
+    echo "✓ This will override ALL other Claude Code settings (highest precedence)"
+    echo ""
+    echo "Enterprise settings contents:"
+    cat /etc/claude-code/managed-settings.json | jq . 2>/dev/null || cat /etc/claude-code/managed-settings.json
+  else
+    echo "❌ Enterprise settings JSON is invalid"
+    cat /etc/claude-code/managed-settings.json
+    exit 1
+  fi
+
+  echo ""
+  echo "=== PROJECT SETTINGS (Backup - Enterprise settings take precedence) ==="
+
   # Copy Claude settings to ALL possible locations to ensure Claude finds them
   # We'll put our configured settings everywhere Claude might look
 
-  echo "Installing Claude settings in multiple locations..."
+  echo "Installing Claude settings in multiple locations as backup..."
 
   # Location 1: /workspace/.claude/settings.local.json (most likely)
   mkdir -p "/workspace/.claude"
@@ -365,11 +397,11 @@ echo "║                    END CONTENT PREVIEW                        ║"
 echo "════════════════════════════════════════════════════════════════"
 echo ""
 
-# Build Claude command with explicit model and tool permissions for maximum reliability
-# Using CLI arguments ensures these settings are applied regardless of config file issues
-CLAUDE_CMD="claude -p --output-format stream-json --verbose --model claude-opus-4-20250514 --allowedTools 'WebSearch,WebFetch,Edit,Read,Write,Bash(git:*,gh:*,echo:*,ls:*,mkdir:*,cp:*,mv:*,rm:*,find:*,grep:*,cat:*,head:*,tail:*,curl:*,wget:*,jq:*,which:*,pwd:*,whoami:*,date:*,wc:*,sort:*,uniq:*,awk:*,sed:*),Glob,Grep,LS,Task,TodoRead,TodoWrite,NotebookRead,NotebookEdit,MultiEdit'"
+# Build Claude command without CLI overrides - let enterprise managed settings control everything
+# Enterprise managed settings at /etc/claude-code/managed-settings.json have highest precedence
+CLAUDE_CMD="claude -p --output-format stream-json --verbose"
 
-echo "✓ Using CLI arguments for guaranteed tool permissions and model selection"
+echo "✓ Using enterprise managed settings for guaranteed tool permissions and model selection"
 
 echo "=== 6. ENVIRONMENT VARIABLES ==="
 echo "Environment variables Claude will see:"
