@@ -938,7 +938,7 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
                 .unwrap()
                 .as_secs();
             let target_branch = format!("docs-generation-{}", chrono::DateTime::from_timestamp(timestamp as i64, 0)
-                .unwrap_or_else(|| chrono::Utc::now())
+                .unwrap_or_else(chrono::Utc::now)
                 .format("%Y%m%d-%H%M%S"));
             data["targetBranch"] = json!(target_branch);
         }
@@ -1149,7 +1149,7 @@ fn build_agent_tools_permissions(agent_tools: &[crate::crds::AgentTool]) -> (Vec
                 "websearch" => "WebSearch(*)".to_string(),
                 _ => {
                     // Log unknown tools but don't fail - allows for future extensibility
-                    eprintln!("Warning: Unknown agent tool '{}' - skipping", tool.name);
+                    tracing::warn!("Unknown agent tool '{}' - skipping", tool.name);
                     continue;
                 }
             };
@@ -1340,7 +1340,7 @@ mod tests {
         assert!(settings.get("model").is_some());
         assert_eq!(settings["model"], "sonnet");
         assert_eq!(settings["permissions"]["defaultMode"], "acceptEdits");
-        assert!(!settings.get("hooks").is_some()); // No hooks for implementation jobs
+        assert!(settings.get("hooks").is_none()); // No hooks for implementation jobs
     }
 
     #[test]
@@ -1373,7 +1373,11 @@ mod tests {
         assert!(settings.get("hooks").is_some()); // Docs jobs have hooks
         assert_eq!(settings["model"], "claude-opus-4-20250514"); // Hard-coded in docs template
         assert_eq!(settings["permissions"]["defaultMode"], "acceptEdits");
-        assert_eq!(settings["hooks"]["onStop"], "./.stop-hook-docs-pr.sh");
+        // Check the new hooks format with Stop array
+        assert!(settings["hooks"]["Stop"].is_array());
+        let stop_hooks = settings["hooks"]["Stop"].as_array().unwrap();
+        assert_eq!(stop_hooks.len(), 1);
+        assert_eq!(stop_hooks[0]["hooks"][0]["command"], "./.stop-hook-docs-pr.sh");
     }
 
     #[test]
