@@ -613,12 +613,31 @@ fn build_claude_job(
 
     // Build volumes list - use dedicated PVC for this service
     let pvc_name = format!("workspace-{service_name}");
-    let volumes = vec![json!({
+    let mut volumes = vec![json!({
         "name": "workspace",
         "persistentVolumeClaim": {
             "claimName": pvc_name
         }
     })];
+
+    // For docs generation jobs, also mount the ConfigMap
+    let mut volume_mounts = vec![json!({
+        "name": "workspace",
+        "mountPath": "/workspace"
+    })];
+
+    if is_docs_generation(tr) {
+        volumes.push(json!({
+            "name": "task-files",
+            "configMap": {
+                "name": _cm_name
+            }
+        }));
+        volume_mounts.push(json!({
+            "name": "task-files",
+            "mountPath": "/config"
+        }));
+    }
 
     // Telemetry and environment settings are now handled via settings.json
     // Only keep essential container-level env vars here
@@ -650,10 +669,7 @@ fn build_claude_job(
                         "command": ["/bin/sh", "-c"],
                         "args": [build_agent_startup_script(tr, config)?],
                         "env": build_env_vars(tr, config),
-                        "volumeMounts": [{
-                            "name": "workspace",
-                            "mountPath": "/workspace"
-                        }],
+                        "volumeMounts": volume_mounts,
                         "workingDir": "/workspace",
                         "securityContext": {
                             "runAsUser": 0,

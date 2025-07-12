@@ -8,28 +8,62 @@ echo '════════════════════════�
 if [ -f /workspace/.github-env ]; then
   . /workspace/.github-env
   echo "✓ GitHub authentication configured"
-  
+
   # Configure git credentials for HTTPS authentication
   if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USER" ]; then
     git config --global user.name "$GITHUB_USER"
     git config --global user.email "${GITHUB_USER}@users.noreply.github.com"
-    
+
     # Ensure git credentials file exists with correct format
     echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
     chmod 600 /workspace/.git-credentials
-    
+
     # Configure git to use the credentials
     git config --global credential.helper 'store --file=/workspace/.git-credentials'
-    
+
     # Also configure the repository-specific credential helper
     cd /workspace && git config credential.helper 'store --file=/workspace/.git-credentials'
-    
+
     echo "✓ Git credentials configured for user: $GITHUB_USER"
     echo "✓ Git push should now work with HTTPS"
   fi
 fi
 
-# Export script should already be created by prep job
+# Copy ConfigMap files to working directory (docs generation doesn't use prep job)
+echo "=== CONFIGMAP FILE SETUP ==="
+
+# Determine the working directory for Claude
+WORKING_DIR="{{working_dir}}"
+if [ -n "$WORKING_DIR" ] && [ "$WORKING_DIR" != "." ]; then
+  CLAUDE_WORK_DIR="/workspace/$WORKING_DIR"
+else
+  CLAUDE_WORK_DIR="/workspace"
+fi
+
+echo "Setting up files in Claude working directory: $CLAUDE_WORK_DIR"
+
+# Ensure the working directory exists
+mkdir -p "$CLAUDE_WORK_DIR"
+
+# Copy all files from ConfigMap to working directory
+if [ -d "/config" ]; then
+  echo "Copying ConfigMap files to working directory..."
+
+  # Copy markdown files
+  cp /config/*.md "$CLAUDE_WORK_DIR/" 2>/dev/null && echo "✓ Copied markdown files" || echo "! No markdown files to copy"
+
+  # Copy Claude settings
+  mkdir -p "$CLAUDE_WORK_DIR/.claude"
+  cp /config/settings-local.json "$CLAUDE_WORK_DIR/.claude/settings.local.json" 2>/dev/null && echo "✓ Copied Claude settings" || echo "! No Claude settings to copy"
+
+  # Copy hook script
+  cp /config/.stop-hook-docs-pr.sh "$CLAUDE_WORK_DIR/.stop-hook-docs-pr.sh" 2>/dev/null && echo "✓ Copied hook script" || echo "! No hook script to copy"
+  chmod +x "$CLAUDE_WORK_DIR/.stop-hook-docs-pr.sh" 2>/dev/null
+
+  echo "✓ ConfigMap files copied to $CLAUDE_WORK_DIR"
+else
+  echo "⚠️  Warning: /config directory not found (ConfigMap not mounted?)"
+fi
 
 echo '=== WORKSPACE VALIDATION ==='
 
@@ -49,7 +83,7 @@ echo "Claude working directory: $CLAUDE_WORK_DIR"
 
 # Check for required files in Claude's working directory
 MISSING_FILES=""
-REQUIRED_FILES="CLAUDE.md"
+REQUIRED_FILES="CLAUDE.md .claude/settings.local.json .stop-hook-docs-pr.sh"
 
 echo "Checking for required files..."
 for file in $REQUIRED_FILES; do
@@ -58,6 +92,9 @@ for file in $REQUIRED_FILES; do
     MISSING_FILES="$MISSING_FILES $file"
   else
     echo "✓ Found: $CLAUDE_WORK_DIR/$file"
+    # Show file size for verification
+    size=$(wc -c < "$CLAUDE_WORK_DIR/$file" 2>/dev/null || echo "0")
+    echo "  File size: $size bytes"
   fi
 done
 
@@ -97,11 +134,28 @@ if [ -n "$MISSING_FILES" ]; then
   echo "║                 WORKSPACE VALIDATION FAILED                  ║"
   echo "═══════════════════════════════════════════════════════════════"
   echo ""
-  echo "The following required files/directories are missing:"
-  echo "$MISSING_FILES"
+  echo "The following required files are missing:"
+  for missing in $MISSING_FILES; do
+    case "$missing" in
+      "CLAUDE.md")
+        echo "  ❌ $missing - Main prompt file with task instructions"
+        ;;
+      ".claude/settings.local.json")
+        echo "  ❌ $missing - Claude Code configuration (permissions, model, etc.)"
+        ;;
+      ".stop-hook-docs-pr.sh")
+        echo "  ❌ $missing - Post-completion hook for auto-commit and PR creation"
+        ;;
+      *)
+        echo "  ❌ $missing"
+        ;;
+    esac
+  done
   echo ""
-  echo "This indicates the prep job didn't complete successfully."
+  echo "These files should have been created by the ConfigMap setup process."
   echo "Claude will NOT be started to avoid wasting API credits."
+  echo ""
+  echo "Debug: Check if ConfigMap was created and mounted correctly."
   echo ""
   exit 1
 fi
@@ -126,7 +180,7 @@ if [ "$DEBUG_SHOW_FILES" = "true" ]; then
   echo '=== DEBUG: FILE CONTENTS ==='
   echo "Showing contents of all markdown files:"
   echo ""
-  
+
   find /workspace -maxdepth 1 -name "*.md" -type f | sort | while read -r file; do
     filename=$(basename "$file")
     echo "════════════════════════════════════════════════════════════════"
@@ -136,7 +190,7 @@ if [ "$DEBUG_SHOW_FILES" = "true" ]; then
     echo ""
     echo ""
   done
-  
+
   echo "════════════════════════════════════════════════════════════════"
   echo "║ END OF FILE CONTENTS"
   echo "════════════════════════════════════════════════════════════════"
