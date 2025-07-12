@@ -122,12 +122,28 @@ if [ -d "/config" ]; then
   # Location 2: /workspace/.claude/settings.json (override auto-generated defaults)
   cp /config/settings-local.json "/workspace/.claude/settings.json" 2>/dev/null && echo "✓ Copied to /workspace/.claude/settings.json (overriding defaults)" || echo "! Failed to copy to /workspace/.claude/settings.json"
 
-  # Location 3: Project directory settings.local.json
+  # PRIMARY location: Project directory settings.local.json (this is where CLAUDE_CONFIG_DIR points)
   mkdir -p "$CLAUDE_WORK_DIR/.claude"
-  cp /config/settings-local.json "$CLAUDE_WORK_DIR/.claude/settings.local.json" 2>/dev/null && echo "✓ Copied to $CLAUDE_WORK_DIR/.claude/settings.local.json" || echo "! Failed to copy to project .claude/settings.local.json"
+  if cp /config/settings-local.json "$CLAUDE_WORK_DIR/.claude/settings.local.json" 2>/dev/null; then
+    echo "✓ Copied to $CLAUDE_WORK_DIR/.claude/settings.local.json"
 
-  # Location 4: Project directory settings.json
-  cp /config/settings-local.json "$CLAUDE_WORK_DIR/.claude/settings.json" 2>/dev/null && echo "✓ Copied to $CLAUDE_WORK_DIR/.claude/settings.json" || echo "! Failed to copy to project .claude/settings.json"
+    # Validate JSON syntax to catch malformed files early
+    # (prevents silent failure mentioned in https://github.com/anthropics/claude-code/issues/2835)
+    if jq . "$CLAUDE_WORK_DIR/.claude/settings.local.json" > /dev/null 2>&1; then
+      echo "✓ Settings JSON syntax validated"
+    else
+      echo "❌ ERROR: Malformed JSON in settings.local.json!"
+      echo "   This will cause Claude Code to silently ignore the settings file."
+      echo "   Showing file contents for debugging:"
+      cat "$CLAUDE_WORK_DIR/.claude/settings.local.json"
+      exit 1
+    fi
+  else
+    echo "! Failed to copy to project .claude/settings.local.json"
+  fi
+
+  # BACKUP location: Project directory settings.json (fallback)
+  cp /config/settings-local.json "$CLAUDE_WORK_DIR/.claude/settings.json" 2>/dev/null && echo "✓ Copied backup to $CLAUDE_WORK_DIR/.claude/settings.json" || echo "! Failed to copy backup settings.json"
 
   # Copy hook script
   cp /config/.stop-hook-docs-pr.sh "$CLAUDE_WORK_DIR/.stop-hook-docs-pr.sh" 2>/dev/null && echo "✓ Copied hook script" || echo "! No hook script to copy"
@@ -269,6 +285,11 @@ export SOURCE_BRANCH="{{repository.branch}}"
 export WORKING_DIR="{{working_dir}}"
 export GITHUB_USER="{{repository.githubUser}}"
 
+# Explicitly set Claude config directory to ensure settings are found
+# This environment variable tells Claude Code exactly where to look for settings
+export CLAUDE_CONFIG_DIR="$CLAUDE_WORK_DIR/.claude"
+echo "✓ Claude config directory set to: $CLAUDE_CONFIG_DIR"
+
 # Change to project directory before running Claude
 cd "$CLAUDE_WORK_DIR"
 echo "Changed to directory: $(pwd)"
@@ -344,12 +365,12 @@ echo "║                    END CONTENT PREVIEW                        ║"
 echo "════════════════════════════════════════════════════════════════"
 echo ""
 
-# Build Claude command with explicit model override to ensure precedence
-# Command line arguments take precedence over settings files
-CLAUDE_CMD="claude -p --output-format stream-json --verbose --model claude-opus-4-20250514"
+# Build Claude command - let settings files control the model selection
+CLAUDE_CMD="claude -p --output-format stream-json --verbose"
 
 echo "=== 6. ENVIRONMENT VARIABLES ==="
 echo "Environment variables Claude will see:"
+echo "CLAUDE_CONFIG_DIR: $CLAUDE_CONFIG_DIR"
 env | grep -E '^(CLAUDE|ANTHROPIC|OTEL|SERVICE_NAME|TARGET_BRANCH|SOURCE_BRANCH|WORKING_DIR|GITHUB|NODE_ENV|DISABLE)' | sort || echo "No relevant env vars found"
 echo ""
 
