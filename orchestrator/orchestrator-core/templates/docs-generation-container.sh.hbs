@@ -152,14 +152,64 @@ export GITHUB_USER="{{repository.githubUser}}"
 cd "$CLAUDE_WORK_DIR"
 echo "Changed to directory: $(pwd)"
 
-# Print the prompt we're about to use
+# Print all the content Claude will receive
 echo ""
-echo "=== PROMPT CONTENT ==="
-echo "Using prompt file: CLAUDE.md"
-echo "Prompt content (first 10 lines):"
-head -10 "CLAUDE.md" | sed 's/^/  /'
-echo "..."
-echo "=== END PROMPT ==="
+echo "════════════════════════════════════════════════════════════════"
+echo "║                    FULL CONTENT PREVIEW                       ║"
+echo "════════════════════════════════════════════════════════════════"
+echo ""
+
+echo "=== 1. CLAUDE SETTINGS (.claude/settings.local.json) ==="
+if [ -f ".claude/settings.local.json" ]; then
+  echo "Settings file contents:"
+  cat ".claude/settings.local.json" | jq . 2>/dev/null || cat ".claude/settings.local.json"
+else
+  echo "❌ Settings file not found!"
+fi
+echo ""
+
+echo "=== 2. HOOK SCRIPT (.stop-hook-docs-pr.sh) ==="
+if [ -f ".stop-hook-docs-pr.sh" ]; then
+  echo "Hook script contents:"
+  cat ".stop-hook-docs-pr.sh"
+else
+  echo "❌ Hook script not found!"
+fi
+echo ""
+
+echo "=== 3. CLAUDE PROMPT (CLAUDE.md) ==="
+if [ -f "CLAUDE.md" ]; then
+  echo "Full CLAUDE.md contents:"
+  cat "CLAUDE.md"
+else
+  echo "❌ CLAUDE.md not found!"
+fi
+echo ""
+
+echo "=== 4. ADDITIONAL MARKDOWN FILES ==="
+echo "Other markdown files in working directory:"
+for md_file in *.md; do
+  if [ -f "$md_file" ] && [ "$md_file" != "CLAUDE.md" ]; then
+    echo ""
+    echo "--- FILE: $md_file ---"
+    cat "$md_file"
+    echo ""
+  fi
+done
+echo ""
+
+echo "=== 5. TASKMASTER TASKS.JSON ==="
+if [ -f ".taskmaster/tasks/tasks.json" ]; then
+  echo "Tasks.json contents:"
+  cat ".taskmaster/tasks/tasks.json" | jq . 2>/dev/null || cat ".taskmaster/tasks/tasks.json"
+else
+  echo "❌ tasks.json not found!"
+fi
+echo ""
+
+echo "════════════════════════════════════════════════════════════════"
+echo "║                    END CONTENT PREVIEW                        ║"
+echo "════════════════════════════════════════════════════════════════"
 echo ""
 
 # Build Claude command (settings.json handles model, permissions, etc.)
@@ -170,6 +220,23 @@ CLAUDE_CMD="$CLAUDE_CMD --continue"
 echo 'Adding --continue flag for attempt {{attempts}}'
 {{/if}}
 
+echo "=== 6. ENVIRONMENT VARIABLES ==="
+echo "Environment variables Claude will see:"
+env | grep -E '^(CLAUDE|ANTHROPIC|OTEL|SERVICE_NAME|TARGET_BRANCH|SOURCE_BRANCH|WORKING_DIR|GITHUB|NODE_ENV|DISABLE)' | sort || echo "No relevant env vars found"
+echo ""
+
+echo "=== 7. WORKING DIRECTORY STATE ==="
+echo "Current working directory: $(pwd)"
+echo "Directory contents:"
+ls -la
+echo ""
+echo "Git status:"
+git status 2>/dev/null || echo "Not a git repository or git not available"
+echo ""
+
+echo "════════════════════════════════════════════════════════════════"
+echo "║                    STARTING CLAUDE EXECUTION                  ║"
+echo "════════════════════════════════════════════════════════════════"
 echo "Command: $CLAUDE_CMD"
 echo "Starting Claude execution..."
 echo "=========================="
