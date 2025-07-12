@@ -887,7 +887,7 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
     }
 
     // Prepare template data
-    let data = json!({
+    let mut data = json!({
         "command": command,
         "model_override": tr.spec.model != "sonnet", // Non-default model
         "model": tr.spec.model.clone(),
@@ -896,7 +896,29 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
         "task_id": tr.spec.task_id,
         "is_docs_generation": is_docs_generation, // Special docs generation task
         "working_dir": working_dir,
+        "service_name": tr.spec.service_name.clone(),
     });
+
+    // Add repository and branch information for docs generation
+    if is_docs_generation {
+        if let Some(repo) = &tr.spec.repository {
+            data["repository"] = json!({
+                "url": repo.url,
+                "branch": repo.branch,
+                "githubUser": repo.github_user
+            });
+
+            // Generate target branch name for docs generation
+            let timestamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            let target_branch = format!("docs-generation-{}", chrono::DateTime::from_timestamp(timestamp as i64, 0)
+                .unwrap_or_else(|| chrono::Utc::now())
+                .format("%Y%m%d-%H%M%S"));
+            data["targetBranch"] = json!(target_branch);
+        }
+    }
 
     handlebars
         .render("main", &data)

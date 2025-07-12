@@ -26,6 +26,69 @@ if [ -f /workspace/.github-env ]; then
   fi
 fi
 
+# Clone repository to get .taskmaster directory and project files
+echo "=== REPOSITORY SETUP ==="
+
+{{#if repository}}
+# Repository information
+REPO_URL="{{repository.url}}"
+REPO_BRANCH="{{repository.branch}}"
+GITHUB_USER="{{repository.githubUser}}"
+
+echo "Cloning repository: $REPO_URL"
+echo "Branch: $REPO_BRANCH"
+echo "GitHub User: $GITHUB_USER"
+
+# Clone the repository to /workspace
+if [ -d "/workspace/.git" ]; then
+  echo "Repository already exists, pulling latest changes..."
+  cd /workspace
+  git fetch origin
+  git checkout "$REPO_BRANCH"
+  git pull origin "$REPO_BRANCH"
+else
+  echo "Cloning repository..."
+  if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" /workspace; then
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "║                   REPOSITORY CLONE FAILED                    ║"
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+    echo "❌ Failed to clone repository: $REPO_URL"
+    echo "   Branch: $REPO_BRANCH"
+    echo ""
+    echo "Possible causes:"
+    echo "  • Invalid repository URL"
+    echo "  • Branch '$REPO_BRANCH' does not exist"
+    echo "  • GitHub authentication failed"
+    echo "  • Network connectivity issues"
+    echo ""
+    echo "🚫 DOCS GENERATION CANNOT PROCEED WITHOUT REPOSITORY"
+    echo ""
+    exit 1
+  fi
+  cd /workspace
+fi
+
+echo "✓ Repository cloned successfully"
+{{else}}
+echo ""
+echo "═══════════════════════════════════════════════════════════════"
+echo "║                NO REPOSITORY CONFIGURED                      ║"
+echo "═══════════════════════════════════════════════════════════════"
+echo ""
+echo "❌ CRITICAL ERROR: No repository configured for docs generation"
+echo ""
+echo "Docs generation requires:"
+echo "  • Repository URL to clone source code"
+echo "  • .taskmaster directory with tasks.json"
+echo "  • Git repository for committing generated docs"
+echo ""
+echo "🚫 DOCS GENERATION CANNOT PROCEED WITHOUT REPOSITORY"
+echo ""
+exit 1
+{{/if}}
+
 # Copy ConfigMap files to working directory
 echo "=== CONFIGMAP FILE SETUP ==="
 
@@ -118,25 +181,67 @@ echo "Project directory contents:"
 ls -la "$CLAUDE_WORK_DIR"
 echo ""
 
-# Check for .taskmaster directory and tasks.json
-if [ -d "$CLAUDE_WORK_DIR/.taskmaster" ]; then
+# Check for REQUIRED .taskmaster directory and tasks.json
+CRITICAL_MISSING=""
+
+if [ ! -d "$CLAUDE_WORK_DIR/.taskmaster" ]; then
+  echo "✗ CRITICAL ERROR: .taskmaster directory not found!"
+  CRITICAL_MISSING="$CRITICAL_MISSING .taskmaster"
+else
   echo "✓ Found .taskmaster directory"
-  if [ -f "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" ]; then
+  if [ ! -f "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" ]; then
+    echo "✗ CRITICAL ERROR: tasks/tasks.json not found!"
+    CRITICAL_MISSING="$CRITICAL_MISSING tasks.json"
+  else
     echo "✓ Found tasks/tasks.json"
     task_count=$(jq '.tasks | length' "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" 2>/dev/null || echo "unknown")
     echo "  Task count: $task_count"
-  else
-    echo "✗ ERROR: tasks/tasks.json not found!"
   fi
-else
-  echo "✗ ERROR: .taskmaster directory not found!"
 fi
 
-# Check git repository
+# Check git repository (REQUIRED for docs generation)
 if [ ! -d "$CLAUDE_WORK_DIR/.git" ]; then
-  echo "! Note: No git repository found (will be cloned if needed)"
+  echo "✗ CRITICAL ERROR: No git repository found!"
+  CRITICAL_MISSING="$CRITICAL_MISSING git-repository"
 else
   echo "✓ Found: git repository"
+fi
+
+# ABORT if any critical components are missing
+if [ -n "$CRITICAL_MISSING" ]; then
+  echo ""
+  echo "═══════════════════════════════════════════════════════════════"
+  echo "║                CRITICAL VALIDATION FAILED                    ║"
+  echo "═══════════════════════════════════════════════════════════════"
+  echo ""
+  echo "❌ CRITICAL COMPONENTS MISSING:"
+  for missing in $CRITICAL_MISSING; do
+    case "$missing" in
+      ".taskmaster")
+        echo "  • .taskmaster directory - Required for task definitions"
+        ;;
+      "tasks.json")
+        echo "  • tasks.json file - Required for documentation generation"
+        ;;
+      "git-repository")
+        echo "  • Git repository - Required for committing and pushing docs"
+        ;;
+      *)
+        echo "  • $missing"
+        ;;
+    esac
+  done
+  echo ""
+  echo "🚫 DOCS GENERATION CANNOT PROCEED WITHOUT THESE COMPONENTS"
+  echo ""
+  echo "This indicates a fundamental setup issue:"
+  echo "  - Repository may not have been cloned properly"
+  echo "  - .taskmaster directory missing from repository"
+  echo "  - Git authentication may have failed"
+  echo ""
+  echo "Claude will NOT be started to avoid wasting API credits."
+  echo ""
+  exit 1
 fi
 
 echo '=== CLAUDE EXECUTION ==='
@@ -213,7 +318,7 @@ echo "════════════════════════�
 echo ""
 
 # Build Claude command (settings.json handles model, permissions, etc.)
-CLAUDE_CMD="claude-code -p --output-format stream-json --verbose"
+CLAUDE_CMD="claude -p --output-format stream-json --verbose"
 
 echo "=== 6. ENVIRONMENT VARIABLES ==="
 echo "Environment variables Claude will see:"
