@@ -215,11 +215,6 @@ echo ""
 # Build Claude command (settings.json handles model, permissions, etc.)
 CLAUDE_CMD="claude-code -p --output-format stream-json --verbose"
 
-{{#if is_retry}}
-CLAUDE_CMD="$CLAUDE_CMD --continue"
-echo 'Adding --continue flag for attempt {{attempts}}'
-{{/if}}
-
 echo "=== 6. ENVIRONMENT VARIABLES ==="
 echo "Environment variables Claude will see:"
 env | grep -E '^(CLAUDE|ANTHROPIC|OTEL|SERVICE_NAME|TARGET_BRANCH|SOURCE_BRANCH|WORKING_DIR|GITHUB|NODE_ENV|DISABLE)' | sort || echo "No relevant env vars found"
