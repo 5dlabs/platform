@@ -11,7 +11,7 @@ agent:
   image:
     repository: "ghcr.io/5dlabs/platform/claude-code"
     tag: "latest"
-    pullPolicy: "IfNotPresent"
+    pullPolicy: "Always"
   command: ["claude"]
   args:
     - "-p"
@@ -39,7 +39,7 @@ initContainer:
   image:
     repository: "ghcr.io/5dlabs/platform/claude-code"
     tag: "latest"
-    pullPolicy: "IfNotPresent"
+    pullPolicy: "Always"
   resources:
     requests:
       cpu: "100m"
