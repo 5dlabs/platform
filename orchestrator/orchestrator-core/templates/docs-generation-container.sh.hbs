@@ -110,13 +110,19 @@ if [ -d "/config" ]; then
   # Copy markdown files (force overwrite any existing files)
   cp -f /config/*.md "$CLAUDE_WORK_DIR/" 2>/dev/null && echo "✓ Copied markdown files (overwriting existing)" || echo "! No markdown files to copy"
 
-  # Copy Claude settings to both locations (Claude looks in /workspace/.claude/)
+  # Copy Claude settings to where Claude actually looks for them (/workspace/.claude/settings.local.json)
+  # This ensures Claude uses our configured model (opus) and security restrictions
+  mkdir -p "/workspace/.claude"
+  cp /config/settings-local.json "/workspace/.claude/settings.local.json" 2>/dev/null && echo "✓ Copied Claude settings to /workspace/.claude/settings.local.json (where Claude looks)" || echo "! No Claude settings to copy"
+
+  # Also copy to project directory for reference
   mkdir -p "$CLAUDE_WORK_DIR/.claude"
   cp /config/settings-local.json "$CLAUDE_WORK_DIR/.claude/settings.local.json" 2>/dev/null && echo "✓ Copied Claude settings to project directory" || echo "! No Claude settings to copy"
 
-  # CRITICAL: Copy our settings to where Claude actually looks (/workspace/.claude/settings.json)
+  # CRITICAL: Copy our settings to where Claude actually looks (/workspace/.claude/settings.local.json)
+  # This will override the auto-generated settings.json with our template configuration
   mkdir -p "/workspace/.claude"
-  cp /config/settings-local.json "/workspace/.claude/settings.json" 2>/dev/null && echo "✓ Copied Claude settings to Claude's expected location (overriding defaults)" || echo "! Failed to copy settings to Claude location"
+  cp /config/settings-local.json "/workspace/.claude/settings.local.json" 2>/dev/null && echo "✓ Copied Claude local settings (will override auto-generated settings)" || echo "! Failed to copy settings to Claude location"
 
   # Copy hook script
   cp /config/.stop-hook-docs-pr.sh "$CLAUDE_WORK_DIR/.stop-hook-docs-pr.sh" 2>/dev/null && echo "✓ Copied hook script" || echo "! No hook script to copy"
