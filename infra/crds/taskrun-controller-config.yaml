@@ -18,8 +18,8 @@ data:
     # Claude agent configuration
     agent:
       image:
-        repository: "ghcr.io/5dlabs/platform/claude-code"
-        tag: "latest"
+        repository: "ghcr.io/5dlabs/agent-platform/claude-code"
+        tag: "1.0.51"
         pullPolicy: "IfNotPresent"
       
       # Command and args for Claude
@@ -58,70 +58,9 @@ data:
         # Working directory will be set to /workspace/{service_name}
         # Telemetry environment variables are generated from telemetry section
     
-    # Init container configuration
-    initContainer:
-      image:
-        repository: "alpine/git"
-        tag: "v2.45.2"
-        pullPolicy: "IfNotPresent"
-      
-      resources:
-        requests:
-          cpu: "100m"
-          memory: "128Mi"
-        limits:
-          cpu: "200m"
-          memory: "256Mi"
-      
-      securityContext:
-        runAsNonRoot: false
-        runAsUser: 0
-        runAsGroup: 0
-        allowPrivilegeEscalation: false
-        readOnlyRootFilesystem: false
-      
-      # Script template for workspace preparation
-      # Variables: ${SERVICE_NAME}, ${TASK_ID}, ${ATTEMPT}
-      script: |
-        set -e
-        echo "🚀 Starting workspace preparation for task ${TASK_ID}"
-        
-        # Setup Claude home directory
-        mkdir -p /home/node/.claude/todos
-        if [ -f /tmp/claude-settings/settings.json ]; then
-          cp /tmp/claude-settings/settings.json /home/node/.claude/settings.json
-        fi
-        chmod -R 755 /home/node/.claude
-        
-        # Create workspace structure for the service
-        echo "📁 Creating workspace structure for service: ${SERVICE_NAME}"
-        mkdir -p /workspace/${SERVICE_NAME}/.task/${TASK_ID}/run-${ATTEMPT}
-        mkdir -p /workspace/${SERVICE_NAME}/src
-        mkdir -p /workspace/${SERVICE_NAME}/tests
-        mkdir -p /workspace/${SERVICE_NAME}/docs
-        
-        # Copy all task files from ConfigMap to workspace
-        if [ -d /config ]; then
-          echo "📋 Copying task files from ConfigMap..."
-          cp -v /config/* /workspace/${SERVICE_NAME}/.task/${TASK_ID}/run-${ATTEMPT}/ 2>/dev/null || true
-        fi
-        
-        # Generate metadata.yaml for tracking attempts
-        echo "📊 Creating metadata for attempt tracking..."
-        cat > /workspace/${SERVICE_NAME}/.task/${TASK_ID}/run-${ATTEMPT}/metadata.yaml << EOF
-        task_id: ${TASK_ID}
-        attempt_number: ${ATTEMPT}
-        timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)
-        service: ${SERVICE_NAME}
-        agent: ${AGENT_NAME}
-        status: in_progress
-        EOF
-        
-        # Set proper permissions on created directories only
-        echo "🔐 Setting permissions..."
-        chmod -R 755 /workspace/${SERVICE_NAME} 2>/dev/null || true
-        
-        echo "✅ Workspace preparation completed successfully!"
+    # Note: Init containers have been replaced with separate prep jobs
+    # Prep jobs handle workspace preparation for implementation tasks
+    # Documentation generation tasks skip prep and create Claude jobs directly
     
     # Storage configuration
     storage:
