@@ -200,7 +200,8 @@ else
 fi
 
 # Check git repository (REQUIRED for docs generation)
-if [ ! -d "$CLAUDE_WORK_DIR/.git" ]; then
+# Note: Git repository is always at /workspace root, not the Claude working directory
+if [ ! -d "/workspace/.git" ]; then
   echo "✗ CRITICAL ERROR: No git repository found!"
   CRITICAL_MISSING="$CRITICAL_MISSING git-repository"
 else
