@@ -1,0 +1,22 @@
+Generate comprehensive documentation for {{#if task_id}}task {{task_id}}{{else}}all Task Master tasks{{/if}}.
+
+Read the project context from CLAUDE.md and the task definitions from .taskmaster/tasks/tasks.json, then create detailed documentation files for each task following the project's documentation standards.
+
+{{#if task_id}}
+Focus specifically on task {{task_id}} and create:
+{{else}}
+For each task, create:
+{{/if}}
+- `task.md` - Comprehensive task overview and implementation guide
+- `prompt.md` - Autonomous prompt for AI agents
+- `acceptance-criteria.md` - Clear acceptance criteria and test cases
+
+Place all documentation in `.taskmaster/docs/task-{id}/` directories.
+
+After generating documentation:
+1. Stage all changes: `git add .`
+2. Commit with message: "docs: auto-generate Task Master documentation{{#if task_id}} for task {{task_id}}{{else}} for all tasks{{/if}}"
+3. Push to current branch: `git push origin HEAD`
+4. Create a pull request with appropriate title and description
+
+Ensure all documentation follows the project standards defined in CLAUDE.md and maintains consistency across all generated files.

@@ -2,13 +2,12 @@
 //!
 //! This handler replaces the Helm-based deployment with TaskRun CRD management
 
-use axum::extract::{Path, State};
+use axum::extract::{State};
 use axum::http::StatusCode;
 use axum::Json;
-use k8s_openapi::api::core::v1::Secret;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 use kube::api::{Api, PostParams};
-use kube::{Client, ResourceExt};
+use kube::{Client};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -798,109 +797,15 @@ pub async fn generate_docs(
             token: None,
         }),
         markdown_files: vec![
+            // CLAUDE.md will be generated from template in build_configmap()
+            // Include working directory info for template processing
             MarkdownFile {
-                content: format!(
-                    r#"# Task Master Project Memory
-
-## Project Information
-- **Repository**: {}
-- **Working Directory**: {}
-- **Documentation Target**: {}
-
-## Project Architecture
-
-This is a Task Master project with the following structure:
-- `.taskmaster/tasks/tasks.json` - Complete task definitions and relationships
-- `.taskmaster/docs/` - Generated documentation directory
-- `.taskmaster/docs/architecture.md` - System architecture and design
-- `.taskmaster/docs/prd.txt` or `.taskmaster/docs/prd.md` - Product requirements
-
-## Documentation Standards
-
-### File Structure
-For each task, create documentation in `.taskmaster/docs/task-{{id}}/`:
-- `task.md` - Comprehensive task overview and implementation guide
-- `prompt.md` - Autonomous prompt for AI agents
-- `acceptance-criteria.md` - Clear acceptance criteria and test cases
-
-### Content Requirements
-- **Include Architecture Context**: Reference architecture.md patterns and decisions
-- **Align with PRD**: Ensure implementation supports product goals
-- **Show Task Relationships**: Reference dependencies from tasks.json
-- **Provide Implementation Details**: Include specific code examples and commands
-- **Define Clear Acceptance Criteria**: Based on architecture constraints and PRD requirements
-- **Maintain Consistency**: Use consistent terminology across all documents
-
-### Quality Standards
-- Well-structured and comprehensive content
-- Actionable implementation guidance
-- Proper markdown formatting
-- Code examples where relevant
-- Clear cross-references between documents
-
-## Common Commands
-
-### Git Workflow
-```bash
-# Stage documentation changes
-git add .
-
-# Commit with standard message
-git commit -m "docs: auto-generate Task Master documentation for all tasks"
-
-# Push to current branch
-git push origin HEAD
-
-# Create pull request
-gh pr create --base "main" --title "docs: auto-generate Task Master documentation" --body "Auto-generated documentation for Task Master tasks"
-```
-
-## Import References
-
-See @.taskmaster/docs/architecture.md for system design details
-See @.taskmaster/docs/prd.txt for product requirements
-See @.taskmaster/tasks/tasks.json for complete task definitions
-"#,
-                    request.repository_url,
-                    request.working_directory,
-                    if request.task_id.is_some() { format!("task {}", request.task_id.unwrap()) } else { "all tasks".to_string() }
-                ),
+                content: format!("- **Working Directory**: {}", request.working_directory),
                 filename: "CLAUDE.md".to_string(),
                 file_type: Some(MarkdownFileType::Context),
             },
         ],
-        agent_tools: vec![
-            AgentTool {
-                name: "bash".to_string(),
-                enabled: true,
-                config: None,
-                restrictions: vec![], // Limited bash for file operations only
-            },
-            AgentTool {
-                name: "edit".to_string(),
-                enabled: true,
-                config: None,
-                restrictions: vec![], // Can only edit in workspace
-            },
-            AgentTool {
-                name: "read".to_string(),
-                enabled: true,
-                config: None,
-                restrictions: vec![], // Can only read from workspace
-            },
-            AgentTool {
-                name: "write".to_string(),
-                enabled: true,
-                config: None,
-                restrictions: vec![], // Can only write to workspace
-            },
-            AgentTool {
-                name: "glob".to_string(),
-                enabled: true,
-                config: None,
-                restrictions: vec![], // Can only glob in workspace
-            },
-        ],
+        agent_tools: vec![], // Use template defaults for docs generation
     };
 
     // Create TaskRun

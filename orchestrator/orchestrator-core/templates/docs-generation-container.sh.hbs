@@ -107,8 +107,8 @@ mkdir -p "$CLAUDE_WORK_DIR"
 if [ -d "/config" ]; then
   echo "Copying ConfigMap files to working directory..."
 
-  # Copy markdown files
-  cp /config/*.md "$CLAUDE_WORK_DIR/" 2>/dev/null && echo "✓ Copied markdown files" || echo "! No markdown files to copy"
+  # Copy markdown files (force overwrite any existing files)
+  cp -f /config/*.md "$CLAUDE_WORK_DIR/" 2>/dev/null && echo "✓ Copied markdown files (overwriting existing)" || echo "! No markdown files to copy"
 
   # Copy Claude settings
   mkdir -p "$CLAUDE_WORK_DIR/.claude"
@@ -345,9 +345,10 @@ echo "=========================="
 
 # Run Claude with proper separation of memory vs prompt
 # CLAUDE.md = Project memory (automatically loaded by Claude)
-# Prompt = Task-specific instruction passed as argument
+# Prompt = Task-specific instruction from template
 
-PROMPT="Generate comprehensive documentation for all Task Master tasks. Read the project context from CLAUDE.md and the task definitions from .taskmaster/tasks/tasks.json, then create detailed documentation files for each task following the project's documentation standards."
+# Load the prompt template content
+PROMPT="{{prompt_content}}"
 
 echo "=== 8. FINAL EXECUTION ==="
 echo "CLAUDE.md (project memory): Will be automatically loaded by Claude"

@@ -568,19 +568,19 @@ fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Resul
         data.insert(file.filename.clone(), file.content.clone());
     }
 
-    // Generate Claude Code configuration file for tool permissions (using correct filename)
-    let settings_json = generate_claude_settings(tr, config)?;
-    // Use settings-local.json for ConfigMap (will be copied to .claude/settings.local.json)
-    data.insert("settings-local.json".to_string(), settings_json);
-
-    // For docs generation jobs, add the post-completion hook script
+    // For docs generation jobs, generate CLAUDE.md from template (overwrites any existing)
     if is_docs_generation(tr) {
+        let claude_memory = generate_docs_claude_memory(tr)?;
+        data.insert("CLAUDE.md".to_string(), claude_memory);
+
         let hook_script = generate_docs_hook_script(tr)?;
         data.insert(".stop-hook-docs-pr.sh".to_string(), hook_script);
     }
 
-    // CLAUDE.md should always be provided by the client
-    // This allows task-specific instructions and Git workflows
+    // Generate Claude Code configuration file for tool permissions (using correct filename)
+    let settings_json = generate_claude_settings(tr, config)?;
+    // Use settings-local.json for ConfigMap (will be copied to .claude/settings.local.json)
+    data.insert("settings-local.json".to_string(), settings_json);
 
     Ok(ConfigMap {
         metadata: ObjectMeta {
@@ -806,6 +806,7 @@ fn build_prep_job(
 const PREP_JOB_TEMPLATE: &str = include_str!("../../templates/prep-job.sh.hbs");
 const MAIN_CONTAINER_TEMPLATE: &str = include_str!("../../templates/main-container.sh.hbs");
 const DOCS_GENERATION_CONTAINER_TEMPLATE: &str = include_str!("../../templates/docs-generation-container.sh.hbs");
+const DOCS_GENERATION_PROMPT_TEMPLATE: &str = include_str!("../../templates/docs-generation-prompt.hbs");
 
 
 /// Build prep job script for workspace preparation
@@ -899,7 +900,7 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
         "service_name": tr.spec.service_name.clone(),
     });
 
-    // Add repository and branch information for docs generation
+        // Add repository and branch information for docs generation
     if is_docs_generation {
         if let Some(repo) = &tr.spec.repository {
             data["repository"] = json!({
@@ -918,6 +919,10 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
                 .format("%Y%m%d-%H%M%S"));
             data["targetBranch"] = json!(target_branch);
         }
+
+        // Generate the prompt content for docs generation
+        let prompt_content = generate_docs_prompt(tr)?;
+        data["prompt_content"] = json!(prompt_content);
     }
 
     handlebars
@@ -996,8 +1001,46 @@ fn build_env_vars(
 
 
 
-// CLAUDE.md generation removed - should be provided by client
-// This allows task-specific instructions and Git workflows
+/// Generate CLAUDE.md content for docs generation tasks
+fn generate_docs_claude_memory(tr: &TaskRun) -> Result<String> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false); // Allow missing fields
+
+    let template = include_str!("../../templates/claude-memory-docs.md.hbs");
+
+    handlebars
+        .register_template_string("claude_memory", template)
+        .map_err(|e| Error::ConfigError(format!("Failed to register CLAUDE.md template: {e}")))?;
+
+    // Extract working directory from the TaskRun
+    let working_directory = if tr.spec.repository.is_some() {
+        // For docs generation, working directory should be extracted from existing CLAUDE.md if present
+        tr.spec.markdown_files.iter()
+            .find(|f| f.filename == "CLAUDE.md")
+            .and_then(|claude_md| {
+                claude_md.content.lines()
+                    .find(|line| line.starts_with("- **Working Directory**: "))
+                    .map(|line| line.trim_start_matches("- **Working Directory**: ").to_string())
+            })
+            .unwrap_or_else(|| ".".to_string())
+    } else {
+        ".".to_string()
+    };
+
+    let data = json!({
+        "repository": tr.spec.repository.as_ref().map(|r| json!({
+            "url": r.url,
+            "branch": r.branch,
+            "githubUser": r.github_user
+        })),
+        "working_directory": working_directory,
+        "task_id": if tr.spec.task_id == DOCS_GENERATION_TASK_ID { json!(null) } else { json!(tr.spec.task_id) }
+    });
+
+    handlebars
+        .render("claude_memory", &data)
+        .map_err(|e| Error::ConfigError(format!("Failed to render CLAUDE.md template: {e}")))
+}
 
 /// Generate Claude Code settings.json for tool permissions
 fn generate_claude_settings(tr: &TaskRun, config: &ControllerConfig) -> Result<String> {
@@ -1139,10 +1182,25 @@ fn generate_docs_hook_script(tr: &TaskRun) -> Result<String> {
         .register_template_string("hook", template)
         .map_err(|e| Error::ConfigError(format!("Failed to register hook template: {e}")))?;
 
+    // Extract working directory from the TaskRun (same logic as CLAUDE.md generation)
+    let working_directory = if tr.spec.repository.is_some() {
+        tr.spec.markdown_files.iter()
+            .find(|f| f.filename == "CLAUDE.md")
+            .and_then(|claude_md| {
+                claude_md.content.lines()
+                    .find(|line| line.starts_with("- **Working Directory**: "))
+                    .map(|line| line.trim_start_matches("- **Working Directory**: ").to_string())
+            })
+            .unwrap_or_else(|| ".".to_string())
+    } else {
+        ".".to_string()
+    };
+
     let data = json!({
-        "task_id": tr.spec.task_id,
+        "task_id": if tr.spec.task_id == DOCS_GENERATION_TASK_ID { json!(null) } else { json!(tr.spec.task_id) },
         "service_name": tr.spec.service_name,
         "repository": tr.spec.repository.as_ref(),
+        "working_directory": working_directory,
         "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
         "is_docs_generation": is_docs_generation(tr),
     });
@@ -1150,6 +1208,33 @@ fn generate_docs_hook_script(tr: &TaskRun) -> Result<String> {
     handlebars
         .render("hook", &data)
         .map_err(|e| Error::ConfigError(format!("Failed to render hook template: {e}")))
+}
+
+/// Generate the prompt content for documentation generation jobs
+fn generate_docs_prompt(tr: &TaskRun) -> Result<String> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false); // Allow missing fields
+
+    handlebars
+        .register_template_string("prompt", DOCS_GENERATION_PROMPT_TEMPLATE)
+        .map_err(|e| Error::ConfigError(format!("Failed to register prompt template: {e}")))?;
+
+    // Extract task_id for docs generation (999999 means "all tasks")
+    let task_id = if tr.spec.task_id == DOCS_GENERATION_TASK_ID {
+        None // Generate docs for all tasks
+    } else {
+        Some(tr.spec.task_id) // Generate docs for specific task
+    };
+
+    let data = json!({
+        "task_id": task_id,
+        "service_name": tr.spec.service_name,
+        "repository": tr.spec.repository.as_ref(),
+    });
+
+    handlebars
+        .render("prompt", &data)
+        .map_err(|e| Error::ConfigError(format!("Failed to render prompt template: {e}")))
 }
 
 #[cfg(test)]
