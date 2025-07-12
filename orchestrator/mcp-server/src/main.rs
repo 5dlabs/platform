@@ -140,18 +140,7 @@ impl OrchestratorService {
         let force = args.force.unwrap_or(false);
         let task_id = args.task_id;
 
-        // Pre-flight validation to catch issues early
-        eprintln!("INFO: Running pre-flight validation...");
-
-        // Check if orchestrator CLI is available
-        if let Err(e) = std::process::Command::new("orchestrator").arg("--version").output() {
-            return Err(McpError::internal_error(
-                format!("Orchestrator CLI not found in PATH: {}. Please install with: cargo install --path orchestrator/orchestrator-cli", e),
-                None
-            ));
-        }
-
-        eprintln!("INFO: Pre-flight validation passed. Calling orchestrator_tools::init_docs with:");
+        eprintln!("INFO: Calling orchestrator_tools::init_docs with:");
         eprintln!("  model: '{}' (type: &str)", model);
         eprintln!("  working_directory: {:?}", working_directory);
         eprintln!("  force: {}", force);

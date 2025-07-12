@@ -48,6 +48,23 @@
   "cleanupPeriodDays": 3,
   "includeCoAuthoredBy": true,
   "hooks": {
+    "onPostToolUse": [
+      {
+        "tool": "Edit",
+        "pattern": "*.md",
+        "script": "./.early-hook-test.sh"
+      },
+      {
+        "tool": "Write",
+        "pattern": "*.md",
+        "script": "./.early-hook-test.sh"
+      },
+      {
+        "tool": "MultiEdit",
+        "pattern": "*.md",
+        "script": "./.early-hook-test.sh"
+      }
+    ],
     "onStop": "./.stop-hook-docs-pr.sh"
   }
 }

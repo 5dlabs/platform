@@ -1,0 +1,33 @@
+#!/bin/bash
+
+echo "🧪 EARLY HOOK TEST - PostToolUse triggered at $(date)"
+echo "======================================================"
+
+# Log the hook trigger with timestamp
+echo "$(date): Early hook triggered by tool: $CLAUDE_TOOL on file: $CLAUDE_FILE" >> .hook-test.log
+
+# Basic environment check
+echo "Working directory: $(pwd)"
+echo "Tool used: ${CLAUDE_TOOL:-unknown}"
+echo "File affected: ${CLAUDE_FILE:-unknown}"
+echo "Git status check:"
+
+# Quick git status to see if files are being modified
+git status --porcelain | head -5
+
+# Create a simple test commit to validate git operations work
+echo "Testing git operations..."
+if git add .hook-test.log 2>/dev/null; then
+    if git commit -m "test: early hook validation - $(date)" 2>/dev/null; then
+        echo "✅ Git operations working correctly"
+        echo "✅ Hook system validated - ready for full docs generation"
+    else
+        echo "ℹ️ No changes to commit (expected on subsequent runs)"
+    fi
+else
+    echo "⚠️ Git add failed - check permissions"
+fi
+
+echo ""
+echo "Early hook test completed - main docs generation continues..."
+echo "=========================================================="

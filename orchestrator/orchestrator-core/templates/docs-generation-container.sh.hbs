@@ -115,24 +115,24 @@ if [ -d "/config" ]; then
   mkdir -p /etc/claude-code
   chmod 755 /etc/claude-code
 
-  # Copy enterprise settings template from ConfigMap
-  if [ -f "/config/claude-enterprise-settings.json" ]; then
-    cp /config/claude-enterprise-settings.json /etc/claude-code/managed-settings.json
+  # Copy Claude settings as enterprise managed settings for highest precedence
+  if [ -f "/config/claude-settings.json" ]; then
+    cp /config/claude-settings.json /etc/claude-code/managed-settings.json
     # Set explicit permissions so Claude Code can read the enterprise settings
     chmod 644 /etc/claude-code/managed-settings.json
-    echo "✓ Copied enterprise managed settings template to /etc/claude-code/managed-settings.json"
+    echo "✓ Copied claude-settings.json as enterprise managed settings to /etc/claude-code/managed-settings.json"
     echo "✓ Set readable permissions (644) for enterprise settings"
   else
-    echo "❌ ERROR: Enterprise settings template not found in ConfigMap!"
-    echo "Expected: /config/claude-enterprise-settings.json"
+    echo "❌ ERROR: Claude settings template not found in ConfigMap!"
+    echo "Expected: /config/claude-settings.json"
     exit 1
   fi
 
-  # Validate the enterprise settings JSON and show bypass configuration
+  # Validate the enterprise settings JSON
   if jq empty /etc/claude-code/managed-settings.json 2>/dev/null; then
     echo "✓ Enterprise settings JSON is valid"
     echo "✓ This will override ALL other Claude Code settings (highest precedence)"
-    echo "✓ bypassPermissions mode enabled - no permission prompts will occur"
+    echo "✓ Model configuration, tools, and hooks are all defined"
 
     echo ""
     echo "Enterprise settings contents:"
@@ -144,14 +144,19 @@ if [ -d "/config" ]; then
   fi
 
   echo ""
-  echo "=== SIMPLIFIED: Enterprise settings with permission bypass ==="
-  echo "✓ All Claude Code configuration handled by enterprise managed settings"
-  echo "✓ Permission system bypassed - no user prompts will occur"
+  echo "=== UNIFIED CONFIGURATION: Enterprise Managed Settings ==="
+  echo "✓ All Claude Code configuration in one comprehensive settings file"
+  echo "✓ Model: claude-opus-4-20250514"
+  echo "✓ Hooks: Early test hooks + final PR creation hook"
+  echo "✓ Permissions: acceptEdits mode + --dangerously-skip-permissions flag"
   echo "✓ No additional settings files needed"
 
-  # Copy hook script
-  cp /config/.stop-hook-docs-pr.sh "$CLAUDE_WORK_DIR/.stop-hook-docs-pr.sh" 2>/dev/null && echo "✓ Copied hook script" || echo "! No hook script to copy"
+  # Copy hook scripts
+  cp /config/.stop-hook-docs-pr.sh "$CLAUDE_WORK_DIR/.stop-hook-docs-pr.sh" 2>/dev/null && echo "✓ Copied stop hook script" || echo "! No stop hook script to copy"
   chmod +x "$CLAUDE_WORK_DIR/.stop-hook-docs-pr.sh" 2>/dev/null
+
+  cp /config/.early-hook-test.sh "$CLAUDE_WORK_DIR/.early-hook-test.sh" 2>/dev/null && echo "✓ Copied early hook test script" || echo "! No early hook test script to copy"
+  chmod +x "$CLAUDE_WORK_DIR/.early-hook-test.sh" 2>/dev/null
 
   echo "✓ ConfigMap files copied to $CLAUDE_WORK_DIR"
 else
@@ -286,9 +291,10 @@ export SOURCE_BRANCH="{{repository.branch}}"
 export WORKING_DIR="{{working_dir}}"
 export GITHUB_USER="{{repository.githubUser}}"
 
-# Enterprise managed settings at /etc/claude-code/managed-settings.json take precedence
-# No need to set CLAUDE_CONFIG_DIR - enterprise settings override everything
-echo "✓ Using enterprise managed settings (highest precedence)"
+# Enterprise managed settings provide comprehensive configuration:
+# - Model selection, tools, hooks, environment variables
+# - Combined with --dangerously-skip-permissions flag for guaranteed permission bypass
+echo "✓ Using enterprise managed settings for complete configuration + permission bypass flag"
 
 # Change to project directory before running Claude
 cd "$CLAUDE_WORK_DIR"
@@ -365,11 +371,11 @@ echo "║                    END CONTENT PREVIEW                        ║"
 echo "════════════════════════════════════════════════════════════════"
 echo ""
 
-# Build Claude command without CLI overrides - let enterprise managed settings control everything
-# Enterprise managed settings at /etc/claude-code/managed-settings.json have highest precedence
-CLAUDE_CMD="claude -p --output-format stream-json --verbose"
+# Build Claude command with --dangerously-skip-permissions to bypass all permission prompts
+# This is simpler and more reliable than enterprise managed settings for permission control
+CLAUDE_CMD="claude -p --output-format stream-json --verbose --dangerously-skip-permissions"
 
-echo "✓ Using enterprise managed settings with bypassPermissions mode - no user prompts required"
+echo "✓ Using --dangerously-skip-permissions flag - all permission prompts will be bypassed"
 
 echo "=== 6. ENVIRONMENT VARIABLES ==="
 echo "Environment variables Claude will see:"

@@ -578,15 +578,23 @@ fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Resul
         let hook_script = generate_docs_hook_script(tr)?;
         data.insert(".stop-hook-docs-pr.sh".to_string(), hook_script);
 
-        // Add enterprise managed settings template for docs generation
-        let enterprise_settings = generate_enterprise_settings(tr)?;
-        data.insert("claude-enterprise-settings.json".to_string(), enterprise_settings);
+        // Add early hook test script for docs generation
+        let early_hook_script = generate_early_hook_script()?;
+        data.insert(".early-hook-test.sh".to_string(), early_hook_script);
+
+        // For docs generation, the claude-settings.json will be copied to enterprise location
+        // in the shell script to use as managed settings at /etc/claude-code/managed-settings.json
     }
 
-    // Generate Claude Code configuration file for tool permissions (using correct filename)
+    // Generate Claude Code configuration file for tool permissions
     let settings_json = generate_claude_settings(tr, config)?;
-    // Use settings-local.json for ConfigMap (will be copied to .claude/settings.local.json)
-    data.insert("settings-local.json".to_string(), settings_json);
+    // For docs generation, insert as claude-settings.json to be copied to enterprise location
+    // For other tasks, use settings-local.json to be copied to .claude/settings.local.json
+    if is_docs_generation(tr) {
+        data.insert("claude-settings.json".to_string(), settings_json);
+    } else {
+        data.insert("settings-local.json".to_string(), settings_json);
+    }
 
     Ok(ConfigMap {
         metadata: ObjectMeta {
@@ -1225,6 +1233,24 @@ fn generate_docs_hook_script(tr: &TaskRun) -> Result<String> {
         .map_err(|e| Error::ConfigError(format!("Failed to render hook template: {e}")))
 }
 
+/// Generate the early hook test script for docs generation jobs
+fn generate_early_hook_script() -> Result<String> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false); // Allow missing fields
+
+    let template = include_str!("../../templates/early-hook-test.sh.hbs");
+    handlebars
+        .register_template_string("early_hook", template)
+        .map_err(|e| Error::ConfigError(format!("Failed to register early hook template: {e}")))?;
+
+    // Early hook doesn't need any dynamic data currently
+    let data = json!({});
+
+    handlebars
+        .render("early_hook", &data)
+        .map_err(|e| Error::ConfigError(format!("Failed to render early hook template: {e}")))
+}
+
 /// Generate the prompt content for documentation generation jobs
 fn generate_docs_prompt(tr: &TaskRun) -> Result<String> {
     let mut handlebars = Handlebars::new();
@@ -1252,24 +1278,7 @@ fn generate_docs_prompt(tr: &TaskRun) -> Result<String> {
         .map_err(|e| Error::ConfigError(format!("Failed to render prompt template: {e}")))
 }
 
-/// Generate enterprise managed settings for docs generation jobs
-fn generate_enterprise_settings(_tr: &TaskRun) -> Result<String> {
-    let mut handlebars = Handlebars::new();
-    handlebars.set_strict_mode(false); // Allow missing fields
 
-    let template = include_str!("../../templates/claude-enterprise-settings.json.hbs");
-
-    handlebars
-        .register_template_string("enterprise_settings", template)
-        .map_err(|e| Error::ConfigError(format!("Failed to register enterprise settings template: {e}")))?;
-
-    // Enterprise settings template doesn't need any dynamic data currently
-    let data = json!({});
-
-    handlebars
-        .render("enterprise_settings", &data)
-        .map_err(|e| Error::ConfigError(format!("Failed to render enterprise settings template: {e}")))
-}
 
 #[cfg(test)]
 mod tests {
