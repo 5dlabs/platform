@@ -5,7 +5,7 @@ echo '════════════════════════�
 echo '║                    CLAUDE AGENT STARTING                     ║'
 echo '════════════════════════════════════════════════════════════════'
 
-=== WORKSPACE VALIDATION ===
+echo "=== WORKSPACE VALIDATION ==="
 echo "Claude working directory: {{working_dir}}"
 echo "Checking for required files..."
 
@@ -45,7 +45,7 @@ fi
 
 echo "✓ All required files present. Workspace is valid."
 
-=== MARKDOWN FILES PROVIDED ===
+echo "=== MARKDOWN FILES PROVIDED ==="
 echo "The following documentation files are available to Claude:"
 echo ""
 for file in *.md; do
@@ -55,7 +55,7 @@ for file in *.md; do
     fi
 done
 
-=== STARTING CLAUDE ===
+echo "=== STARTING CLAUDE ==="
 
 # Build Claude command with print mode, streaming output
 CLAUDE_CMD="{{command}} -p --output-format stream-json --verbose --allowedTools Bash,Edit,Read,Write,Glob,Grep,LS,MultiEdit,WebSearch,WebFetch,TodoRead,TodoWrite"

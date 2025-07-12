@@ -17,9 +17,9 @@ pub struct ControllerConfig {
     /// Claude agent configuration
     pub agent: AgentConfig,
 
-    /// Init container configuration
+    /// Init container configuration (optional, legacy)
     #[serde(rename = "initContainer")]
-    pub init_container: InitContainerConfig,
+    pub init_container: Option<InitContainerConfig>,
 
     /// Storage configuration
     pub storage: StorageConfig,
