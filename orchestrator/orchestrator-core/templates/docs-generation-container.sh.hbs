@@ -343,7 +343,16 @@ echo "Note: Claude will automatically read CLAUDE.md from the working directory"
 echo "Starting Claude execution..."
 echo "=========================="
 
-# Run Claude with initial prompt
-# Claude will automatically read CLAUDE.md from the working directory for context
-# The prompt tells Claude what to do based on the CLAUDE.md instructions
-exec $CLAUDE_CMD "Please read and follow the instructions in CLAUDE.md to generate comprehensive documentation for the Task Master tasks."
+# Run Claude with proper separation of memory vs prompt
+# CLAUDE.md = Project memory (automatically loaded by Claude)
+# Prompt = Task-specific instruction passed as argument
+
+PROMPT="Generate comprehensive documentation for all Task Master tasks. Read the project context from CLAUDE.md and the task definitions from .taskmaster/tasks/tasks.json, then create detailed documentation files for each task following the project's documentation standards."
+
+echo "=== 8. FINAL EXECUTION ==="
+echo "CLAUDE.md (project memory): Will be automatically loaded by Claude"
+echo "Prompt (task instruction): $PROMPT"
+echo "=== END EXECUTION INFO ==="
+echo ""
+
+exec $CLAUDE_CMD "$PROMPT"

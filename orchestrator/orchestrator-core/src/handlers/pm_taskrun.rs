@@ -800,93 +800,70 @@ pub async fn generate_docs(
         markdown_files: vec![
             MarkdownFile {
                 content: format!(
-                    r#"# Documentation Generation Task
+                    r#"# Task Master Project Memory
 
-## Repository Information
+## Project Information
 - **Repository**: {}
 - **Working Directory**: {}
-- **Source Branch**: {}
-- **Target Branch**: {}
+- **Documentation Target**: {}
 
-## Task Details
-- **Generate docs for**: {}
-- **Model**: {}
-- **Force overwrite**: {}
-- **Dry run**: {}
+## Project Architecture
 
-## Instructions
+This is a Task Master project with the following structure:
+- `.taskmaster/tasks/tasks.json` - Complete task definitions and relationships
+- `.taskmaster/docs/` - Generated documentation directory
+- `.taskmaster/docs/architecture.md` - System architecture and design
+- `.taskmaster/docs/prd.txt` or `.taskmaster/docs/prd.md` - Product requirements
 
-You are tasked with generating comprehensive documentation for Task Master tasks.
+## Documentation Standards
 
-IMPORTANT: You are already in a workspace with access ONLY to the Task Master directory. DO NOT clone any repositories or navigate outside the current directory.
+### File Structure
+For each task, create documentation in `.taskmaster/docs/task-{{id}}/`:
+- `task.md` - Comprehensive task overview and implementation guide
+- `prompt.md` - Autonomous prompt for AI agents
+- `acceptance-criteria.md` - Clear acceptance criteria and test cases
 
-## Context Documents
-
-Before generating task documentation, familiarize yourself with these key project documents:
-
-- **Architecture & Design**: @.taskmaster/docs/architecture.md - Overall system design and architecture
-- **Product Requirements**: @.taskmaster/docs/prd.txt or @.taskmaster/docs/prd.md - Product requirements document
-- **Task List**: @.taskmaster/tasks/tasks.json - Complete task definitions and relationships
-
-## Documentation Generation Process
-
-Follow these steps:
-
-1. You are already in the correct directory - no need to clone or navigate
-
-2. **Read Context Documents First**:
-   - Read @.taskmaster/docs/architecture.md to understand the system architecture
-   - Read @.taskmaster/docs/prd.txt (or prd.md) to understand product requirements
-   - Read @.taskmaster/tasks/tasks.json to understand all tasks and their relationships
-
-3. **Generate Documentation**: For each task {}, create these files in `.taskmaster/docs/task-{{id}}/`:
-   - `task.md`: Comprehensive task overview and implementation guide
-   - `prompt.md`: Autonomous prompt for AI agents
-   - `acceptance-criteria.md`: Clear acceptance criteria and test cases
-
-4. **Git Workflow**:
-   - Stage all changes: `git add .`
-   - Commit with message: `docs: auto-generate Task Master documentation for all tasks`
-   - Push the branch: `git push origin HEAD`
-   - Create a PR targeting the source branch: `gh pr create --base "{2}" --title "docs: auto-generate Task Master documentation" --body "Auto-generated documentation for Task Master tasks"`
-
-## Documentation Requirements
-
-### For each task document, ensure you:
-
-- **Include Architecture Context**: Reference relevant parts of the architecture document
-- **Align with PRD**: Ensure task implementation aligns with product requirements
-- **Show Task Relationships**: Reference dependencies and related tasks from tasks.json
+### Content Requirements
+- **Include Architecture Context**: Reference architecture.md patterns and decisions
+- **Align with PRD**: Ensure implementation supports product goals
+- **Show Task Relationships**: Reference dependencies from tasks.json
 - **Provide Implementation Details**: Include specific code examples and commands
 - **Define Clear Acceptance Criteria**: Based on architecture constraints and PRD requirements
-- **Maintain Consistency**: Use consistent terminology from architecture and PRD documents
+- **Maintain Consistency**: Use consistent terminology across all documents
 
-### File-Specific Guidelines:
+### Quality Standards
+- Well-structured and comprehensive content
+- Actionable implementation guidance
+- Proper markdown formatting
+- Code examples where relevant
+- Clear cross-references between documents
 
-- **task.md**: Include architecture diagrams references, system integration points, and PRD alignment
-- **prompt.md**: Include architecture context and PRD requirements in the autonomous prompt
-- **acceptance-criteria.md**: Validate against both functional requirements (PRD) and technical constraints (architecture)
+## Common Commands
 
-## Important Notes
+### Git Workflow
+```bash
+# Stage documentation changes
+git add .
 
-- Each document should be well-structured, comprehensive, and actionable
-- Include code examples, commands, and implementation details where relevant
-- Reference architecture patterns and design decisions from architecture.md
-- Ensure task implementation supports overall product goals from PRD
-- Maintain consistency across all generated documents
-- Ensure all markdown is properly formatted
-- Generate ALL THREE files (task.md, prompt.md, acceptance-criteria.md) for EACH task
-- Working directory is relative to repository root
+# Commit with standard message
+git commit -m "docs: auto-generate Task Master documentation for all tasks"
+
+# Push to current branch
+git push origin HEAD
+
+# Create pull request
+gh pr create --base "main" --title "docs: auto-generate Task Master documentation" --body "Auto-generated documentation for Task Master tasks"
+```
+
+## Import References
+
+See @.taskmaster/docs/architecture.md for system design details
+See @.taskmaster/docs/prd.txt for product requirements
+See @.taskmaster/tasks/tasks.json for complete task definitions
 "#,
                     request.repository_url,
                     request.working_directory,
-                    request.source_branch,
-                    request.target_branch,
-                    request.task_id.map(|id| format!("task {id}")).unwrap_or_else(|| "all tasks".to_string()),
-                    request.model,
-                    request.force,
-                    request.dry_run,
-                    if request.task_id.is_some() { "(specified task only)" } else { "(all tasks)" }
+                    if request.task_id.is_some() { format!("task {}", request.task_id.unwrap()) } else { "all tasks".to_string() }
                 ),
                 filename: "CLAUDE.md".to_string(),
                 file_type: Some(MarkdownFileType::Context),
