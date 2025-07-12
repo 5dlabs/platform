@@ -1,781 +1,783 @@
 {
-  "tasks": [
-    {
-      "id": 1,
-      "title": "Setup Project Repository and Toolchain",
-      "description": "Initialize the Rust project, install required tools, and configure the development environment.",
-      "details": "Create a new Rust project using `cargo new`. Install Rust (latest stable), protoc (Protocol Buffers compiler), and Docker. Set up a `.gitignore` and basic README. Configure VS Code or preferred IDE with Rust Analyzer. Use `cargo-edit` for dependency management. Recommended: Rust 1.75+, protoc 3.21+, Docker 24+.",
-      "testStrategy": "Verify toolchain by running `cargo --version`, `protoc --version`, and `docker --version`. Ensure project builds with `cargo build`.",
-      "priority": "high",
-      "dependencies": [],
-      "status": "pending",
-      "subtasks": [
-        {
-          "id": 1,
-          "title": "Install Rust and Required Tools",
-          "description": "Download and install Rust using rustup, ensuring rustc and Cargo are available. Install additional tools such as rustfmt and Clippy for formatting and linting.",
-          "dependencies": [],
-          "details": "Run the installation script from https://rustup.rs. On macOS, install Xcode command line tools if prompted. Verify installation by running 'rustc --version' and 'cargo --version'. Install rustfmt and Clippy using 'rustup component add rustfmt clippy'.",
-          "status": "done",
-          "testStrategy": ""
-        },
-        {
-          "id": 2,
-          "title": "Initialize the Rust Project",
-          "description": "Create a new Rust project using Cargo, Rust's package manager and build system.",
-          "dependencies": [
-            1
-          ],
-          "details": "Open a terminal, navigate to your desired directory, and run 'cargo new project_name'. This creates a new directory with Cargo.toml and src/main.rs. Verify setup by running 'cargo run' inside the project directory.",
-          "status": "done",
-          "testStrategy": ""
-        },
-        {
-          "id": 3,
-          "title": "Configure Docker for Rust Development",
-          "description": "Set up Docker to provide a consistent development environment for Rust projects.",
-          "dependencies": [
-            2
-          ],
-          "details": "Create a Dockerfile that installs Rust and required tools. Optionally, set up docker-compose for multi-service projects. Build and run the container to ensure Rust commands work inside the environment.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 5,
-          "title": "Prepare Project Documentation Files",
-          "description": "Create and organize documentation files such as README.md, CONTRIBUTING.md, and LICENSE for the Rust project.",
-          "dependencies": [
-            2
-          ],
-          "details": "Draft a README.md with project overview and setup instructions. Add CONTRIBUTING.md for guidelines and LICENSE for legal information. Place these files in the project root directory.",
-          "status": "pending",
-          "testStrategy": ""
-        }
-      ]
-    },
-    {
-      "id": 2,
-      "title": "Define gRPC Service Contracts",
-      "description": "Design and implement Protocol Buffers definitions for all gRPC services.",
-      "details": "Create `.proto` files for user, board, and task services. Define messages and RPCs for authentication, CRUD operations, and streaming. Use `syntax = ",
-      "testStrategy": "Validate `.proto` files with `protoc` and generate Rust code using `tonic-build`. Check for compilation errors and correct message definitions.",
-      "priority": "high",
-      "dependencies": [
-        1
-      ],
-      "status": "pending",
-      "subtasks": [
-        {
-          "id": 1,
-          "title": "Design User Service Proto",
-          "description": "Define the .proto file for the user service, specifying service methods, request and response messages, and adhering to protobuf style and best practices.",
-          "dependencies": [],
-          "details": "Identify user-related operations (e.g., CreateUser, GetUser, UpdateUser, DeleteUser). Use TitleCase for service and method names. Avoid required fields and deprecated features. Structure messages for future schema evolution.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 2,
-          "title": "Design Board and Task Service Protos",
-          "description": "Define .proto files for board and task services, specifying their respective service methods and message types, following protobuf conventions.",
-          "dependencies": [
-            1
-          ],
-          "details": "List and design board-related (e.g., CreateBoard, ListBoards) and task-related (e.g., CreateTask, UpdateTask) RPCs. Ensure message types are well-structured and separated. Follow style guide and best practices for maintainability and evolution.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 3,
-          "title": "Validate Proto Files for Style and Best Practices",
-          "description": "Review all proto files for adherence to protobuf style guide and API best practices, ensuring compatibility and maintainability.",
-          "dependencies": [
-            1,
-            2
-          ],
-          "details": "Check naming conventions, field numbering, and message organization. Ensure no deprecated features (e.g., required fields, groups) are used. Optionally use a linter like protolint for automated checks.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 4,
-          "title": "Generate and Test Code from Proto Files",
-          "description": "Use protoc or relevant tools to generate client and server code from the validated proto files, and verify successful compilation.",
-          "dependencies": [
-            3
-          ],
-          "details": "Run code generation for target languages (e.g., Go, Java, Python). Ensure generated code compiles and stubs are usable. Address any issues found during code generation.",
-          "status": "pending",
-          "testStrategy": ""
-        }
-      ]
-    },
-    {
-      "id": 3,
-      "title": "Implement Database Schema and ORM",
-      "description": "Design and implement the PostgreSQL database schema and set up Diesel ORM.",
-      "details": "Define tables: users, boards, board_members, tasks. Use Diesel 2.1+ with PostgreSQL. Write migrations and models. Configure Diesel CLI for schema management. Use `diesel print-schema` to generate schema.rs.",
-      "testStrategy": "Run migrations with `diesel migration run`. Verify schema matches requirements. Test model creation and basic queries.",
-      "priority": "high",
-      "dependencies": [
-        1
-      ],
-      "status": "pending",
-      "subtasks": [
-        {
-          "id": 1,
-          "title": "Design Database Schema",
-          "description": "Define the tables, columns, data types, primary keys, and relationships required for the application's domain model.",
-          "dependencies": [],
-          "details": "Use Diesel's table macro syntax to specify table structures, primary keys (including composite keys if needed), and implicit relationships via foreign key columns. Ensure the schema accurately reflects the application's data requirements.[1]",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 2,
-          "title": "Write and Organize Migrations",
-          "description": "Create migration files to implement the schema in the database, including up.sql and down.sql scripts for each migration.",
-          "dependencies": [
-            1
-          ],
-          "details": "Use the Diesel CLI to generate migration folders and write SQL statements to create and drop tables as needed. Ensure each migration is reversible and additive, allowing for schema evolution over time.[2][3]",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 3,
-          "title": "Configure Diesel in the Project",
-          "description": "Set up Diesel's configuration files and dependencies to enable database connectivity and migration management.",
-          "dependencies": [
-            2
-          ],
-          "details": "Create and edit the diesel.toml file, specify the database URL, and ensure the Diesel CLI is installed. Confirm that the project is ready to run migrations and generate schema files.[3]",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 4,
-          "title": "Generate schema.rs File",
-          "description": "Run Diesel CLI commands to generate the Rust schema.rs file reflecting the current database schema.",
-          "dependencies": [
-            3
-          ],
-          "details": "Use `diesel migration run` or `diesel print-schema` to create or update src/schema.rs, which contains Rust representations of the database tables and columns for type-safe query building.[2][4]",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 5,
-          "title": "Implement Rust Models",
-          "description": "Define Rust structs that map to the database tables, using Diesel's macros for ORM integration.",
-          "dependencies": [
-            4
-          ],
-          "details": "Create model structs with appropriate derives (e.g., Queryable, Insertable) and ensure field types match the schema.rs definitions. Implement any necessary associations or helper methods for model logic.[1]",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 6,
-          "title": "Verify Setup with Test Queries",
-          "description": "Write and execute test queries to ensure the schema, models, and Diesel configuration work as expected.",
-          "dependencies": [
-            5
-          ],
-          "details": "Perform CRUD operations using Diesel's query DSL to validate that the schema, models, and database are correctly integrated. Address any issues found during testing.",
-          "status": "pending",
-          "testStrategy": ""
-        }
-      ]
-    },
-    {
-      "id": 4,
-      "title": "Implement User Management Service",
-      "description": "Develop user registration, authentication, and JWT token generation.",
-      "details": "Implement gRPC endpoints for register and login. Use `jsonwebtoken` 8.3+ for JWT. Store hashed passwords with `argon2` or `bcrypt`. Validate input and return appropriate errors. Use async/await with Tokio.",
-      "testStrategy": "Write unit and integration tests for user registration, login, and token validation. Test error cases and input validation.",
-      "priority": "high",
-      "dependencies": [
-        2,
-        3
-      ],
-      "status": "pending",
-      "subtasks": [
-        {
-          "id": 1,
-          "title": "Design Registration Endpoint",
-          "description": "Define the API route, request/response schema, and logic for user registration, ensuring secure handling of sensitive data.",
-          "dependencies": [],
-          "details": "Specify the HTTP method (typically POST), required input fields (e.g., username, email, password), and expected responses. Ensure the endpoint does not expose sensitive information and follows RESTful conventions.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 2,
-          "title": "Design Login Endpoint",
-          "description": "Define the API route, request/response schema, and logic for user authentication, including credential verification.",
-          "dependencies": [
-            1
-          ],
-          "details": "Specify the HTTP method (POST), required input fields (e.g., username/email and password), and expected responses. Ensure the endpoint returns a JWT on successful authentication and handles errors securely.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 3,
-          "title": "Implement Password Hashing",
-          "description": "Integrate secure password hashing for storing and verifying user passwords.",
-          "dependencies": [
-            1
-          ],
-          "details": "Use a strong hashing algorithm (e.g., bcrypt, Argon2) to hash passwords before storing them in the database. Ensure password verification during login compares the hashed values.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 4,
-          "title": "Implement JWT Generation",
-          "description": "Generate and sign JWTs upon successful login, embedding necessary user information and setting appropriate expiration.",
-          "dependencies": [
-            2,
-            3
-          ],
-          "details": "Use a secure secret key to sign JWTs. Include claims such as user ID and roles. Set token expiration and consider refresh token strategy if needed.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 5,
-          "title": "Implement Input Validation",
-          "description": "Validate all incoming data for registration and login endpoints to prevent malformed or malicious input.",
-          "dependencies": [
-            1,
-            2
-          ],
-          "details": "Use validation libraries or custom logic to enforce constraints on fields (e.g., email format, password strength). Reject requests with invalid input and return informative error messages.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 6,
-          "title": "Implement Robust Error Handling",
-          "description": "Handle and respond to errors gracefully across all authentication endpoints, ensuring no sensitive information is leaked.",
-          "dependencies": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
-          "details": "Standardize error responses, log errors securely, and ensure that error messages do not reveal implementation details or sensitive data.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 7,
-          "title": "Write Automated Tests",
-          "description": "Develop comprehensive tests for registration, login, password hashing, JWT generation, input validation, and error handling.",
-          "dependencies": [
-            1,
-            2,
-            3,
-            4,
-            5,
-            6
-          ],
-          "details": "Write unit and integration tests to cover successful flows, edge cases, and failure scenarios. Ensure tests verify security requirements and correct behavior.",
-          "status": "pending",
-          "testStrategy": ""
-        }
-      ]
-    },
-    {
-      "id": 5,
-      "title": "Implement Project Board CRUD Service",
-      "description": "Develop gRPC endpoints for creating, reading, updating, and deleting project boards.",
-      "details": "Implement board CRUD operations. Include authorization checks (only admins or board members can modify). Use Diesel for database operations. Return appropriate errors for unauthorized access.",
-      "testStrategy": "Test board creation, retrieval, update, and deletion. Verify authorization and error handling.",
-      "priority": "medium",
-      "dependencies": [
-        2,
-        3,
-        4
-      ],
-      "status": "pending",
-      "subtasks": [
-        {
-          "id": 1,
-          "title": "Design CRUD Endpoints",
-          "description": "Define and implement the API endpoints for create, read, update, and delete operations, following RESTful conventions and best practices for URL structure and HTTP methods.",
-          "dependencies": [],
-          "details": "Endpoints should use nouns for resources and appropriate HTTP methods (POST for create, GET for read, PUT/PATCH for update, DELETE for delete). Ensure endpoints are clearly named and documented.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 2,
-          "title": "Integrate Database Operations",
-          "description": "Connect each CRUD endpoint to the database, ensuring data is correctly created, retrieved, updated, and deleted as requested by the API calls.",
-          "dependencies": [
-            1
-          ],
-          "details": "Implement logic to interact with the database for each operation. Validate input data and enforce data constraints before performing database actions.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 3,
-          "title": "Implement Authorization Checks",
-          "description": "Add authorization logic to each endpoint to ensure only users with the correct permissions can perform specific CRUD operations.",
-          "dependencies": [
-            1
-          ],
-          "details": "Use authentication tokens or other mechanisms to verify user identity and check permissions before allowing access to sensitive operations.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 4,
-          "title": "Add Error Handling",
-          "description": "Implement robust error handling for all endpoints, returning meaningful error messages and appropriate HTTP status codes for various failure scenarios.",
-          "dependencies": [
-            2,
-            3
-          ],
-          "details": "Handle errors such as invalid input, unauthorized access, resource not found, and database failures. Ensure error responses are consistent and informative.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 5,
-          "title": "Test Endpoint Functionality and Security",
-          "description": "Write and execute tests to verify that all CRUD endpoints work as expected, including correct database integration, authorization enforcement, and error handling.",
-          "dependencies": [
-            4
-          ],
-          "details": "Include tests for successful operations, permission denials, invalid data, and edge cases. Ensure endpoints are secure and do not expose sensitive data.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 6,
-          "title": "Document API Endpoints and Usage",
-          "description": "Create comprehensive documentation for the API, detailing endpoint URLs, request/response formats, authorization requirements, and error codes.",
-          "dependencies": [
-            5
-          ],
-          "details": "Ensure documentation is clear, up-to-date, and accessible to developers who will use or maintain the API.",
-          "status": "pending",
-          "testStrategy": ""
-        }
-      ]
-    },
-    {
-      "id": 6,
-      "title": "Implement Task CRUD and Assignment Service",
-      "description": "Develop gRPC endpoints for task CRUD and assignment to users.",
-      "details": "Implement task CRUD operations and assignment logic. Include fields: title, description, assignee, due date, status, priority. Use Diesel for database operations. Validate input and return appropriate errors.",
-      "testStrategy": "Test task creation, retrieval, update, deletion, and assignment. Verify field validation and error handling.",
-      "priority": "medium",
-      "dependencies": [
-        2,
-        3,
-        4,
-        5
-      ],
-      "status": "pending",
-      "subtasks": [
-        {
-          "id": 1,
-          "title": "Design Task Data Model and Database Integration",
-          "description": "Define the task schema with all required fields (e.g., title, description, status, assignee, timestamps) and integrate with the chosen database (e.g., MongoDB, SQL). Ensure the model supports assignment and status tracking.",
-          "dependencies": [],
-          "details": "Set up the database connection and create the task model/schema. Include fields for assignment and status updates.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 2,
-          "title": "Implement Create Task Endpoint",
-          "description": "Develop the API endpoint to create new tasks, including logic for assigning tasks and setting initial status. Validate incoming data before saving to the database.",
-          "dependencies": [
-            1
-          ],
-          "details": "Use POST /api/tasks. Validate required fields and assignment logic before creating the task.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 3,
-          "title": "Implement Read Task Endpoints",
-          "description": "Develop endpoints to fetch all tasks and individual tasks by ID. Ensure assignment and status fields are included in responses.",
-          "dependencies": [
-            1
-          ],
-          "details": "Use GET /api/tasks for all tasks and GET /api/tasks/:id for a single task. Include assignment and status in the response.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 4,
-          "title": "Implement Update Task Endpoint",
-          "description": "Develop the API endpoint to update existing tasks, including logic for re-assignment and status changes. Validate updated fields and enforce business rules.",
-          "dependencies": [
-            1
-          ],
-          "details": "Use PUT or PATCH /api/tasks/:id. Validate updates, especially for assignment and status transitions.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 5,
-          "title": "Implement Delete Task Endpoint",
-          "description": "Develop the API endpoint to delete tasks by ID. Ensure proper cleanup and response codes.",
-          "dependencies": [
-            1
-          ],
-          "details": "Use DELETE /api/tasks/:id. Return appropriate status codes on success or failure.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 6,
-          "title": "Implement Field Validation and Assignment Logic",
-          "description": "Add validation middleware or logic to ensure all required fields are present and valid for create and update operations. Implement robust assignment logic to handle user/task relationships.",
-          "dependencies": [
-            2,
-            4
-          ],
-          "details": "Validate fields such as title, description, status, and assignee. Ensure assignment logic prevents invalid assignments.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 7,
-          "title": "Implement Error Handling for All Endpoints",
-          "description": "Add comprehensive error handling for all CRUD endpoints, including validation errors, database errors, and assignment/status update failures. Return clear and consistent error responses.",
-          "dependencies": [
-            2,
-            3,
-            4,
-            5,
-            6
-          ],
-          "details": "Handle errors such as missing fields, invalid IDs, assignment conflicts, and database failures. Return standardized error messages and HTTP status codes.",
-          "status": "pending",
-          "testStrategy": ""
-        }
-      ]
-    },
-    {
-      "id": 7,
-      "title": "Implement Real-Time Updates via gRPC Streams",
-      "description": "Develop bidirectional gRPC streaming for real-time task updates.",
-      "details": "Implement streaming endpoints for task changes. Use Tonic’s streaming support. Notify connected clients of task updates. Handle connection lifecycle and errors.",
-      "testStrategy": "Test streaming by simulating multiple clients. Verify real-time updates and error handling.",
-      "priority": "medium",
-      "dependencies": [
-        2,
-        3,
-        4,
-        5,
-        6
-      ],
-      "status": "pending",
-      "subtasks": [
-        {
-          "id": 1,
-          "title": "Design Streaming Endpoints",
-          "description": "Define clear, consistent, and secure API endpoints for streaming, considering RESTful and real-time communication best practices.",
-          "dependencies": [],
-          "details": "Specify endpoint paths, HTTP methods, and resource naming conventions. Ensure endpoints support bidirectional streaming if required and follow versioning and security guidelines.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 2,
-          "title": "Implement Server-Side Streaming Logic",
-          "description": "Develop the backend logic to handle streaming data to and from clients, supporting concurrency and real-time updates.",
-          "dependencies": [
-            1
-          ],
-          "details": "Use appropriate protocols (e.g., HTTP/2, WebSockets, gRPC) to enable efficient server-side streaming. Ensure strong typing, authentication, and high performance.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 3,
-          "title": "Develop Client Handling Mechanisms",
-          "description": "Create logic to manage multiple concurrent client connections and their individual streaming sessions.",
-          "dependencies": [
-            2
-          ],
-          "details": "Implement mechanisms for client registration, message routing, and resource allocation. Ensure scalability and efficient handling of client requests.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 4,
-          "title": "Manage Connection Lifecycle",
-          "description": "Implement robust connection lifecycle management, including initiation, maintenance, and graceful termination of streaming sessions.",
-          "dependencies": [
-            3
-          ],
-          "details": "Handle connection setup, keep-alive, reconnection strategies, and cleanup of resources on disconnect or failure.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 5,
-          "title": "Implement Error Handling and Recovery",
-          "description": "Design and implement uniform error handling strategies for streaming endpoints, including recovery and notification mechanisms.",
-          "dependencies": [
-            4
-          ],
-          "details": "Standardize error responses, handle transient and fatal errors, and provide clients with actionable feedback. Ensure security and input validation.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 6,
-          "title": "Test with Multiple Clients",
-          "description": "Develop and execute comprehensive tests simulating multiple concurrent clients to validate streaming, lifecycle, and error handling logic.",
-          "dependencies": [
-            5
-          ],
-          "details": "Test for concurrency, performance, error scenarios, and resource cleanup. Ensure the system behaves correctly under load and recovers gracefully from failures.",
-          "status": "pending",
-          "testStrategy": ""
-        }
-      ]
-    },
-    {
-      "id": 8,
-      "title": "Implement Structured Logging and Error Handling",
-      "description": "Add structured logging with tracing and robust error handling.",
-      "details": "Integrate `tracing` and `tracing-subscriber` for structured logs. Use `thiserror` for custom error types. Log important events and errors. Ensure graceful degradation.",
-      "testStrategy": "Verify logs are generated for key events and errors. Test error handling and logging in failure scenarios.",
-      "priority": "medium",
-      "dependencies": [
-        1
-      ],
-      "status": "pending",
-      "subtasks": [
-        {
-          "id": 1,
-          "title": "Integrate Tracing into the Application",
-          "description": "Select and implement a tracing library that integrates with the existing application stack to capture distributed traces and correlate them with logs.",
-          "dependencies": [],
-          "details": "Research tracing libraries compatible with your framework. Integrate the chosen library, ensuring it can correlate trace IDs with log entries for contextual insights. Test tracing in a development environment to verify correct propagation and collection.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 2,
-          "title": "Define Custom Error Types",
-          "description": "Design and implement custom error types to standardize error handling and improve log clarity.",
-          "dependencies": [
-            1
-          ],
-          "details": "Create a set of custom error classes or types that encapsulate relevant metadata (e.g., error codes, context). Ensure these types are used throughout the codebase for consistent error reporting and logging.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 3,
-          "title": "Instrument Key Events with Structured Logging",
-          "description": "Identify and instrument critical application events with structured log statements, ensuring logs include trace and error context.",
-          "dependencies": [
-            2
-          ],
-          "details": "Determine which events (e.g., user actions, system errors, external API calls) require logging. Use a structured logging library to emit logs as key-value pairs (e.g., JSON), including trace IDs and error details where applicable.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 4,
-          "title": "Implement Graceful Error Handling",
-          "description": "Update application logic to handle errors gracefully, ensuring errors are logged with sufficient context and do not cause unhandled failures.",
-          "dependencies": [
-            3
-          ],
-          "details": "Wrap critical code paths with error handling logic that catches exceptions, logs them using the structured logger, and returns appropriate responses or fallback behavior. Ensure custom error types are leveraged for clarity.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 5,
-          "title": "Verify and Validate Log Output",
-          "description": "Test and review log output to ensure logs are structured, contain necessary context, and are correctly correlated with traces and errors.",
-          "dependencies": [
-            4
-          ],
-          "details": "Run application scenarios in development and staging environments. Inspect logs for structure, completeness, and trace/error correlation. Adjust instrumentation and error handling as needed to meet logging standards and observability goals.",
-          "status": "pending",
-          "testStrategy": ""
-        }
-      ]
-    },
-    {
-      "id": 9,
-      "title": "Write Comprehensive Unit and Integration Tests",
-      "description": "Develop unit and integration tests for all services and endpoints.",
-      "details": "Write tests using `tokio::test` for async code. Test all gRPC endpoints, database operations, and error cases. Use test containers for integration tests with PostgreSQL.",
-      "testStrategy": "Run tests with `cargo test`. Ensure coverage for all critical paths and error cases.",
-      "priority": "medium",
-      "dependencies": [
-        4,
-        5,
-        6,
-        7,
-        8
-      ],
-      "status": "pending",
-      "subtasks": [
-        {
-          "id": 1,
-          "title": "Develop Unit Tests for Each Service",
-          "description": "Write unit tests for all individual service classes, ensuring each method is tested in isolation using mocks or stubs for dependencies.",
-          "dependencies": [],
-          "details": "Focus on direct invocation of service methods, mocking external dependencies as needed to verify logic and edge cases.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 2,
-          "title": "Create Integration Tests for gRPC Endpoints",
-          "description": "Implement integration tests that start the application in a test environment and interact with gRPC endpoints using a gRPC client.",
-          "dependencies": [
-            1
-          ],
-          "details": "Use in-memory servers or test containers to host the gRPC app, and verify end-to-end behavior of endpoints, including request/response validation.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 3,
-          "title": "Implement Database Operation Tests",
-          "description": "Write tests to verify correct database interactions, including CRUD operations and transaction handling.",
-          "dependencies": [
-            2
-          ],
-          "details": "Use test containers or in-memory databases to ensure isolation and repeatability of database tests.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 4,
-          "title": "Design Error Case and Fault Injection Tests",
-          "description": "Develop tests that simulate error scenarios, such as invalid input, network failures, and service exceptions, to verify robust error handling.",
-          "dependencies": [
-            1,
-            2,
-            3
-          ],
-          "details": "Include both unit and integration-level error cases, using mocking frameworks or test utilities to inject faults.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 5,
-          "title": "Set Up Test Container Infrastructure",
-          "description": "Configure and manage test containers for services and databases to provide isolated, reproducible test environments.",
-          "dependencies": [],
-          "details": "Automate container lifecycle management for integration and database tests, ensuring consistent environments across test runs.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 6,
-          "title": "Verify and Report Test Coverage",
-          "description": "Run coverage analysis tools to measure code coverage across all test types and generate actionable reports.",
-          "dependencies": [
-            1,
-            2,
-            3,
-            4
-          ],
-          "details": "Ensure that all critical paths, edge cases, and error handling branches are exercised by the test suite.",
-          "status": "pending",
-          "testStrategy": ""
-        }
-      ]
-    },
-    {
-      "id": 10,
-      "title": "Prepare Deployment Artifacts and Documentation",
-      "description": "Create Dockerfile, Kubernetes manifests, and deployment documentation.",
-      "details": "Write Dockerfile for building and running the service. Create Kubernetes deployment and service YAMLs. Document environment variables and deployment steps. Use multi-stage builds for smaller images.",
-      "testStrategy": "Build and run Docker image locally. Deploy to Kubernetes and verify service availability. Check documentation for completeness.",
-      "priority": "medium",
-      "dependencies": [
-        1,
-        9
-      ],
-      "status": "pending",
-      "subtasks": [
-        {
-          "id": 1,
-          "title": "Write Dockerfile for Application",
-          "description": "Create a Dockerfile that defines the build and runtime environment for the application, following best practices for security, maintainability, and performance.",
-          "dependencies": [],
-          "details": "Specify a trusted and versioned base image, add application files, install dependencies, set up health checks, and ensure the container runs as a non-root user.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 2,
-          "title": "Create Kubernetes Manifests",
-          "description": "Develop Kubernetes YAML manifests for deploying the application, including Deployment, Service, and any necessary ConfigMap or Secret resources.",
-          "dependencies": [
-            1
-          ],
-          "details": "Reference the built Docker image in the Deployment, define resource requests/limits, and expose the application via a Service.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 3,
-          "title": "Document Environment Variables",
-          "description": "List and describe all environment variables required by the application, including their purpose, default values, and whether they are mandatory.",
-          "dependencies": [
-            1
-          ],
-          "details": "Provide a table or section in the documentation detailing each variable, its usage, and example values.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 4,
-          "title": "Write Deployment Steps Documentation",
-          "description": "Document the step-by-step process for building the Docker image, pushing it to a registry, and deploying the application to Kubernetes.",
-          "dependencies": [
-            1,
-            2,
-            3
-          ],
-          "details": "Include commands for building and pushing the Docker image, applying Kubernetes manifests, and configuring environment variables.",
-          "status": "pending",
-          "testStrategy": ""
-        },
-        {
-          "id": 5,
-          "title": "Verify Deployment",
-          "description": "Test and confirm that the application is successfully deployed and running as expected in the Kubernetes cluster.",
-          "dependencies": [
-            4
-          ],
-          "details": "Check pod status, service accessibility, and application health endpoints. Document verification steps and troubleshooting tips.",
-          "status": "pending",
-          "testStrategy": ""
-        }
-      ]
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Setup Project Repository and Toolchain",
+        "description": "Initialize the Rust project, install required tools, and configure the development environment.",
+        "details": "Create a new Rust project using `cargo new`. Install Rust (latest stable), protoc (Protocol Buffers compiler), and Docker. Set up a `.gitignore` and basic README. Configure VS Code or preferred IDE with Rust Analyzer. Use `cargo-edit` for dependency management. Recommended: Rust 1.75+, protoc 3.21+, Docker 24+.",
+        "testStrategy": "Verify toolchain by running `cargo --version`, `protoc --version`, and `docker --version`. Ensure project builds with `cargo build`.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Install Rust and Required Tools",
+            "description": "Download and install Rust using rustup, ensuring rustc and Cargo are available. Install additional tools such as rustfmt and Clippy for formatting and linting.",
+            "dependencies": [],
+            "details": "Run the installation script from https://rustup.rs. On macOS, install Xcode command line tools if prompted. Verify installation by running 'rustc --version' and 'cargo --version'. Install rustfmt and Clippy using 'rustup component add rustfmt clippy'.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Initialize the Rust Project",
+            "description": "Create a new Rust project using Cargo, Rust's package manager and build system.",
+            "dependencies": [
+              1
+            ],
+            "details": "Open a terminal, navigate to your desired directory, and run 'cargo new project_name'. This creates a new directory with Cargo.toml and src/main.rs. Verify setup by running 'cargo run' inside the project directory.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Configure Docker for Rust Development",
+            "description": "Set up Docker to provide a consistent development environment for Rust projects.",
+            "dependencies": [
+              2
+            ],
+            "details": "Create a Dockerfile that installs Rust and required tools. Optionally, set up docker-compose for multi-service projects. Build and run the container to ensure Rust commands work inside the environment.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Prepare Project Documentation Files",
+            "description": "Create and organize documentation files such as README.md, CONTRIBUTING.md, and LICENSE for the Rust project.",
+            "dependencies": [
+              2
+            ],
+            "details": "Draft a README.md with project overview and setup instructions. Add CONTRIBUTING.md for guidelines and LICENSE for legal information. Place these files in the project root directory.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Define gRPC Service Contracts",
+        "description": "Design and implement Protocol Buffers definitions for all gRPC services.",
+        "details": "Create `.proto` files for user, board, and task services. Define messages and RPCs for authentication, CRUD operations, and streaming. Use `syntax = ",
+        "testStrategy": "Validate `.proto` files with `protoc` and generate Rust code using `tonic-build`. Check for compilation errors and correct message definitions.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design User Service Proto",
+            "description": "Define the .proto file for the user service, specifying service methods, request and response messages, and adhering to protobuf style and best practices.",
+            "dependencies": [],
+            "details": "Identify user-related operations (e.g., CreateUser, GetUser, UpdateUser, DeleteUser). Use TitleCase for service and method names. Avoid required fields and deprecated features. Structure messages for future schema evolution.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Design Board and Task Service Protos",
+            "description": "Define .proto files for board and task services, specifying their respective service methods and message types, following protobuf conventions.",
+            "dependencies": [
+              1
+            ],
+            "details": "List and design board-related (e.g., CreateBoard, ListBoards) and task-related (e.g., CreateTask, UpdateTask) RPCs. Ensure message types are well-structured and separated. Follow style guide and best practices for maintainability and evolution.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Validate Proto Files for Style and Best Practices",
+            "description": "Review all proto files for adherence to protobuf style guide and API best practices, ensuring compatibility and maintainability.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Check naming conventions, field numbering, and message organization. Ensure no deprecated features (e.g., required fields, groups) are used. Optionally use a linter like protolint for automated checks.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Generate and Test Code from Proto Files",
+            "description": "Use protoc or relevant tools to generate client and server code from the validated proto files, and verify successful compilation.",
+            "dependencies": [
+              3
+            ],
+            "details": "Run code generation for target languages (e.g., Go, Java, Python). Ensure generated code compiles and stubs are usable. Address any issues found during code generation.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Implement Database Schema and ORM",
+        "description": "Design and implement the PostgreSQL database schema and set up Diesel ORM.",
+        "details": "Define tables: users, boards, board_members, tasks. Use Diesel 2.1+ with PostgreSQL. Write migrations and models. Configure Diesel CLI for schema management. Use `diesel print-schema` to generate schema.rs.",
+        "testStrategy": "Run migrations with `diesel migration run`. Verify schema matches requirements. Test model creation and basic queries.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Database Schema",
+            "description": "Define the tables, columns, data types, primary keys, and relationships required for the application's domain model.",
+            "dependencies": [],
+            "details": "Use Diesel's table macro syntax to specify table structures, primary keys (including composite keys if needed), and implicit relationships via foreign key columns. Ensure the schema accurately reflects the application's data requirements.[1]",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Write and Organize Migrations",
+            "description": "Create migration files to implement the schema in the database, including up.sql and down.sql scripts for each migration.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use the Diesel CLI to generate migration folders and write SQL statements to create and drop tables as needed. Ensure each migration is reversible and additive, allowing for schema evolution over time.[2][3]",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Configure Diesel in the Project",
+            "description": "Set up Diesel's configuration files and dependencies to enable database connectivity and migration management.",
+            "dependencies": [
+              2
+            ],
+            "details": "Create and edit the diesel.toml file, specify the database URL, and ensure the Diesel CLI is installed. Confirm that the project is ready to run migrations and generate schema files.[3]",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Generate schema.rs File",
+            "description": "Run Diesel CLI commands to generate the Rust schema.rs file reflecting the current database schema.",
+            "dependencies": [
+              3
+            ],
+            "details": "Use `diesel migration run` or `diesel print-schema` to create or update src/schema.rs, which contains Rust representations of the database tables and columns for type-safe query building.[2][4]",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Rust Models",
+            "description": "Define Rust structs that map to the database tables, using Diesel's macros for ORM integration.",
+            "dependencies": [
+              4
+            ],
+            "details": "Create model structs with appropriate derives (e.g., Queryable, Insertable) and ensure field types match the schema.rs definitions. Implement any necessary associations or helper methods for model logic.[1]",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Verify Setup with Test Queries",
+            "description": "Write and execute test queries to ensure the schema, models, and Diesel configuration work as expected.",
+            "dependencies": [
+              5
+            ],
+            "details": "Perform CRUD operations using Diesel's query DSL to validate that the schema, models, and database are correctly integrated. Address any issues found during testing.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Implement User Management Service",
+        "description": "Develop user registration, authentication, and JWT token generation.",
+        "details": "Implement gRPC endpoints for register and login. Use `jsonwebtoken` 8.3+ for JWT. Store hashed passwords with `argon2` or `bcrypt`. Validate input and return appropriate errors. Use async/await with Tokio.",
+        "testStrategy": "Write unit and integration tests for user registration, login, and token validation. Test error cases and input validation.",
+        "priority": "high",
+        "dependencies": [
+          2,
+          3
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Registration Endpoint",
+            "description": "Define the API route, request/response schema, and logic for user registration, ensuring secure handling of sensitive data.",
+            "dependencies": [],
+            "details": "Specify the HTTP method (typically POST), required input fields (e.g., username, email, password), and expected responses. Ensure the endpoint does not expose sensitive information and follows RESTful conventions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Design Login Endpoint",
+            "description": "Define the API route, request/response schema, and logic for user authentication, including credential verification.",
+            "dependencies": [
+              1
+            ],
+            "details": "Specify the HTTP method (POST), required input fields (e.g., username/email and password), and expected responses. Ensure the endpoint returns a JWT on successful authentication and handles errors securely.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Password Hashing",
+            "description": "Integrate secure password hashing for storing and verifying user passwords.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use a strong hashing algorithm (e.g., bcrypt, Argon2) to hash passwords before storing them in the database. Ensure password verification during login compares the hashed values.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement JWT Generation",
+            "description": "Generate and sign JWTs upon successful login, embedding necessary user information and setting appropriate expiration.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Use a secure secret key to sign JWTs. Include claims such as user ID and roles. Set token expiration and consider refresh token strategy if needed.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Input Validation",
+            "description": "Validate all incoming data for registration and login endpoints to prevent malformed or malicious input.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Use validation libraries or custom logic to enforce constraints on fields (e.g., email format, password strength). Reject requests with invalid input and return informative error messages.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Implement Robust Error Handling",
+            "description": "Handle and respond to errors gracefully across all authentication endpoints, ensuring no sensitive information is leaked.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "details": "Standardize error responses, log errors securely, and ensure that error messages do not reveal implementation details or sensitive data.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Write Automated Tests",
+            "description": "Develop comprehensive tests for registration, login, password hashing, JWT generation, input validation, and error handling.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ],
+            "details": "Write unit and integration tests to cover successful flows, edge cases, and failure scenarios. Ensure tests verify security requirements and correct behavior.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Implement Project Board CRUD Service",
+        "description": "Develop gRPC endpoints for creating, reading, updating, and deleting project boards.",
+        "details": "Implement board CRUD operations. Include authorization checks (only admins or board members can modify). Use Diesel for database operations. Return appropriate errors for unauthorized access.",
+        "testStrategy": "Test board creation, retrieval, update, and deletion. Verify authorization and error handling.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          3,
+          4
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design CRUD Endpoints",
+            "description": "Define and implement the API endpoints for create, read, update, and delete operations, following RESTful conventions and best practices for URL structure and HTTP methods.",
+            "dependencies": [],
+            "details": "Endpoints should use nouns for resources and appropriate HTTP methods (POST for create, GET for read, PUT/PATCH for update, DELETE for delete). Ensure endpoints are clearly named and documented.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Integrate Database Operations",
+            "description": "Connect each CRUD endpoint to the database, ensuring data is correctly created, retrieved, updated, and deleted as requested by the API calls.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement logic to interact with the database for each operation. Validate input data and enforce data constraints before performing database actions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Authorization Checks",
+            "description": "Add authorization logic to each endpoint to ensure only users with the correct permissions can perform specific CRUD operations.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use authentication tokens or other mechanisms to verify user identity and check permissions before allowing access to sensitive operations.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Add Error Handling",
+            "description": "Implement robust error handling for all endpoints, returning meaningful error messages and appropriate HTTP status codes for various failure scenarios.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Handle errors such as invalid input, unauthorized access, resource not found, and database failures. Ensure error responses are consistent and informative.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Test Endpoint Functionality and Security",
+            "description": "Write and execute tests to verify that all CRUD endpoints work as expected, including correct database integration, authorization enforcement, and error handling.",
+            "dependencies": [
+              4
+            ],
+            "details": "Include tests for successful operations, permission denials, invalid data, and edge cases. Ensure endpoints are secure and do not expose sensitive data.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Document API Endpoints and Usage",
+            "description": "Create comprehensive documentation for the API, detailing endpoint URLs, request/response formats, authorization requirements, and error codes.",
+            "dependencies": [
+              5
+            ],
+            "details": "Ensure documentation is clear, up-to-date, and accessible to developers who will use or maintain the API.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Implement Task CRUD and Assignment Service",
+        "description": "Develop gRPC endpoints for task CRUD and assignment to users.",
+        "details": "Implement task CRUD operations and assignment logic. Include fields: title, description, assignee, due date, status, priority. Use Diesel for database operations. Validate input and return appropriate errors.",
+        "testStrategy": "Test task creation, retrieval, update, deletion, and assignment. Verify field validation and error handling.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          3,
+          4,
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Task Data Model and Database Integration",
+            "description": "Define the task schema with all required fields (e.g., title, description, status, assignee, timestamps) and integrate with the chosen database (e.g., MongoDB, SQL). Ensure the model supports assignment and status tracking.",
+            "dependencies": [],
+            "details": "Set up the database connection and create the task model/schema. Include fields for assignment and status updates.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Create Task Endpoint",
+            "description": "Develop the API endpoint to create new tasks, including logic for assigning tasks and setting initial status. Validate incoming data before saving to the database.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use POST /api/tasks. Validate required fields and assignment logic before creating the task.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Read Task Endpoints",
+            "description": "Develop endpoints to fetch all tasks and individual tasks by ID. Ensure assignment and status fields are included in responses.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use GET /api/tasks for all tasks and GET /api/tasks/:id for a single task. Include assignment and status in the response.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Update Task Endpoint",
+            "description": "Develop the API endpoint to update existing tasks, including logic for re-assignment and status changes. Validate updated fields and enforce business rules.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use PUT or PATCH /api/tasks/:id. Validate updates, especially for assignment and status transitions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Delete Task Endpoint",
+            "description": "Develop the API endpoint to delete tasks by ID. Ensure proper cleanup and response codes.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use DELETE /api/tasks/:id. Return appropriate status codes on success or failure.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Implement Field Validation and Assignment Logic",
+            "description": "Add validation middleware or logic to ensure all required fields are present and valid for create and update operations. Implement robust assignment logic to handle user/task relationships.",
+            "dependencies": [
+              2,
+              4
+            ],
+            "details": "Validate fields such as title, description, status, and assignee. Ensure assignment logic prevents invalid assignments.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Implement Error Handling for All Endpoints",
+            "description": "Add comprehensive error handling for all CRUD endpoints, including validation errors, database errors, and assignment/status update failures. Return clear and consistent error responses.",
+            "dependencies": [
+              2,
+              3,
+              4,
+              5,
+              6
+            ],
+            "details": "Handle errors such as missing fields, invalid IDs, assignment conflicts, and database failures. Return standardized error messages and HTTP status codes.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Implement Real-Time Updates via gRPC Streams",
+        "description": "Develop bidirectional gRPC streaming for real-time task updates.",
+        "details": "Implement streaming endpoints for task changes. Use Tonic’s streaming support. Notify connected clients of task updates. Handle connection lifecycle and errors.",
+        "testStrategy": "Test streaming by simulating multiple clients. Verify real-time updates and error handling.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Streaming Endpoints",
+            "description": "Define clear, consistent, and secure API endpoints for streaming, considering RESTful and real-time communication best practices.",
+            "dependencies": [],
+            "details": "Specify endpoint paths, HTTP methods, and resource naming conventions. Ensure endpoints support bidirectional streaming if required and follow versioning and security guidelines.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Server-Side Streaming Logic",
+            "description": "Develop the backend logic to handle streaming data to and from clients, supporting concurrency and real-time updates.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use appropriate protocols (e.g., HTTP/2, WebSockets, gRPC) to enable efficient server-side streaming. Ensure strong typing, authentication, and high performance.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Develop Client Handling Mechanisms",
+            "description": "Create logic to manage multiple concurrent client connections and their individual streaming sessions.",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement mechanisms for client registration, message routing, and resource allocation. Ensure scalability and efficient handling of client requests.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Manage Connection Lifecycle",
+            "description": "Implement robust connection lifecycle management, including initiation, maintenance, and graceful termination of streaming sessions.",
+            "dependencies": [
+              3
+            ],
+            "details": "Handle connection setup, keep-alive, reconnection strategies, and cleanup of resources on disconnect or failure.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Error Handling and Recovery",
+            "description": "Design and implement uniform error handling strategies for streaming endpoints, including recovery and notification mechanisms.",
+            "dependencies": [
+              4
+            ],
+            "details": "Standardize error responses, handle transient and fatal errors, and provide clients with actionable feedback. Ensure security and input validation.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Test with Multiple Clients",
+            "description": "Develop and execute comprehensive tests simulating multiple concurrent clients to validate streaming, lifecycle, and error handling logic.",
+            "dependencies": [
+              5
+            ],
+            "details": "Test for concurrency, performance, error scenarios, and resource cleanup. Ensure the system behaves correctly under load and recovers gracefully from failures.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Implement Structured Logging and Error Handling",
+        "description": "Add structured logging with tracing and robust error handling.",
+        "details": "Integrate `tracing` and `tracing-subscriber` for structured logs. Use `thiserror` for custom error types. Log important events and errors. Ensure graceful degradation.",
+        "testStrategy": "Verify logs are generated for key events and errors. Test error handling and logging in failure scenarios.",
+        "priority": "medium",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Integrate Tracing into the Application",
+            "description": "Select and implement a tracing library that integrates with the existing application stack to capture distributed traces and correlate them with logs.",
+            "dependencies": [],
+            "details": "Research tracing libraries compatible with your framework. Integrate the chosen library, ensuring it can correlate trace IDs with log entries for contextual insights. Test tracing in a development environment to verify correct propagation and collection.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Define Custom Error Types",
+            "description": "Design and implement custom error types to standardize error handling and improve log clarity.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create a set of custom error classes or types that encapsulate relevant metadata (e.g., error codes, context). Ensure these types are used throughout the codebase for consistent error reporting and logging.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Instrument Key Events with Structured Logging",
+            "description": "Identify and instrument critical application events with structured log statements, ensuring logs include trace and error context.",
+            "dependencies": [
+              2
+            ],
+            "details": "Determine which events (e.g., user actions, system errors, external API calls) require logging. Use a structured logging library to emit logs as key-value pairs (e.g., JSON), including trace IDs and error details where applicable.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Graceful Error Handling",
+            "description": "Update application logic to handle errors gracefully, ensuring errors are logged with sufficient context and do not cause unhandled failures.",
+            "dependencies": [
+              3
+            ],
+            "details": "Wrap critical code paths with error handling logic that catches exceptions, logs them using the structured logger, and returns appropriate responses or fallback behavior. Ensure custom error types are leveraged for clarity.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Verify and Validate Log Output",
+            "description": "Test and review log output to ensure logs are structured, contain necessary context, and are correctly correlated with traces and errors.",
+            "dependencies": [
+              4
+            ],
+            "details": "Run application scenarios in development and staging environments. Inspect logs for structure, completeness, and trace/error correlation. Adjust instrumentation and error handling as needed to meet logging standards and observability goals.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Write Comprehensive Unit and Integration Tests",
+        "description": "Develop unit and integration tests for all services and endpoints.",
+        "details": "Write tests using `tokio::test` for async code. Test all gRPC endpoints, database operations, and error cases. Use test containers for integration tests with PostgreSQL.",
+        "testStrategy": "Run tests with `cargo test`. Ensure coverage for all critical paths and error cases.",
+        "priority": "medium",
+        "dependencies": [
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Develop Unit Tests for Each Service",
+            "description": "Write unit tests for all individual service classes, ensuring each method is tested in isolation using mocks or stubs for dependencies.",
+            "dependencies": [],
+            "details": "Focus on direct invocation of service methods, mocking external dependencies as needed to verify logic and edge cases.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Create Integration Tests for gRPC Endpoints",
+            "description": "Implement integration tests that start the application in a test environment and interact with gRPC endpoints using a gRPC client.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use in-memory servers or test containers to host the gRPC app, and verify end-to-end behavior of endpoints, including request/response validation.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Database Operation Tests",
+            "description": "Write tests to verify correct database interactions, including CRUD operations and transaction handling.",
+            "dependencies": [
+              2
+            ],
+            "details": "Use test containers or in-memory databases to ensure isolation and repeatability of database tests.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Design Error Case and Fault Injection Tests",
+            "description": "Develop tests that simulate error scenarios, such as invalid input, network failures, and service exceptions, to verify robust error handling.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Include both unit and integration-level error cases, using mocking frameworks or test utilities to inject faults.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Set Up Test Container Infrastructure",
+            "description": "Configure and manage test containers for services and databases to provide isolated, reproducible test environments.",
+            "dependencies": [],
+            "details": "Automate container lifecycle management for integration and database tests, ensuring consistent environments across test runs.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Verify and Report Test Coverage",
+            "description": "Run coverage analysis tools to measure code coverage across all test types and generate actionable reports.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Ensure that all critical paths, edge cases, and error handling branches are exercised by the test suite.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Prepare Deployment Artifacts and Documentation",
+        "description": "Create Dockerfile, Kubernetes manifests, and deployment documentation.",
+        "details": "Write Dockerfile for building and running the service. Create Kubernetes deployment and service YAMLs. Document environment variables and deployment steps. Use multi-stage builds for smaller images.",
+        "testStrategy": "Build and run Docker image locally. Deploy to Kubernetes and verify service availability. Check documentation for completeness.",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          9
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Write Dockerfile for Application",
+            "description": "Create a Dockerfile that defines the build and runtime environment for the application, following best practices for security, maintainability, and performance.",
+            "dependencies": [],
+            "details": "Specify a trusted and versioned base image, add application files, install dependencies, set up health checks, and ensure the container runs as a non-root user.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Create Kubernetes Manifests",
+            "description": "Develop Kubernetes YAML manifests for deploying the application, including Deployment, Service, and any necessary ConfigMap or Secret resources.",
+            "dependencies": [
+              1
+            ],
+            "details": "Reference the built Docker image in the Deployment, define resource requests/limits, and expose the application via a Service.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Document Environment Variables",
+            "description": "List and describe all environment variables required by the application, including their purpose, default values, and whether they are mandatory.",
+            "dependencies": [
+              1
+            ],
+            "details": "Provide a table or section in the documentation detailing each variable, its usage, and example values.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Write Deployment Steps Documentation",
+            "description": "Document the step-by-step process for building the Docker image, pushing it to a registry, and deploying the application to Kubernetes.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Include commands for building and pushing the Docker image, applying Kubernetes manifests, and configuring environment variables.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Verify Deployment",
+            "description": "Test and confirm that the application is successfully deployed and running as expected in the Kubernetes cluster.",
+            "dependencies": [
+              4
+            ],
+            "details": "Check pod status, service accessibility, and application health endpoints. Document verification steps and troubleshooting tips.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-10T07:41:23.297Z",
+      "updated": "2025-07-10T07:44:53.064Z",
+      "description": "Tasks for master context"
     }
-  ],
-  "metadata": {
-    "created": "2025-07-10T07:41:23.297Z",
-    "updated": "2025-07-10T07:44:53.064Z",
-    "description": "Tasks for master context"
   }
 }
