@@ -373,9 +373,7 @@ echo ""
 
 # Build Claude command with --dangerously-skip-permissions to bypass all permission prompts
 # This is simpler and more reliable than enterprise managed settings for permission control
-CLAUDE_CMD="claude -p --output-format stream-json --verbose --dangerously-skip-permissions"
-
-echo "✓ Using --dangerously-skip-permissions flag - all permission prompts will be bypassed"
+CLAUDE_CMD="claude -p --output-format stream-json --verbose"
 
 echo "=== 6. ENVIRONMENT VARIABLES ==="
 echo "Environment variables Claude will see:"

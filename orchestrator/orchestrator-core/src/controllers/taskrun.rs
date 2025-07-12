@@ -235,8 +235,8 @@ async fn reconcile_create_or_update(
 
     // Ensure PVC exists for the service (skip for docs generation - uses emptyDir)
     if !is_docs_generation(&tr) {
-        let pvc_name = format!("workspace-{}", tr.spec.service_name);
-        ensure_pvc_exists(pvcs, &pvc_name, &tr.spec.service_name).await?;
+    let pvc_name = format!("workspace-{}", tr.spec.service_name);
+    ensure_pvc_exists(pvcs, &pvc_name, &tr.spec.service_name).await?;
     }
 
     // Create ConfigMap first (needed by both prep and main jobs)
@@ -593,7 +593,7 @@ fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Resul
     if is_docs_generation(tr) {
         data.insert("claude-settings.json".to_string(), settings_json);
     } else {
-        data.insert("settings-local.json".to_string(), settings_json);
+    data.insert("settings-local.json".to_string(), settings_json);
     }
 
     Ok(ConfigMap {
@@ -634,12 +634,12 @@ fn build_claude_job(
         })]
     } else {
         // Use PVC for implementation tasks (need persistent workspace)
-        let pvc_name = format!("workspace-{service_name}");
+    let pvc_name = format!("workspace-{service_name}");
         vec![json!({
-            "name": "workspace",
-            "persistentVolumeClaim": {
-                "claimName": pvc_name
-            }
+        "name": "workspace",
+        "persistentVolumeClaim": {
+            "claimName": pvc_name
+        }
         })]
     };
 

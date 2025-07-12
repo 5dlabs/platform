@@ -48,23 +48,45 @@
   "cleanupPeriodDays": 3,
   "includeCoAuthoredBy": true,
   "hooks": {
-    "onPostToolUse": [
+    "PostToolUse": [
       {
-        "tool": "Edit",
-        "pattern": "*.md",
-        "script": "./.early-hook-test.sh"
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.early-hook-test.sh"
+          }
+        ]
       },
       {
-        "tool": "Write",
-        "pattern": "*.md",
-        "script": "./.early-hook-test.sh"
+        "matcher": "Write",Okay, wait so I'm wondering now since we have the correct version, maybe it works, we don't need that anymore. 
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.early-hook-test.sh"
+          }
+        ]
       },
       {
-        "tool": "MultiEdit",
-        "pattern": "*.md",
-        "script": "./.early-hook-test.sh"
+        "matcher": "MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.early-hook-test.sh"
+          }
+        ]
       }
     ],
-    "onStop": "./.stop-hook-docs-pr.sh"
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.stop-hook-docs-pr.sh"
+          }
+        ]
+      }
+    ]
   }
 }

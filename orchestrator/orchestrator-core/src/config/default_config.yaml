@@ -9,8 +9,8 @@ job:
 
 agent:
   image:
-    repository: "ghcr.io/5dlabs/platform/claude-code"
-    tag: "latest"
+    repository: "ghcr.io/5dlabs/agent-platform/claude-code"
+    tag: "1.0.51"
     pullPolicy: "Always"
   command: ["claude"]
   args:
