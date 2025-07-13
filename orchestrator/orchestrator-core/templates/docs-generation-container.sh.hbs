@@ -4,6 +4,11 @@ echo '════════════════════════�
 echo '║                 DOCS GENERATION STARTING                     ║'
 echo '════════════════════════════════════════════════════════════════'
 
+# Disable interactive Git prompts globally
+export GIT_TERMINAL_PROMPT=0
+export GIT_ASKPASS=/bin/true
+export SSH_ASKPASS=/bin/true
+
 # Setup authentication based on repository URL type
 {{#if repository}}
 REPO_URL="{{repository.url}}"
@@ -62,17 +67,25 @@ else
   if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USER" ]; then
     echo "✓ GitHub environment variables found"
 
-    # Configure git user
+    # Configure git user FIRST
     git config --global user.name "$GITHUB_USER"
     git config --global user.email "${GITHUB_USER}@users.noreply.github.com"
 
-    # Ensure git credentials file exists with correct format
+    # Disable interactive prompts for git operations
+    git config --global credential.helper ""
+    git config --global core.askPass ""
+
+    # Create credentials file with proper format
+    mkdir -p /root/.git-credentials-dir
+    echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > /root/.git-credentials
+    chmod 600 /root/.git-credentials
+
+    # Configure git to use the credentials file
+    git config --global credential.helper 'store --file=/root/.git-credentials'
+
+    # Also set up workspace-specific credentials (for compatibility)
     echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
     chmod 600 /workspace/.git-credentials
-
-    # Configure git to use the credentials
-    git config --global credential.helper 'store --file=/workspace/.git-credentials'
-    cd /workspace && git config credential.helper 'store --file=/workspace/.git-credentials'
 
     echo "✓ Git credentials configured for user: $GITHUB_USER"
 
@@ -114,12 +127,128 @@ if [ -f /workspace/.github-env ]; then
   fi
 fi
 fi
+
+# =============================================================================
+# COMPREHENSIVE GITHUB AUTHENTICATION TESTING
+# =============================================================================
+echo ""
+echo "═══════════════════════════════════════════════════════════════"
+echo "║                 GITHUB AUTHENTICATION TESTING                ║"
+echo "═══════════════════════════════════════════════════════════════"
+echo ""
+
+# Test 1: Basic GitHub API access
+echo "=== TEST 1: GitHub API Authentication ==="
+if [ -n "$GITHUB_TOKEN" ]; then
+  echo "Testing GitHub API access..."
+  API_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user)
+  if echo "$API_RESPONSE" | grep -q '"login"'; then
+    API_USER=$(echo "$API_RESPONSE" | grep '"login"' | sed 's/.*"login": *"\([^"]*\)".*/\1/')
+    echo "✓ GitHub API authentication successful"
+    echo "  Authenticated as: $API_USER"
+
+    # Verify the API user matches the configured user
+    if [ "$API_USER" = "$GITHUB_USER" ]; then
+      echo "✓ API user matches configured GITHUB_USER"
+    else
+      echo "⚠️  WARNING: API user ($API_USER) differs from GITHUB_USER ($GITHUB_USER)"
+      echo "   This may cause permission issues"
+    fi
+  else
+    echo "❌ GitHub API authentication failed"
+    echo "   Response: $API_RESPONSE"
+    echo ""
+    echo "🚫 ABORTING: Cannot proceed without GitHub API access"
+    exit 1
+  fi
+else
+  echo "❌ No GITHUB_TOKEN available for API testing"
+  exit 1
+fi
+
+# Test 2: Repository access permissions
+echo ""
+echo "=== TEST 2: Repository Access Verification ==="
+REPO_URL="{{repository.url}}"
+# Extract owner/repo from URL
+if echo "$REPO_URL" | grep -q "github.com"; then
+  REPO_PATH=$(echo "$REPO_URL" | sed 's|.*github.com[/:]||' | sed 's|\.git$||')
+  echo "Testing repository access for: $REPO_PATH"
+
+  REPO_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO_PATH")
+  if echo "$REPO_RESPONSE" | grep -q '"full_name"'; then
+    echo "✓ Repository is accessible via API"
+
+    # Check permissions
+    PERMISSIONS=$(echo "$REPO_RESPONSE" | grep -o '"permissions":{[^}]*}' || echo "")
+    if echo "$PERMISSIONS" | grep -q '"push":true'; then
+      echo "✓ Push permissions confirmed"
+    else
+      echo "⚠️  WARNING: Push permissions may be limited"
+      echo "   Permissions: $PERMISSIONS"
+    fi
+  else
+    echo "❌ Repository not accessible via API"
+    echo "   Response: $REPO_RESPONSE"
+    echo ""
+    echo "🚫 ABORTING: Cannot access target repository"
+    exit 1
+  fi
+else
+  echo "⚠️  Non-GitHub repository detected, skipping API permission check"
+fi
+
+# Test 3: Git credential functionality
+echo ""
+echo "=== TEST 3: Git Credential Testing ==="
+echo "Testing git credential configuration..."
+
+# Show current git config
+echo "Git configuration:"
+git config --global --list | grep -E "(user\.|credential\.|core\.askPass)" || echo "No relevant git config found"
+
+# Test git credential helper
+echo ""
+echo "Testing credential helper..."
+if [ "$USE_SSH" = "true" ]; then
+  echo "Using SSH authentication - testing SSH key access"
+  if ssh -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
+    echo "✓ SSH authentication working"
+  else
+    echo "❌ SSH authentication failed"
+    exit 1
+  fi
+else
+  echo "Testing HTTPS credential helper..."
+  # Create a minimal test to verify credentials work
+  TEST_REPO_URL="https://github.com/$REPO_PATH.git"
+  echo "Testing with URL: $TEST_REPO_URL"
+
+  # Test git ls-remote (read operation)
+  if git ls-remote "$TEST_REPO_URL" HEAD >/dev/null 2>&1; then
+    echo "✓ Git HTTPS authentication working (read access confirmed)"
+  else
+    echo "❌ Git HTTPS authentication failed"
+    echo "   Testing credential helper directly..."
+
+    # Debug credential helper
+    echo "url=https://github.com" | git credential fill 2>&1 || echo "Credential helper test completed"
+
+    echo ""
+    echo "🚫 ABORTING: Git authentication not working"
+    exit 1
+  fi
+fi
+
 {{else}}
 echo "⚠️ No repository configured for authentication setup"
 {{/if}}
 
 # Clone repository to get .taskmaster directory and project files
-echo "=== REPOSITORY SETUP ==="
+echo ""
+echo "═══════════════════════════════════════════════════════════════"
+echo "║                    REPOSITORY SETUP                          ║"
+echo "═══════════════════════════════════════════════════════════════"
 
 {{#if repository}}
 # Repository information
@@ -135,9 +264,28 @@ echo "GitHub User: $GITHUB_USER"
 if [ -d "/workspace/.git" ]; then
   echo "Repository already exists, pulling latest changes..."
   cd /workspace
-  git fetch origin
-  git checkout "$REPO_BRANCH"
-  git pull origin "$REPO_BRANCH"
+
+  # Ensure we have the right remote configuration
+  git remote set-url origin "$REPO_URL"
+
+  echo "Fetching from origin..."
+  if ! git fetch origin; then
+    echo "❌ Failed to fetch from origin"
+    echo "🚫 ABORTING: Cannot fetch repository updates"
+    exit 1
+  fi
+
+  echo "Checking out branch: $REPO_BRANCH"
+  if ! git checkout "$REPO_BRANCH"; then
+    echo "❌ Failed to checkout branch: $REPO_BRANCH"
+    exit 1
+  fi
+
+  echo "Pulling latest changes..."
+  if ! git pull origin "$REPO_BRANCH"; then
+    echo "❌ Failed to pull latest changes"
+    exit 1
+  fi
 else
   echo "Cloning repository..."
   echo "DEBUG: Contents of /workspace before clone:"
@@ -166,11 +314,14 @@ else
       echo "❌ Failed to clone repository: $REPO_URL"
       echo "   Branch: $REPO_BRANCH"
       echo ""
-      echo "Possible causes:"
-      echo "  • Invalid repository URL"
-      echo "  • Branch '$REPO_BRANCH' does not exist"
-      echo "  • GitHub authentication failed"
-      echo "  • Network connectivity issues"
+      echo "Debugging information:"
+      echo "  • Git version: $(git --version)"
+      echo "  • Git config (user): $(git config --global user.name) <$(git config --global user.email)>"
+      echo "  • Git config (credential): $(git config --global credential.helper)"
+      echo "  • Environment variables:"
+      echo "    - GIT_TERMINAL_PROMPT: $GIT_TERMINAL_PROMPT"
+      echo "    - GIT_ASKPASS: $GIT_ASKPASS"
+      echo "    - SSH_ASKPASS: $SSH_ASKPASS"
       echo ""
       echo "🚫 DOCS GENERATION CANNOT PROCEED WITHOUT REPOSITORY"
       echo ""
@@ -197,11 +348,14 @@ else
       echo "❌ Failed to clone repository: $REPO_URL"
       echo "   Branch: $REPO_BRANCH"
       echo ""
-      echo "Possible causes:"
-      echo "  • Invalid repository URL"
-      echo "  • Branch '$REPO_BRANCH' does not exist"
-      echo "  • GitHub authentication failed"
-      echo "  • Network connectivity issues"
+      echo "Debugging information:"
+      echo "  • Git version: $(git --version)"
+      echo "  • Git config (user): $(git config --global user.name) <$(git config --global user.email)>"
+      echo "  • Git config (credential): $(git config --global credential.helper)"
+      echo "  • Environment variables:"
+      echo "    - GIT_TERMINAL_PROMPT: $GIT_TERMINAL_PROMPT"
+      echo "    - GIT_ASKPASS: $GIT_ASKPASS"
+      echo "    - SSH_ASKPASS: $SSH_ASKPASS"
       echo ""
       echo "🚫 DOCS GENERATION CANNOT PROCEED WITHOUT REPOSITORY"
       echo ""
@@ -212,6 +366,78 @@ else
 fi
 
 echo "✓ Repository cloned successfully"
+
+# =============================================================================
+# TEST GITHUB WRITE ACCESS WITH ACTUAL BRANCH/PR CREATION
+# =============================================================================
+echo ""
+echo "═══════════════════════════════════════════════════════════════"
+echo "║                 GITHUB WRITE ACCESS TEST                     ║"
+echo "═══════════════════════════════════════════════════════════════"
+echo ""
+
+echo "=== TEST 4: GitHub Write Access Verification ==="
+echo "Creating test branch to verify write permissions..."
+
+# Create a unique test branch name
+TEST_BRANCH="docs-auth-test-$(date +%s)"
+TARGET_BRANCH="{{targetBranch}}"
+
+echo "Test branch: $TEST_BRANCH"
+echo "Target branch: $TARGET_BRANCH"
+
+# Create and push test branch
+cd /workspace
+if git checkout -b "$TEST_BRANCH"; then
+  echo "✓ Created test branch locally"
+
+  # Create a small test file
+  echo "# Authentication Test" > ".auth-test-$(date +%s).md"
+  echo "This file was created to test GitHub write access." >> ".auth-test-$(date +%s).md"
+  echo "Generated at: $(date)" >> ".auth-test-$(date +%s).md"
+
+  if git add ".auth-test-"*.md && git commit -m "Test: Verify GitHub write access"; then
+    echo "✓ Created test commit"
+
+    # Try to push the test branch
+    if git push origin "$TEST_BRANCH"; then
+      echo "✓ Successfully pushed test branch to GitHub"
+      echo "✓ Write access confirmed!"
+
+      # Clean up test branch immediately
+      echo "Cleaning up test branch..."
+      git checkout "$REPO_BRANCH"
+      git branch -D "$TEST_BRANCH" 2>/dev/null || true
+      git push origin --delete "$TEST_BRANCH" 2>/dev/null || echo "Test branch cleanup completed"
+      rm -f ".auth-test-"*.md 2>/dev/null || true
+
+      echo "✓ Test branch cleaned up"
+    else
+      echo "❌ Failed to push test branch to GitHub"
+      echo "   This indicates insufficient write permissions"
+      echo ""
+      echo "🚫 ABORTING: Cannot proceed without GitHub write access"
+      echo "   Docs generation requires the ability to create and push branches"
+      exit 1
+    fi
+  else
+    echo "❌ Failed to create test commit"
+    exit 1
+  fi
+else
+  echo "❌ Failed to create test branch"
+  exit 1
+fi
+
+echo ""
+echo "✅ ALL GITHUB AUTHENTICATION TESTS PASSED"
+echo "   • API access: ✓"
+echo "   • Repository access: ✓"
+echo "   • Git credentials: ✓"
+echo "   • Write permissions: ✓"
+echo ""
+echo "🚀 Proceeding with docs generation..."
+
 {{else}}
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
