@@ -1,0 +1,39 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Setup Basic Express Server",
+        "description": "Create a simple Express.js server with one health check endpoint",
+        "details": "Initialize a Node.js project, install Express, and create a basic server with a single GET /health endpoint that returns a JSON response.",
+        "testStrategy": "Start the server and verify the /health endpoint returns a 200 status with JSON response",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Add Basic Logging",
+        "description": "Add simple console logging to track requests",
+        "details": "Add middleware to log incoming requests and add logging to the health endpoint response.",
+        "testStrategy": "Make requests and verify logs appear in console output",
+        "priority": "medium",
+        "dependencies": [1],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Create Dockerfile",
+        "description": "Containerize the Express app with Docker",
+        "details": "Create a Dockerfile that builds and runs the Express app, expose the correct port.",
+        "testStrategy": "Build Docker image and run container, verify health endpoint works from container",
+        "priority": "medium",
+        "dependencies": [1],
+        "status": "pending",
+        "subtasks": []
+      }
+    ]
+  }
+}
