@@ -637,3 +637,4 @@ The platform uses a **TaskRun CRD-based approach**:
 
 [Your license here]# Test rust-builder fixes
 # Test cache fixes
+# Trigger CI build for SSH auth testing
