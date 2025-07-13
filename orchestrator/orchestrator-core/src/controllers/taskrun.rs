@@ -662,6 +662,28 @@ fn build_claude_job(
         }));
     }
 
+    // Add SSH key volume if repository uses SSH URL
+    if let Some(repo) = &tr.spec.repository {
+        if repo.url.starts_with("git@") || repo.url.starts_with("ssh://") {
+            // Use service-name-based SSH key secret
+            let ssh_secret_name = format!("{}-ssh-key", tr.spec.service_name);
+
+            volumes.push(json!({
+                "name": "ssh-key",
+                "secret": {
+                    "secretName": ssh_secret_name,
+                    "defaultMode": 0o600
+                }
+            }));
+
+            volume_mounts.push(json!({
+                "name": "ssh-key",
+                "mountPath": "/root/.ssh",
+                "readOnly": true
+            }));
+        }
+    }
+
     // Telemetry and environment settings are now handled via settings.json
     // Only keep essential container-level env vars here
 

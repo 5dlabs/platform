@@ -4,27 +4,81 @@ echo '════════════════════════�
 echo '║                 DOCS GENERATION STARTING                     ║'
 echo '════════════════════════════════════════════════════════════════'
 
-# Source GitHub environment if it exists
-if [ -f /workspace/.github-env ]; then
-  . /workspace/.github-env
-  echo "✓ GitHub authentication configured"
+# Setup authentication based on repository URL type
+{{#if repository}}
+REPO_URL="{{repository.url}}"
+if echo "$REPO_URL" | grep -q "^git@\|^ssh://"; then
+  echo "SSH repository URL detected"
+  USE_SSH=true
+else
+  echo "HTTPS repository URL detected"
+  USE_SSH=false
+fi
 
-  # Configure git credentials for HTTPS authentication
-  if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USER" ]; then
-    git config --global user.name "$GITHUB_USER"
-    git config --global user.email "${GITHUB_USER}@users.noreply.github.com"
+# SSH Authentication Setup
+if [ "$USE_SSH" = "true" ]; then
+  echo "=== SSH AUTHENTICATION SETUP ==="
 
-    # Ensure git credentials file exists with correct format
-    echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
-    chmod 600 /workspace/.git-credentials
+  # Check if SSH key is mounted
+  if [ -f "/root/.ssh/ssh-privatekey" ]; then
+    echo "✓ SSH private key found"
 
-    # Configure git to use the credentials
-    git config --global credential.helper 'store --file=/workspace/.git-credentials'
-    cd /workspace && git config credential.helper 'store --file=/workspace/.git-credentials'
+    # Set up SSH key with correct permissions
+    cp /root/.ssh/ssh-privatekey /root/.ssh/id_rsa
+    chmod 600 /root/.ssh/id_rsa
 
-    echo "✓ Git credentials configured for user: $GITHUB_USER"
+    # Copy public key if available
+    if [ -f "/root/.ssh/ssh-publickey" ]; then
+      cp /root/.ssh/ssh-publickey /root/.ssh/id_rsa.pub
+      chmod 644 /root/.ssh/id_rsa.pub
+    fi
+
+    # Add GitHub to known hosts
+    ssh-keyscan github.com >> /root/.ssh/known_hosts 2>/dev/null || echo "Warning: Failed to add GitHub to known hosts"
+
+    # Test SSH connection
+    echo "Testing SSH connection to GitHub..."
+    ssh -T git@github.com 2>&1 | head -3 || echo "SSH test completed (expected to fail with 'successfully authenticated')"
+
+    # Configure git user
+    git config --global user.name "{{repository.githubUser}}"
+    git config --global user.email "{{repository.githubUser}}@users.noreply.github.com"
+
+    echo "✓ SSH authentication configured successfully"
+  else
+    echo "❌ SSH private key not found at /root/.ssh/ssh-privatekey"
+    echo "   Expected SSH key secret to be mounted"
+    exit 1
+  fi
+else
+  # HTTPS Authentication Setup (existing logic)
+  echo "=== HTTPS AUTHENTICATION SETUP ==="
+
+  # Source GitHub environment if it exists
+  if [ -f /workspace/.github-env ]; then
+    . /workspace/.github-env
+    echo "✓ GitHub authentication configured"
+
+    # Configure git credentials for HTTPS authentication
+    if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USER" ]; then
+      git config --global user.name "$GITHUB_USER"
+      git config --global user.email "${GITHUB_USER}@users.noreply.github.com"
+
+      # Ensure git credentials file exists with correct format
+      echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+      chmod 600 /workspace/.git-credentials
+
+      # Configure git to use the credentials
+      git config --global credential.helper 'store --file=/workspace/.git-credentials'
+      cd /workspace && git config credential.helper 'store --file=/workspace/.git-credentials'
+
+      echo "✓ Git credentials configured for user: $GITHUB_USER"
+    fi
   fi
 fi
+{{else}}
+echo "⚠️ No repository configured for authentication setup"
+{{/if}}
 
 # Clone repository to get .taskmaster directory and project files
 echo "=== REPOSITORY SETUP ==="
