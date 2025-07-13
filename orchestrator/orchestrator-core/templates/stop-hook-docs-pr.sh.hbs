@@ -1,27 +1,73 @@
 #!/bin/bash
-# SIMPLE TEST VERSION - Post-completion hook for docs generation
+# Post-completion hook for docs generation - PR creation
 
-echo "🔗🔗🔗 STOP HOOK TEST - Starting simple test version..."
+echo "🔗 STOP HOOK - Starting PR creation..."
 echo "Timestamp: $(date)"
 echo "Working directory: $(pwd)"
 
-# Create a simple test file to prove the stop hook ran
-echo "Stop hook executed at $(date)" > .stop-hook-test-success
-echo "✅ Created .stop-hook-test-success file"
+# Create a test file to prove the stop hook ran
+echo "Stop hook executed at $(date)" > .stop-hook-executed
+echo "✅ Created .stop-hook-executed file"
 
-# Log some basic info
-echo "Files in current directory:"
-ls -la | head -10
+# Source GitHub environment if available
+if [ -f ".github-env" ]; then
+    source .github-env
+    echo "✅ Loaded GitHub environment"
+fi
 
-echo "Git status (if available):"
-git status --porcelain || echo "Git status failed or not a git repo"
+# Check if we have any documentation changes
+if git diff --quiet HEAD -- .taskmaster/docs/ 2>/dev/null && git diff --cached --quiet HEAD -- .taskmaster/docs/ 2>/dev/null; then
+    # Check for untracked files
+    UNTRACKED_DOCS=$(git ls-files --others --exclude-standard .taskmaster/docs/ 2>/dev/null | wc -l)
+    if [ "$UNTRACKED_DOCS" -eq 0 ]; then
+        echo "No documentation changes found - exiting"
+        exit 0
+    fi
+fi
 
-echo "🔗🔗🔗 STOP HOOK TEST - Completed successfully!"
+echo "📝 Documentation changes detected - proceeding with PR creation"
 
-# END OF SIMPLE TEST - Original complex logic commented out
-exit 0
+# Add all documentation changes
+git add .taskmaster/docs/ || { echo "❌ Failed to add docs"; exit 1; }
 
-# Keep the original logic but comment it out for now
+# Commit changes
+COMMIT_MSG="docs: Auto-generated documentation via orchestrator
+
+- Generated comprehensive task documentation
+- Updated task breakdown and implementation details
+- Added acceptance criteria and prompts"
+
+if git commit -m "$COMMIT_MSG"; then
+    echo "✅ Successfully committed documentation changes"
+else
+    echo "❌ Failed to commit changes"
+    exit 1
+fi
+
+# Push changes
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if git push origin "$CURRENT_BRANCH"; then
+    echo "✅ Successfully pushed changes to $CURRENT_BRANCH"
+else
+    echo "❌ Failed to push changes"
+    exit 1
+fi
+
+# Create PR if not on main/master
+if [ "$CURRENT_BRANCH" != "main" ] && [ "$CURRENT_BRANCH" != "master" ]; then
+    if command -v gh >/dev/null 2>&1; then
+        gh pr create --title "docs: Auto-generated documentation updates" \
+                     --body "Auto-generated documentation updates from orchestrator" \
+                     --base main || echo "⚠️ PR creation failed (may already exist)"
+        echo "✅ PR creation attempted"
+    else
+        echo "⚠️ GitHub CLI not available"
+    fi
+fi
+
+echo "🎉 Stop hook completed successfully!"
+
+# Original complex logic (preserved for reference)
 : '
 # Source GitHub environment if available
 if [ -f ".github-env" ]; then
