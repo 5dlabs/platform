@@ -1,0 +1,8 @@
+{
+  "service_name": "platform",
+  "task_id": 999999,
+  "repository": {
+    "url": "git@github.com:5dlabs/agent-platform.git",
+    "branch": "feature/example-project-and-cli"
+  }
+}
