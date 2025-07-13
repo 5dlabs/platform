@@ -147,7 +147,7 @@ echo ""
 exit 1
 {{/if}}
 
-# Copy ConfigMap files to working directory
+# Copy ConfigMap files to working directory (AFTER repository clone)
 echo "=== CONFIGMAP FILE SETUP ==="
 
 # Determine the working directory for Claude
@@ -159,6 +159,7 @@ else
 fi
 
 echo "Setting up files in Claude working directory: $CLAUDE_WORK_DIR"
+# Note: Directory should already exist from repository clone, but ensure it exists
 mkdir -p "$CLAUDE_WORK_DIR"
 
 # Copy all files from ConfigMap to working directory
