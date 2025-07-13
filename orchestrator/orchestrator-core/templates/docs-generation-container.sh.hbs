@@ -106,6 +106,8 @@ if [ -d "/workspace/.git" ]; then
   git pull origin "$REPO_BRANCH"
 else
   echo "Cloning repository..."
+  echo "DEBUG: Contents of /workspace before clone:"
+  ls -la /workspace
   if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" /workspace; then
     echo ""
     echo "═══════════════════════════════════════════════════════════════"
