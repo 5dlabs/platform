@@ -109,13 +109,21 @@ else
   echo "DEBUG: Contents of /workspace before clone:"
   ls -la /workspace
 
-  # Handle non-empty workspace directory by cloning to temp location first
+  # Handle non-empty workspace directory by temporarily backing up existing files
   if [ "$(ls -A /workspace 2>/dev/null)" ]; then
-    echo "Workspace is not empty, cloning to temporary location first..."
-    TEMP_CLONE_DIR="/tmp/repo-clone"
-    rm -rf "$TEMP_CLONE_DIR"
+    echo "Workspace is not empty, backing up existing files..."
+    BACKUP_DIR="/tmp/workspace-backup"
+    rm -rf "$BACKUP_DIR"
+    mkdir -p "$BACKUP_DIR"
 
-    if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$TEMP_CLONE_DIR"; then
+    # Backup existing files (like .gitconfig)
+    cp -r /workspace/. "$BACKUP_DIR/" 2>/dev/null || true
+
+    # Clear workspace for clean clone
+    rm -rf /workspace/*
+    rm -rf /workspace/.[^.]*  # Remove hidden files but keep . and ..
+
+    if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" /workspace; then
       echo ""
       echo "═══════════════════════════════════════════════════════════════"
       echo "║                   REPOSITORY CLONE FAILED                    ║"
@@ -135,10 +143,14 @@ else
       exit 1
     fi
 
-    # Move repository contents to workspace, preserving existing files like .gitconfig
-    echo "Moving repository contents to workspace..."
-    cp -r "$TEMP_CLONE_DIR"/. /workspace/
-    rm -rf "$TEMP_CLONE_DIR"
+    # Restore backed up files that don't conflict with repository
+    echo "Restoring non-conflicting workspace files..."
+    for file in "$BACKUP_DIR"/.gitconfig "$BACKUP_DIR"/.github-env "$BACKUP_DIR"/.git-credentials; do
+      if [ -f "$file" ]; then
+        cp "$file" /workspace/ 2>/dev/null || true
+        echo "✓ Restored: $(basename "$file")"
+      fi
+    done
     cd /workspace
   else
     # Workspace is empty, clone directly
