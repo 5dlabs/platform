@@ -5,15 +5,50 @@ echo "🔗 STOP HOOK - Starting PR creation..."
 echo "Timestamp: $(date)"
 echo "Working directory: $(pwd)"
 
-# Create a test file to prove the stop hook ran
-echo "Stop hook executed at $(date)" > .stop-hook-executed
-echo "✅ Created .stop-hook-executed file"
+# === GIT AUTHENTICATION SETUP ===
+echo "=== GIT AUTHENTICATION SETUP ==="
 
 # Source GitHub environment if available
 if [ -f ".github-env" ]; then
     source .github-env
     echo "✅ Loaded GitHub environment"
+elif [ -f "/workspace/.github-env" ]; then
+    source /workspace/.github-env
+    echo "✅ Loaded GitHub environment from /workspace"
 fi
+
+# Ensure git credentials are properly configured
+if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USER" ]; then
+    echo "✅ GitHub credentials available"
+
+    # Configure git user if not already set
+    if [ -z "$(git config user.name)" ]; then
+        git config user.name "$GITHUB_USER"
+        git config user.email "${GITHUB_USER}@users.noreply.github.com"
+        echo "✅ Configured git user: $GITHUB_USER"
+    fi
+
+    # Ensure git credentials file exists
+    if [ ! -f "/workspace/.git-credentials" ] || ! grep -q "github.com" /workspace/.git-credentials 2>/dev/null; then
+        echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+        chmod 600 /workspace/.git-credentials
+        echo "✅ Created git credentials file"
+    fi
+
+    # Configure git to use the credentials
+    git config credential.helper 'store --file=/workspace/.git-credentials'
+    echo "✅ Configured git credential helper"
+
+else
+    echo "❌ Missing GITHUB_TOKEN or GITHUB_USER"
+    echo "   GITHUB_TOKEN present: $([ -n "$GITHUB_TOKEN" ] && echo "yes" || echo "no")"
+    echo "   GITHUB_USER present: $([ -n "$GITHUB_USER" ] && echo "yes" || echo "no")"
+    exit 1
+fi
+
+# Create a test file to prove the stop hook ran
+echo "Stop hook executed at $(date)" > .stop-hook-executed
+echo "✅ Created .stop-hook-executed file"
 
 # Check if we have any documentation changes
 if git diff --quiet HEAD -- .taskmaster/docs/ 2>/dev/null && git diff --cached --quiet HEAD -- .taskmaster/docs/ 2>/dev/null; then

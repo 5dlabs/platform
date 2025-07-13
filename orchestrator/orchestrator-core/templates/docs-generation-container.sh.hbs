@@ -58,12 +58,46 @@ else
   # HTTPS Authentication Setup (existing logic)
   echo "=== HTTPS AUTHENTICATION SETUP ==="
 
-# Source GitHub environment if it exists
+  # Use environment variables directly (they're mounted as secrets)
+  if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USER" ]; then
+    echo "✓ GitHub environment variables found"
+
+    # Configure git user
+    git config --global user.name "$GITHUB_USER"
+    git config --global user.email "${GITHUB_USER}@users.noreply.github.com"
+
+    # Ensure git credentials file exists with correct format
+    echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+    chmod 600 /workspace/.git-credentials
+
+    # Configure git to use the credentials
+    git config --global credential.helper 'store --file=/workspace/.git-credentials'
+    cd /workspace && git config credential.helper 'store --file=/workspace/.git-credentials'
+
+    echo "✓ Git credentials configured for user: $GITHUB_USER"
+
+    # Create .github-env file for stop hook compatibility
+    cat > /workspace/.github-env << EOF
+GITHUB_TOKEN="$GITHUB_TOKEN"
+GITHUB_USER="$GITHUB_USER"
+USE_SSH=false
+EOF
+    chmod 600 /workspace/.github-env
+    echo "✓ Created .github-env file for stop hook"
+
+  else
+    echo "❌ Missing GITHUB_TOKEN or GITHUB_USER environment variables"
+    echo "   GITHUB_TOKEN present: $([ -n "$GITHUB_TOKEN" ] && echo "yes" || echo "no")"
+    echo "   GITHUB_USER present: $([ -n "$GITHUB_USER" ] && echo "yes" || echo "no")"
+    exit 1
+  fi
+
+# Source GitHub environment if it exists (legacy compatibility)
 if [ -f /workspace/.github-env ]; then
   . /workspace/.github-env
   echo "✓ GitHub authentication configured"
 
-  # Configure git credentials for HTTPS authentication
+  # Configure git credentials for HTTPS authentication (fallback)
   if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USER" ]; then
     git config --global user.name "$GITHUB_USER"
     git config --global user.email "${GITHUB_USER}@users.noreply.github.com"
