@@ -106,8 +106,6 @@ if [ -d "/workspace/.git" ]; then
   git pull origin "$REPO_BRANCH"
 else
   echo "Cloning repository..."
-  # Clear workspace first to avoid "directory not empty" error
-  rm -rf /workspace/* /workspace/.* 2>/dev/null || true
   if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" /workspace; then
     echo ""
     echo "═══════════════════════════════════════════════════════════════"
