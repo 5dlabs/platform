@@ -1,21 +1,28 @@
 #!/bin/bash
-# Post-completion hook for docs generation
-# Commits and pushes documentation changes to feature branch
+# SIMPLE TEST VERSION - Post-completion hook for docs generation
 
-set -e
+echo "🔗🔗🔗 STOP HOOK TEST - Starting simple test version..."
+echo "Timestamp: $(date)"
+echo "Working directory: $(pwd)"
 
-echo "🔗 Post-completion hook: Committing and pushing documentation changes..."
+# Create a simple test file to prove the stop hook ran
+echo "Stop hook executed at $(date)" > .stop-hook-test-success
+echo "✅ Created .stop-hook-test-success file"
 
-# Get current working directory
-WORKING_DIR="$(pwd)"
-echo "Working directory: $WORKING_DIR"
+# Log some basic info
+echo "Files in current directory:"
+ls -la | head -10
 
-# Ensure we're in a git repository
-if [ ! -d ".git" ]; then
-    echo "❌ Error: Not in a git repository"
-    exit 1
-fi
+echo "Git status (if available):"
+git status --porcelain || echo "Git status failed or not a git repo"
 
+echo "🔗🔗🔗 STOP HOOK TEST - Completed successfully!"
+
+# END OF SIMPLE TEST - Original complex logic commented out
+exit 0
+
+# Keep the original logic but comment it out for now
+: '
 # Source GitHub environment if available
 if [ -f ".github-env" ]; then
     source .github-env
@@ -161,3 +168,4 @@ else
 fi
 
 echo "🎉 Documentation commit and push completed successfully!"
+'
