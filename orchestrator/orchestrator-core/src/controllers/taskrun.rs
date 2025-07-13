@@ -678,7 +678,7 @@ fn build_claude_job(
 
             volume_mounts.push(json!({
                 "name": "ssh-key",
-                "mountPath": "/root/.ssh",
+                "mountPath": "/ssh-keys",
                 "readOnly": true
             }));
         }
