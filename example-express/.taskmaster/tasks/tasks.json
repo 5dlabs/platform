@@ -1,0 +1,46 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Project Setup and Dependencies",
+        "description": "Initialize the Node.js project with TypeScript and Express dependencies",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [],
+        "details": "Create package.json, install Express, TypeScript, and dev dependencies. Set up TypeScript configuration and basic project structure with src/ directory.",
+        "testStrategy": "Verify that npm install runs successfully and TypeScript compiles without errors."
+      },
+      {
+        "id": 2,
+        "title": "Basic Express Server Setup",
+        "description": "Create the main Express server with middleware and health check endpoint",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [1],
+        "details": "Create src/index.ts with Express server, CORS middleware, JSON body parser, and a GET /health endpoint. Server should start on port 3000.",
+        "testStrategy": "Server starts successfully on port 3000 and /health endpoint returns 200 status."
+      },
+      {
+        "id": 3,
+        "title": "Todo Data Model and In-Memory Storage",
+        "description": "Implement Todo interface and in-memory storage system",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [2],
+        "details": "Create Todo interface with id, title, completed, createdAt fields. Implement simple in-memory array storage with helper functions for CRUD operations.",
+        "testStrategy": "Todo interface is properly typed and storage functions work correctly."
+      },
+      {
+        "id": 4,
+        "title": "Todo CRUD API Endpoints",
+        "description": "Implement all REST API endpoints for Todo operations",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [3],
+        "details": "Implement GET /api/todos, POST /api/todos, GET /api/todos/:id, PUT /api/todos/:id, DELETE /api/todos/:id endpoints with proper validation and error handling.",
+        "testStrategy": "All endpoints respond correctly with proper HTTP status codes. Test creating, reading, updating, and deleting todos through the API."
+      }
+    ]
+  }
+}
