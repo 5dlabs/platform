@@ -58,27 +58,27 @@ else
   # HTTPS Authentication Setup (existing logic)
   echo "=== HTTPS AUTHENTICATION SETUP ==="
 
-  # Source GitHub environment if it exists
-  if [ -f /workspace/.github-env ]; then
-    . /workspace/.github-env
-    echo "✓ GitHub authentication configured"
+# Source GitHub environment if it exists
+if [ -f /workspace/.github-env ]; then
+  . /workspace/.github-env
+  echo "✓ GitHub authentication configured"
 
-    # Configure git credentials for HTTPS authentication
-    if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USER" ]; then
-      git config --global user.name "$GITHUB_USER"
-      git config --global user.email "${GITHUB_USER}@users.noreply.github.com"
+  # Configure git credentials for HTTPS authentication
+  if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USER" ]; then
+    git config --global user.name "$GITHUB_USER"
+    git config --global user.email "${GITHUB_USER}@users.noreply.github.com"
 
-      # Ensure git credentials file exists with correct format
-      echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
-      chmod 600 /workspace/.git-credentials
+    # Ensure git credentials file exists with correct format
+    echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+    chmod 600 /workspace/.git-credentials
 
-      # Configure git to use the credentials
-      git config --global credential.helper 'store --file=/workspace/.git-credentials'
-      cd /workspace && git config credential.helper 'store --file=/workspace/.git-credentials'
+    # Configure git to use the credentials
+    git config --global credential.helper 'store --file=/workspace/.git-credentials'
+    cd /workspace && git config credential.helper 'store --file=/workspace/.git-credentials'
 
-      echo "✓ Git credentials configured for user: $GITHUB_USER"
-    fi
+    echo "✓ Git credentials configured for user: $GITHUB_USER"
   fi
+fi
 fi
 {{else}}
 echo "⚠️ No repository configured for authentication setup"
@@ -108,26 +108,61 @@ else
   echo "Cloning repository..."
   echo "DEBUG: Contents of /workspace before clone:"
   ls -la /workspace
-  if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" /workspace; then
-    echo ""
-    echo "═══════════════════════════════════════════════════════════════"
-    echo "║                   REPOSITORY CLONE FAILED                    ║"
-    echo "═══════════════════════════════════════════════════════════════"
-    echo ""
-    echo "❌ Failed to clone repository: $REPO_URL"
-    echo "   Branch: $REPO_BRANCH"
-    echo ""
-    echo "Possible causes:"
-    echo "  • Invalid repository URL"
-    echo "  • Branch '$REPO_BRANCH' does not exist"
-    echo "  • GitHub authentication failed"
-    echo "  • Network connectivity issues"
-    echo ""
-    echo "🚫 DOCS GENERATION CANNOT PROCEED WITHOUT REPOSITORY"
-    echo ""
-    exit 1
+
+  # Handle non-empty workspace directory by cloning to temp location first
+  if [ "$(ls -A /workspace 2>/dev/null)" ]; then
+    echo "Workspace is not empty, cloning to temporary location first..."
+    TEMP_CLONE_DIR="/tmp/repo-clone"
+    rm -rf "$TEMP_CLONE_DIR"
+
+    if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$TEMP_CLONE_DIR"; then
+      echo ""
+      echo "═══════════════════════════════════════════════════════════════"
+      echo "║                   REPOSITORY CLONE FAILED                    ║"
+      echo "═══════════════════════════════════════════════════════════════"
+      echo ""
+      echo "❌ Failed to clone repository: $REPO_URL"
+      echo "   Branch: $REPO_BRANCH"
+      echo ""
+      echo "Possible causes:"
+      echo "  • Invalid repository URL"
+      echo "  • Branch '$REPO_BRANCH' does not exist"
+      echo "  • GitHub authentication failed"
+      echo "  • Network connectivity issues"
+      echo ""
+      echo "🚫 DOCS GENERATION CANNOT PROCEED WITHOUT REPOSITORY"
+      echo ""
+      exit 1
+    fi
+
+    # Move repository contents to workspace, preserving existing files like .gitconfig
+    echo "Moving repository contents to workspace..."
+    cp -r "$TEMP_CLONE_DIR"/. /workspace/
+    rm -rf "$TEMP_CLONE_DIR"
+    cd /workspace
+  else
+    # Workspace is empty, clone directly
+    if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" /workspace; then
+      echo ""
+      echo "═══════════════════════════════════════════════════════════════"
+      echo "║                   REPOSITORY CLONE FAILED                    ║"
+      echo "═══════════════════════════════════════════════════════════════"
+      echo ""
+      echo "❌ Failed to clone repository: $REPO_URL"
+      echo "   Branch: $REPO_BRANCH"
+      echo ""
+      echo "Possible causes:"
+      echo "  • Invalid repository URL"
+      echo "  • Branch '$REPO_BRANCH' does not exist"
+      echo "  • GitHub authentication failed"
+      echo "  • Network connectivity issues"
+      echo ""
+      echo "🚫 DOCS GENERATION CANNOT PROCEED WITHOUT REPOSITORY"
+      echo ""
+      exit 1
+    fi
+    cd /workspace
   fi
-  cd /workspace
 fi
 
 echo "✓ Repository cloned successfully"
