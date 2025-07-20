@@ -305,7 +305,11 @@ else
     rm -rf /workspace/*
     rm -rf /workspace/.[^.]*  # Remove hidden files but keep . and ..
 
-    if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" /workspace; then
+    # Clone to temp directory first, then move contents
+    TEMP_CLONE_DIR="/tmp/repo-clone"
+    rm -rf "$TEMP_CLONE_DIR"
+    
+    if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$TEMP_CLONE_DIR"; then
       echo ""
       echo "═══════════════════════════════════════════════════════════════"
       echo "║                   REPOSITORY CLONE FAILED                    ║"
@@ -327,6 +331,13 @@ else
       echo ""
       exit 1
     fi
+
+    # Move cloned repository contents to workspace
+    echo "Moving repository contents to workspace..."
+    mv "$TEMP_CLONE_DIR"/* /workspace/ 2>/dev/null || true
+    mv "$TEMP_CLONE_DIR"/.[^.]* /workspace/ 2>/dev/null || true
+    rm -rf "$TEMP_CLONE_DIR"
+    cd /workspace
 
     # Restore backed up files that don't conflict with repository
     echo "Restoring non-conflicting workspace files..."
