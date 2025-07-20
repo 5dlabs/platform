@@ -49,10 +49,6 @@ if [ "$USE_SSH" = "true" ]; then
     echo "Testing SSH connection to GitHub..."
     ssh -T git@github.com 2>&1 | head -3 || echo "SSH test completed (expected to fail with 'successfully authenticated')"
 
-    # Configure git user
-    git config --global user.name "{{repository.githubUser}}"
-    git config --global user.email "{{repository.githubUser}}@users.noreply.github.com"
-
     echo "✓ SSH authentication configured successfully"
   else
     echo "❌ SSH private key not found at /ssh-keys/ssh-privatekey"
@@ -371,6 +367,14 @@ else
 fi
 
 echo "✓ Repository cloned successfully"
+
+# Configure git user after successful clone
+{{#if repository}}
+echo "=== POST-CLONE GIT CONFIGURATION ==="
+git config --global user.name "{{repository.githubUser}}"
+git config --global user.email "{{repository.githubUser}}@users.noreply.github.com"
+echo "✓ Configured git user: {{repository.githubUser}}"
+{{/if}}
 
 # =============================================================================
 # TEST GITHUB WRITE ACCESS WITH ACTUAL BRANCH/PR CREATION
