@@ -665,8 +665,8 @@ fn build_claude_job(
     // Add SSH key volume if repository uses SSH URL
     if let Some(repo) = &tr.spec.repository {
         if repo.url.starts_with("git@") || repo.url.starts_with("ssh://") {
-            // Use service-name-based SSH key secret
-            let ssh_secret_name = format!("{}-ssh-key", tr.spec.service_name);
+            // Use GitHub user-specific SSH key secret
+            let ssh_secret_name = format!("github-ssh-{}", repo.github_user);
 
             volumes.push(json!({
                 "name": "ssh-key",
