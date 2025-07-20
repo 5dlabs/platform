@@ -20,3 +20,11 @@ After generating documentation:
 4. Create a pull request with appropriate title and description
 
 Ensure all documentation follows the project standards defined in CLAUDE.md and maintains consistency across all generated files.
+
+## Git Workflow Steps
+
+1. Create new branch: `git checkout -b docs-generation-$(date +%Y%m%d-%H%M%S)`
+2. Stage changes: `git add .`
+3. Commit with descriptive message: `git commit -m "docs: Generate documentation for {{task.title}}"`
+4. Push new branch: `git push origin HEAD`
+5. Create pull request: `gh pr create --base "{{repository.branch}}" --title "docs: Generate documentation for {{task.title}}" --body "Automated documentation generation for task {{task.id}}"`
