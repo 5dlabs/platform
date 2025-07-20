@@ -683,6 +683,7 @@ pub mod task {
         model: &str,
         repo: Option<&str>,
         source_branch: Option<&str>,
+        working_directory: Option<&str>,
         force: bool,
         task_id: Option<u32>,
         _update: bool,
@@ -728,10 +729,15 @@ pub mod task {
             .to_string_lossy()
             .to_string();
 
-        let working_directory = if rel_path.is_empty() {
-            ".".to_string()
-        } else {
-            rel_path
+        let working_directory = match working_directory {
+            Some(wd) => wd.to_string(),
+            None => {
+                if rel_path.is_empty() {
+                    ".".to_string()
+                } else {
+                    rel_path
+                }
+            }
         };
 
         // Check if tasks.json needs to be committed
@@ -907,19 +913,19 @@ pub mod task {
 
         // Create documentation directory structure and placeholder files
         output.info("Creating documentation directory structure...")?;
-        
+
         // Read tasks.json to get all task IDs
         let tasks_json_path = format!("{}/tasks/tasks.json", taskmaster_path);
         if std::path::Path::new(&tasks_json_path).exists() {
             let content = std::fs::read_to_string(&tasks_json_path)
                 .context("Failed to read tasks.json for directory creation")?;
-            
+
             if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
                 if let Some(tasks) = json.get("tasks").and_then(|t| t.as_array()) {
                     let docs_dir = format!("{}/docs", taskmaster_path);
                     std::fs::create_dir_all(&docs_dir)
                         .context("Failed to create docs directory")?;
-                    
+
                     let mut created_count = 0;
                     for task in tasks {
                         if let Some(task_id) = task.get("id").and_then(|id| id.as_u64()) {
@@ -928,7 +934,7 @@ pub mod task {
                                 let task_dir = format!("{}/task-{}", docs_dir, task_id);
                                 std::fs::create_dir_all(&task_dir)
                                     .context(format!("Failed to create directory for task {}", task_id))?;
-                                
+
                                 // Create placeholder files
                                 let task_md = format!("{}/task.md", task_dir);
                                 if !std::path::Path::new(&task_md).exists() {
@@ -939,7 +945,7 @@ pub mod task {
                                     std::fs::write(&task_md, task_content)
                                         .context(format!("Failed to create task.md for task {}", task_id))?;
                                 }
-                                
+
                                 let prompt_md = format!("{}/prompt.md", task_dir);
                                 if !std::path::Path::new(&prompt_md).exists() {
                                     let prompt_content = format!(
@@ -949,7 +955,7 @@ pub mod task {
                                     std::fs::write(&prompt_md, prompt_content)
                                         .context(format!("Failed to create prompt.md for task {}", task_id))?;
                                 }
-                                
+
                                 let acceptance_md = format!("{}/acceptance-criteria.md", task_dir);
                                 if !std::path::Path::new(&acceptance_md).exists() {
                                     let acceptance_content = format!(
@@ -959,35 +965,35 @@ pub mod task {
                                     std::fs::write(&acceptance_md, acceptance_content)
                                         .context(format!("Failed to create acceptance-criteria.md for task {}", task_id))?;
                                 }
-                                
+
                                 created_count += 1;
                             }
                         }
                     }
-                    
+
                     output.success(&format!("Created documentation structure for {} tasks", created_count))?;
-                    
+
                     // Commit the directory structure
                     output.info("Committing documentation structure...")?;
                     Command::new("git")
                         .args(["add", &format!("{}/docs", taskmaster_path)])
                         .status()
                         .context("Failed to add documentation structure")?;
-                    
+
                     let commit_result = Command::new("git")
                         .args(["commit", "-m", "feat: create documentation structure for Task Master tasks"])
                         .status()
                         .context("Failed to commit documentation structure")?;
-                    
+
                     if commit_result.success() {
                         output.success("Committed documentation structure")?;
-                        
+
                         // Push the structure to remote
                         let push_result = Command::new("git")
                             .args(["push", "origin", &source_branch_name])
                             .status()
                             .context("Failed to push documentation structure")?;
-                        
+
                         if push_result.success() {
                             output.success("Pushed documentation structure to remote")?;
                         } else {

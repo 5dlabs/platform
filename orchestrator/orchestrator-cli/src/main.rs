@@ -162,6 +162,9 @@ enum TaskCommands {
         /// Source branch to base documentation branch from (auto-detected if not specified)
         #[arg(long)]
         source_branch: Option<String>,
+        /// Working directory containing .taskmaster folder (auto-detected if not specified)
+        #[arg(long, short = 'w')]
+        working_directory: Option<String>,
         /// Overwrite existing documentation
         #[arg(long, short = 'f')]
         force: bool,
@@ -343,6 +346,7 @@ async fn main() -> Result<()> {
                 model,
                 repo,
                 source_branch,
+                working_directory,
                 force,
                 task_id,
                 update,
@@ -357,6 +361,7 @@ async fn main() -> Result<()> {
                     &model,
                     repo.as_deref(),
                     source_branch.as_deref(),
+                    working_directory.as_deref(),
                     force,
                     task_id,
                     update,
