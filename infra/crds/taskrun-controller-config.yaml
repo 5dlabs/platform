@@ -19,7 +19,7 @@ data:
     agent:
       image:
         repository: "ghcr.io/5dlabs/platform/claude-code"
-        tag: "1.0.51"
+        tag: "1.0.56"
         pullPolicy: "IfNotPresent"
       
       # Command and args for Claude
