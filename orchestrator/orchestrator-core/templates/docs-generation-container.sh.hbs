@@ -371,6 +371,10 @@ echo "✓ Repository cloned successfully"
 # Configure git user after successful clone
 {{#if repository}}
 echo "=== POST-CLONE GIT CONFIGURATION ==="
+# Fix dubious ownership issue when repository is cloned as different user
+git config --global --add safe.directory /workspace
+echo "✓ Added /workspace to safe directories"
+
 git config --global user.name "{{repository.githubUser}}"
 git config --global user.email "{{repository.githubUser}}@users.noreply.github.com"
 echo "✓ Configured git user: {{repository.githubUser}}"
