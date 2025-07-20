@@ -147,13 +147,7 @@ if [ -n "$GITHUB_TOKEN" ]; then
     echo "✓ GitHub API authentication successful"
     echo "  Authenticated as: $API_USER"
 
-    # Verify the API user matches the configured user
-    if [ "$API_USER" = "$GITHUB_USER" ]; then
-      echo "✓ API user matches configured GITHUB_USER"
-    else
-      echo "⚠️  WARNING: API user ($API_USER) differs from GITHUB_USER ($GITHUB_USER)"
-      echo "   This may cause permission issues"
-    fi
+    # API authentication successful - user verification handled by SSH auth
   else
     echo "❌ GitHub API authentication failed"
     echo "   Response: $API_RESPONSE"
