@@ -627,11 +627,8 @@ fn build_claude_job(
 
     // Build volumes list - use dedicated PVC for this service, emptyDir for docs generation
     let mut volumes = if is_docs_generation(tr) {
-        // Use emptyDir for docs generation (no need for persistent storage)
-        vec![json!({
-            "name": "workspace",
-            "emptyDir": {}
-        })]
+        // No workspace volume for docs generation (use container filesystem)
+        vec![]
     } else {
         // Use PVC for implementation tasks (need persistent workspace)
     let pvc_name = format!("workspace-{service_name}");
@@ -643,11 +640,16 @@ fn build_claude_job(
         })]
     };
 
-    // For docs generation jobs, also mount the ConfigMap
-    let mut volume_mounts = vec![json!({
-        "name": "workspace",
-        "mountPath": "/workspace"
-    })];
+    // Configure volume mounts based on task type
+    let mut volume_mounts = vec![];
+    
+    if !is_docs_generation(tr) {
+        // Only mount workspace volume for implementation tasks
+        volume_mounts.push(json!({
+            "name": "workspace",
+            "mountPath": "/workspace"
+        }));
+    }
 
     if is_docs_generation(tr) {
         volumes.push(json!({
