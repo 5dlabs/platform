@@ -1,37 +1,654 @@
 {
-  "tasks": [
-    {
-      "id": "1",
-      "title": "Initialize Express Application",
-      "description": "Set up a new Express.js application with basic routing and middleware",
-      "status": "pending",
-      "priority": "high",
-      "dependencies": [],
-      "details": "Create a basic Express.js server with:\n- Basic routing (GET /)\n- Error handling middleware\n- CORS configuration\n- JSON body parsing\n- Environment variable configuration\n- Package.json with appropriate dependencies",
-      "testStrategy": "Unit tests for route handlers, integration tests for API endpoints",
-      "subtasks": []
-    },
-    {
-      "id": "2", 
-      "title": "Add Database Integration",
-      "description": "Integrate database connectivity and basic models",
-      "status": "pending",
-      "priority": "medium",
-      "dependencies": ["1"],
-      "details": "Add database support with:\n- Database connection configuration\n- Basic user model\n- Migration system\n- Connection pooling\n- Error handling for database operations",
-      "testStrategy": "Database integration tests, model validation tests",
-      "subtasks": []
-    },
-    {
-      "id": "3",
-      "title": "Authentication System",
-      "description": "Implement JWT-based authentication",
-      "status": "pending", 
-      "priority": "high",
-      "dependencies": ["2"],
-      "details": "Create authentication system with:\n- JWT token generation and validation\n- User registration and login endpoints\n- Password hashing with bcrypt\n- Authentication middleware\n- Token refresh mechanism",
-      "testStrategy": "Authentication flow tests, JWT validation tests, security tests",
-      "subtasks": []
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Initialize Express Project and Configure Environment",
+        "description": "Set up the Express.js project structure with proper package configuration, environment variables, and core middleware setup",
+        "details": "Create project directory structure and initialize npm project. Install Express.js (^4.19.2), dotenv (^16.4.5), cors (^2.8.5), morgan (^1.10.0), and helmet (^7.1.0). Set up src/ directory with app.js as main entry point. Create .env.example with PORT=3000, NODE_ENV=development, JWT_SECRET=your-secret-key-here, DATABASE_URL=./database.sqlite. Implement basic Express server with middleware stack: helmet for security headers, cors for cross-origin requests, morgan for request logging, express.json() for JSON parsing. Add global error handling middleware that catches all errors and returns appropriate status codes. Create npm scripts: 'start' for production with node src/app.js, 'dev' for development with nodemon (^3.1.0), 'test' with jest. Implement graceful shutdown handling for SIGTERM and SIGINT signals.",
+        "testStrategy": "Create a basic smoke test that verifies the server starts on the configured port and responds to GET /health with 200 status. Test that environment variables are properly loaded from .env file. Verify middleware is applied in correct order by checking response headers. Test error handling middleware by triggering deliberate errors and checking response format.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Project structure and npm setup",
+            "description": "Create the project directory structure and initialize npm with a package.json file",
+            "dependencies": [],
+            "details": "Create root directory with src/, config/, and public/ folders. Run npm init to create package.json with proper project metadata including name, version, description, main entry point (src/index.js), and author information.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Core dependencies installation",
+            "description": "Install Express framework and essential dependencies for the project",
+            "dependencies": [
+              1
+            ],
+            "details": "Install express as the main dependency. Add development dependencies including nodemon for auto-restarting, dotenv for environment variables, and any TypeScript dependencies if using TypeScript. Consider adding cors, helmet, and compression as common production dependencies.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Basic Express server implementation",
+            "description": "Create the main server file with basic Express application setup and routing",
+            "dependencies": [
+              2
+            ],
+            "details": "Create src/index.js or src/app.js with Express server initialization. Set up a basic health check route at '/' that returns a success message. Configure the server to listen on a port from environment variables with a fallback to 3000.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Middleware configuration",
+            "description": "Set up essential middleware for parsing, security, and request handling",
+            "dependencies": [
+              3
+            ],
+            "details": "Configure express.json() and express.urlencoded() for body parsing. Add error handling middleware for catching and formatting errors. Set up morgan for request logging. Configure static file serving from public directory if needed. Ensure middleware is added in the correct order.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Environment and scripts setup",
+            "description": "Configure environment variables and npm scripts for development and production",
+            "dependencies": [
+              4
+            ],
+            "details": "Create .env and .env.example files with PORT and NODE_ENV variables. Add npm scripts for 'start' (production), 'dev' (nodemon), and 'test'. Create a .gitignore file to exclude node_modules, .env, and other sensitive files. Document the setup process in a basic README.md if needed.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Setup SQLite Database with Models",
+        "description": "Configure SQLite database connection and create User and Task models with proper schema definitions",
+        "details": "Install sqlite3 (^5.1.7) and better-sqlite3 (^9.4.3) for improved performance. Create src/config/database.js to initialize SQLite connection with proper error handling. Design database schema: Users table with id (INTEGER PRIMARY KEY AUTOINCREMENT), email (TEXT UNIQUE NOT NULL), password (TEXT NOT NULL), created_at (DATETIME DEFAULT CURRENT_TIMESTAMP); Tasks table with id (INTEGER PRIMARY KEY AUTOINCREMENT), user_id (INTEGER NOT NULL FOREIGN KEY), title (TEXT NOT NULL), description (TEXT), completed (BOOLEAN DEFAULT 0), created_at (DATETIME DEFAULT CURRENT_TIMESTAMP), updated_at (DATETIME DEFAULT CURRENT_TIMESTAMP). Create src/models/User.js and src/models/Task.js with methods for CRUD operations using prepared statements to prevent SQL injection. Implement database initialization script that creates tables if they don't exist. Add seed data functionality for development testing with at least 2 users and 5 tasks per user.",
+        "testStrategy": "Write unit tests for database connection establishment and error handling. Test model methods for User: create, findByEmail, findById; for Task: create, findByUserId, findById, update, delete. Verify foreign key constraints work correctly. Test that database file is created in correct location. Verify seed data insertion works without errors.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "SQLite installation and connection setup",
+            "description": "Install SQLite dependencies and create database connection module",
+            "dependencies": [],
+            "details": "Install sqlite3 npm package, create db/connection.js module with database initialization logic, implement connection pooling and error handling, ensure proper database file path configuration",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Database schema design and migration scripts",
+            "description": "Design database schema and create migration system",
+            "dependencies": [
+              1
+            ],
+            "details": "Create migrations directory structure, design users table schema (id, username, email, password_hash, created_at, updated_at), design tasks table schema (id, user_id, title, description, status, priority, due_date, created_at, updated_at), implement migration runner script",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "User model implementation with CRUD methods",
+            "description": "Implement User model with complete CRUD operations",
+            "dependencies": [
+              2
+            ],
+            "details": "Create models/User.js class, implement create() method with password hashing, implement findById() and findByEmail() methods, implement update() and delete() methods, add input validation and error handling",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Task model implementation with CRUD methods",
+            "description": "Implement Task model with CRUD operations and user associations",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Create models/Task.js class, implement create() with user_id foreign key, implement findById() and findByUserId() methods, implement update() and delete() methods, add status and priority enums, ensure foreign key constraints",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Database initialization and table creation",
+            "description": "Create database initialization script and run migrations",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Create db/init.js script, run migration scripts to create tables, set up indexes for performance (user_id on tasks, email on users), implement database reset functionality for development, add database connection verification",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Seed data implementation",
+            "description": "Create seed data script for development and testing",
+            "dependencies": [
+              5
+            ],
+            "details": "Create db/seeds.js script, generate sample users with hashed passwords, create sample tasks with various statuses and priorities, implement seed runner with transaction support, add npm script for easy seeding",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Implement JWT Authentication System",
+        "description": "Build JWT-based authentication with user registration, login, and middleware for protecting routes",
+        "details": "Install jsonwebtoken (^9.0.2) and bcrypt (^5.1.1). Create src/middleware/auth.js with authenticateToken middleware that validates JWT from Authorization header (Bearer token format). Implement token generation utility in src/utils/jwt.js with 24-hour expiration. Create src/routes/auth.js with POST /auth/register endpoint: validate email format and password strength (min 8 chars), hash password with bcrypt (10 salt rounds), create user in database, return JWT token. Implement POST /auth/login: validate credentials against database, compare password with bcrypt, generate and return JWT on success. Add proper error responses: 400 for validation errors, 401 for invalid credentials, 409 for duplicate email. Include user ID and email in JWT payload. Create refresh token mechanism for better security (optional enhancement).",
+        "testStrategy": "Test password hashing produces different hashes for same password. Verify JWT tokens are valid and contain correct payload. Test registration with invalid email formats and weak passwords. Test login with correct and incorrect credentials. Verify authentication middleware correctly validates tokens and rejects invalid/expired tokens. Test that protected endpoints return 401 without valid token.",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "JWT utility functions and token generation",
+            "description": "Implement core JWT functions for token creation, signing, and verification with configurable expiration times",
+            "dependencies": [],
+            "details": "Create utility functions for generating access tokens and refresh tokens using jsonwebtoken library. Include functions for token signing with secret key, setting appropriate expiration times, and extracting payload data. Implement token verification and decoding functions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Password hashing implementation with bcrypt",
+            "description": "Set up secure password hashing and comparison functions using bcrypt library",
+            "dependencies": [],
+            "details": "Implement password hashing function with appropriate salt rounds (10-12). Create password comparison function for login verification. Ensure proper error handling for hashing operations and consider async implementation for non-blocking operations.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Authentication middleware development",
+            "description": "Create Express middleware for protecting routes and validating JWT tokens",
+            "dependencies": [
+              1
+            ],
+            "details": "Develop middleware function to extract JWT from Authorization header, verify token validity, decode user information, and attach user data to request object. Include proper error responses for missing, invalid, or expired tokens.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "User registration endpoint with validation",
+            "description": "Implement POST /api/auth/register endpoint with input validation and user creation",
+            "dependencies": [
+              2
+            ],
+            "details": "Create registration endpoint that validates email format, password strength, and required fields. Check for existing users, hash password using bcrypt, store user in database, and return success response without exposing sensitive data.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Login endpoint implementation",
+            "description": "Create POST /api/auth/login endpoint for user authentication and token generation",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Implement login endpoint that validates credentials, verifies password against stored hash, generates JWT tokens upon successful authentication, and returns tokens with appropriate user data. Include rate limiting considerations.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Error handling for auth flows",
+            "description": "Implement comprehensive error handling for all authentication scenarios",
+            "dependencies": [
+              3,
+              4,
+              5
+            ],
+            "details": "Create standardized error responses for invalid credentials, duplicate registrations, malformed requests, expired tokens, and server errors. Ensure error messages don't leak sensitive information about system internals or user existence.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Token refresh mechanism (optional)",
+            "description": "Implement refresh token flow for maintaining user sessions",
+            "dependencies": [
+              1,
+              3
+            ],
+            "details": "Create POST /api/auth/refresh endpoint that accepts refresh tokens, validates them, and issues new access tokens. Implement refresh token storage strategy, rotation policy, and revocation mechanism for enhanced security.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Create Task Management API Endpoints",
+        "description": "Implement RESTful CRUD endpoints for task management with proper authorization checks",
+        "details": "Create src/routes/tasks.js with all task-related endpoints. Implement GET /api/tasks: fetch all tasks for authenticated user, return array with task objects, support query parameters for filtering by completed status. POST /api/tasks: validate title (required, max 255 chars) and description (optional, max 1000 chars), create task associated with authenticated user ID, return created task with 201 status. PUT /api/tasks/:id: verify task belongs to authenticated user, update only provided fields (title, description, completed), update updated_at timestamp, return updated task. DELETE /api/tasks/:id: verify ownership, soft delete or hard delete based on requirements, return 204 on success. Add pagination support for GET endpoint with limit (default 20) and offset parameters. Implement input validation middleware using express-validator (^7.0.1) for all endpoints.",
+        "testStrategy": "Test each endpoint with valid and invalid inputs. Verify users can only access their own tasks. Test pagination works correctly with different limit/offset values. Verify proper status codes are returned. Test that database constraints are enforced. Create integration tests that test complete task lifecycle: create, read, update, delete.",
+        "priority": "medium",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement GET /tasks endpoint with filtering",
+            "description": "Create GET endpoint to retrieve tasks with support for query parameters to filter by status, priority, and other fields",
+            "dependencies": [],
+            "details": "Implement controller method to handle GET requests, extract query parameters, build dynamic queries based on filters, ensure proper authorization to only return user's tasks, return 200 OK with JSON array of tasks",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement POST /tasks endpoint with validation",
+            "description": "Create POST endpoint to create new tasks with request body validation for required fields",
+            "dependencies": [],
+            "details": "Implement controller method for POST requests, validate required fields (title, description, etc.), sanitize input data, save to database with user association, return 201 Created with created task object and location header",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement PUT /tasks/:id endpoint with ownership verification",
+            "description": "Create PUT endpoint to update existing tasks with authorization check to ensure user owns the task",
+            "dependencies": [],
+            "details": "Implement controller for PUT requests, verify task exists and user has permission, validate update payload, perform partial or full update based on request, return 200 OK with updated task or 403 Forbidden if unauthorized",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement DELETE /tasks/:id endpoint",
+            "description": "Create DELETE endpoint to remove tasks with proper authorization and error handling",
+            "dependencies": [],
+            "details": "Implement controller for DELETE requests, check task exists and user owns it, perform soft or hard delete based on requirements, return 204 No Content on success or appropriate error status",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Add pagination support to GET /tasks endpoint",
+            "description": "Enhance GET endpoint with pagination using page/limit parameters and return metadata",
+            "dependencies": [
+              1
+            ],
+            "details": "Add page and limit query parameters with defaults, calculate offset for database query, return pagination metadata (total, page, limit, hasNext, hasPrev), implement efficient counting query, ensure consistent ordering",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Create input validation middleware",
+            "description": "Develop reusable validation middleware for all endpoints using a validation library",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Set up validation library (e.g., Joi, express-validator), create validation schemas for each endpoint, implement middleware to validate request bodies and parameters, return 400 Bad Request with detailed validation errors, ensure consistent error format across all endpoints",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Add Request Validation and Error Handling",
+        "description": "Implement comprehensive input validation and standardized error responses across all endpoints",
+        "details": "Install express-validator (^7.0.1) and create validation middleware for all endpoints. Define validation rules: email must be valid format, password minimum 8 characters with at least one number and letter, task title required and max 255 chars, task description optional max 1000 chars. Create src/middleware/validation.js with reusable validation chains. Implement custom error formatter that returns consistent error structure: { error: { message: string, field: string, code: string } }. Add rate limiting with express-rate-limit (^7.2.0): 100 requests per 15 minutes for general endpoints, 5 requests per hour for auth endpoints. Create centralized error handler in src/utils/errors.js with custom error classes: ValidationError, AuthenticationError, NotFoundError, ConflictError. Ensure all errors are logged appropriately with timestamps and request context.",
+        "testStrategy": "Test validation rules with boundary cases (empty strings, null values, extremely long inputs). Verify rate limiting blocks requests after threshold. Test error responses maintain consistent format across all endpoints. Check that sensitive information is not leaked in error messages. Test SQL injection attempts are blocked by validation.",
+        "priority": "medium",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Express-validator setup and validation rules definition",
+            "description": "Install express-validator package and define comprehensive validation rules for all API endpoints including request body, query parameters, and route parameters",
+            "dependencies": [],
+            "details": "Set up express-validator as the validation library. Create validation schemas for user registration, login, profile updates, post creation/updates, and comment operations. Define reusable validation chains for common fields like email, password, usernames, and IDs. Implement sanitization rules to prevent XSS attacks.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Reusable validation middleware creation",
+            "description": "Create modular validation middleware functions that can be easily applied to routes and handle validation errors consistently",
+            "dependencies": [
+              1
+            ],
+            "details": "Build a validation middleware factory that accepts validation rules and returns middleware functions. Create specialized validators for authentication tokens, pagination parameters, and resource ownership. Implement a centralized validation error handler that formats validation errors into a consistent response structure.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Custom error classes and error handler implementation",
+            "description": "Design and implement custom error classes for different error types and create a global error handling middleware",
+            "dependencies": [],
+            "details": "Create base AppError class extending Error with status code and operational error flag. Implement specific error classes: ValidationError, AuthenticationError, AuthorizationError, NotFoundError, and ConflictError. Build a global error handling middleware that catches all errors, differentiates between operational and programming errors, and sends appropriate responses.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Rate limiting configuration",
+            "description": "Implement rate limiting to prevent abuse and protect API endpoints from excessive requests",
+            "dependencies": [],
+            "details": "Install and configure express-rate-limit with different limits for various endpoints. Set stricter limits for authentication endpoints (login, register) and more relaxed limits for general API usage. Implement rate limiting by user ID for authenticated routes and by IP for public routes. Configure custom rate limit exceeded messages and headers.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Error logging and response formatting",
+            "description": "Set up comprehensive error logging system and standardize error response formats across the API",
+            "dependencies": [
+              3
+            ],
+            "details": "Integrate winston or similar logging library for structured error logging. Log errors with appropriate severity levels, timestamps, and context. Create consistent error response format including error code, message, and details. Implement request ID tracking for error correlation. Configure different logging behaviors for development and production environments.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Create Basic Frontend Interface",
+        "description": "Build a simple HTML/CSS/JavaScript frontend for testing the API endpoints interactively",
+        "details": "Create public/ directory with index.html, styles.css, and app.js. Build single-page interface with vanilla JavaScript (no framework needed). Create login/register form that switches between modes, stores JWT in localStorage on successful auth. Implement task list display with add, edit, delete functionality using fetch API. Add logout button that clears JWT from localStorage. Style with basic CSS: responsive layout using flexbox, simple color scheme, form styling with proper spacing. Implement error message display for failed API calls. Add loading states for async operations. Create simple navigation between auth and task views based on authentication state. Serve static files from Express using express.static middleware. Include basic XSS protection by escaping user inputs when displaying.",
+        "testStrategy": "Manually test all user flows: registration, login, task CRUD operations, logout. Verify JWT is properly stored and sent with requests. Test error states display correctly. Check responsive design on different screen sizes. Verify no JavaScript errors in console during normal operation.",
+        "priority": "low",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "HTML structure and basic layout",
+            "description": "Create the foundational HTML structure with semantic elements for the single-page application including main containers, navigation, and content areas",
+            "dependencies": [],
+            "details": "Build index.html with proper DOCTYPE, meta tags, viewport settings, and semantic HTML5 elements. Create div containers for app root, header/nav, main content area, authentication section, task management section, and footer. Include script and style tags for external files.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "CSS styling and responsive design",
+            "description": "Implement comprehensive CSS styling with mobile-first responsive design approach for all UI components",
+            "dependencies": [
+              1
+            ],
+            "details": "Create styles.css with CSS reset, custom properties for theming, flexbox/grid layouts, form styling, button styles, card components for tasks, modal dialogs, loading spinners, and media queries for responsive breakpoints (mobile, tablet, desktop). Include transitions and hover effects for better UX.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Authentication forms and JWT handling",
+            "description": "Build login/register forms with client-side JWT token management and session persistence",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Create auth.js module with functions for rendering login/register forms, form validation, JWT token storage in localStorage, token expiration checking, automatic token refresh logic, logout functionality, and auth state management. Include password strength indicators and error message display.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Task list display and management UI",
+            "description": "Implement the complete task management interface with CRUD operations and dynamic DOM updates",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Create tasks.js module for rendering task lists, individual task cards with title/description/status, add/edit/delete task forms, task filtering by status, sorting options, search functionality, and real-time DOM updates using vanilla JavaScript. Include confirmation dialogs for destructive actions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "API integration with fetch",
+            "description": "Develop a centralized API service layer for all backend communications using the Fetch API",
+            "dependencies": [
+              3
+            ],
+            "details": "Create api.js module with reusable fetch wrapper functions for all endpoints (auth, tasks CRUD), automatic JWT token injection in headers, request/response interceptors, retry logic for failed requests, proper error handling, and response data transformation. Include environment-based API URL configuration.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Error handling and loading states",
+            "description": "Implement comprehensive error handling and loading state management throughout the application",
+            "dependencies": [
+              3,
+              4,
+              5
+            ],
+            "details": "Create ui-feedback.js module for global error handling, toast notifications, loading overlays, progress indicators for async operations, form validation error displays, network error recovery strategies, and user-friendly error messages. Implement a global state manager for tracking loading states across components.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Implement Comprehensive Testing Suite",
+        "description": "Set up Jest testing framework with unit and integration tests covering all major functionality",
+        "details": "Install jest (^29.7.0), supertest (^6.3.4) for API testing, and @types/jest for better IDE support. Configure jest.config.js with testEnvironment: 'node', coverage thresholds: 80% for statements, branches, functions, lines. Create test database setup that uses in-memory SQLite for faster tests. Write unit tests for all model methods, authentication utilities, validation middleware. Create integration tests for complete user flows: register → login → create task → update task → delete task. Test error scenarios: invalid tokens, non-existent resources, unauthorized access attempts. Add GitHub Actions workflow (.github/workflows/test.yml) that runs tests on push and pull requests. Implement test data factories using factory pattern for consistent test data generation. Add npm scripts: 'test' for running all tests, 'test:watch' for development, 'test:coverage' for coverage report.",
+        "testStrategy": "Ensure 100% test coverage for critical paths (auth, database operations). Mock external dependencies appropriately. Test both happy paths and error scenarios. Verify tests are isolated and don't affect each other. Run tests in CI/CD pipeline and fail builds if tests fail or coverage drops below threshold.",
+        "priority": "medium",
+        "dependencies": [
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set up Jest testing environment and configuration",
+            "description": "Install and configure Jest with TypeScript support, set up test database configuration, and create base test utilities",
+            "dependencies": [],
+            "details": "Install jest, @types/jest, ts-jest, and supertest. Configure jest.config.js with TypeScript support, coverage thresholds (80%), and test environment settings. Set up separate test database configuration and migration scripts. Create base test setup/teardown utilities for database connections and cleanup between tests.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Create unit tests for User and Task models with database operations",
+            "description": "Write comprehensive unit tests for User and Task models including CRUD operations, validations, and relationships",
+            "dependencies": [
+              1
+            ],
+            "details": "Test User model: creation, validation (email format, password requirements), finding by email/id, password hashing verification. Test Task model: CRUD operations, user association, status updates, filtering by user. Test model relationships and cascade operations. Ensure proper database transaction handling and rollback in tests.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement authentication middleware and JWT utility tests",
+            "description": "Create unit tests for JWT token generation/verification and authentication middleware functionality",
+            "dependencies": [
+              1
+            ],
+            "details": "Test JWT utilities: token generation with proper payload, token verification, expiration handling, invalid token scenarios. Test auth middleware: valid token authentication, missing token handling, expired token handling, malformed token handling. Mock request/response objects for middleware testing.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Write API endpoint integration tests for all routes",
+            "description": "Create comprehensive integration tests for auth and task endpoints using supertest",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Test auth endpoints: user registration (valid/invalid data), login (correct/incorrect credentials), token generation. Test task endpoints: create task (authenticated/unauthenticated), get all tasks (with pagination), get single task, update task (own/other's task), delete task (authorization checks). Test request validation and error responses.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement error scenario and edge case testing",
+            "description": "Create tests for error handling, edge cases, and boundary conditions across the application",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Test database connection failures, concurrent access scenarios, rate limiting (if implemented), large payload handling, SQL injection attempts, XSS prevention, pagination edge cases (empty results, out of bounds), cascading deletes, orphaned records prevention. Test error middleware and consistent error response format.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Create test data factories and helper utilities",
+            "description": "Build factory functions and utilities for generating test data and common test scenarios",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Create factory functions for: generating valid/invalid user data, creating authenticated test users, generating task data with various states, creating batches of test data. Build helper utilities for: authenticating test requests, cleaning up test data, seeding database for specific scenarios, mocking external services if any.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Set up CI/CD integration with GitHub Actions for automated testing",
+            "description": "Configure GitHub Actions workflow for running tests, coverage reports, and deployment checks",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ],
+            "details": "Create .github/workflows/test.yml with: Node.js setup, PostgreSQL service container, environment variable configuration, test database setup, running all tests with coverage, uploading coverage reports to service like Codecov, failing builds if coverage drops below 80%. Add status badges to README and configure branch protection rules.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Prepare Deployment Configuration and Documentation",
+        "description": "Create deployment scripts, CI/CD configuration, and comprehensive documentation for the project",
+        "details": "Create comprehensive README.md with: project overview, prerequisites (Node.js version), installation steps, environment variable configuration, API endpoint documentation with example requests/responses, deployment instructions. Add Dockerfile with multi-stage build: node:20-alpine base image, separate build and runtime stages, non-root user for security, health check configuration. Create docker-compose.yml for local development with volume mounts. Add .dockerignore to exclude node_modules, .env, database files. Create deployment scripts for common platforms: start.sh for production startup, health-check.sh for monitoring. Document database backup/restore procedures. Add API documentation using swagger-jsdoc (^6.2.8) and swagger-ui-express (^5.0.0) for interactive API exploration. Create CONTRIBUTING.md with code style guidelines, git commit message format, pull request process. Add .nvmrc file specifying Node.js version for consistency.",
+        "testStrategy": "Test Docker build process produces working image. Verify container starts and responds to health checks. Test deployment scripts work in clean environment. Validate all documentation examples actually work. Check that swagger documentation accurately reflects API endpoints. Test backup/restore procedures with sample data.",
+        "priority": "medium",
+        "dependencies": [
+          7
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create comprehensive README.md documentation",
+            "description": "Develop project documentation including overview, architecture, setup instructions, API endpoints, and usage examples",
+            "dependencies": [],
+            "details": "Include project description, tech stack, prerequisites, installation steps, environment variables configuration, basic usage examples, and links to other documentation",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Build multi-stage Dockerfile",
+            "description": "Create an optimized Dockerfile with multi-stage build process for the Express application",
+            "dependencies": [],
+            "details": "Implement build stage for dependencies, production stage with minimal image size, proper user permissions, health check instructions, and security best practices",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Configure Docker Compose setup",
+            "description": "Create docker-compose.yml with service definitions, networking, volumes, and environment configurations",
+            "dependencies": [
+              2
+            ],
+            "details": "Define services for the application, database connections, volume mappings, network configuration, environment variable management, and development/production profiles",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Swagger API documentation",
+            "description": "Set up Swagger/OpenAPI documentation for all API endpoints with interactive testing capabilities",
+            "dependencies": [
+              1
+            ],
+            "details": "Install swagger-ui-express, create OpenAPI specification, document all endpoints with request/response schemas, authentication requirements, and example payloads",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Create deployment scripts and health checks",
+            "description": "Develop deployment automation scripts and implement health check endpoints for monitoring",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Create deployment scripts for different environments, implement /health and /ready endpoints, add monitoring integration points, and configure auto-restart policies",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Write contributing guidelines and code standards",
+            "description": "Establish CONTRIBUTING.md with development workflow, code style guide, and quality standards",
+            "dependencies": [
+              1
+            ],
+            "details": "Define git workflow, branch naming conventions, commit message format, code review process, testing requirements, linting rules, and pull request templates",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Design backup and maintenance procedures",
+            "description": "Document backup strategies, disaster recovery plans, and routine maintenance procedures",
+            "dependencies": [
+              3,
+              5
+            ],
+            "details": "Create backup scripts for data and configurations, define recovery time objectives, document maintenance windows, log rotation policies, and update procedures",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-20T16:54:39.011Z",
+      "updated": "2025-07-20T16:54:56.500Z",
+      "description": "Tasks for master context"
     }
-  ]
+  }
 }
