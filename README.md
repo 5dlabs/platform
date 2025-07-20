@@ -104,7 +104,7 @@ cargo build --release
 cp target/release/orchestrator ~/.local/bin/
 
 # Or use the pre-built binary from releases
-curl -L https://github.com/5dlabs/agent-platform/releases/latest/download/orchestrator-linux-x86_64 -o ~/.local/bin/orchestrator
+curl -L https://github.com/5dlabs/platform/releases/latest/download/orchestrator-linux-x86_64 -o ~/.local/bin/orchestrator
 chmod +x ~/.local/bin/orchestrator
 ```
 
@@ -176,7 +176,7 @@ orchestrator job logs job-123 --follow
 8. **Install MCP Server for Cursor/Claude Integration**:
 ```bash
 # Quick install with script
-curl -fsSL https://raw.githubusercontent.com/5dlabs/agent-platform/main/scripts/install-mcp-server.sh | bash
+curl -fsSL https://raw.githubusercontent.com/5dlabs/platform/main/scripts/install-mcp-server.sh | bash
 
 # Or manual installation
 ./scripts/install-mcp-server.sh \
