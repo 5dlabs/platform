@@ -14,6 +14,10 @@ This task establishes the foundation for the Express.js application by setting u
 - Set up development tooling for efficient workflow
 - Implement graceful shutdown handling
 
+## Related Project Context
+
+This task aligns with the Product Requirements Document's objective to "Build a minimal but functional Express.js application" and establishes the foundation for all subsequent tasks. It implements the core technical requirements for Express server setup, middleware configuration, and environment management.
+
 ## Technical Requirements
 
 ### Dependencies
