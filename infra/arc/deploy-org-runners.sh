@@ -90,7 +90,7 @@ echo -e "${GREEN}✅ Actions Runner Controller is installed${NC}"
 # Apply the configuration
 echo -e "${YELLOW}📦 Applying runner configuration...${NC}"
 
-if kubectl apply -f "$(dirname "$0")/org-runners.yaml"; then
+if kubectl apply -f "$(dirname "$0")/arc-org-runners.yaml"; then
     echo -e "${GREEN}✅ Runner configuration applied successfully${NC}"
 else
     echo -e "${RED}❌ Failed to apply runner configuration${NC}"

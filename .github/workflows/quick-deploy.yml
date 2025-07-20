@@ -38,7 +38,7 @@ jobs:
   # Build only orchestrator (skip Claude Code for now)
   build-orchestrator:
     needs: [version]
-    runs-on: [self-hosted, k8s-runner, agent-platform]
+    runs-on: [k8s-runner]
     # No container needed - the Arc runners now have the rust-builder image!
     permissions:
       contents: read

@@ -9,7 +9,7 @@
 			"args": [],
 			"env": {
 			  "ORCHESTRATOR_API_URL": "http://orchestrator.orchestrator.svc.cluster.local/api/v1",
-			  "TASKMASTER_ROOT": "/Users/jonathonfritz/platform/example"
+			  "TASKMASTER_ROOT": "/Users/jonathonfritz/platform/example-express"
 			}
 		}
 
