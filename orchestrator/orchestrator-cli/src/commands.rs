@@ -916,7 +916,7 @@ pub mod task {
                 .context("Failed to read tasks.json for directory creation")?;
 
             if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
-                if let Some(tasks) = json.get("tasks").and_then(|t| t.as_array()) {
+                if let Some(tasks) = json.get("master").and_then(|m| m.get("tasks")).and_then(|t| t.as_array()) {
                     let docs_dir = format!("{}/docs", taskmaster_path);
                     std::fs::create_dir_all(&docs_dir)
                         .context("Failed to create docs directory")?;
@@ -930,26 +930,17 @@ pub mod task {
                                 std::fs::create_dir_all(&task_dir)
                                     .context(format!("Failed to create directory for task {}", task_id))?;
 
-                                // Copy actual task text file to docs directory
-                                let source_task_file = format!("{}/.taskmaster/tasks/task_{:03}.txt", taskmaster_path, task_id);
-                                let target_task_file = format!("{}/task.txt", task_dir);
+                                // Copy individual task file from tasks/task_XXX.txt to docs/task-{id}/task.txt
+                                let source_file = format!("{}/tasks/task_{:03}.txt", taskmaster_path, task_id);
+                                let dest_file = format!("{}/task.txt", task_dir);
 
-                                if std::path::Path::new(&source_task_file).exists() {
-                                    std::fs::copy(&source_task_file, &target_task_file)
+                                if std::path::Path::new(&source_file).exists() {
+                                    std::fs::copy(&source_file, &dest_file)
                                         .context(format!("Failed to copy task file for task {}", task_id))?;
-                                    output.info(&format!("Copied task_{:03}.txt to task-{}/task.txt", task_id, task_id))?;
+                                    output.info(&format!("✓ Copied task file for task {}: {}", task_id, title))?;
                                 } else {
-                                    // Fallback: create placeholder if source doesn't exist
-                                    let task_content = format!(
-                                        "# Task {}: {}\n\n<!-- Source task file not found: {} -->\n<!-- Please run 'task-master generate' to create task text files -->\n",
-                                        task_id, title, source_task_file
-                                    );
-                                    std::fs::write(&target_task_file, task_content)
-                                        .context(format!("Failed to create fallback task file for task {}", task_id))?;
-                                    output.warning(&format!("Source task file not found for task {}, created placeholder", task_id))?;
+                                    output.warning(&format!("⚠ No task file found for task {} (expected: {})", task_id, source_file))?;
                                 }
-
-                                // Only copy task.txt files for now - other files can be added later if needed
 
                                 created_count += 1;
                             }
@@ -957,36 +948,7 @@ pub mod task {
                     }
 
                     output.success(&format!("Created documentation structure for {} tasks", created_count))?;
-
-                    // Commit the directory structure
-                    output.info("Committing documentation structure...")?;
-                    Command::new("git")
-                        .args(["add", &format!("{}/docs", taskmaster_path)])
-                        .status()
-                        .context("Failed to add documentation structure")?;
-
-                    let commit_result = Command::new("git")
-                        .args(["commit", "-m", "feat: create documentation structure for Task Master tasks"])
-                        .status()
-                        .context("Failed to commit documentation structure")?;
-
-                    if commit_result.success() {
-                        output.success("Committed documentation structure")?;
-
-                        // Push the structure to remote
-                        let push_result = Command::new("git")
-                            .args(["push", "origin", &source_branch_name])
-                            .status()
-                            .context("Failed to push documentation structure")?;
-
-                        if push_result.success() {
-                            output.success("Pushed documentation structure to remote")?;
-                        } else {
-                            output.warning("Failed to push documentation structure, continuing anyway...")?;
-                        }
-                    } else {
-                        output.info("No new documentation structure to commit")?;
-                    }
+                    output.info("📋 Individual task files copied - Claude will generate all documentation in one commit")?;
                 }
             }
         }
