@@ -81,7 +81,7 @@ fn handle_mcp_protocol_methods(
             let _protocol_version = params_map
                 .get("protocolVersion")
                 .and_then(|v| v.as_str())
-                .unwrap_or("2024-11-05");
+                .unwrap_or("2025-06-18");
 
             // Validate that required fields are present (as per MCP schema)
             if params_map.get("capabilities").is_none()
@@ -92,7 +92,7 @@ fn handle_mcp_protocol_methods(
             }
 
             Some(Ok(json!({
-                "protocolVersion": "2024-11-05",
+                "protocolVersion": "2025-06-18",
                 "capabilities": {
                     "tools": {
                         "listChanged": true
@@ -116,7 +116,9 @@ fn handle_mcp_protocol_methods(
 
         "tools/list" => {
             // Return list of available tools with schemas
-            Some(Ok(get_capabilities()))
+            let capabilities = get_capabilities();
+            eprintln!("DEBUG: tools/list called, returning: {}", serde_json::to_string_pretty(&capabilities).unwrap_or_else(|_| "ERROR".to_string()));
+            Some(Ok(capabilities))
         }
         _ => None,
     }
