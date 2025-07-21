@@ -2,7 +2,6 @@ use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::env;
 use std::process::{Command, Stdio};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::runtime::Runtime;
@@ -114,10 +113,7 @@ fn handle_mcp_protocol_methods(
             // Debug: catch any notifications we might be missing
             None
         }
-        "ping" => {
-            // MCP ping request - respond with empty object for connection health
-            Some(Ok(json!({})))
-        }
+
         "tools/list" => {
             // Return list of available tools with schemas
             Some(Ok(get_capabilities()))
@@ -132,27 +128,7 @@ fn handle_orchestrator_tools(
     params_map: &HashMap<String, Value>,
 ) -> Option<Result<Value>> {
     match method {
-        "ping" => {
-            // Test connectivity and show tool information
-            Some(Ok(json!({
-                "status": "OK",
-                "server": "orchestrator-mcp-server",
-                "version": "1.0.0",
-                "environment": {
-                    "working_directory": env::current_dir().unwrap_or_default().to_string_lossy(),
-                    "orchestrator_cli_available": std::path::Path::new("./target/release/orchestrator-cli").exists()
-                },
-                "usage_examples": {
-                    "init_docs": [
-                        "init_docs()",
-                        "init_docs({model: 'opus'})",
-                        "init_docs({working_directory: '/absolute/path/to/project'})",
-                        "init_docs({task_id: 5})",
-                        "init_docs({force: true})"
-                    ]
-                }
-            })))
-        }
+
         "init_docs" => {
             // Initialize documentation for Task Master tasks
             eprintln!("DEBUG: MCP init_docs called with raw args: {:?}", params_map);
