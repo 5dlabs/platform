@@ -468,6 +468,14 @@ echo "   • Write permissions: ✓"
 echo ""
 echo "🚀 Proceeding with docs generation..."
 
+# Change back to working directory after git operations
+echo "Returning to working directory: $CLAUDE_WORK_DIR"
+cd "$CLAUDE_WORK_DIR" || {
+  echo "❌ ERROR: Failed to return to working directory: $CLAUDE_WORK_DIR"
+  exit 1
+}
+echo "✓ Back in working directory: $(pwd)"
+
 {{else}}
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
