@@ -1,0 +1,154 @@
+# Task ID: 8
+# Title: Implement Automated Operations and Self-Healing
+# Status: pending
+# Dependencies: 5, 7
+# Priority: medium
+# Description: Develop automated operations capabilities including dynamic resource management, circuit breakers for degraded performance, and self-healing through Kubernetes operators.
+# Details:
+1. Create custom Kubernetes operator for Solana validator:
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	solanaoperator "github.com/our-org/solana-operator/api/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+type SolanaReconciler struct {
+	client.Client
+}
+
+func (r *SolanaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	var validator solanaoperator.SolanaValidator
+	if err := r.Get(ctx, req.NamespacedName, &validator); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// Check validator health
+	// Implement memory pressure detection
+	// Adjust cache sizes based on memory pressure
+	// Implement circuit breakers
+
+	return ctrl.Result{RequeueAfter: time.Minute}, nil
+}
+```
+
+2. Implement memory pressure-based cache adjustment:
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: solana-memory-optimizer
+spec:
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: optimizer
+            image: solana-tools:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              MEMORY_PRESSURE=$(curl -s http://solana-validator:8899/health | jq '.memory_pressure')
+              if [ "$MEMORY_PRESSURE" -gt 15 ]; then
+                # Reduce cache size
+                curl -X POST http://solana-validator:8899/admin/cache/reduce
+              elif [ "$MEMORY_PRESSURE" -lt 5 ]; then
+                # Increase cache size
+                curl -X POST http://solana-validator:8899/admin/cache/increase
+              fi
+          restartPolicy: OnFailure
+```
+
+3. Configure automated snapshot backups:
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: solana-snapshot-backup
+spec:
+  schedule: "0 */6 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: solana-tools:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              solana-ledger-tool create-snapshot $(solana-ledger-tool slot /mnt/ledger) /mnt/ledger /mnt/snapshots
+              aws s3 cp /mnt/snapshots/$(ls -t /mnt/snapshots | head -1) s3://solana-snapshots/
+            volumeMounts:
+            - name: ledger
+              mountPath: /mnt/ledger
+            - name: snapshots
+              mountPath: /mnt/snapshots
+          restartPolicy: OnFailure
+          volumes:
+          - name: ledger
+            persistentVolumeClaim:
+              claimName: solana-validator-ledger
+          - name: snapshots
+            persistentVolumeClaim:
+              claimName: solana-validator-snapshots
+```
+
+4. Implement circuit breakers for degraded performance
+5. Create self-healing procedures for common failure scenarios
+6. Configure continuous ledger pruning for space management
+7. Develop quick recovery procedures (<30 minutes RTO)
+
+# Test Strategy:
+1. Test memory pressure detection and cache adjustment
+2. Verify automated snapshot backup functionality
+3. Simulate degraded performance to test circuit breakers
+4. Validate self-healing for common failure scenarios
+5. Test recovery procedures for different failure modes
+6. Verify ledger pruning effectiveness
+7. Measure recovery time objective (target <30 minutes)
+8. Test backup restoration process
+
+# Subtasks:
+## 1. Develop Custom Kubernetes Operator for Solana Validator [pending]
+### Dependencies: None
+### Description: Design and implement a Kubernetes operator that manages Solana validator lifecycle, monitors health, and orchestrates automated operations such as resource management and failure recovery.
+### Details:
+The operator should reconcile SolanaValidator custom resources, detect validator health status, and trigger remediation actions as needed. It must integrate with Kubernetes APIs for pod management and support extensibility for future automation.
+
+## 2. Implement Dynamic Resource Management and Memory Pressure Handling [pending]
+### Dependencies: 8.1
+### Description: Automate resource management by monitoring memory pressure and dynamically adjusting Solana validator cache sizes to optimize performance and prevent resource exhaustion.
+### Details:
+Deploy a CronJob or controller that queries validator memory metrics and adjusts cache sizes via Solana admin endpoints based on defined thresholds. Ensure integration with the operator for coordinated actions.
+
+## 3. Configure Automated Snapshot Backups and Ledger Pruning [pending]
+### Dependencies: 8.1
+### Description: Set up scheduled snapshot backups of the Solana ledger and implement continuous ledger pruning to manage disk space and enable rapid recovery.
+### Details:
+Use Kubernetes CronJobs to periodically create ledger snapshots and upload them to remote storage (e.g., S3). Implement automated pruning of old ledger data to maintain storage limits.
+
+## 4. Implement Circuit Breakers for Degraded Performance [pending]
+### Dependencies: 8.1, 8.2
+### Description: Integrate circuit breaker mechanisms to detect and mitigate degraded performance, preventing cascading failures and protecting upstream and downstream services.
+### Details:
+Configure circuit breakers using Kubernetes-native tools (e.g., Istio DestinationRule with OutlierDetection) or custom logic in the operator to monitor error rates, latency, and resource exhaustion, and to block or shed traffic when thresholds are exceeded[1][2][4].
+
+## 5. Develop Self-Healing and Quick Recovery Procedures [pending]
+### Dependencies: 8.1, 8.2, 8.3, 8.4
+### Description: Create automated self-healing workflows for common failure scenarios and ensure rapid recovery with a target RTO of less than 30 minutes.
+### Details:
+Implement operator logic and supporting scripts to detect failures (e.g., pod crashes, data corruption), trigger restarts, restore from snapshots, and rejoin the validator to the cluster with minimal downtime.
+

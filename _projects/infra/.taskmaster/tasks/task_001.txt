@@ -1,0 +1,78 @@
+# Task ID: 1
+# Title: Build Custom Talos OS Image with Solana Optimizations
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Create a custom Talos OS build with kernel optimizations specifically for Solana validator performance, including huge pages allocation, NUMA optimizations, and io_uring support.
+# Details:
+1. Fork the Talos OS repository and set up build environment
+2. Configure kernel with the following optimizations:
+   - Static huge pages allocation (100GB at boot time)
+   - NUMA optimizations for AMD EPYC processors
+   - io_uring support for future Firedancer compatibility
+   - SR-IOV enablement for network acceleration
+3. Implement custom kernel module for runtime optimizations
+4. Add gcompat layer for glibc compatibility
+5. Integrate performance monitoring extensions
+6. Configure kernel parameters in machine config:
+   ```yaml
+   machine:
+     type: worker
+     install:
+       disk: /dev/nvme0n1
+       image: ghcr.io/our-org/installer:custom-solana-v1.10.3
+       extensions:
+         - image: ghcr.io/our-org/solana-optimizer:latest
+     kernel:
+       modules:
+         - tcp_bbr
+         - sch_fq
+     sysctls:
+       vm.max_map_count: 1048576
+       vm.dirty_ratio: 50
+       net.core.rmem_max: 268435456
+       net.ipv4.tcp_congestion_control: bbr
+   ```
+7. Build and publish custom Talos installer image
+8. Document build process and configuration options
+
+# Test Strategy:
+1. Benchmark custom vs stock kernel performance using sysbench and fio
+2. Verify huge pages allocation at boot time
+3. Test NUMA node affinity with numactl
+4. Validate io_uring performance with io_uring-test
+5. Confirm SR-IOV functionality with network tests
+6. Verify gcompat compatibility by running glibc-dependent applications
+7. Compare performance metrics against baseline systemd deployments
+
+# Subtasks:
+## 1. Fork Talos OS Repository and Set Up Build Environment [pending]
+### Dependencies: None
+### Description: Fork the official Talos OS repository and prepare a local development environment capable of building custom Talos images.
+### Details:
+Clone the Talos repository, install required build tools (Docker, buildx), and verify the ability to build Talos components locally. Set up a local Docker registry for image testing and pushing custom builds.
+
+## 2. Configure Kernel with Solana-Specific Optimizations [pending]
+### Dependencies: 1.1
+### Description: Modify the Talos kernel configuration to enable static huge pages allocation, NUMA optimizations for AMD EPYC, io_uring support, and SR-IOV networking.
+### Details:
+Edit kernel config files to statically allocate 100GB huge pages at boot, enable NUMA features, activate io_uring, and ensure SR-IOV modules are included. Validate compatibility with AMD EPYC processors and Solana validator requirements.
+
+## 3. Implement Custom Kernel Module and Runtime Optimizations [pending]
+### Dependencies: 1.2
+### Description: Develop and integrate a custom kernel module to provide additional runtime optimizations for Solana workloads.
+### Details:
+Write a kernel module to tune runtime parameters (e.g., memory management, CPU affinity) and load it during system boot. Ensure module is compatible with Talos OS's immutable design and API-driven management.
+
+## 4. Integrate gcompat Layer and Performance Monitoring Extensions [pending]
+### Dependencies: 1.3
+### Description: Add the gcompat compatibility layer for glibc support and integrate performance monitoring tools/extensions into the custom Talos build.
+### Details:
+Package and include gcompat in the Talos image to enable glibc-dependent binaries. Integrate monitoring agents or extensions required for Solana validator performance tracking, ensuring they are managed via Talos APIs.
+
+## 5. Build, Publish, and Document Custom Talos Installer Image [pending]
+### Dependencies: 1.4
+### Description: Build the final custom Talos installer image, publish it to a container registry, and document the build process and configuration options.
+### Details:
+Use the Talos build system to create the installer image with all customizations. Push the image to the designated registry and write comprehensive documentation covering build steps, kernel parameters, and usage instructions.
+

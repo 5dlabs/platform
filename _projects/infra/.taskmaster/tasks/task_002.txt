@@ -1,0 +1,160 @@
+# Task ID: 2
+# Title: Provision Cherry Servers Infrastructure with Terraform
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Develop Terraform modules to provision and configure the required Cherry Servers bare metal infrastructure in EU-East-1 region, including control plane nodes and Solana validator node with appropriate storage configuration. Implementation follows a cost-effective staged approach with thorough validation before deploying expensive production infrastructure.
+# Details:
+**Pre-Deployment Validation Strategy:**
+
+1. **Local Development Stage** ($0 cost):
+   - Terraform plan validation without applying
+   - Resource configuration and cost estimation
+   - Network topology validation
+   - Security policy compliance checks
+
+2. **VM Testing Stage** (<$100/month):
+   - Deploy Terraform modules on local VM infrastructure
+   - Test hardware configuration templates
+   - Validate storage and network configurations
+   - Test NUMA and resource allocation patterns
+
+3. **Cloud Staging Stage** (<$500/month):
+   - Deploy complete infrastructure on AWS/GCP with similar specs
+   - Test the complete provisioning and deployment pipeline
+   - Validate performance characteristics and resource utilization
+   - Test disaster recovery and backup procedures
+
+4. **Production Deployment Stage** (>$5,000/month):
+   - Final Terraform plan review and cost validation
+   - Cherry Servers API access and quota verification
+   - Security and compliance final review
+   - Team training and knowledge transfer
+   - Deploy actual Cherry Servers infrastructure:
+     - 3x control plane nodes (smaller instances)
+     - 1x Solana validator node (AMD EPYC 9454P or 9654, 128 threads)
+     - Storage configuration:
+       - 15TB NVMe Gen5 for ledger (ext4)
+       - 6TB NVMe Gen5 for accounts (ext4)
+       - 2TB NVMe Gen5 for snapshots (btrfs)
+     - 25Gbps networking with SR-IOV support
+
+**Go/No-Go Checkpoints:**
+- Local Development: All Terraform plans validate without errors
+- VM Testing: Resource templates work correctly, NUMA patterns validated
+- Cloud Staging: Performance meets requirements, costs within budget
+- Production: All security reviews passed, team trained, budget approved
+
+Example Terraform configuration:
+```hcl
+module "cherry_servers" {
+  source = "./modules/cherry_servers"
+  
+  region = "EU-East-1"
+  
+  control_plane_nodes = {
+    count = 3
+    plan = "AMD EPYC 7302P"
+    memory = "64GB"
+    storage = "1TB NVMe"
+  }
+  
+  validator_node = {
+    plan = "AMD EPYC 9454P"
+    memory = "512GB DDR5 ECC"
+    storage_config = [
+      { device = "/dev/nvme0n1", size = "15TB", fs = "ext4", mount = "/mnt/ledger" },
+      { device = "/dev/nvme1n1", size = "6TB", fs = "ext4", mount = "/mnt/accounts" },
+      { device = "/dev/nvme2n1", size = "2TB", fs = "btrfs", mount = "/mnt/snapshots" }
+    ]
+    network = "25Gbps"
+    sr_iov = true
+  }
+}
+```
+
+# Test Strategy:
+1. **Local Development Tests:**
+   - Validate Terraform plan execution without errors
+   - Verify cost estimates are within budget
+   - Check security group and network configurations
+
+2. **VM Testing Validation:**
+   - Test Terraform modules on local VMs
+   - Validate storage layout and filesystem configurations
+   - Test NUMA configuration scripts
+
+3. **Cloud Staging Tests:**
+   - Deploy to AWS/GCP with equivalent specs
+   - Benchmark storage performance with fio (target >300K IOPS ledger, >500K IOPS accounts)
+   - Test network performance with iperf3 (validate >20Gbps throughput)
+   - Validate disaster recovery procedures
+
+4. **Production Validation:**
+   - Verify all resources created correctly in Cherry Servers console
+   - Test network connectivity between nodes
+   - Verify IPMI/remote management functionality
+   - Validate DDoS protection settings
+   - Confirm all performance benchmarks meet requirements
+
+# Subtasks:
+## 1. Develop Cherry Servers Terraform Modules [pending]
+### Dependencies: None
+### Description: Create reusable Terraform modules for provisioning Cherry Servers resources, including provider configuration, authentication, and resource definitions for bare metal servers.
+### Details:
+Implement modules that encapsulate Cherry Servers provider setup, handle API token authentication, and define resources for server provisioning. Ensure modules support parameterization for region, server plans, and storage.
+
+## 2. Define Infrastructure Components and Storage Layout [pending]
+### Dependencies: 2.1
+### Description: Specify Terraform resources for 3 control plane nodes and 1 Solana validator node with detailed storage configuration and hardware requirements.
+### Details:
+Configure resources for three smaller control plane nodes and one high-performance validator node (AMD EPYC 9454P/9654, 128 threads). Attach NVMe Gen5 storage volumes (15TB for ledger, 6TB for accounts, 2TB for snapshots) with appropriate filesystems (ext4, btrfs). Set memory to 512GB DDR5 ECC as a cost-effective starting point.
+
+## 3. Configure Advanced Network Settings [pending]
+### Dependencies: 2.2
+### Description: Implement network configuration for all nodes, including 25Gbps networking, SR-IOV support, jumbo frames, and DDoS protection.
+### Details:
+Set network parameters in Terraform to enable 25Gbps interfaces, activate SR-IOV if available, configure jumbo frames (MTU), and enable DDoS protection features as supported by Cherry Servers.
+
+## 4. Implement Remote Management and Output Variables [pending]
+### Dependencies: 2.3
+### Description: Enable remote management (IPMI) for all nodes and define Terraform output variables for node IPs and access credentials.
+### Details:
+Configure IPMI or equivalent remote management access for each server. Add Terraform outputs to expose public/private IPs and management endpoints for downstream automation.
+
+## 5. Configure State Backend and Documentation [pending]
+### Dependencies: 2.4
+### Description: Set up a remote Terraform state backend and document the infrastructure deployment process, including prerequisites and usage instructions.
+### Details:
+Implement a remote backend (e.g., S3, GCS, or Cherry Servers-supported option) for Terraform state management. Write clear documentation covering module usage, variable definitions, and deployment workflow. Include notes about the 512GB memory configuration being a starting point that can be upgraded if performance testing shows memory bottlenecks.
+
+## 6. Implement Local Development Stage Validation [pending]
+### Dependencies: 2.1
+### Description: Set up local development environment for Terraform validation without incurring any infrastructure costs.
+### Details:
+Create local validation scripts that run 'terraform plan' to validate configurations without applying. Implement cost estimation tools to predict monthly expenses. Set up pre-commit hooks for security policy compliance checks and network topology validation. Document all validation criteria and expected outputs.
+
+## 7. Create VM Testing Environment [pending]
+### Dependencies: 2.6
+### Description: Deploy Terraform modules on local VM infrastructure to test configurations at minimal cost (<$100/month).
+### Details:
+Set up local VMs using KVM/VMware to simulate Cherry Servers environment. Test hardware configuration templates, storage layouts, and network configurations. Implement NUMA testing scripts to validate resource allocation patterns. Create mock Cherry Servers API endpoints for testing.
+
+## 8. Deploy Cloud Staging Environment [pending]
+### Dependencies: 2.7
+### Description: Create staging infrastructure on AWS/GCP with similar specifications to validate complete deployment pipeline (<$500/month).
+### Details:
+Deploy equivalent infrastructure on cloud providers using similar instance types (e.g., AWS m6a.24xlarge for validator). Test complete provisioning pipeline, performance characteristics, and resource utilization. Implement disaster recovery procedures and backup strategies. Document performance baselines for comparison with production.
+
+## 9. Conduct Production Readiness Review [pending]
+### Dependencies: 2.8
+### Description: Perform final validation and team preparation before deploying expensive Cherry Servers infrastructure.
+### Details:
+Review all Terraform plans and validate final costs. Verify Cherry Servers API access and available quotas. Conduct security and compliance review with stakeholders. Organize team training sessions on infrastructure management. Create runbooks for common operations. Establish go/no-go criteria checklist.
+
+## 10. Execute Production Deployment with Monitoring [pending]
+### Dependencies: 2.9
+### Description: Deploy actual Cherry Servers infrastructure following successful validation stages.
+### Details:
+Execute Terraform apply for Cherry Servers infrastructure only after all validation stages pass. Monitor deployment progress and costs in real-time. Implement phased rollout starting with control plane nodes. Set up cost alerts and usage monitoring. Document any deviations from staging environment.
+
