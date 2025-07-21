@@ -30,8 +30,6 @@ pub struct TaskRunSpec {
     #[serde(default = "default_context_version")]
     pub context_version: u32,
 
-    /// Markdown files containing task context
-    pub markdown_files: Vec<MarkdownFile>,
 
     /// Tools available to the agent
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -40,6 +38,22 @@ pub struct TaskRunSpec {
     /// Repository information for code access
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repository: Option<RepositorySpec>,
+
+    /// Optional working directory within target repository (defaults to service_name)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub working_directory: Option<String>,
+
+    /// Platform repository for documentation access
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub platform_repository: Option<RepositorySpec>,
+
+    /// Additional prompt instructions for retry attempts
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_modification: Option<String>,
+
+    /// How to apply prompt_modification: 'append' or 'replace'
+    #[serde(default = "default_prompt_mode", skip_serializing_if = "is_default_prompt_mode")]
+    pub prompt_mode: String,
 }
 
 fn default_context_version() -> u32 {
@@ -50,31 +64,14 @@ fn default_model() -> String {
     "sonnet".to_string()
 }
 
-/// Markdown file containing task context
-#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct MarkdownFile {
-    /// Filename for the markdown content
-    pub filename: String,
-
-    /// Markdown content
-    pub content: String,
-
-    /// Type of markdown file
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub file_type: Option<MarkdownFileType>,
+fn default_prompt_mode() -> String {
+    "append".to_string()
 }
 
-/// Type of markdown file
-#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
-#[serde(rename_all = "kebab-case")]
-pub enum MarkdownFileType {
-    Task,
-    DesignSpec,
-    Prompt,
-    Context,
-    AcceptanceCriteria,
+fn is_default_prompt_mode(mode: &str) -> bool {
+    mode == "append"
 }
+
 
 /// Agent tool specification
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
@@ -239,13 +236,12 @@ mod tests {
                 agent_name: "claude-agent-1".to_string(),
                 model: "sonnet".to_string(),
                 context_version: 1,
-                markdown_files: vec![MarkdownFile {
-                    filename: "task.md".to_string(),
-                    content: "# Task content".to_string(),
-                    file_type: Some(MarkdownFileType::Task),
-                }],
                 agent_tools: vec![],
                 repository: None,
+                working_directory: None,
+                platform_repository: None,
+                prompt_modification: None,
+                prompt_mode: "append".to_string(),
             },
             status: None,
         };

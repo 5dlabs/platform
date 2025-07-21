@@ -11,5 +11,5 @@ pub mod k8s;
 // Re-export commonly used types
 pub use config::ControllerConfig;
 pub use controllers::run_taskrun_controller;
-pub use crds::{MarkdownFile, TaskRun, TaskRunSpec, TaskRunStatus};
+pub use crds::{TaskRun, TaskRunSpec, TaskRunStatus};
 pub use k8s::{K8sClient, K8sError, K8sResult};

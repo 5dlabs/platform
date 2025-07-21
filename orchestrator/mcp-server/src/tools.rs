@@ -61,7 +61,11 @@ fn get_submit_implementation_task_schema() -> Value {
                 },
                 "working_directory": {
                     "type": "string",
-                    "description": "Task Master project directory (auto-detected if not specified)"
+                    "description": "Working directory within target repository (defaults to service name)"
+                },
+                "platform_repository_url": {
+                    "type": "string",
+                    "description": "Platform repository URL for documentation access (auto-detected from current git repo if not specified)"
                 },
                 "repository_url": {
                     "type": "string",
@@ -91,6 +95,16 @@ fn get_submit_implementation_task_schema() -> Value {
                 "github_user": {
                     "type": "string",
                     "description": "GitHub username for authentication (auto-detected if not specified)"
+                },
+                "prompt_modification": {
+                    "type": "string",
+                    "description": "Additional prompt instructions for retry attempts (used when retry=true)"
+                },
+                "prompt_mode": {
+                    "type": "string",
+                    "description": "How to apply prompt_modification: 'append' (add to existing prompt) or 'replace' (replace system prompt)",
+                    "enum": ["append", "replace"],
+                    "default": "append"
                 }
             },
             "required": ["task_id", "service"]

@@ -99,6 +99,15 @@ enum TaskCommands {
         /// Claude model to use (sonnet, opus)
         #[arg(long, short = 'm', default_value = "sonnet")]
         model: String,
+        /// Working directory within target repository (defaults to service name)
+        #[arg(long, short = 'w')]
+        working_directory: Option<String>,
+        /// Additional prompt instructions for retry attempts (used when --retry is specified)
+        #[arg(long)]
+        prompt_modification: Option<String>,
+        /// How to apply prompt_modification: 'append' (add to existing prompt) or 'replace' (replace system prompt)
+        #[arg(long, default_value = "append")]
+        prompt_mode: String,
     },
     /// Submit a new task (advanced workflow with explicit paths)
     SubmitAdvanced {
@@ -280,6 +289,9 @@ async fn main() -> Result<()> {
                 github_user,
                 retry,
                 model,
+                working_directory,
+                prompt_modification,
+                prompt_mode,
             } => {
                 commands::task::submit_task_simplified(
                     &api_client,
@@ -295,6 +307,9 @@ async fn main() -> Result<()> {
                     github_user.as_deref(),
                     retry,
                     &model,
+                    working_directory.as_deref(),
+                    prompt_modification.as_deref(),
+                    &prompt_mode,
                 )
                 .await
             }
@@ -459,6 +474,9 @@ mod tests {
                         github_user,
                         retry,
                         model,
+                        working_directory,
+                        prompt_modification,
+                        prompt_mode,
                     },
             } => {
                 assert_eq!(task_id, 1001);

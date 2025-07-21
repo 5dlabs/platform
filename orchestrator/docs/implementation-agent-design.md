@@ -198,11 +198,11 @@ You don't need to remember MCP syntax or TaskRun details - just tell me what you
 - **Evidence-Based Success**: Require concrete evidence (test outputs, logs, working demos) before claiming completion
 
 #### **Implementation**
-- **CLI Flag Integration**: System prompt appended via `--system-prompt` CLI flag
+- **CLI Flag Integration**: System prompt appended via `--append-system-prompt` CLI flag
 - **Consistent Application**: Applied to all implementation tasks automatically via container startup script
 - **Behavioral Change**: Shifts agent from "optimistic completion" to "pessimistic validation" with senior engineer mindset
 
-#### **Enhanced System Prompt** (via `--system-prompt` CLI flag)
+#### **Enhanced System Prompt** (via `--append-system-prompt` CLI flag)
 ```
 You are a highly capable, highly critical, somewhat paranoid, super senior principal Rust engineer.
 
@@ -765,7 +765,7 @@ As a senior principal engineer, you understand that production failures are extr
 Err on the side of being too cautious rather than too confident.
 Apply the highest standards of code quality, testing, and verification."
 
-claude --system-prompt "$SYSTEM_PROMPT" "{{{prompt_content}}}"
+claude --append-system-prompt "$SYSTEM_PROMPT" "{{{prompt_content}}}"
 ```
 
 ##### **Guideline Templates** (New)
@@ -920,7 +920,7 @@ pub struct TaskRunSpec {
 ### **Phase 1: Core Infrastructure**
 1. **TaskRun CRD Schema Updates** - Add working_directory, platform_repository fields
 2. **New MCP Templates** - Create `mcp.json.hbs`
-3. **System Prompt Enhancement** - Add paranoid verification via `--system-prompt` CLI flag in container template
+3. **System Prompt Enhancement** - Add paranoid verification via `--append-system-prompt` CLI flag in container template
 4. **Container Template Updates** - Add platform repo cloning, working directory logic, and client-config.json copying
 5. **Settings Template Updates** - Add MCP auto-approval configuration and Claude MCP server enablement
 6. **Claude MCP Server Access** - Enable external MCP server and create Kubernetes service for future sidecar monitoring
@@ -1334,7 +1334,7 @@ claude --mcp-server --port 8080 --host 0.0.0.0 &
 MCP_SERVER_PID=$!
 
 # Continue with normal Claude execution
-claude --system-prompt "$SYSTEM_PROMPT" "{{{prompt_content}}}"
+claude --append-system-prompt "$SYSTEM_PROMPT" "{{{prompt_content}}}"
 
 # Cleanup MCP server on exit
 kill $MCP_SERVER_PID 2>/dev/null || true

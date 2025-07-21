@@ -5,6 +5,7 @@ use crate::output::OutputManager;
 use anyhow::{Context, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::io::{self, Write};
+use std::process::Command;
 use std::time::Duration;
 use tracing::{error, info};
 
@@ -33,6 +34,9 @@ pub mod task {
         github_user: Option<&str>,
         retry: bool,
         model: &str,
+        working_directory: Option<&str>,
+        prompt_modification: Option<&str>,
+        prompt_mode: &str,
     ) -> Result<()> {
         output.info("Preparing task submission...")?;
         info!(
@@ -226,8 +230,8 @@ pub mod task {
             _ => None,
         };
 
-        // Create PM request with model selection
-        let pm_request = PmTaskRequest::new_with_repository(
+        // Create PM request with model selection and prompt modification support
+        let pm_request = PmTaskRequest::new_with_prompt_modification(
             task,
             service_name.to_string(),
             agent_name.to_string(),
@@ -235,6 +239,9 @@ pub mod task {
             markdown_files,
             agent_tools,
             repository,
+            working_directory.map(|s| s.to_string()),
+            prompt_modification.map(|s| s.to_string()),
+            prompt_mode.to_string(),
         );
 
         // Debug: print the request JSON
@@ -1247,5 +1254,104 @@ pub async fn health_check(api_client: &ApiClient, output: &OutputManager) -> Res
             output.error(&format!("Failed to check service health: {e}"))?;
             Err(e)
         }
+    }
+}
+
+/// Platform repository detection functions
+/// Auto-detects the current git repository information for platform documentation access
+pub fn detect_platform_repo() -> Result<Option<orchestrator_common::models::pm_task::RepositorySpec>> {
+    use anyhow::Context;
+    
+    // Get git remote URL
+    let remote_url = match get_git_remote_url() {
+        Ok(url) => url,
+        Err(_) => {
+            // Not in a git repository, return None
+            return Ok(None);
+        }
+    };
+    
+    // Get current branch
+    let current_branch = get_current_branch().unwrap_or_else(|| "main".to_string());
+    
+    // Extract GitHub user from URL
+    let github_user = match extract_github_user(&remote_url) {
+        Ok(user) => user,
+        Err(_) => {
+            // Cannot determine GitHub user, return None
+            return Ok(None);
+        }
+    };
+    
+    Ok(Some(orchestrator_common::models::pm_task::RepositorySpec {
+        url: remote_url,
+        branch: current_branch,
+        github_user,
+        token: None, // Reserved for future use
+    }))
+}
+
+/// Get the origin remote URL from git
+fn get_git_remote_url() -> Result<String> {
+    let output = Command::new("git")
+        .args(["remote", "get-url", "origin"])
+        .output()
+        .context("Failed to execute git remote command")?;
+        
+    if !output.status.success() {
+        return Err(anyhow::anyhow!("Failed to get git remote URL"));
+    }
+    
+    let url = String::from_utf8(output.stdout)
+        .context("Invalid UTF-8 in git remote URL")?
+        .trim()
+        .to_string();
+        
+    Ok(url)
+}
+
+/// Get the current git branch
+fn get_current_branch() -> Option<String> {
+    let output = Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .output()
+        .ok()?;
+        
+    if !output.status.success() {
+        return None;
+    }
+    
+    String::from_utf8(output.stdout)
+        .ok()
+        .map(|branch| branch.trim().to_string())
+}
+
+/// Extract GitHub username from repository URL
+/// Supports both SSH and HTTPS URLs
+fn extract_github_user(repo_url: &str) -> Result<String> {
+    use anyhow::Context;
+    
+    if repo_url.starts_with("git@github.com:") {
+        // SSH format: git@github.com:username/repo.git
+        let path = repo_url
+            .strip_prefix("git@github.com:")
+            .context("Invalid SSH URL format")?;
+        let username = path
+            .split('/')
+            .next()
+            .context("Cannot extract username from SSH URL")?;
+        Ok(username.to_string())
+    } else if repo_url.starts_with("https://github.com/") {
+        // HTTPS format: https://github.com/username/repo.git
+        let path = repo_url
+            .strip_prefix("https://github.com/")
+            .context("Invalid HTTPS URL format")?;
+        let username = path
+            .split('/')
+            .next()
+            .context("Cannot extract username from HTTPS URL")?;
+        Ok(username.to_string())
+    } else {
+        Err(anyhow::anyhow!("Unsupported repository URL format: {}", repo_url))
     }
 }

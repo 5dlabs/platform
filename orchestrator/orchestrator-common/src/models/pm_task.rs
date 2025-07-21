@@ -34,6 +34,18 @@ pub struct PmTaskRequest {
     // Repository specification for code access
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repository: Option<RepositorySpec>,
+
+    // Working directory within target repository (defaults to service_name)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub working_directory: Option<String>,
+
+    // Additional prompt instructions for retry attempts
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_modification: Option<String>,
+
+    // How to apply prompt_modification: 'append' or 'replace'
+    #[serde(default = "default_prompt_mode", skip_serializing_if = "is_default_prompt_mode")]
+    pub prompt_mode: String,
 }
 
 /// Subtask structure from Task Master
@@ -85,6 +97,14 @@ fn default_branch() -> String {
 
 fn default_model() -> String {
     "sonnet".to_string()
+}
+
+fn default_prompt_mode() -> String {
+    "append".to_string()
+}
+
+fn is_default_prompt_mode(mode: &str) -> bool {
+    mode == "append"
 }
 
 /// Documentation generation request
@@ -197,6 +217,9 @@ impl PmTaskRequest {
             markdown_files,
             agent_tools,
             repository: None,
+            working_directory: None,
+            prompt_modification: None,
+            prompt_mode: "append".to_string(),
         }
     }
 
@@ -226,6 +249,77 @@ impl PmTaskRequest {
             markdown_files,
             agent_tools,
             repository,
+            working_directory: None,
+            prompt_modification: None,
+            prompt_mode: "append".to_string(),
+        }
+    }
+
+    /// Create a new PM task request with full specification including working directory
+    pub fn new_with_full_spec(
+        task: Task,
+        service_name: String,
+        agent_name: String,
+        model: String,
+        markdown_files: Vec<MarkdownPayload>,
+        agent_tools: Vec<AgentToolSpec>,
+        repository: Option<RepositorySpec>,
+        working_directory: Option<String>,
+    ) -> Self {
+        Self {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            details: task.details,
+            test_strategy: task.test_strategy,
+            priority: task.priority,
+            dependencies: task.dependencies,
+            status: task.status,
+            subtasks: task.subtasks,
+            service_name,
+            agent_name,
+            model,
+            markdown_files,
+            agent_tools,
+            repository,
+            working_directory,
+            prompt_modification: None,
+            prompt_mode: "append".to_string(),
+        }
+    }
+
+    /// Create a new PM task request with prompt modification support for retries
+    pub fn new_with_prompt_modification(
+        task: Task,
+        service_name: String,
+        agent_name: String,
+        model: String,
+        markdown_files: Vec<MarkdownPayload>,
+        agent_tools: Vec<AgentToolSpec>,
+        repository: Option<RepositorySpec>,
+        working_directory: Option<String>,
+        prompt_modification: Option<String>,
+        prompt_mode: String,
+    ) -> Self {
+        Self {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            details: task.details,
+            test_strategy: task.test_strategy,
+            priority: task.priority,
+            dependencies: task.dependencies,
+            status: task.status,
+            subtasks: task.subtasks,
+            service_name,
+            agent_name,
+            model,
+            markdown_files,
+            agent_tools,
+            repository,
+            working_directory,
+            prompt_modification,
+            prompt_mode,
         }
     }
 }

@@ -15,7 +15,7 @@ use tokio::process::Command;
 use tracing::{error, info, warn};
 
 use crate::crds::taskrun::{
-    AgentTool, MarkdownFile, MarkdownFileType, RepositorySpec, TaskRun, TaskRunSpec,
+    AgentTool, RepositorySpec, TaskRun, TaskRunSpec,
 };
 use orchestrator_common::models::pm_task::{DocsGenerationRequest, PmTaskRequest};
 
@@ -284,14 +284,8 @@ pub async fn submit_task(
         request.id, request.service_name
     );
 
-    // Validate request
-    if request.markdown_files.is_empty() {
-        warn!("Task {} has no markdown files", request.id);
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error("No markdown files provided")),
-        ));
-    }
+    // Request validation - markdown files are no longer required
+    // Task content is now generated from templates based on task metadata
 
     // Validate GitHub repository permissions if repository is configured
     if let Some(ref _repository) = request.repository {
@@ -359,23 +353,7 @@ pub async fn submit_task(
         }
     }
 
-    // Convert request markdown files to CRD format
-    let markdown_files = request
-        .markdown_files
-        .into_iter()
-        .map(|f| MarkdownFile {
-            filename: f.filename,
-            content: f.content,
-            file_type: match f.file_type.as_str() {
-                "task" => Some(MarkdownFileType::Task),
-                "design-spec" => Some(MarkdownFileType::DesignSpec),
-                "prompt" => Some(MarkdownFileType::Prompt),
-                "context" => Some(MarkdownFileType::Context),
-                "acceptance-criteria" => Some(MarkdownFileType::AcceptanceCriteria),
-                _ => None,
-            },
-        })
-        .collect();
+    // Markdown files are no longer stored in the spec - content is generated from templates
 
     // Convert agent tools to CRD format
     let agent_tools = request
@@ -407,7 +385,6 @@ pub async fn submit_task(
             agent_name: request.agent_name.clone(),
             model: request.model.clone(),
             context_version: 1,
-            markdown_files,
             agent_tools,
             repository: request
                 .repository
@@ -417,6 +394,10 @@ pub async fn submit_task(
                     github_user: repo.github_user,
                     token: repo.token, // Reserved for future use
                 }),
+            working_directory: request.working_directory.map(|s| s),
+            platform_repository: None, // TODO: Add platform repo support when needed
+            prompt_modification: request.prompt_modification,
+            prompt_mode: request.prompt_mode
         },
         status: None,
     };
@@ -490,11 +471,8 @@ pub async fn add_context(
             "serviceName": current_tr.spec.service_name,
             "agentName": current_tr.spec.agent_name,
             "contextVersion": next_version,
-            "markdownFiles": [{
-                "filename": format!("context-v{}.md", next_version),
-                "content": context.additional_context,
-                "fileType": "context",
-            }],
+            // Context addition now updates context_version to trigger template regeneration
+            // The additional context will be handled by the template system
         }
     });
 
@@ -600,13 +578,7 @@ pub async fn get_task(
                 "service_name": taskrun.spec.service_name,
                 "agent_name": taskrun.spec.agent_name,
                 "context_version": taskrun.spec.context_version,
-                "markdown_files": taskrun.spec.markdown_files.iter().map(|f| {
-                    json!({
-                        "filename": f.filename,
-                        "file_type": f.file_type,
-                        "content_length": f.content.len(),
-                    })
-                }).collect::<Vec<_>>(),
+                // Markdown files no longer stored in spec - using template-based generation
                 "status": taskrun.status.as_ref().map(|s| {
                     json!({
                         "phase": s.phase.as_ref().map(|p| p.to_string()),
@@ -796,16 +768,12 @@ pub async fn generate_docs(
             github_user: request.github_user.clone(),
             token: None,
         }),
-        markdown_files: vec![
-            // CLAUDE.md will be generated from template in build_configmap()
-            // Include working directory info for template processing
-            MarkdownFile {
-                content: format!("- **Working Directory**: {}", request.working_directory),
-                filename: "CLAUDE.md".to_string(),
-                file_type: Some(MarkdownFileType::Context),
-            },
-        ],
+        // Content is now generated from templates in the controller
         agent_tools: vec![], // Use template defaults for docs generation
+        working_directory: Some(request.working_directory.clone()),
+        platform_repository: None, // Docs generation uses the same repo for both platform and target
+        prompt_modification: None,
+        prompt_mode: "append".to_string()
     };
 
     // Create TaskRun
