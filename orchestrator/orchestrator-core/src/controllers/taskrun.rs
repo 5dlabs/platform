@@ -322,10 +322,56 @@ async fn create_claude_job(
 
     // Check if Claude job already exists
     match jobs.get(&job_name).await {
-        Ok(_) => {
+        Ok(existing_job) => {
             info!("Claude job already exists: {}", job_name);
-            if tr.status.as_ref().and_then(|s| s.phase.as_ref()) != Some(&TaskRunPhase::Running) {
-                update_status(taskruns, &name, TaskRunPhase::Running, "Job already exists").await?;
+
+            // Check the actual job status
+            if let Some(job_status) = &existing_job.status {
+                let (phase, message) = if job_status.succeeded.unwrap_or(0) > 0 {
+                    (TaskRunPhase::Succeeded, "Job completed successfully")
+                } else if job_status.failed.unwrap_or(0) > 0 {
+                    // Job failed - delete it and create a new one
+                    info!("Existing job failed, deleting and creating new one: {}", job_name);
+                    jobs.delete(&job_name, &DeleteParams::background()).await?;
+
+                    // Create new job
+                    let job = build_claude_job(&tr, &job_name, cm_name, config)?;
+                    match jobs.create(&PostParams::default(), &job).await {
+                        Ok(_) => {
+                            info!("Created new Claude job after failure: {}", job_name);
+                            update_status_with_details(
+                                taskruns,
+                                &name,
+                                TaskRunPhase::Running,
+                                "Claude agent restarted after failure",
+                                Some(job_name),
+                                Some(cm_name.to_string()),
+                            ).await?;
+                            return Ok(());
+                        }
+                        Err(e) => {
+                            update_status(
+                                taskruns,
+                                &name,
+                                TaskRunPhase::Failed,
+                                &format!("Failed to create Claude job after retry: {e}"),
+                            ).await?;
+                            return Err(e.into());
+                        }
+                    }
+                } else {
+                    (TaskRunPhase::Running, "Job is running")
+                };
+
+                // Update TaskRun status based on actual job status
+                if tr.status.as_ref().and_then(|s| s.phase.as_ref()) != Some(&phase) {
+                    update_status(taskruns, &name, phase, message).await?;
+                }
+            } else {
+                // Job exists but no status yet - assume it's starting
+                if tr.status.as_ref().and_then(|s| s.phase.as_ref()) != Some(&TaskRunPhase::Running) {
+                    update_status(taskruns, &name, TaskRunPhase::Running, "Job starting").await?;
+                }
             }
         }
         Err(kube::Error::Api(ae)) if ae.code == 404 => {
