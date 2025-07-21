@@ -159,136 +159,151 @@ fi
 echo "⚠️ No repository configured for authentication setup"
 {{/if}}
 
-# Clone repository to get project files
+# Dual Repository Setup - Platform repo for docs, Target repo for implementation
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
-echo "║                    REPOSITORY SETUP                          ║"
+echo "║                 DUAL REPOSITORY SETUP                        ║"
 echo "═══════════════════════════════════════════════════════════════"
 
+{{#if platform_repository}}
+# Platform Repository Information (for task documentation)
+PLATFORM_URL="{{platform_repository.url}}"
+PLATFORM_BRANCH="{{platform_repository.branch}}"
+PLATFORM_USER="{{platform_repository.githubUser}}"
+
+echo "=== PLATFORM REPOSITORY SETUP ==="
+echo "Platform repo: $PLATFORM_URL"
+echo "Platform branch: $PLATFORM_BRANCH"
+echo "Platform user: $PLATFORM_USER"
+{{else}}
+echo "⚠️  No platform repository configured - using target repository for docs"
+{{/if}}
+
 {{#if repository}}
-# Repository information
+# Target Repository Information (for implementation)
 REPO_URL="{{repository.url}}"
 REPO_BRANCH="{{repository.branch}}"
 GITHUB_USER="{{repository.githubUser}}"
 
-echo "Cloning repository: $REPO_URL"
-echo "Branch: $REPO_BRANCH"
-echo "GitHub User: $GITHUB_USER"
+echo "=== TARGET REPOSITORY SETUP ==="
+echo "Target repo: $REPO_URL"
+echo "Target branch: $REPO_BRANCH"
+echo "Target user: $GITHUB_USER"
 
-# Clone the repository to /workspace
-if [ -d "/workspace/.git" ]; then
-  echo "Repository already exists, pulling latest changes..."
-  cd /workspace
-
-  # Ensure we have the right remote configuration
-  git remote set-url origin "$REPO_URL"
-
-  echo "Fetching from origin..."
-  if ! git fetch origin; then
-    echo "❌ Failed to fetch from origin"
-    echo "🚫 ABORTING: Cannot fetch repository updates"
+# 1. Clone Platform Repository (for docs)
+{{#if platform_repository}}
+echo "=== CLONING PLATFORM REPOSITORY ==="
+if ! git clone "$PLATFORM_URL" platform-repo; then
+    echo "❌ Failed to clone platform repository: $PLATFORM_URL"
     exit 1
-  fi
+fi
+cd platform-repo && git checkout "$PLATFORM_BRANCH" && cd /workspace
+echo "✓ Platform repository cloned successfully"
 
-  echo "Checking out branch: $REPO_BRANCH"
-  if ! git checkout "$REPO_BRANCH"; then
-    echo "❌ Failed to checkout branch: $REPO_BRANCH"
-    exit 1
-  fi
+# 2. Copy Current Task Documentation (Clean Previous Task Content)
+echo "=== SETTING UP CURRENT TASK ==="
 
-  echo "Pulling latest changes..."
-  if ! git pull origin "$REPO_BRANCH"; then
-    echo "❌ Failed to pull latest changes"
-    exit 1
-  fi
+# Remove any previous task content to avoid confusion
+rm -rf task/ 2>/dev/null
+
+# Create clean task directory for current task only
+mkdir -p task
+if [ -d "platform-repo/.taskmaster/docs/task-{{task_id}}" ]; then
+    cp platform-repo/.taskmaster/docs/task-{{task_id}}/task.md task/ 2>/dev/null || echo "⚠️  task.md not found"
+    cp platform-repo/.taskmaster/docs/task-{{task_id}}/acceptance-criteria.md task/ 2>/dev/null || echo "⚠️  acceptance-criteria.md not found"
+    cp platform-repo/.taskmaster/docs/task-{{task_id}}/architecture.md task/ 2>/dev/null || echo "⚠️  architecture.md not found"
+    echo "✓ Task {{task_id}} documentation copied (previous task content cleaned)"
 else
-  echo "Cloning repository..."
-  echo "DEBUG: Contents of /workspace before clone:"
-  ls -la /workspace
-
-  # Handle non-empty workspace directory by temporarily backing up existing files
-  if [ "$(ls -A /workspace 2>/dev/null)" ]; then
-    echo "Workspace is not empty, backing up existing files..."
-    BACKUP_DIR="/tmp/workspace-backup"
-    rm -rf "$BACKUP_DIR"
-    mkdir -p "$BACKUP_DIR"
-
-    # Backup existing files (like .gitconfig)
-    cp -r /workspace/. "$BACKUP_DIR/" 2>/dev/null || true
-
-    # Clear workspace for clean clone
-    rm -rf /workspace/*
-    rm -rf /workspace/.[^.]*  # Remove hidden files but keep . and ..
-
-    # Clone to temp directory first, then move contents
-    TEMP_CLONE_DIR="/tmp/repo-clone"
-    rm -rf "$TEMP_CLONE_DIR"
-
-    if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$TEMP_CLONE_DIR"; then
-      echo ""
-      echo "═══════════════════════════════════════════════════════════════"
-      echo "║                   REPOSITORY CLONE FAILED                    ║"
-      echo "═══════════════════════════════════════════════════════════════"
-      echo ""
-      echo "❌ Failed to clone repository: $REPO_URL"
-      echo "   Branch: $REPO_BRANCH"
-      echo ""
-      echo "Debugging information:"
-      echo "  • Git version: $(git --version)"
-      echo "  • Git config (user): $(git config --global user.name) <$(git config --global user.email)>"
-      echo "  • Git config (credential): $(git config --global credential.helper)"
-      echo ""
-      echo "🚫 IMPLEMENTATION TASK CANNOT PROCEED WITHOUT REPOSITORY"
-      echo ""
-      exit 1
-    fi
-
-    # Move cloned repository contents to workspace
-    echo "Moving repository contents to workspace..."
-    mv "$TEMP_CLONE_DIR"/* /workspace/ 2>/dev/null || true
-    mv "$TEMP_CLONE_DIR"/.[^.]* /workspace/ 2>/dev/null || true
-    rm -rf "$TEMP_CLONE_DIR"
-    cd /workspace
-
-    # Restore backed up files that don't conflict with repository
-    echo "Restoring non-conflicting workspace files..."
-    for file in "$BACKUP_DIR"/.gitconfig "$BACKUP_DIR"/.git-credentials; do
-      if [ -f "$file" ]; then
-        cp "$file" /workspace/ 2>/dev/null || true
-        echo "✓ Restored: $(basename "$file")"
-      fi
-    done
-    cd /workspace
-  else
-    # Workspace is empty, clone directly
-    if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" /workspace; then
-      echo ""
-      echo "═══════════════════════════════════════════════════════════════"
-      echo "║                   REPOSITORY CLONE FAILED                    ║"
-      echo "═══════════════════════════════════════════════════════════════"
-      echo ""
-      echo "❌ Failed to clone repository: $REPO_URL"
-      echo "   Branch: $REPO_BRANCH"
-      echo ""
-      echo "🚫 IMPLEMENTATION TASK CANNOT PROCEED WITHOUT REPOSITORY"
-      echo ""
-      exit 1
-    fi
-    cd /workspace
-  fi
+    echo "⚠️  Task {{task_id}} documentation directory not found in platform repo"
 fi
 
-echo "✓ Repository cloned successfully"
+# 3. Copy MCP Tool Configuration
+if [ -f "platform-repo/.taskmaster/tasks/task-{{task_id}}/client-config.json" ]; then
+    cp platform-repo/.taskmaster/tasks/task-{{task_id}}/client-config.json /workspace/
+    echo "✓ MCP client configuration copied"
+else
+    echo "⚠️  MCP client-config.json not found in platform repo"
+fi
+{{else}}
+echo "⚠️  Skipping platform repository setup - not configured"
+{{/if}}
+
+# 4. Target Repository Setup (Smart Detection & Cleanup)
+echo "=== TARGET REPOSITORY OPERATIONS ==="
+if [ -d "target-repo/.git" ]; then
+    echo "=== EXISTING REPOSITORY DETECTED ==="
+    cd target-repo
+
+    # Cleanup Phase - Handle previous agent state
+    echo "=== REPOSITORY CLEANUP ==="
+
+    # Save current branch for logging
+    CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
+    echo "Found repository on branch: $CURRENT_BRANCH"
+
+    # Reset any uncommitted changes
+    git reset --hard HEAD 2>/dev/null || true
+    git clean -fd 2>/dev/null || true
+
+    # Check if we're retrying the same task
+    FEATURE_BRANCH="feature/task-{{task_id}}-implementation"
+    if [ "$CURRENT_BRANCH" = "$FEATURE_BRANCH" ]; then
+        echo "=== CONTINUING EXISTING TASK {{task_id}} ==="
+        # For task retry - preserve the feature branch but clean it up
+        git reset --hard HEAD
+        git clean -fd
+        echo "Cleaned up existing feature branch for retry"
+    else
+        echo "=== STARTING NEW TASK {{task_id}} ==="
+        # For new task - return to base branch and cleanup old feature branches
+        git fetch origin
+        git checkout "$REPO_BRANCH" 2>/dev/null || git checkout -b "$REPO_BRANCH" origin/"$REPO_BRANCH"
+        git pull origin "$REPO_BRANCH"
+
+        # Clean up old feature branches (keep last 3 for debugging)
+        git branch | grep "feature/task-" | head -n -3 | xargs -r git branch -D 2>/dev/null || true
+
+        # Create fresh feature branch for new task
+        git checkout -b "$FEATURE_BRANCH"
+        echo "Created fresh feature branch: $FEATURE_BRANCH"
+    fi
+else
+    echo "=== CLONING FRESH TARGET REPOSITORY ==="
+    if ! git clone "$REPO_URL" target-repo; then
+        echo "❌ Failed to clone target repository: $REPO_URL"
+        exit 1
+    fi
+    cd target-repo
+
+    # Create feature branch for this implementation
+    git checkout -b "feature/task-{{task_id}}-implementation"
+    echo "Created initial feature branch for task {{task_id}}"
+fi
+
+# 5. Set Working Directory
+{{#if working_directory}}
+WORK_DIR="{{working_directory}}"
+{{else}}
+WORK_DIR="{{service_name}}"
+{{/if}}
+mkdir -p "$WORK_DIR" && cd "$WORK_DIR"
+echo "✓ Set working directory: /workspace/target-repo/$WORK_DIR"
+
+# 6. MCP Configuration Setup
+echo "=== MCP CONFIGURATION SETUP ==="
+cp /config/mcp.json /workspace/.mcp.json 2>/dev/null || echo "⚠️  mcp.json template not found"
+# client-config.json already copied from platform repo in step 3
 
 # Configure git user after successful clone
 echo "=== POST-CLONE GIT CONFIGURATION ==="
-# Fix dubious ownership issue when repository is cloned as different user
-git config --global --add safe.directory /workspace
-echo "✓ Added /workspace to safe directories"
+# Fix dubious ownership issues
+git config --global --add safe.directory /workspace/platform-repo
+git config --global --add safe.directory /workspace/target-repo
+echo "✓ Added repositories to safe directories"
 
-git config --global user.name "{{repository.githubUser}}"
-git config --global user.email "{{repository.githubUser}}@users.noreply.github.com"
-echo "✓ Configured git user: {{repository.githubUser}}"
+git config --global user.name "$GITHUB_USER"
+git config --global user.email "${GITHUB_USER}@users.noreply.github.com"
+echo "✓ Configured git user: $GITHUB_USER"
 
 {{else}}
 echo ""
@@ -310,8 +325,8 @@ exit 1
 # Copy ConfigMap files to working directory (AFTER repository clone)
 echo "=== CONFIGMAP FILE SETUP ==="
 
-# For implementation tasks, Claude works in the repository root
-CLAUDE_WORK_DIR="/workspace"
+# For implementation tasks, Claude works in the target repository service directory
+CLAUDE_WORK_DIR="/workspace/target-repo/$WORK_DIR"
 
 echo "Setting up files in Claude working directory: $CLAUDE_WORK_DIR"
 cd "$CLAUDE_WORK_DIR"
@@ -320,8 +335,25 @@ cd "$CLAUDE_WORK_DIR"
 if [ -d "/config" ]; then
   echo "Copying ConfigMap files to working directory..."
 
-  # Copy markdown files (force overwrite any existing files)
-  cp -f /config/*.md "$CLAUDE_WORK_DIR/" 2>/dev/null && echo "✓ Copied markdown files" || echo "! No markdown files to copy"
+  # Copy markdown files (preserve existing CLAUDE.md memory)
+  for md_file in /config/*.md; do
+    if [ -f "$md_file" ]; then
+      basename_file=$(basename "$md_file")
+      if [ "$basename_file" = "CLAUDE.md" ]; then
+        # Only copy CLAUDE.md if it doesn't already exist (preserve memory)
+        if [ ! -f "$CLAUDE_WORK_DIR/CLAUDE.md" ]; then
+          cp "$md_file" "$CLAUDE_WORK_DIR/"
+          echo "✓ Created initial CLAUDE.md memory file"
+        else
+          echo "✓ Preserved existing CLAUDE.md memory file"
+        fi
+      else
+        # Always update other markdown files (guidelines, etc.)
+        cp "$md_file" "$CLAUDE_WORK_DIR/"
+        echo "✓ Updated $basename_file"
+      fi
+    fi
+  done
 
   # Set up Claude Code local settings (user-level settings)
   echo "=== CLAUDE CODE LOCAL SETTINGS ==="
@@ -353,13 +385,22 @@ if [ -d "/config" ]; then
     exit 1
   fi
 
-  # Copy all hook scripts from hooks directory
-  if [ -d "/config/hooks" ]; then
-    echo "Copying hook scripts..."
-    cp /config/hooks/*.sh "$CLAUDE_WORK_DIR/" 2>/dev/null && echo "✓ Copied hook scripts" || echo "! No hook scripts to copy"
-    chmod +x "$CLAUDE_WORK_DIR"/*.sh 2>/dev/null
+  # Copy all hook scripts (now prefixed with hooks- to comply with ConfigMap key constraints)
+  echo "Copying hook scripts..."
+  for hook_file in /config/hooks-*.sh; do
+    if [ -f "$hook_file" ]; then
+      # Extract the hook name (remove hooks- prefix) and copy to workspace
+      hook_name=$(basename "$hook_file" | sed 's/^hooks-//')
+      cp "$hook_file" "$CLAUDE_WORK_DIR/$hook_name"
+      chmod +x "$CLAUDE_WORK_DIR/$hook_name"
+      echo "✓ Copied hook: $hook_name"
+    fi
+  done
+  # Check if any hooks were copied
+  if ls "$CLAUDE_WORK_DIR"/*.sh >/dev/null 2>&1; then
+    echo "✓ Hook scripts copied successfully"
   else
-    echo "! No hooks directory found in ConfigMap"
+    echo "! No hook scripts found to copy"
   fi
 
   echo "✓ ConfigMap files copied to $CLAUDE_WORK_DIR"
@@ -387,11 +428,11 @@ for file in $REQUIRED_FILES; do
 done
 
 # Check git repository (REQUIRED for implementation tasks)
-if [ ! -d "/workspace/.git" ]; then
-  echo "✗ CRITICAL ERROR: No git repository found!"
+if [ ! -d "/workspace/target-repo/.git" ]; then
+  echo "✗ CRITICAL ERROR: No target git repository found!"
   MISSING_FILES="$MISSING_FILES git-repository"
 else
-  echo "✓ Found: git repository"
+  echo "✓ Found: target git repository"
 fi
 
 # If any files are missing, abort
@@ -534,13 +575,59 @@ echo "=========================="
 # Load the prompt template content
 PROMPT="{{prompt_content}}"
 
+# Enhanced System Prompt for Production-Grade Paranoid Verification
+BASE_SYSTEM_PROMPT="You are a highly capable, highly critical, somewhat paranoid, super senior principal Rust engineer.
+
+CRITICAL: You are implementing code that MUST work in production. Be extremely paranoid about declaring success.
+
+NEVER say you are \"done\" or \"completed\" unless you have:
+1. Actually executed your code in a real environment
+2. Observed it working correctly with your own eyes
+3. Run regression tests and seen them pass
+4. Verified all edge cases and error conditions
+
+If you cannot test in a real environment, explicitly state what testing you were unable to perform and why the implementation should be considered incomplete until proper testing is done.
+
+As a senior principal engineer, you understand that production failures are extremely costly.
+Err on the side of being too cautious rather than too confident.
+Apply the highest standards of code quality, testing, and verification."
+
+{{#if prompt_modification}}
+# Prompt modification for retry attempt
+PROMPT_MODIFICATION="{{prompt_modification}}"
+PROMPT_MODE="{{prompt_mode}}"
+
+if [ "$PROMPT_MODE" = "replace" ]; then
+  # Replace mode: Use prompt modification as complete system prompt
+  SYSTEM_PROMPT="$PROMPT_MODIFICATION"
+  echo "Using replacement system prompt for retry"
+else
+  # Append mode: Add prompt modification to base system prompt
+  SYSTEM_PROMPT="$BASE_SYSTEM_PROMPT
+
+=== RETRY GUIDANCE ===
+$PROMPT_MODIFICATION
+======================"
+  echo "Using appended system prompt for retry"
+fi
+{{else}}
+# No prompt modification - use base system prompt
+SYSTEM_PROMPT="$BASE_SYSTEM_PROMPT"
+echo "Using standard system prompt"
+{{/if}}
+
 echo "=== 6. FINAL EXECUTION ==="
 echo "CLAUDE.md (project memory): Will be automatically loaded by Claude"
 echo "Prompt (task instruction): $PROMPT"
+{{#if prompt_modification}}
+echo "System Prompt: Modified for retry (mode: {{prompt_mode}})"
+{{else}}
+echo "System Prompt: Standard paranoid verification requirements"
+{{/if}}
 echo "=== END EXECUTION INFO ==="
 echo ""
 
-exec $CLAUDE_CMD "$PROMPT"
+exec $CLAUDE_CMD --append-system-prompt "$SYSTEM_PROMPT" "$PROMPT"
 
 echo '════════════════════════════════════════════════════════════════'
 echo '║                 IMPLEMENTATION TASK COMPLETE                 ║'

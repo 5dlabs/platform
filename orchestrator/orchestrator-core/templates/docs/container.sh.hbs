@@ -532,13 +532,22 @@ if [ -d "/config" ]; then
   echo "✓ Permissions: acceptEdits mode + --dangerously-skip-permissions flag"
   echo "✓ No additional settings files needed"
 
-  # Copy all hook scripts from hooks directory
-  if [ -d "/config/hooks" ]; then
-    echo "Copying hook scripts..."
-    cp /config/hooks/*.sh "$CLAUDE_WORK_DIR/" 2>/dev/null && echo "✓ Copied hook scripts" || echo "! No hook scripts to copy"
-    chmod +x "$CLAUDE_WORK_DIR"/*.sh 2>/dev/null
+  # Copy all hook scripts (now prefixed with hooks- to comply with ConfigMap key constraints)
+  echo "Copying hook scripts..."
+  for hook_file in /config/hooks-*.sh; do
+    if [ -f "$hook_file" ]; then
+      # Extract the hook name (remove hooks- prefix) and copy to workspace
+      hook_name=$(basename "$hook_file" | sed 's/^hooks-//')
+      cp "$hook_file" "$CLAUDE_WORK_DIR/$hook_name"
+      chmod +x "$CLAUDE_WORK_DIR/$hook_name"
+      echo "✓ Copied hook: $hook_name"
+    fi
+  done
+  # Check if any hooks were copied
+  if ls "$CLAUDE_WORK_DIR"/*.sh >/dev/null 2>&1; then
+    echo "✓ Hook scripts copied successfully"
   else
-    echo "! No hooks directory found in ConfigMap"
+    echo "! No hook scripts found to copy"
   fi
 
   echo "✓ ConfigMap files copied to $CLAUDE_WORK_DIR"

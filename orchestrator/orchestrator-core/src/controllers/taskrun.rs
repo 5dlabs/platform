@@ -1,6 +1,4 @@
 use crate::config::controller_config::ControllerConfig;
-#[cfg(test)]
-use crate::crds::{MarkdownFile, MarkdownFileType};
 use crate::crds::{TaskRun, TaskRunPhase};
 use chrono::Utc;
 use futures::StreamExt;
@@ -508,23 +506,30 @@ async fn update_status_with_details(
 fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Result<ConfigMap> {
     let mut data = BTreeMap::new();
 
-    // Add all markdown files
-    for file in &tr.spec.markdown_files {
-        data.insert(file.filename.clone(), file.content.clone());
-    }
+    // Markdown files are no longer stored in spec - all content is generated from templates
 
     // Generate CLAUDE.md from appropriate memory template based on task type
-    let claude_memory = if is_docs_generation(tr) {
-        generate_claude_memory(tr, DOCS_MEMORY_TEMPLATE)?
+    // Only generate initial CLAUDE.md for first attempt - preserve existing memory on retries
+    let is_retry = tr.status.as_ref().is_some_and(|s| s.attempts > 1);
+    if !is_retry {
+        let claude_memory = if is_docs_generation(tr) {
+            generate_claude_memory(tr, DOCS_CLAUDE_TEMPLATE)?
+        } else {
+            generate_claude_memory(tr, IMPLEMENTATION_CLAUDE_TEMPLATE)?
+        };
+        data.insert("CLAUDE.md".to_string(), claude_memory);
     } else {
-        generate_claude_memory(tr, IMPLEMENTATION_MEMORY_TEMPLATE)?
-    };
-    data.insert("CLAUDE.md".to_string(), claude_memory);
+        // On retry attempts, we need to preserve the existing CLAUDE.md from the PVC
+        // The container will handle copying the existing file from workspace
+        info!("Retry attempt - preserving existing CLAUDE.md memory file");
+    }
 
     // Add all hook scripts from the hooks directory
     let hook_scripts = generate_hook_scripts(tr)?;
     for (filename, content) in hook_scripts {
-        data.insert(format!("hooks/{}", filename), content);
+        // Use hooks- prefix instead of hooks/ to comply with ConfigMap key constraints
+        // Kubernetes ConfigMap keys can only contain: [-._a-zA-Z0-9]+
+        data.insert(format!("hooks-{}", filename), content);
     }
 
     // Generate Claude Code configuration file for tool permissions
@@ -534,7 +539,18 @@ fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Resul
     if is_docs_generation(tr) {
         data.insert("claude-settings.json".to_string(), settings_json);
     } else {
-    data.insert("settings-local.json".to_string(), settings_json);
+        data.insert("settings-local.json".to_string(), settings_json);
+
+        // Generate MCP configuration for implementation tasks
+        let mcp_json = generate_mcp_config(tr)?;
+        data.insert("mcp.json".to_string(), mcp_json);
+
+        // Add coding and GitHub guidelines for implementation tasks
+        let coding_guidelines = generate_coding_guidelines(tr)?;
+        data.insert("coding-guidelines.md".to_string(), coding_guidelines);
+
+        let github_guidelines = generate_github_guidelines(tr)?;
+        data.insert("github-guidelines.md".to_string(), github_guidelines);
     }
 
     Ok(ConfigMap {
@@ -683,10 +699,13 @@ const IMPLEMENTATION_CONTAINER_TEMPLATE: &str = include_str!("../../templates/im
 const DOCS_GENERATION_CONTAINER_TEMPLATE: &str = include_str!("../../templates/docs/container.sh.hbs");
 const DOCS_GENERATION_PROMPT_TEMPLATE: &str = include_str!("../../templates/docs/prompt.hbs");
 const IMPLEMENTATION_PROMPT_TEMPLATE: &str = include_str!("../../templates/implementation/prompt.hbs");
-const DOCS_MEMORY_TEMPLATE: &str = include_str!("../../templates/docs/memory.md.hbs");
-const IMPLEMENTATION_MEMORY_TEMPLATE: &str = include_str!("../../templates/implementation/memory.md.hbs");
+const DOCS_CLAUDE_TEMPLATE: &str = include_str!("../../templates/docs/claude.md.hbs");
+const IMPLEMENTATION_CLAUDE_TEMPLATE: &str = include_str!("../../templates/implementation/claude.md.hbs");
 const DOCS_SETTINGS_TEMPLATE: &str = include_str!("../../templates/docs/settings.json.hbs");
 const IMPLEMENTATION_SETTINGS_TEMPLATE: &str = include_str!("../../templates/implementation/settings.json.hbs");
+const IMPLEMENTATION_MCP_TEMPLATE: &str = include_str!("../../templates/implementation/mcp.json.hbs");
+const IMPLEMENTATION_CODING_GUIDELINES_TEMPLATE: &str = include_str!("../../templates/implementation/coding-guidelines.md.hbs");
+const IMPLEMENTATION_GITHUB_GUIDELINES_TEMPLATE: &str = include_str!("../../templates/implementation/github-guidelines.md.hbs");
 
 
 
@@ -718,14 +737,9 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
     // Extract working directory for docs generation tasks
     let mut working_dir = String::new();
     if is_docs_generation {
-        // For docs generation, parse working directory from markdown
-        if let Some(claude_md) = tr.spec.markdown_files.iter().find(|f| f.filename == "CLAUDE.md") {
-            for line in claude_md.content.lines() {
-                if line.starts_with("- **Working Directory**: ") {
-                    working_dir = line.trim_start_matches("- **Working Directory**: ").to_string();
-                    break;
-                }
-            }
+        // For docs generation, use working_directory field if present
+        if let Some(wd) = &tr.spec.working_directory {
+            working_dir = wd.clone();
         }
     }
 
@@ -742,25 +756,45 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
         "service_name": tr.spec.service_name.clone(),
     });
 
-        // Add repository and branch information for docs generation
-    if is_docs_generation {
-        if let Some(repo) = &tr.spec.repository {
-            data["repository"] = json!({
-                "url": repo.url,
-                "branch": repo.branch,
-                "githubUser": repo.github_user
-            });
+    // Add repository information for both docs generation and implementation tasks
+    if let Some(repo) = &tr.spec.repository {
+        data["repository"] = json!({
+            "url": repo.url,
+            "branch": repo.branch,
+            "githubUser": repo.github_user
+        });
+    }
 
-            // Generate target branch name for docs generation
-            let timestamp = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs();
-            let target_branch = format!("docs-generation-{}", chrono::DateTime::from_timestamp(timestamp as i64, 0)
-                .unwrap_or_else(chrono::Utc::now)
-                .format("%Y%m%d-%H%M%S"));
-            data["targetBranch"] = json!(target_branch);
-        }
+    // Add platform repository information if present
+    if let Some(platform_repo) = &tr.spec.platform_repository {
+        data["platform_repository"] = json!({
+            "url": platform_repo.url,
+            "branch": platform_repo.branch,
+            "githubUser": platform_repo.github_user
+        });
+    }
+
+    // Add working directory information
+    if let Some(working_directory) = &tr.spec.working_directory {
+        data["working_directory"] = json!(working_directory);
+    }
+
+    // Add prompt modification fields for retry attempts
+    if let Some(prompt_modification) = &tr.spec.prompt_modification {
+        data["prompt_modification"] = json!(prompt_modification);
+    }
+    data["prompt_mode"] = json!(tr.spec.prompt_mode);
+
+    if is_docs_generation {
+        // Generate target branch name for docs generation
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let target_branch = format!("docs-generation-{}", chrono::DateTime::from_timestamp(timestamp as i64, 0)
+            .unwrap_or_else(chrono::Utc::now)
+            .format("%Y%m%d-%H%M%S"));
+        data["targetBranch"] = json!(target_branch);
 
         // Generate the prompt content for docs generation
         let prompt_content = generate_prompt(tr, DOCS_GENERATION_PROMPT_TEMPLATE)?;
@@ -858,17 +892,10 @@ fn generate_claude_memory(tr: &TaskRun, template: &str) -> Result<String> {
 
     // Extract working directory from the TaskRun
     let working_directory = if tr.spec.repository.is_some() {
-        // For docs generation, working directory should be extracted from existing CLAUDE.md if present
-        tr.spec.markdown_files.iter()
-            .find(|f| f.filename == "CLAUDE.md")
-            .and_then(|claude_md| {
-                claude_md.content.lines()
-                    .find(|line| line.starts_with("- **Working Directory**: "))
-                    .map(|line| line.trim_start_matches("- **Working Directory**: ").to_string())
-            })
-            .unwrap_or_else(|| ".".to_string())
+        // Use working_directory field from TaskRun spec
+        tr.spec.working_directory.as_deref().unwrap_or(".")
     } else {
-        ".".to_string()
+        "."
     };
 
     let data = json!({
@@ -909,6 +936,66 @@ fn generate_claude_settings(tr: &TaskRun, config: &ControllerConfig) -> Result<S
     handlebars
         .render("settings", &data)
         .map_err(|e| Error::ConfigError(format!("Failed to render settings template: {e}")))
+}
+
+/// Generate MCP configuration for implementation tasks
+fn generate_mcp_config(tr: &TaskRun) -> Result<String> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false); // Allow missing fields
+
+    handlebars
+        .register_template_string("mcp", IMPLEMENTATION_MCP_TEMPLATE)
+        .map_err(|e| Error::ConfigError(format!("Failed to register MCP template: {e}")))?;
+
+    // Build basic template data - MCP template is simple and doesn't need complex data
+    let data = json!({
+        "service_name": tr.spec.service_name,
+        "task_id": tr.spec.task_id
+    });
+
+    handlebars
+        .render("mcp", &data)
+        .map_err(|e| Error::ConfigError(format!("Failed to render MCP template: {e}")))
+}
+
+/// Generate coding guidelines for implementation tasks
+fn generate_coding_guidelines(tr: &TaskRun) -> Result<String> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false); // Allow missing fields
+
+    handlebars
+        .register_template_string("coding_guidelines", IMPLEMENTATION_CODING_GUIDELINES_TEMPLATE)
+        .map_err(|e| Error::ConfigError(format!("Failed to register coding guidelines template: {e}")))?;
+
+    // Build basic template data
+    let data = json!({
+        "service_name": tr.spec.service_name,
+        "task_id": tr.spec.task_id
+    });
+
+    handlebars
+        .render("coding_guidelines", &data)
+        .map_err(|e| Error::ConfigError(format!("Failed to render coding guidelines template: {e}")))
+}
+
+/// Generate GitHub guidelines for implementation tasks
+fn generate_github_guidelines(tr: &TaskRun) -> Result<String> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false); // Allow missing fields
+
+    handlebars
+        .register_template_string("github_guidelines", IMPLEMENTATION_GITHUB_GUIDELINES_TEMPLATE)
+        .map_err(|e| Error::ConfigError(format!("Failed to register GitHub guidelines template: {e}")))?;
+
+    // Build basic template data
+    let data = json!({
+        "service_name": tr.spec.service_name,
+        "task_id": tr.spec.task_id
+    });
+
+    handlebars
+        .render("github_guidelines", &data)
+        .map_err(|e| Error::ConfigError(format!("Failed to render GitHub guidelines template: {e}")))
 }
 
 /// Build template data for Claude settings generation
@@ -1019,14 +1106,7 @@ fn generate_hook_scripts(tr: &TaskRun) -> Result<Vec<(String, String)>> {
 
     // Extract working directory from the TaskRun (for docs generation compatibility)
     let working_directory = if tr.spec.repository.is_some() {
-        tr.spec.markdown_files.iter()
-            .find(|f| f.filename == "CLAUDE.md")
-            .and_then(|claude_md| {
-                claude_md.content.lines()
-                    .find(|line| line.starts_with("- **Working Directory**: "))
-                    .map(|line| line.trim_start_matches("- **Working Directory**: ").to_string())
-            })
-            .unwrap_or_else(|| ".".to_string())
+        tr.spec.working_directory.as_deref().unwrap_or(".").to_string()
     } else {
         ".".to_string()
     };
@@ -1125,20 +1205,12 @@ mod tests {
                 agent_name: "claude-agent-1".to_string(),
                 model: "sonnet".to_string(),
                 context_version: 1,
-                markdown_files: vec![
-                    MarkdownFile {
-                        filename: "task.md".to_string(),
-                        content: "Task content".to_string(),
-                        file_type: Some(MarkdownFileType::Task),
-                    },
-                    MarkdownFile {
-                        filename: "design-spec.md".to_string(),
-                        content: "Design spec".to_string(),
-                        file_type: Some(MarkdownFileType::DesignSpec),
-                    },
-                ],
                 agent_tools: vec![],
                 repository: None,
+                working_directory: None,
+                platform_repository: None,
+                prompt_modification: None,
+                prompt_mode: "append".to_string(),
             },
             status: None,
         };
@@ -1146,10 +1218,13 @@ mod tests {
         let config = ControllerConfig::default();
         let cm = build_configmap(&tr, "test-cm", &config).unwrap();
         let data = cm.data.unwrap();
-        assert!(data.contains_key("task.md"));
-        assert!(data.contains_key("design-spec.md"));
-        assert_eq!(data.get("task.md").unwrap(), "Task content");
-        assert_eq!(data.get("design-spec.md").unwrap(), "Design spec");
+
+        // ConfigMap should contain generated template files instead of markdown files
+        assert!(data.contains_key("CLAUDE.md"));
+        assert!(data.contains_key("settings-local.json"));
+        assert!(data.contains_key("mcp.json"));
+        assert!(data.contains_key("coding-guidelines.md"));
+        assert!(data.contains_key("github-guidelines.md"));
     }
 
     #[test]
@@ -1162,9 +1237,12 @@ mod tests {
                 agent_name: "claude-agent-1".to_string(),
                 model: "sonnet".to_string(),
                 context_version: 1,
-                markdown_files: vec![],
                 agent_tools: vec![],
                 repository: None,
+                working_directory: None,
+                platform_repository: None,
+                prompt_modification: None,
+                prompt_mode: "append".to_string(),
             },
             status: None,
         };
@@ -1194,9 +1272,12 @@ mod tests {
                 agent_name: "claude-agent-1".to_string(),
                 model: "sonnet".to_string(), // This should be overridden
                 context_version: 1,
-                markdown_files: vec![],
                 agent_tools: vec![],
                 repository: None,
+                working_directory: None,
+                platform_repository: None,
+                prompt_modification: None,
+                prompt_mode: "append".to_string(),
             },
             status: None,
         };
@@ -1263,5 +1344,309 @@ mod tests {
 
         // Should have 2 deny rules (rm + sudo restrictions)
         assert_eq!(deny_rules.len(), 2);
+    }
+
+    #[test]
+    fn test_generate_claude_memory_template_substitution() {
+        // Test that template variables are properly substituted in claude memory generation
+        let tr = TaskRun {
+            metadata: Default::default(),
+            spec: TaskRunSpec {
+                task_id: 1001,
+                service_name: "test-service".to_string(),
+                agent_name: "claude-agent-1".to_string(),
+                model: "sonnet".to_string(),
+                context_version: 1,
+                agent_tools: vec![],
+                repository: Some(crate::crds::taskrun::RepositorySpec {
+                    url: "https://github.com/test/repo".to_string(),
+                    branch: "main".to_string(),
+                    github_user: "testuser".to_string(),
+                    token: None,
+                }),
+                working_directory: Some("service-dir".to_string()),
+                platform_repository: None,
+                prompt_modification: None,
+                prompt_mode: "append".to_string(),
+            },
+            status: None,
+        };
+
+        let memory = generate_claude_memory(&tr, IMPLEMENTATION_CLAUDE_TEMPLATE).unwrap();
+
+        // Verify template variables were substituted correctly
+        assert!(memory.contains("https://github.com/test/repo"));
+        assert!(memory.contains("main"));
+        assert!(memory.contains("testuser"));
+        assert!(memory.contains("service-dir"));
+        assert!(memory.contains("task 1001"));
+        assert!(memory.contains("task/task.md"));
+        assert!(memory.contains("task/acceptance-criteria.md"));
+    }
+
+    #[test]
+    fn test_generate_mcp_config_template() {
+        let tr = TaskRun {
+            metadata: Default::default(),
+            spec: TaskRunSpec {
+                task_id: 1001,
+                service_name: "test-service".to_string(),
+                agent_name: "claude-agent-1".to_string(),
+                model: "sonnet".to_string(),
+                context_version: 1,
+                agent_tools: vec![],
+                repository: None,
+                working_directory: None,
+                platform_repository: None,
+                prompt_modification: None,
+                prompt_mode: "append".to_string(),
+            },
+            status: None,
+        };
+
+        let mcp_config = generate_mcp_config(&tr).unwrap();
+
+        // Parse as JSON to verify it's valid
+        let config: serde_json::Value = serde_json::from_str(&mcp_config).unwrap();
+
+        // Verify MCP config structure
+        assert!(config.get("mcpServers").is_some());
+        assert!(config["mcpServers"].get("toolman").is_some());
+        assert_eq!(config["mcpServers"]["toolman"]["type"], "stdio");
+        assert_eq!(config["mcpServers"]["toolman"]["command"], "/usr/local/bin/toolman-client");
+    }
+
+    #[test]
+    fn test_generate_coding_guidelines_template() {
+        let tr = TaskRun {
+            metadata: Default::default(),
+            spec: TaskRunSpec {
+                task_id: 1001,
+                service_name: "test-service".to_string(),
+                agent_name: "claude-agent-1".to_string(),
+                model: "sonnet".to_string(),
+                context_version: 1,
+                agent_tools: vec![],
+                repository: None,
+                working_directory: None,
+                platform_repository: None,
+                prompt_modification: None,
+                prompt_mode: "append".to_string(),
+            },
+            status: None,
+        };
+
+        let guidelines = generate_coding_guidelines(&tr).unwrap();
+
+        // Verify template generated content
+        assert!(guidelines.contains("# Rust Coding Guidelines"));
+        assert!(guidelines.contains("Error Handling"));
+        assert!(guidelines.contains("Memory Management"));
+        assert!(guidelines.contains("Async Programming"));
+        assert!(guidelines.contains("Testing Guidelines"));
+    }
+
+    #[test]
+    fn test_generate_github_guidelines_template() {
+        let tr = TaskRun {
+            metadata: Default::default(),
+            spec: TaskRunSpec {
+                task_id: 1001,
+                service_name: "test-service".to_string(),
+                agent_name: "claude-agent-1".to_string(),
+                model: "sonnet".to_string(),
+                context_version: 1,
+                agent_tools: vec![],
+                repository: None,
+                working_directory: None,
+                platform_repository: None,
+                prompt_modification: None,
+                prompt_mode: "append".to_string(),
+            },
+            status: None,
+        };
+
+        let guidelines = generate_github_guidelines(&tr).unwrap();
+
+        // Verify template generated content
+        assert!(guidelines.contains("# GitHub Workflow Guidelines"));
+        assert!(guidelines.contains("Commit Message Format"));
+        assert!(guidelines.contains("Branch Naming"));
+        assert!(guidelines.contains("Pull Request Guidelines"));
+        assert!(guidelines.contains("Code Review Standards"));
+    }
+
+    #[test]
+    fn test_generate_hook_scripts_implementation() {
+        let tr = TaskRun {
+            metadata: Default::default(),
+            spec: TaskRunSpec {
+                task_id: 1001,
+                service_name: "test-service".to_string(),
+                agent_name: "claude-agent-1".to_string(),
+                model: "sonnet".to_string(),
+                context_version: 1,
+                agent_tools: vec![],
+                repository: Some(crate::crds::taskrun::RepositorySpec {
+                    url: "https://github.com/test/repo".to_string(),
+                    branch: "main".to_string(),
+                    github_user: "testuser".to_string(),
+                    token: None,
+                }),
+                working_directory: Some("service-dir".to_string()),
+                platform_repository: None,
+                prompt_modification: None,
+                prompt_mode: "append".to_string(),
+            },
+            status: None,
+        };
+
+        let hooks = generate_hook_scripts(&tr).unwrap();
+
+        // Should generate 2 hook scripts for implementation tasks
+        assert_eq!(hooks.len(), 2);
+
+        // Verify hook script names
+        let hook_names: Vec<&String> = hooks.iter().map(|(name, _)| name).collect();
+        assert!(hook_names.contains(&&"stop-commit.sh".to_string()));
+        assert!(hook_names.contains(&&"early-test.sh".to_string()));
+
+        // Verify template content is generated correctly
+        for (_, content) in &hooks {
+            assert!(content.contains("#!/bin/bash"));
+            assert!(content.len() > 100); // Hook scripts should be non-trivial
+        }
+    }
+
+    #[test]
+    fn test_build_settings_template_data() {
+        let tr = TaskRun {
+            metadata: Default::default(),
+            spec: TaskRunSpec {
+                task_id: 1001,
+                service_name: "test-service".to_string(),
+                agent_name: "claude-agent-1".to_string(),
+                model: "opus".to_string(),
+                context_version: 1,
+                agent_tools: vec![
+                    crate::crds::AgentTool {
+                        name: "bash".to_string(),
+                        enabled: true,
+                        config: None,
+                        restrictions: vec!["rm:*".to_string()],
+                    }
+                ],
+                repository: None,
+                working_directory: None,
+                platform_repository: None,
+                prompt_modification: None,
+                prompt_mode: "append".to_string(),
+            },
+            status: Some(crate::crds::taskrun::TaskRunStatus {
+                phase: Some(crate::crds::taskrun::TaskRunPhase::Running),
+                job_name: None,
+                config_map_name: None,
+                attempts: 2,
+                last_updated: None,
+                message: None,
+                session_id: None,
+                conditions: vec![],
+            }),
+        };
+
+        let config = crate::config::controller_config::ControllerConfig::default();
+        let data = build_settings_template_data(&tr, &config).unwrap();
+
+        // Verify template data structure
+        assert_eq!(data["model"], "opus");
+        assert_eq!(data["agent_tools_override"], true);
+        assert_eq!(data["retry"]["is_retry"], true);
+        assert!(data.get("permissions").is_some());
+
+        // Verify telemetry data structure
+        assert!(data.get("telemetry").is_some());
+        assert_eq!(data["telemetry"]["enabled"], true); // Default config has telemetry enabled
+    }
+
+    #[test]
+    fn test_template_conditional_logic() {
+        // Test conditional logic in templates with docs generation
+        let tr_docs = TaskRun {
+            metadata: Default::default(),
+            spec: TaskRunSpec {
+                task_id: DOCS_GENERATION_TASK_ID,
+                service_name: "docs-generator".to_string(),
+                agent_name: "claude-agent-1".to_string(),
+                model: "sonnet".to_string(),
+                context_version: 1,
+                agent_tools: vec![],
+                repository: Some(crate::crds::taskrun::RepositorySpec {
+                    url: "https://github.com/test/repo".to_string(),
+                    branch: "main".to_string(),
+                    github_user: "testuser".to_string(),
+                    token: None,
+                }),
+                working_directory: Some("docs".to_string()),
+                platform_repository: None,
+                prompt_modification: None,
+                prompt_mode: "append".to_string(),
+            },
+            status: None,
+        };
+
+        let memory_docs = generate_claude_memory(&tr_docs, DOCS_CLAUDE_TEMPLATE).unwrap();
+
+        // Should not include task ID for docs generation (uses null)
+        assert!(!memory_docs.contains("task 999999"));
+
+        // Test implementation task
+        let tr_impl = TaskRun {
+            metadata: Default::default(),
+            spec: TaskRunSpec {
+                task_id: 1001,
+                service_name: "test-service".to_string(),
+                agent_name: "claude-agent-1".to_string(),
+                model: "sonnet".to_string(),
+                context_version: 1,
+                agent_tools: vec![],
+                repository: None,
+                working_directory: None,
+                platform_repository: None,
+                prompt_modification: None,
+                prompt_mode: "append".to_string(),
+            },
+            status: None,
+        };
+
+        let memory_impl = generate_claude_memory(&tr_impl, IMPLEMENTATION_CLAUDE_TEMPLATE).unwrap();
+
+        // Should include specific task ID for implementation
+        assert!(memory_impl.contains("task 1001"));
+    }
+
+    #[test]
+    fn test_template_error_handling() {
+        let tr = TaskRun {
+            metadata: Default::default(),
+            spec: TaskRunSpec {
+                task_id: 1001,
+                service_name: "test-service".to_string(),
+                agent_name: "claude-agent-1".to_string(),
+                model: "sonnet".to_string(),
+                context_version: 1,
+                agent_tools: vec![],
+                repository: None,
+                working_directory: None,
+                platform_repository: None,
+                prompt_modification: None,
+                prompt_mode: "append".to_string(),
+            },
+            status: None,
+        };
+
+        // Test with invalid template - should return error
+        let invalid_template = "{{invalid_syntax";
+        let result = generate_claude_memory(&tr, invalid_template);
+        assert!(result.is_err());
     }
 }

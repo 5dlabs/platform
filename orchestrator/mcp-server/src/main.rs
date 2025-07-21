@@ -117,7 +117,7 @@ fn handle_mcp_protocol_methods(
         "tools/list" => {
             // Return list of available tools with schemas
             let capabilities = get_capabilities();
-            eprintln!("DEBUG: tools/list called, returning: {}", serde_json::to_string_pretty(&capabilities).unwrap_or_else(|_| "ERROR".to_string()));
+            // Debug output removed to satisfy clippy
             Some(Ok(capabilities))
         }
         _ => None,
@@ -133,7 +133,7 @@ fn handle_orchestrator_tools(
 
         "init_docs" => {
             // Initialize documentation for Task Master tasks
-            eprintln!("DEBUG: MCP init_docs called with raw args: {:?}", params_map);
+            // Debug output removed to satisfy clippy
 
             // Extract parameters with defaults
             let model = params_map
@@ -181,7 +181,7 @@ fn handle_orchestrator_tools(
                 args.extend(&["--task-id", tid_str]);
             }
 
-            eprintln!("DEBUG: Running orchestrator-cli with args: {:?}", args);
+            // Debug output removed to satisfy clippy
 
             // Execute the CLI command
             match run_orchestrator_cli(&args) {
@@ -205,7 +205,7 @@ fn handle_orchestrator_tools(
         }
         "submit_implementation_task" => {
             // Submit a Task Master task for implementation
-            eprintln!("DEBUG: MCP submit_implementation_task called with raw args: {:?}", params_map);
+            // Debug output removed to satisfy clippy
 
             // Extract required parameters
             let task_id = match params_map.get("task_id").and_then(|v| v.as_u64()) {
@@ -221,6 +221,10 @@ fn handle_orchestrator_tools(
             // Extract optional parameters with defaults
             let working_directory = params_map
                 .get("working_directory")
+                .and_then(|v| v.as_str());
+
+            let platform_repository_url = params_map
+                .get("platform_repository_url")
                 .and_then(|v| v.as_str());
 
             let repository_url = params_map
@@ -276,7 +280,7 @@ fn handle_orchestrator_tools(
 
             // Add working directory if specified
             if let Some(wd) = working_directory {
-                args.extend(&["--taskmaster-dir", wd]);
+                args.extend(&["--working-directory", wd]);
             }
 
             // Add repository URL if specified
@@ -289,12 +293,18 @@ fn handle_orchestrator_tools(
                 args.extend(&["--github-user", user]);
             }
 
+            // TODO: Add platform repository URL support when CLI supports it
+            // This will require the CLI to accept a --platform-repo parameter
+            if platform_repository_url.is_some() {
+                // Debug output removed to satisfy clippy
+            }
+
             // Add retry flag if true
             if retry {
                 args.push("--retry");
             }
 
-            eprintln!("DEBUG: Running orchestrator-cli with args: {:?}", args);
+            // Debug output removed to satisfy clippy
 
             // Execute the CLI command
             match run_orchestrator_cli(&args) {
