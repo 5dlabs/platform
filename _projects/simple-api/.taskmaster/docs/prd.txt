@@ -1,0 +1,75 @@
+Product Requirements Document: Simple Todo REST API
+
+1. Product Overview
+   - A lightweight REST API for managing todo items
+   - Built with Node.js and Express
+   - SQLite database for persistence
+   - Full CRUD operations for todos
+
+2. Functional Requirements
+
+   2.1 Todo Management
+   - Create new todo items with title and optional description
+   - Retrieve all todos with optional filtering by completion status
+   - Retrieve individual todos by ID
+   - Update todo properties (title, description, completion status)
+   - Delete todos
+
+   2.2 API Features
+   - RESTful endpoint design
+   - Request validation
+   - Pagination support for list endpoints
+   - Health check endpoint
+   - Comprehensive error handling
+
+   2.3 Documentation
+   - OpenAPI/Swagger documentation
+   - Interactive API documentation UI
+   - Clear README with setup instructions
+
+3. Technical Requirements
+
+   3.1 Technology Stack
+   - Node.js 18 or higher
+   - Express.js 4.x
+   - SQLite database with better-sqlite3
+   - Jest for testing
+   - express-validator for input validation
+   - swagger-jsdoc and swagger-ui-express for documentation
+
+   3.2 Project Structure
+   - MVC architecture pattern
+   - Modular code organization
+   - Separation of concerns
+   - Environment-based configuration
+
+   3.3 Testing Requirements
+   - Unit tests for models and controllers
+   - Integration tests for API endpoints
+   - Minimum 90% code coverage
+   - Test database isolation
+
+4. Non-Functional Requirements
+
+   4.1 Performance
+   - Fast response times
+   - Efficient database queries
+   - Pagination for large datasets
+
+   4.2 Reliability
+   - Proper error handling
+   - Input validation
+   - Database integrity
+
+   4.3 Maintainability
+   - Clean, readable code
+   - Consistent coding style
+   - Comprehensive documentation
+   - Modular architecture
+
+5. Success Criteria
+   - All CRUD operations functional
+   - All tests passing with 90%+ coverage
+   - API documentation accessible
+   - Project runs without errors
+   - Code follows best practices
