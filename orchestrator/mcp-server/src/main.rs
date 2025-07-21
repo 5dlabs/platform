@@ -179,7 +179,7 @@ fn handle_orchestrator_tools(
             // Validate model parameter
             if !["opus", "sonnet"].contains(&model) {
                 return Some(Err(anyhow!("Invalid model '{}'. Must be 'opus' or 'sonnet'", model)));
-            }
+        }
 
             // Build CLI arguments
             let mut args = vec!["task", "init-docs"];
@@ -220,8 +220,126 @@ fn handle_orchestrator_tools(
                         }
                     })))
                 }
-                Err(e) => {
+            Err(e) => {
                     Some(Err(anyhow!("Failed to execute init-docs: {}", e)))
+                }
+            }
+        }
+        "submit_implementation_task" => {
+            // Submit a Task Master task for implementation
+            eprintln!("DEBUG: MCP submit_implementation_task called with raw args: {:?}", params_map);
+
+            // Extract required parameters
+            let task_id = match params_map.get("task_id").and_then(|v| v.as_u64()) {
+                Some(id) => id,
+                None => return Some(Err(anyhow!("Missing required parameter: task_id"))),
+            };
+
+            let service = match params_map.get("service").and_then(|v| v.as_str()) {
+                Some(s) => s,
+                None => return Some(Err(anyhow!("Missing required parameter: service"))),
+            };
+
+            // Extract optional parameters with defaults
+            let working_directory = params_map
+                .get("working_directory")
+                .and_then(|v| v.as_str());
+
+            let repository_url = params_map
+                .get("repository_url")
+                .and_then(|v| v.as_str());
+
+            let branch = params_map
+                .get("branch")
+                .and_then(|v| v.as_str())
+                .unwrap_or("main");
+
+            let model = params_map
+                .get("model")
+                .and_then(|v| v.as_str())
+                .unwrap_or("sonnet");
+
+            let agent = params_map
+                .get("agent")
+                .and_then(|v| v.as_str())
+                .unwrap_or("claude-agent-1");
+
+            let retry = params_map
+                .get("retry")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let github_user = params_map
+                .get("github_user")
+                .and_then(|v| v.as_str());
+
+            // Validate model parameter
+            if !["opus", "sonnet"].contains(&model) {
+                return Some(Err(anyhow!("Invalid model '{}'. Must be 'opus' or 'sonnet'", model)));
+            }
+
+            // Validate service name (must be valid for PVC naming)
+            if !service.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-') {
+                return Some(Err(anyhow!("Invalid service name '{}'. Must contain only lowercase letters, numbers, and hyphens", service)));
+            }
+
+            // Build CLI arguments
+            let mut args = vec!["task", "submit"];
+
+            // Add required parameters
+            let task_id_str = task_id.to_string();
+            args.extend(&["--task-id", &task_id_str]);
+            args.extend(&["--service", service]);
+
+            // Add optional parameters
+            args.extend(&["--agent", agent]);
+            args.extend(&["--model", model]);
+            args.extend(&["--branch", branch]);
+
+            // Add working directory if specified
+            if let Some(wd) = working_directory {
+                args.extend(&["--taskmaster-dir", wd]);
+            }
+
+            // Add repository URL if specified
+            if let Some(repo) = repository_url {
+                args.extend(&["--repo", repo]);
+            }
+
+            // Add GitHub user if specified
+            if let Some(user) = github_user {
+                args.extend(&["--github-user", user]);
+            }
+
+            // Add retry flag if true
+            if retry {
+                args.push("--retry");
+            }
+
+            eprintln!("DEBUG: Running orchestrator-cli with args: {:?}", args);
+
+            // Execute the CLI command
+            match run_orchestrator_cli(&args) {
+                Ok(output) => {
+                    Some(Ok(json!({
+                        "success": true,
+                        "message": "Implementation task submitted successfully",
+                        "output": output,
+                        "parameters_used": {
+                            "task_id": task_id,
+                            "service": service,
+                            "working_directory": working_directory,
+                            "repository_url": repository_url,
+                            "branch": branch,
+                            "model": model,
+                            "agent": agent,
+                            "retry": retry,
+                            "github_user": github_user
+                        }
+                    })))
+                }
+                Err(e) => {
+                    Some(Err(anyhow!("Failed to execute submit task: {}", e)))
                 }
             }
         }
@@ -256,8 +374,8 @@ fn handle_tool_invocation(params_map: &HashMap<String, Value>) -> Result<Value> 
         }
     } else {
         Err(anyhow!("Unknown tool: {}", name))
-    }
-}
+            }
+        }
 
 // Handle core MCP methods (including tool calls)
 fn handle_core_methods(
@@ -337,7 +455,7 @@ async fn rpc_loop() -> Result<()> {
         // If result is None, it's a notification - no response should be sent
     }
     Ok(())
-}
+    }
 
 fn main() -> Result<()> {
     let rt = Runtime::new()?;

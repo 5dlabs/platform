@@ -1,0 +1,158 @@
+# 🚀 Implementation Task: {{task_title}}
+
+**🚨 MANDATORY CHECKPOINT SYSTEM 🚨**
+You MUST use the checkpoint system throughout this implementation. This is critical for resumability if the task fails or times out.
+
+## Task Overview
+
+**Service**: {{service_name}}
+**Task ID**: {{task_id}}
+**Attempt**: {{attempt_number}}
+{{#if is_retry}}
+**⚠️ This is a retry attempt** - Check existing progress before starting!
+{{/if}}
+
+## Task Details
+
+{{{task_content}}}
+
+{{#if design_spec}}
+## Design Specification
+
+{{{design_spec}}}
+{{/if}}
+
+{{#if acceptance_criteria}}
+## Acceptance Criteria
+
+{{{acceptance_criteria}}}
+{{/if}}
+
+## 📋 Implementation Process (MANDATORY STEPS)
+
+### Step 1: Assessment & Planning
+{{#if is_retry}}
+**🔄 RETRY ASSESSMENT REQUIRED:**
+1. **Review checkpoint file**: `cat .orchestrator/task-{{task_id}}-checkpoint.json`
+2. **Check progress log**: `cat .orchestrator/task-{{task_id}}-progress.log`
+3. **Analyze git commits**: `git log --oneline -10`
+4. **Identify what's been completed and what remains**
+5. **Plan continuation from current state**
+{{else}}
+1. **Analyze current codebase state**
+2. **Review task requirements and dependencies**
+3. **Plan implementation approach**
+4. **Identify potential challenges**
+{{/if}}
+
+**🏁 Checkpoint**: `update_checkpoint "assessment_complete" "Analyzed requirements and planned approach"`
+
+### Step 2: Environment Setup
+1. **Verify workspace setup**
+2. **Check dependencies and tools**
+3. **Set up any required configuration**
+4. **Create necessary directory structure**
+
+**🏁 Checkpoint**: `update_checkpoint "environment_ready" "Development environment configured"`
+
+### Step 3: Implementation Phases
+
+#### Phase A: Core Implementation
+1. **Implement primary functionality**
+2. **Write core business logic**
+3. **Handle basic error cases**
+
+**🏁 Checkpoint**: `update_checkpoint "core_complete" "Primary functionality implemented"`
+**📝 Commit**: `commit_work "Implement core functionality for task {{task_id}}"`
+
+#### Phase B: Integration & Testing
+1. **Integrate with existing systems**
+2. **Add comprehensive error handling**
+3. **Write/update tests**
+4. **Verify functionality works end-to-end**
+
+**🏁 Checkpoint**: `update_checkpoint "integration_complete" "Integration and testing finished"`
+**📝 Commit**: `commit_work "Add integration and tests for task {{task_id}}"`
+
+#### Phase C: Documentation & Finalization
+1. **Update documentation**
+2. **Add code comments**
+3. **Update README or relevant docs**
+4. **Final verification**
+
+**🏁 Checkpoint**: `update_checkpoint "documentation_complete" "Documentation updated"`
+**📝 Commit**: `commit_work "Add documentation for task {{task_id}}"`
+
+### Step 4: Final Validation
+1. **Run all tests**
+2. **Verify acceptance criteria are met**
+3. **Check for any remaining TODOs**
+4. **Confirm task completion**
+
+**🏁 Final Checkpoint**: `update_checkpoint "task_completed" "All requirements satisfied"`
+
+## 🛠️ Available Helper Commands
+
+- `update_checkpoint "step_name" "description"` - Save progress after each major step
+- `log_progress "message"` - Log important decisions or discoveries
+- `commit_work "description"` - Make incremental git commits
+- `cat .orchestrator/task-{{task_id}}-checkpoint.json` - View current progress
+- `cat .orchestrator/task-{{task_id}}-progress.log` - View progress log
+
+## ⚠️ Critical Requirements
+
+### Checkpoint Usage (MANDATORY)
+- **Save checkpoints after EVERY major step**
+- **Commit work incrementally, not all at the end**
+- **Use descriptive checkpoint names and commit messages**
+- **Log important decisions and findings**
+
+### Error Handling
+- **If you encounter errors, log them and continue where possible**
+- **Use `log_progress` to record any issues or solutions**
+- **Don't skip checkpoints even if something fails**
+
+### Progress Tracking
+- **Be explicit about what you're doing**
+- **Record your reasoning for implementation choices**
+- **Note any deviations from the original plan**
+
+### Code Quality
+- **Follow existing code patterns in the repository**
+- **Add appropriate error handling**
+- **Include relevant tests**
+- **Update documentation**
+
+{{#if retry_context}}
+## 🔄 Retry Context
+
+Previous attempts have been made. Key information:
+
+{{{retry_context}}}
+
+**Before starting**: Review the checkpoint file and progress log to understand what has already been accomplished.
+{{/if}}
+
+## 🎯 Success Criteria
+
+The task is considered complete when:
+
+1. ✅ All acceptance criteria are satisfied
+2. ✅ Code is properly tested
+3. ✅ Documentation is updated
+4. ✅ All changes are committed
+5. ✅ Final checkpoint shows "task_completed"
+
+## 🚨 CRITICAL REMINDER
+
+**You MUST use the checkpoint system throughout this implementation.** This allows for:
+- **Resumability** if the task fails partway through
+- **Progress tracking** for monitoring and debugging
+- **Incremental commits** to preserve work
+- **Clear audit trail** of implementation decisions
+
+**Start by running**: `update_checkpoint "started" "Beginning implementation of task {{task_id}}"`
+
+---
+
+**Ready to begin? Start with the assessment phase and remember to checkpoint your progress!** 🚀

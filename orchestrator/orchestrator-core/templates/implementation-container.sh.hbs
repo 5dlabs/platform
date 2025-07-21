@@ -1,0 +1,181 @@
+#!/bin/bash
+set -e
+
+echo "🚀 Starting Implementation Task Execution..."
+echo "Service: {{service_name}}"
+echo "Task ID: {{task_id}}"
+echo "Attempt: {{attempt_number}}"
+echo "Agent: {{agent_name}}"
+
+# Setup working directory
+WORKSPACE_DIR="/workspace/{{service_name}}"
+CHECKPOINT_FILE="$WORKSPACE_DIR/.orchestrator/task-{{task_id}}-checkpoint.json"
+PROGRESS_LOG="$WORKSPACE_DIR/.orchestrator/task-{{task_id}}-progress.log"
+
+mkdir -p "$WORKSPACE_DIR/.orchestrator"
+
+# Initialize checkpoint if first attempt
+if [ ! -f "$CHECKPOINT_FILE" ]; then
+    echo "📝 Initializing task checkpoint..."
+    cat > "$CHECKPOINT_FILE" << EOF
+{
+  "task_id": {{task_id}},
+  "service": "{{service_name}}",
+  "started_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "attempt_number": {{attempt_number}},
+  "status": "started",
+  "completed_steps": [],
+  "current_step": "",
+  "git_commits": []
+}
+EOF
+fi
+
+# Log start of attempt
+echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") - Attempt {{attempt_number}} started" >> "$PROGRESS_LOG"
+
+# Clone/update repository if needed
+if [ ! -d "$WORKSPACE_DIR/.git" ]; then
+    echo "📥 Cloning repository..."
+    cd /workspace
+    git clone "{{repository_url}}" "{{service_name}}"
+    cd "$WORKSPACE_DIR"
+    git checkout "{{branch}}"
+else
+    echo "🔄 Updating existing repository..."
+    cd "$WORKSPACE_DIR"
+    git fetch origin
+    git checkout "{{branch}}"
+    git pull origin "{{branch}}"
+fi
+
+# Configure git user
+git config user.name "{{git_user_name}}"
+git config user.email "{{git_user_email}}"
+
+# Setup Claude settings
+echo "⚙️ Configuring Claude for implementation..."
+mkdir -p ~/.claude
+cat > ~/.claude/claude_chat_context.md << 'EOF'
+# Implementation Task Context
+
+## Service: {{service_name}}
+## Task ID: {{task_id}}
+## Attempt: {{attempt_number}}
+
+{{#if is_retry}}
+**🔄 This is a retry attempt. Previous attempts may have made partial progress.**
+
+Check the checkpoint file at: `$CHECKPOINT_FILE`
+Review progress log at: `$PROGRESS_LOG`
+{{/if}}
+
+## Task Details
+{{{task_content}}}
+
+## Implementation Instructions
+{{{implementation_prompt}}}
+
+## Checkpoint System
+- Save progress after each meaningful step
+- Update checkpoint file: `$CHECKPOINT_FILE`
+- Log all actions to: `$PROGRESS_LOG`
+- Commit work incrementally with descriptive messages
+
+## Available Commands
+- `update_checkpoint "step_name" "description"` - Save progress
+- `log_progress "message"` - Add to progress log
+- `commit_work "description"` - Make incremental git commit
+
+EOF
+
+# Add helper functions
+cat >> ~/.bashrc << 'EOF'
+update_checkpoint() {
+    local step="$1"
+    local desc="$2"
+    local checkpoint_file="/workspace/{{service_name}}/.orchestrator/task-{{task_id}}-checkpoint.json"
+
+    # Update checkpoint with jq
+    tmp=$(mktemp)
+    jq --arg step "$step" --arg desc "$desc" --arg time "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+       '.completed_steps += [{"step": $step, "description": $desc, "completed_at": $time}] | .current_step = $step | .last_updated = $time' \
+       "$checkpoint_file" > "$tmp" && mv "$tmp" "$checkpoint_file"
+
+    echo "✅ Checkpoint saved: $step"
+}
+
+log_progress() {
+    local message="$1"
+    echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") - $message" >> "/workspace/{{service_name}}/.orchestrator/task-{{task_id}}-progress.log"
+}
+
+commit_work() {
+    local desc="$1"
+    cd "/workspace/{{service_name}}"
+    git add .
+    if git diff --staged --quiet; then
+        echo "⚠️ No changes to commit"
+        return 0
+    fi
+
+    git commit -m "Task {{task_id}}: $desc
+
+Attempt: {{attempt_number}}
+Service: {{service_name}}
+Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+    local commit_hash=$(git rev-parse HEAD)
+    echo "📝 Committed: $commit_hash"
+
+    # Update checkpoint with commit info
+    local checkpoint_file="/workspace/{{service_name}}/.orchestrator/task-{{task_id}}-checkpoint.json"
+    tmp=$(mktemp)
+    jq --arg hash "$commit_hash" --arg desc "$desc" --arg time "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+       '.git_commits += [{"hash": $hash, "description": $desc, "timestamp": $time}]' \
+       "$checkpoint_file" > "$tmp" && mv "$tmp" "$checkpoint_file"
+}
+EOF
+
+source ~/.bashrc
+
+# Start Claude with implementation context
+echo "🧠 Starting Claude for task implementation..."
+cd "$WORKSPACE_DIR"
+
+# Set Claude model based on task requirements
+export CLAUDE_MODEL="{{model}}"
+
+# Execute Claude with the implementation prompt
+claude chat --continue-from ~/.claude/claude_chat_context.md
+
+# Handle completion
+if [ $? -eq 0 ]; then
+    echo "✅ Task implementation completed successfully"
+    update_checkpoint "task_completed" "Implementation finished successfully"
+
+    # Final commit if there are uncommitted changes
+    if ! git diff --quiet || ! git diff --staged --quiet; then
+        commit_work "Final implementation completion"
+    fi
+
+    # Update checkpoint status
+    tmp=$(mktemp)
+    jq '.status = "completed" | .completed_at = $time' \
+       --arg time "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+       "$CHECKPOINT_FILE" > "$tmp" && mv "$tmp" "$CHECKPOINT_FILE"
+
+    echo "🎉 Implementation task {{task_id}} completed successfully!"
+else
+    echo "❌ Task implementation failed"
+    update_checkpoint "task_failed" "Implementation failed with exit code $?"
+
+    # Update checkpoint status
+    tmp=$(mktemp)
+    jq '.status = "failed" | .failed_at = $time' \
+       --arg time "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+       "$CHECKPOINT_FILE" > "$tmp" && mv "$tmp" "$CHECKPOINT_FILE"
+
+    echo "💾 Progress saved to checkpoint file for retry"
+    exit 1
+fi

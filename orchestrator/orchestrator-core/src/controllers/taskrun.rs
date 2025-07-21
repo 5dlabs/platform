@@ -37,6 +37,18 @@ fn is_docs_generation(tr: &TaskRun) -> bool {
     tr.spec.task_id == DOCS_GENERATION_TASK_ID
 }
 
+/// Get the appropriate job deadline based on task type
+fn get_job_deadline_seconds(tr: &TaskRun, config: &ControllerConfig) -> i64 {
+    if is_docs_generation(tr) {
+        // Docs generation needs longer timeout for large projects (4 hours)
+        14400
+    } else {
+        // Implementation jobs with checkpoint system (2 hours)
+        // Use config value but with a minimum of 2 hours for implementation
+        std::cmp::max(config.job.active_deadline_seconds, 7200)
+    }
+}
+
 // Error type for the controller
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -642,7 +654,7 @@ fn build_claude_job(
 
     // Configure volume mounts based on task type
     let mut volume_mounts = vec![];
-    
+
     if !is_docs_generation(tr) {
         // Only mount workspace volume for implementation tasks
         volume_mounts.push(json!({
@@ -704,7 +716,7 @@ fn build_claude_job(
         },
         "spec": {
             "backoffLimit": config.job.backoff_limit,
-            "activeDeadlineSeconds": config.job.active_deadline_seconds,
+            "activeDeadlineSeconds": get_job_deadline_seconds(tr, config),
             "ttlSecondsAfterFinished": config.job.ttl_seconds_after_finished,
             "template": {
                 "spec": {
