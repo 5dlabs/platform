@@ -202,22 +202,41 @@ You don't need to remember MCP syntax or TaskRun details - just tell me what you
 - **Consistent Application**: Applied to all implementation tasks automatically via container startup script
 - **Behavioral Change**: Shifts agent from "optimistic completion" to "pessimistic validation" with senior engineer mindset
 
-#### **Enhanced System Prompt** (via `--append-system-prompt` CLI flag)
+#### **Enhanced System Prompt** ✅ (via `--append-system-prompt` CLI flag)
 ```
 You are a highly capable, highly critical, somewhat paranoid, super senior principal Rust engineer.
 
 CRITICAL: You are implementing code that MUST work in production. Be extremely paranoid about declaring success.
 
+MANDATORY VERIFICATION REQUIREMENTS:
+Before marking ANY task as complete, you MUST:
+- Execute the actual functionality in a real environment 
+- Show the user the exact output/logs proving it works
+- If you cannot test it, explicitly state "IMPLEMENTATION UNVERIFIED" and STOP working on dependent tasks
+
 NEVER say you are "done" or "completed" unless you have:
 1. Actually executed your code in a real environment
 2. Observed it working correctly with your own eyes
-3. Run regression tests and seen them pass
+3. Run regression tests and seen them pass  
 4. Verified all edge cases and error conditions
+
+EVIDENCE REQUIREMENT:
+When claiming something works, you MUST provide one of:
+- Actual execution logs showing success
+- Test output demonstrating the functionality  
+- Live demonstration of the feature working
+- Explicit statement: "Cannot verify - implementation incomplete"
+
+FORWARD PROGRESS BLOCKER:
+NEVER proceed to the next task if the current one is unverified. Untested code is broken code until proven otherwise.
+
+COGNITIVE CHECK:
+Before saying "done" or "complete", ask yourself: "If this breaks in production, can I point to specific evidence that it was working?" If no, it's not done.
 
 If you cannot test in a real environment, explicitly state what testing you were unable to perform and why the implementation should be considered incomplete until proper testing is done.
 
 As a senior principal engineer, you understand that production failures are extremely costly.
-Err on the side of being too cautious rather than too confident.
+Err on the side of being too cautious rather than too confident.  
 Apply the highest standards of code quality, testing, and verification.
 ```
 
@@ -252,9 +271,87 @@ Platform Repo Git Clone → Copy Task Docs → ConfigMap Templates → Claude Co
 - **Toolman Client**: Binary built into Claude container (`toolman-client`)
 - **Task-Specific Filtering**: Each task gets relevant tools via client configuration
 
-### **Configuration Structure**
+### **Dynamic Tool Configuration System** ✅
 
-#### **Claude Code MCP Configuration** (`.mcp.json`)
+#### **Architecture Overview**
+The implementation now supports dynamic tool selection via CLI parameters with template-based configuration generation:
+
+**CLI Interface:**
+```bash
+# Tool configuration presets
+--tool-config minimal|default|advanced
+
+# Custom tool selection  
+--local-tools "bash,edit,read"
+--remote-tools "github_create_issue,rustdocs_query_rust_docs"
+```
+
+**Template-Based Generation:**
+- `mcp.json.hbs` → Claude Code MCP server configuration
+- `client-config.json.hbs` → ToolMan client tool selection
+- Dynamic rendering based on CLI parameters and TaskRun spec
+
+#### **Tool Configuration Presets**
+
+##### **Minimal Configuration**
+```json
+{
+  "remoteTools": [],
+  "localServers": {}
+}
+```
+*Use Case: Simple tasks requiring only Claude Code built-in tools*
+
+##### **Default Configuration** 
+```json
+{
+  "remoteTools": [
+    "brave-search_brave_web_search",
+    "memory_create_entities", 
+    "rustdocs_query_rust_docs"
+  ],
+  "localServers": {}
+}
+```
+*Use Case: Standard development tasks with research and documentation*
+
+##### **Advanced Configuration**
+```json
+{
+  "remoteTools": [
+    "brave-search_brave_web_search",
+    "memory_create_entities",
+    "rustdocs_query_rust_docs", 
+    "github_create_issue",
+    "kubernetes_listResources",
+    "terraform_list_providers"
+  ],
+  "localServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "tools": ["read_file", "write_file", "list_directory", "create_directory"],
+      "workingDirectory": "project_root"
+    }
+  }
+}
+```
+*Use Case: Complex tasks requiring DevOps tools and advanced filesystem operations*
+
+#### **Custom Tool Selection**
+Users can override presets with specific tool lists:
+```bash
+# Custom remote tools only
+--remote-tools "github_create_issue,kubernetes_listResources"
+
+# Custom local tools with advanced preset
+--tool-config advanced --local-tools "bash,edit"
+
+# Completely custom configuration
+--local-tools "read,write" --remote-tools "brave-search_brave_web_search"
+```
+
+#### **Claude Code MCP Configuration** (Generated from `mcp.json.hbs`)
 ```json
 {
   "mcpServers": {
@@ -269,27 +366,15 @@ Platform Repo Git Clone → Copy Task Docs → ConfigMap Templates → Claude Co
   }
 }
 ```
+*Note: MCP servers are conditionally included based on tool requirements*
 
-#### **Toolman Client Configuration** (`client-config.json`)
-*Source: Platform repo tasks folder (e.g., `.taskmaster/tasks/task-1/client-config.json`)*
-```json
-{
-  "remoteTools": [
-    "brave-search_brave_web_search",
-    "memory_create_entities",
-    "kubernetes_listResources",
-    "rustdocs_query_rust_docs"
-  ],
-  "localServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
-      "tools": ["read_file", "write_file", "list_directory", "create_directory"],
-      "workingDirectory": "project_root"
-    }
-  }
-}
-```
+#### **Implementation Status**
+- ✅ CLI parameter support (`--tool-config`, `--local-tools`, `--remote-tools`)
+- ✅ TaskRun CRD schema updated with tool configuration fields
+- ✅ Template-based configuration generation (`mcp.json.hbs`, `client-config.json.hbs`)
+- ✅ MCP server integration with ToolMan
+- ✅ Comprehensive test coverage (17/17 tests passing)
+- ✅ Integration tests for all tool configuration scenarios
 
 #### **Claude Settings Integration** (in `settings.json`)
 ```json
