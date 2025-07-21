@@ -368,6 +368,23 @@ fi
 
 echo "✓ Repository cloned successfully"
 
+# Navigate to working directory if specified
+WORKING_DIR="{{working_dir}}"
+if [ -n "$WORKING_DIR" ] && [ "$WORKING_DIR" != "." ]; then
+  CLAUDE_WORK_DIR="/workspace/$WORKING_DIR"
+  echo "Navigating to working directory: $CLAUDE_WORK_DIR"
+  cd "$CLAUDE_WORK_DIR" || {
+    echo "❌ ERROR: Failed to navigate to working directory: $CLAUDE_WORK_DIR"
+    echo "Available directories in /workspace:"
+    ls -la /workspace/
+    exit 1
+  }
+  echo "✓ Changed to working directory: $(pwd)"
+else
+  CLAUDE_WORK_DIR="/workspace"
+  echo "Using repository root as working directory: $CLAUDE_WORK_DIR"
+fi
+
 # Configure git user after successful clone
 {{#if repository}}
 echo "=== POST-CLONE GIT CONFIGURATION ==="
@@ -471,14 +488,6 @@ exit 1
 
 # Copy ConfigMap files to working directory (AFTER repository clone)
 echo "=== CONFIGMAP FILE SETUP ==="
-
-# Determine the working directory for Claude
-WORKING_DIR="{{working_dir}}"
-if [ -n "$WORKING_DIR" ] && [ "$WORKING_DIR" != "." ]; then
-  CLAUDE_WORK_DIR="/workspace/$WORKING_DIR"
-else
-  CLAUDE_WORK_DIR="/workspace"
-fi
 
 echo "Setting up files in Claude working directory: $CLAUDE_WORK_DIR"
 # Note: Directory should already exist from repository clone, but ensure it exists
@@ -688,20 +697,16 @@ export GITHUB_USER="{{repository.githubUser}}"
 # - Combined with --dangerously-skip-permissions flag for guaranteed permission bypass
 echo "✓ Using enterprise managed settings for complete configuration + permission bypass flag"
 
-# Change to project directory before running Claude
-cd "$CLAUDE_WORK_DIR"
-echo "Changed to directory: $(pwd)"
-
 # Verify we're in the correct directory and have required files
 echo "=== WORKING DIRECTORY VERIFICATION ==="
 echo "Current working directory: $(pwd)"
 echo "Expected directory: $CLAUDE_WORK_DIR"
 if [ "$(pwd)" != "$CLAUDE_WORK_DIR" ]; then
-  echo "❌ ERROR: Failed to change to correct working directory!"
-  echo "Attempting to change directory again..."
-  cd "$CLAUDE_WORK_DIR" || exit 1
-  echo "✓ Successfully changed to: $(pwd)"
+  echo "❌ ERROR: Not in correct working directory!"
+  echo "This should not happen since we navigated earlier."
+  exit 1
 fi
+echo "✓ Confirmed in correct working directory"
 
 # Print all the content Claude will receive
 echo ""
