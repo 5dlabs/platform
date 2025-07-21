@@ -930,36 +930,26 @@ pub mod task {
                                 std::fs::create_dir_all(&task_dir)
                                     .context(format!("Failed to create directory for task {}", task_id))?;
 
-                                // Create placeholder files
-                                let task_md = format!("{}/task.md", task_dir);
-                                if !std::path::Path::new(&task_md).exists() {
+                                // Copy actual task text file to docs directory
+                                let source_task_file = format!("{}/.taskmaster/tasks/task_{:03}.txt", taskmaster_path, task_id);
+                                let target_task_file = format!("{}/task.txt", task_dir);
+
+                                if std::path::Path::new(&source_task_file).exists() {
+                                    std::fs::copy(&source_task_file, &target_task_file)
+                                        .context(format!("Failed to copy task file for task {}", task_id))?;
+                                    output.info(&format!("Copied task_{:03}.txt to task-{}/task.txt", task_id, task_id))?;
+                                } else {
+                                    // Fallback: create placeholder if source doesn't exist
                                     let task_content = format!(
-                                        "# Task {}: {}\n\n<!-- This file contains comprehensive task overview and implementation guide -->\n<!-- TODO: Fill in content based on architecture.md, prd.txt, and tasks.json -->\n\n## Overview\n\n## Architecture Context\n\n## Implementation Details\n\n## Dependencies\n\n## Testing Strategy\n",
-                                        task_id, title
+                                        "# Task {}: {}\n\n<!-- Source task file not found: {} -->\n<!-- Please run 'task-master generate' to create task text files -->\n",
+                                        task_id, title, source_task_file
                                     );
-                                    std::fs::write(&task_md, task_content)
-                                        .context(format!("Failed to create task.md for task {}", task_id))?;
+                                    std::fs::write(&target_task_file, task_content)
+                                        .context(format!("Failed to create fallback task file for task {}", task_id))?;
+                                    output.warning(&format!("Source task file not found for task {}, created placeholder", task_id))?;
                                 }
 
-                                let prompt_md = format!("{}/prompt.md", task_dir);
-                                if !std::path::Path::new(&prompt_md).exists() {
-                                    let prompt_content = format!(
-                                        "# Autonomous Prompt for Task {}: {}\n\n<!-- This file contains autonomous prompt for AI agents -->\n<!-- TODO: Fill in content based on architecture.md, prd.txt, and tasks.json -->\n\n## Context\n\n## Task Requirements\n\n## Implementation Instructions\n\n## Success Criteria\n",
-                                        task_id, title
-                                    );
-                                    std::fs::write(&prompt_md, prompt_content)
-                                        .context(format!("Failed to create prompt.md for task {}", task_id))?;
-                                }
-
-                                let acceptance_md = format!("{}/acceptance-criteria.md", task_dir);
-                                if !std::path::Path::new(&acceptance_md).exists() {
-                                    let acceptance_content = format!(
-                                        "# Acceptance Criteria for Task {}: {}\n\n<!-- This file contains clear acceptance criteria and test cases -->\n<!-- TODO: Fill in content based on architecture.md, prd.txt, and tasks.json -->\n\n## Functional Requirements\n\n## Technical Requirements\n\n## Test Cases\n\n## Verification Steps\n",
-                                        task_id, title
-                                    );
-                                    std::fs::write(&acceptance_md, acceptance_content)
-                                        .context(format!("Failed to create acceptance-criteria.md for task {}", task_id))?;
-                                }
+                                // Only copy task.txt files for now - other files can be added later if needed
 
                                 created_count += 1;
                             }

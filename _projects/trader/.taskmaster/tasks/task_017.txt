@@ -3,15 +3,21 @@
 # Status: pending
 # Dependencies: 1, 3, 6, 16
 # Priority: high
-# Description: Create a robust live trading execution engine that can execute real transactions on Solana with comprehensive risk management, circuit breaker integration, and transaction confirmation monitoring.
+# Description: Create a robust live trading execution engine that can execute real transactions on Solana based on external TradeRequest objects received via gRPC, with comprehensive risk management, circuit breaker integration, and transaction confirmation monitoring.
 # Details:
 1. Implement core transaction execution system:
-   - Create a transaction builder that constructs Solana transactions for Jupiter V6 swaps
+   - Create a transaction builder that constructs Solana transactions for Jupiter V6 swaps based on received TradeRequest objects
    - Implement priority fee calculation based on network congestion (using recent blockhash fee analysis)
    - Add MEV protection parameters to Jupiter V6 API calls (slippage tolerance, priority fees)
    - Implement transaction signing using the wallet manager
 
-2. Integrate comprehensive risk management:
+2. Implement gRPC interface for receiving trade requests:
+   - Create execute_trade_request(TradeRequest) endpoint to receive external trade requests
+   - Implement TradeRequest validation for format and required fields
+   - Design and implement TradeResult response object with detailed execution metrics
+   - Add comprehensive logging for all received requests and responses
+
+3. Integrate comprehensive risk management:
    - Implement pre-trade validation checks:
      - Verify sufficient balance for trade + fees
      - Check that trade size is within configured limits
@@ -20,25 +26,25 @@
    - Create transaction simulation before execution to verify expected outcome
    - Implement maximum slippage protection with configurable thresholds
 
-3. Implement circuit breaker integration:
+4. Implement circuit breaker integration:
    - Check circuit breaker status before initiating any transaction
-   - Automatically pause trading when circuit breaker opens
+   - Automatically reject trade requests when circuit breaker opens
    - Implement graceful handling of trades in progress when circuit breaker triggers
    - Add logging and alerting for circuit breaker state changes
 
-4. Create transaction confirmation monitoring:
+5. Create transaction confirmation monitoring:
    - Implement confirmation polling with configurable timeout
    - Add exponential backoff retry logic for failed transactions
    - Track transaction signatures and status in QuestDB
    - Create detailed error categorization for failed transactions
 
-5. Implement error handling and recovery:
+6. Implement error handling and recovery:
    - Create robust error handling for network issues
    - Implement transaction timeout and cancellation logic
    - Add automatic retry for specific error conditions
    - Create comprehensive logging for all transaction states
 
-6. Implement trade recording in QuestDB:
+7. Implement trade recording in QuestDB:
    - Record all transaction details including:
      - Transaction signature
      - Execution timestamp
@@ -46,15 +52,23 @@
      - Execution price and slippage
      - Priority fees paid
      - Confirmation time
+     - Original TradeRequest ID and source
    - Create indexes for efficient querying of trade history
+
+8. Implement audit trail and compliance features:
+   - Log all received TradeRequests with timestamps and source identifiers
+   - Record detailed execution steps for each trade
+   - Create comprehensive error reporting with context
+   - Implement request-response correlation for traceability
 
 # Test Strategy:
 1. Unit testing:
-   - Create comprehensive tests for transaction building with various token pairs
+   - Create comprehensive tests for transaction building with various TradeRequest formats
    - Test priority fee calculation with different network conditions
    - Verify risk management checks with valid and invalid trade parameters
    - Test circuit breaker integration with all possible states
    - Verify error handling with simulated failure conditions
+   - Test TradeRequest validation with valid and invalid inputs
 
 2. Integration testing:
    - Test against Solana devnet with real transactions
@@ -62,22 +76,26 @@
    - Test integration with wallet manager for transaction signing
    - Verify QuestDB recording of transaction details
    - Test circuit breaker triggering during active transactions
+   - Test gRPC interface with mock clients
 
 3. End-to-end testing:
-   - Create automated test suite that executes small real trades
-   - Verify complete transaction flow from initiation to confirmation
+   - Create automated test suite that sends TradeRequests and verifies execution
+   - Verify complete transaction flow from request receipt to confirmation
    - Test recovery from simulated network failures
    - Verify proper handling of transaction timeouts
    - Test MEV protection parameters with real Jupiter V6 API
+   - Verify TradeResult contains accurate execution metrics
 
 4. Performance testing:
    - Measure transaction execution latency under various conditions
    - Test system under high transaction volume
    - Verify resource usage during peak operation
    - Test recovery time after circuit breaker events
+   - Measure gRPC request handling performance
 
 5. Security testing:
    - Conduct code review focused on transaction security
    - Verify proper handling of private keys and signing
    - Test for potential transaction manipulation vulnerabilities
    - Verify proper error handling for security-critical operations
+   - Test input validation for all external data sources
