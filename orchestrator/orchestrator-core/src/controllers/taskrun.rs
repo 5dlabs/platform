@@ -739,14 +739,7 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
     // Build the Claude command
     let command = config.agent.command.join(" ");
 
-    // Extract working directory for docs generation tasks
-    let mut working_dir = String::new();
-    if is_docs_generation {
-        // For docs generation, use working_directory field if present
-        if let Some(wd) = &tr.spec.working_directory {
-            working_dir = wd.clone();
-        }
-    }
+    // Note: working_directory is handled via the standard working_directory field below
 
     // Prepare template data
     let mut data = json!({
@@ -757,7 +750,6 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
         "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
         "task_id": tr.spec.task_id,
         "is_docs_generation": is_docs_generation, // Special docs generation task
-        "working_dir": working_dir,
         "service_name": tr.spec.service_name.clone(),
     });
 
@@ -1223,19 +1215,24 @@ mod tests {
     use super::*;
     use crate::crds::TaskRunSpec;
 
-    #[test]
-    fn test_build_configmap() {
-        let tr = TaskRun {
+    /// Create a default TaskRun for testing with optional field overrides
+    fn create_test_taskrun() -> TaskRun {
+        TaskRun {
             metadata: Default::default(),
             spec: TaskRunSpec {
-                task_id: 1001,
+                task_id: 2001,
                 service_name: "test-service".to_string(),
                 agent_name: "claude-agent-1".to_string(),
                 model: "sonnet".to_string(),
                 context_version: 1,
                 agent_tools: vec![],
-                repository: None,
-                working_directory: None,
+                repository: Some(crate::crds::taskrun::RepositorySpec {
+                    url: "https://github.com/test/repo".to_string(),
+                    branch: "main".to_string(),
+                    github_user: "testuser".to_string(),
+                    token: None,
+                }),
+                working_directory: Some("test-dir".to_string()),
                 platform_repository: None,
                 prompt_modification: None,
                 prompt_mode: "append".to_string(),
@@ -1244,7 +1241,15 @@ mod tests {
                 tool_config: "default".to_string(),
             },
             status: None,
-        };
+        }
+    }
+
+    #[test]
+    fn test_build_configmap() {
+        let mut tr = create_test_taskrun();
+        tr.spec.task_id = 1001;
+        tr.spec.repository = None;
+        tr.spec.working_directory = None;
 
         let config = ControllerConfig::default();
         let cm = build_configmap(&tr, "test-cm", &config).unwrap();
@@ -1463,26 +1468,13 @@ mod tests {
 
     #[test]
     fn test_generate_client_config_template() {
-        let tr = TaskRun {
-            metadata: Default::default(),
-            spec: TaskRunSpec {
-                task_id: 1001,
-                service_name: "test-service".to_string(),
-                agent_name: "claude-agent-1".to_string(),
-                model: "sonnet".to_string(),
-                context_version: 1,
-                agent_tools: vec![],
-                repository: None,
-                working_directory: None,
-                platform_repository: None,
-                prompt_modification: None,
-                prompt_mode: "append".to_string(),
-                local_tools: vec!["bash".to_string(), "edit".to_string()],
-                remote_tools: vec!["github_create_issue".to_string(), "rustdocs_query_rust_docs".to_string()],
-                tool_config: "advanced".to_string(),
-            },
-            status: None,
-        };
+        let mut tr = create_test_taskrun();
+        tr.spec.task_id = 1001;
+        tr.spec.repository = None;
+        tr.spec.working_directory = None;
+        tr.spec.local_tools = vec!["bash".to_string(), "edit".to_string()];
+        tr.spec.remote_tools = vec!["github_create_issue".to_string(), "rustdocs_query_rust_docs".to_string()];
+        tr.spec.tool_config = "advanced".to_string();
 
         let config = ControllerConfig::default();
 
@@ -1753,10 +1745,10 @@ mod tests {
         };
 
         let config = ControllerConfig::default();
-        
+
         // Test implementation container script
         let container_script = build_agent_startup_script(&tr, &config).unwrap();
-        
+
         // Verify key elements are present in container script
         assert!(container_script.contains("test-service"));
         assert!(container_script.contains("task-1001"));
@@ -1764,7 +1756,7 @@ mod tests {
         assert!(container_script.contains("main"));
         assert!(container_script.contains("testuser"));
         assert!(container_script.contains("service-dir"));
-        
+
         // Verify it's executable shell script
         assert!(container_script.starts_with("#!/bin/sh"));
         assert!(container_script.contains("CLAUDE_CMD="));
@@ -1796,11 +1788,11 @@ mod tests {
         // Test implementation prompt template
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(false);
-        
+
         handlebars
             .register_template_string("prompt", IMPLEMENTATION_PROMPT_TEMPLATE)
             .unwrap();
-        
+
         let data = json!({
             "task_id": tr.spec.task_id,
             "service_name": tr.spec.service_name,
@@ -1809,24 +1801,24 @@ mod tests {
             "attempt_number": 1,
             "is_retry": false
         });
-        
+
         let prompt = handlebars.render("prompt", &data).unwrap();
-        
+
         // Verify prompt contains key elements
         assert!(prompt.contains("1001"));
         assert!(prompt.contains("test-service"));
         assert!(prompt.contains("Test Task"));
-        
+
         // Test docs prompt template
         let mut handlebars_docs = Handlebars::new();
         handlebars_docs.set_strict_mode(false);
-        
+
         handlebars_docs
             .register_template_string("prompt_docs", DOCS_GENERATION_PROMPT_TEMPLATE)
             .unwrap();
-        
+
         let prompt_docs = handlebars_docs.render("prompt_docs", &data).unwrap();
-        
+
         // Docs prompt should be different from implementation prompt
         assert_ne!(prompt, prompt_docs);
     }
@@ -1860,15 +1852,15 @@ mod tests {
         };
 
         let hooks = generate_hook_scripts(&tr).unwrap();
-        
+
         // Should generate hook scripts for implementation tasks
         assert!(!hooks.is_empty());
-        
+
         // Verify hook scripts are present and executable
         for (hook_name, hook_content) in &hooks {
             assert!(hook_name.ends_with(".sh"));
             assert!(hook_content.starts_with("#!/"));
-            
+
             // Verify hook scripts contain basic functionality
             if hook_name.contains("early-test") {
                 assert!(hook_content.contains("EARLY HOOK TEST"));
@@ -1889,40 +1881,21 @@ mod tests {
             ("default", vec![], vec![]),
             ("advanced", vec!["bash".to_string()], vec!["github_create_issue".to_string()]),
         ];
-        
+
         let config = ControllerConfig::default();
-        
+
         for (tool_config, local_tools, remote_tools) in test_cases {
-            let tr = TaskRun {
-                metadata: Default::default(),
-                spec: TaskRunSpec {
-                    task_id: 2001,
-                    service_name: "integration-test".to_string(),
-                    agent_name: "claude-agent-1".to_string(),
-                    model: "sonnet".to_string(),
-                    context_version: 1,
-                    agent_tools: vec![],
-                    repository: Some(crate::crds::taskrun::RepositorySpec {
-                        url: "https://github.com/test/repo".to_string(),
-                        branch: "main".to_string(),
-                        github_user: "testuser".to_string(),
-                        token: None,
-                    }),
-                    working_directory: Some("test-dir".to_string()),
-                    platform_repository: None,
-                    prompt_modification: None,
-                    prompt_mode: "append".to_string(),
-                    local_tools: local_tools.clone(),
-                    remote_tools: remote_tools.clone(),
-                    tool_config: tool_config.to_string(),
-                },
-                status: None,
-            };
+            let mut tr = create_test_taskrun();
+            tr.spec.task_id = 2001;
+            tr.spec.service_name = "integration-test".to_string();
+            tr.spec.local_tools = local_tools.clone();
+            tr.spec.remote_tools = remote_tools.clone();
+            tr.spec.tool_config = tool_config.to_string();
 
             // Test all template rendering works together
             let configmap = build_configmap(&tr, "test-cm", &config).unwrap();
             let cm_data = configmap.data.unwrap();
-            
+
             // Verify all expected files are generated
             assert!(cm_data.contains_key("settings-local.json"));
             assert!(cm_data.contains_key("mcp.json"));
@@ -1930,12 +1903,12 @@ mod tests {
             assert!(cm_data.contains_key("CLAUDE.md"));
             assert!(cm_data.contains_key("coding-guidelines.md"));
             assert!(cm_data.contains_key("github-guidelines.md"));
-            
+
             // Verify JSON files are valid
             let _settings: serde_json::Value = serde_json::from_str(cm_data.get("settings-local.json").unwrap()).unwrap();
             let mcp_config: serde_json::Value = serde_json::from_str(cm_data.get("mcp.json").unwrap()).unwrap();
             let client_config: serde_json::Value = serde_json::from_str(cm_data.get("client-config.json").unwrap()).unwrap();
-            
+
             // Verify tool configuration is correctly applied
             match tool_config {
                 "minimal" => {
@@ -1957,13 +1930,13 @@ mod tests {
                 },
                 _ => {}
             }
-            
+
             // Verify MCP servers configuration
             let mcp_servers = &mcp_config["mcpServers"];
             match tool_config {
                 "minimal" => {
                     // Minimal should have no MCP servers
-                    assert!(mcp_servers.as_object().unwrap().is_empty() || 
+                    assert!(mcp_servers.as_object().unwrap().is_empty() ||
                            !mcp_servers.get("toolman").is_some());
                 },
                 "default" | "advanced" => {

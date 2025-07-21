@@ -369,7 +369,7 @@ fi
 echo "✓ Repository cloned successfully"
 
 # Navigate to working directory if specified
-WORKING_DIR="{{working_dir}}"
+WORKING_DIR="{{working_directory}}"
 if [ -n "$WORKING_DIR" ] && [ "$WORKING_DIR" != "." ]; then
   CLAUDE_WORK_DIR="/workspace/$WORKING_DIR"
   echo "Navigating to working directory: $CLAUDE_WORK_DIR"
