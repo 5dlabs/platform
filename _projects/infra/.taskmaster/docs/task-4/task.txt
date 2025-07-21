@@ -1,0 +1,70 @@
+{
+  "id": 4,
+  "title": "Implement Cilium CNI with eBPF Acceleration",
+  "description": "Deploy Cilium CNI with eBPF optimizations, configure XDP programs for Solana traffic prioritization, and implement application-level rate limiting for DDoS protection.",
+  "details": "1. Install Cilium with Helm chart, enabling eBPF optimizations\n2. Configure Cilium to replace kube-proxy for reduced latency\n3. Disable BPF masquerade for Talos compatibility\n4. Develop and deploy XDP programs for Solana traffic prioritization\n5. Implement application-level rate limiting for DDoS protection\n6. Configure Hubble for network observability\n7. Apply network policies for security\n\nExample Cilium Helm values:\n```yaml\ncilium:\n  kubeProxyReplacement: \"strict\"\n  bpf:\n    masquerade: false\n  loadBalancer:\n    acceleration: \"native\"\n  hubble:\n    enabled: true\n    metrics:\n      enabled:\n        - \"drop\"\n        - \"tcp\"\n        - \"flow\"\n        - \"icmp\"\n        - \"http\"\n  nodePort:\n    enabled: true\n  hostServices:\n    enabled: true\n  externalIPs:\n    enabled: true\n  hostPort:\n    enabled: true\n  ipam:\n    mode: \"kubernetes\"\n  ebpf:\n    hostRouting: true\n```\n\nXDP program for Solana traffic prioritization:\n```c\n#include <linux/bpf.h>\n#include <linux/if_ether.h>\n#include <linux/ip.h>\n#include <linux/udp.h>\n\nSEC(\"xdp\")\nint solana_traffic_prio(struct xdp_md *ctx) {\n    void *data_end = (void *)(long)ctx->data_end;\n    void *data = (void *)(long)ctx->data;\n    struct ethhdr *eth = data;\n    \n    if (data + sizeof(*eth) > data_end)\n        return XDP_PASS;\n        \n    if (eth->h_proto != htons(ETH_P_IP))\n        return XDP_PASS;\n        \n    struct iphdr *iph = data + sizeof(*eth);\n    if ((void*)iph + sizeof(*iph) > data_end)\n        return XDP_PASS;\n        \n    if (iph->protocol != IPPROTO_UDP)\n        return XDP_PASS;\n        \n    struct udphdr *udph = (void*)iph + sizeof(*iph);\n    if ((void*)udph + sizeof(*udph) > data_end)\n        return XDP_PASS;\n        \n    // Solana gossip port is 8000-8002\n    if (ntohs(udph->dest) >= 8000 && ntohs(udph->dest) <= 8002) {\n        // Set priority by modifying packet\n        // This is simplified - actual implementation would use BPF maps\n        return XDP_PASS;\n    }\n    \n    return XDP_PASS;\n}\n```",
+  "testStrategy": "1. Verify Cilium pods are running correctly\n2. Test UDP performance for gossip traffic with iperf3\n3. Validate XDP program loading with `bpftool prog show`\n4. Benchmark network latency and throughput with and without XDP\n5. Test SR-IOV functionality if available\n6. Verify DDoS protection with simulated attack traffic\n7. Check Hubble observability for network traffic visualization\n8. Validate that kube-proxy replacement is working correctly",
+  "priority": "high",
+  "dependencies": [
+    3
+  ],
+  "status": "pending",
+  "subtasks": [
+    {
+      "id": 1,
+      "title": "Install Cilium CNI with eBPF Optimizations",
+      "description": "Deploy Cilium as the Kubernetes CNI using Helm, enabling eBPF optimizations and configuring it to replace kube-proxy for improved performance and reduced latency.",
+      "dependencies": [],
+      "details": "Add the Cilium Helm repository, update it, and install Cilium with Helm using values that enable eBPF features and strict kube-proxy replacement. Ensure Talos compatibility by disabling BPF masquerade.",
+      "status": "pending",
+      "testStrategy": "Verify Cilium pods are running and CNI is functional by checking node readiness and pod networking status."
+    },
+    {
+      "id": 2,
+      "title": "Configure Hubble and Network Observability",
+      "description": "Enable and configure Hubble for real-time network observability and monitoring within the Cilium deployment.",
+      "dependencies": [
+        "4.1"
+      ],
+      "details": "Set Hubble to enabled in the Helm values, configure metrics collection, and ensure the Hubble UI is accessible for network flow visualization.",
+      "status": "pending",
+      "testStrategy": "Validate Hubble UI accessibility and confirm that network flows and metrics are being collected and displayed."
+    },
+    {
+      "id": 3,
+      "title": "Develop and Deploy XDP Programs for Solana Traffic Prioritization",
+      "description": "Create and deploy custom XDP (eXpress Data Path) eBPF programs to prioritize Solana gossip traffic (UDP ports 8000-8002) at the kernel level.",
+      "dependencies": [
+        "4.1"
+      ],
+      "details": "Write and compile the XDP program, load it onto relevant network interfaces, and integrate with Cilium if necessary to ensure Solana traffic is prioritized.",
+      "status": "pending",
+      "testStrategy": "Use bpftool to verify XDP program loading and test UDP performance for Solana gossip ports with tools like iperf3."
+    },
+    {
+      "id": 4,
+      "title": "Implement Application-Level Rate Limiting for DDoS Protection",
+      "description": "Deploy application-level rate limiting mechanisms to protect Solana validator workloads from DDoS attacks.",
+      "dependencies": [
+        "4.1",
+        "4.3"
+      ],
+      "details": "Configure Cilium or integrate with external tools to enforce rate limits on incoming traffic, focusing on Solana-related endpoints.",
+      "status": "pending",
+      "testStrategy": "Simulate DDoS scenarios and verify that rate limiting is enforced and legitimate traffic is not disrupted."
+    },
+    {
+      "id": 5,
+      "title": "Apply Network Policies for Security Hardening",
+      "description": "Define and enforce Kubernetes network policies using Cilium to restrict traffic to and from Solana validator pods, enhancing security.",
+      "dependencies": [
+        "4.1",
+        "4.2",
+        "4.4"
+      ],
+      "details": "Write and apply Cilium network policies that allow only necessary ingress and egress traffic, following least privilege principles.",
+      "status": "pending",
+      "testStrategy": "Attempt unauthorized access to Solana validator pods and verify that network policies block unwanted traffic."
+    }
+  ]
+}
