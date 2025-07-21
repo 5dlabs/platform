@@ -255,9 +255,41 @@ fn handle_orchestrator_tools(
                 .get("github_user")
                 .and_then(|v| v.as_str());
 
+            let prompt_modification = params_map
+                .get("prompt_modification")
+                .and_then(|v| v.as_str());
+
+            let prompt_mode = params_map
+                .get("prompt_mode")
+                .and_then(|v| v.as_str())
+                .unwrap_or("append");
+
+            let local_tools = params_map
+                .get("local_tools")
+                .and_then(|v| v.as_str());
+
+            let remote_tools = params_map
+                .get("remote_tools")
+                .and_then(|v| v.as_str());
+
+            let tool_config = params_map
+                .get("tool_config")
+                .and_then(|v| v.as_str())
+                .unwrap_or("default");
+
             // Validate model parameter
             if !["opus", "sonnet"].contains(&model) {
                 return Some(Err(anyhow!("Invalid model '{}'. Must be 'opus' or 'sonnet'", model)));
+            }
+
+            // Validate tool_config parameter
+            if !["default", "minimal", "advanced"].contains(&tool_config) {
+                return Some(Err(anyhow!("Invalid tool_config '{}'. Must be 'default', 'minimal', or 'advanced'", tool_config)));
+            }
+
+            // Validate prompt_mode parameter
+            if !["append", "replace"].contains(&prompt_mode) {
+                return Some(Err(anyhow!("Invalid prompt_mode '{}'. Must be 'append' or 'replace'", prompt_mode)));
             }
 
             // Validate service name (must be valid for PVC naming)
@@ -303,6 +335,26 @@ fn handle_orchestrator_tools(
             if retry {
                 args.push("--retry");
             }
+
+            // Add prompt modification if specified
+            if let Some(prompt_mod) = prompt_modification {
+                args.extend(&["--prompt-modification", prompt_mod]);
+            }
+
+            // Add prompt mode (always include since it has a default)
+            args.extend(&["--prompt-mode", prompt_mode]);
+
+            // Add tool configuration parameters
+            if let Some(local) = local_tools {
+                args.extend(&["--local-tools", local]);
+            }
+            
+            if let Some(remote) = remote_tools {
+                args.extend(&["--remote-tools", remote]);
+            }
+
+            // Add tool config (always include since it has a default)
+            args.extend(&["--tool-config", tool_config]);
 
             // Debug output removed to satisfy clippy
 

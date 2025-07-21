@@ -105,6 +105,20 @@ fn get_submit_implementation_task_schema() -> Value {
                     "description": "How to apply prompt_modification: 'append' (add to existing prompt) or 'replace' (replace system prompt)",
                     "enum": ["append", "replace"],
                     "default": "append"
+                },
+                "local_tools": {
+                    "type": "string",
+                    "description": "Comma-separated list of local Claude Code tools to enable (e.g., 'bash,edit,read')"
+                },
+                "remote_tools": {
+                    "type": "string",
+                    "description": "Comma-separated list of remote MCP tools to enable (e.g., 'github_create_issue,rustdocs_query_rust_docs')"
+                },
+                "tool_config": {
+                    "type": "string",
+                    "description": "Tool configuration preset: 'default', 'minimal', 'advanced'",
+                    "enum": ["default", "minimal", "advanced"],
+                    "default": "default"
                 }
             },
             "required": ["task_id", "service"]

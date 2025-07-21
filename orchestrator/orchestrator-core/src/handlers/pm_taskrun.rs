@@ -394,10 +394,13 @@ pub async fn submit_task(
                     github_user: repo.github_user,
                     token: repo.token, // Reserved for future use
                 }),
-            working_directory: request.working_directory.map(|s| s),
+            working_directory: request.working_directory,
             platform_repository: None, // TODO: Add platform repo support when needed
             prompt_modification: request.prompt_modification,
-            prompt_mode: request.prompt_mode
+            prompt_mode: request.prompt_mode,
+            local_tools: request.local_tools,
+            remote_tools: request.remote_tools,
+            tool_config: request.tool_config,
         },
         status: None,
     };
@@ -431,7 +434,7 @@ pub async fn submit_task(
 pub async fn add_context(
     State(state): State<Arc<AppState>>,
     axum::extract::Path(task_id): axum::extract::Path<u32>,
-    Json(context): Json<AddContextRequest>,
+    Json(_context): Json<AddContextRequest>,
 ) -> Result<Json<ApiResponse>, (StatusCode, Json<ApiResponse>)> {
     info!("Adding context to task {}", task_id);
 
@@ -773,7 +776,10 @@ pub async fn generate_docs(
         working_directory: Some(request.working_directory.clone()),
         platform_repository: None, // Docs generation uses the same repo for both platform and target
         prompt_modification: None,
-        prompt_mode: "append".to_string()
+        prompt_mode: "append".to_string(),
+        local_tools: Vec::new(),
+        remote_tools: Vec::new(),
+        tool_config: "default".to_string(),
     };
 
     // Create TaskRun

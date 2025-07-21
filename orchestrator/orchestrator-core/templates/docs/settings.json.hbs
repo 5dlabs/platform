@@ -50,35 +50,6 @@
   "cleanupPeriodDays": 3,
   "includeCoAuthoredBy": true,
   "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "./.early-hook-test.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "./.early-hook-test.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "./.early-hook-test.sh"
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "matcher": "",

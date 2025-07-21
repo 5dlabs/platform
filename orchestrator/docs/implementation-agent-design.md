@@ -352,7 +352,7 @@ Platform Repo Git Clone → Copy Task Docs → ConfigMap Templates → Claude Co
 │   ├── .git/
 │   ├── src/
 │   └── ...
-├── task-docs/           # Copied from platform-repo for easy access
+├── task/                # Copied from platform-repo for easy access
 │   ├── task.md
 │   ├── acceptance-criteria.md
 │   └── architecture.md
@@ -682,9 +682,9 @@ git clone {{platform_repo.url}} platform-repo
 cd platform-repo && git checkout {{platform_repo.branch}}
 
 # 2. Copy Task Documentation and Configuration
-cp .taskmaster/docs/task-{{task_id}}/task.md /workspace/task-docs/
-cp .taskmaster/docs/task-{{task_id}}/acceptance-criteria.md /workspace/task-docs/
-cp .taskmaster/docs/task-{{task_id}}/architecture.md /workspace/task-docs/
+cp .taskmaster/docs/task-{{task_id}}/task.md /workspace/task/
+cp .taskmaster/docs/task-{{task_id}}/acceptance-criteria.md /workspace/task/
+cp .taskmaster/docs/task-{{task_id}}/architecture.md /workspace/task/
 cp .taskmaster/tasks/task-{{task_id}}/client-config.json /workspace/client-config.json
 
 # 3. Target Repository Setup (Smart Detection)

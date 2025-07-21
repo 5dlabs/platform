@@ -46,6 +46,18 @@ pub struct PmTaskRequest {
     // How to apply prompt_modification: 'append' or 'replace'
     #[serde(default = "default_prompt_mode", skip_serializing_if = "is_default_prompt_mode")]
     pub prompt_mode: String,
+
+    // Local Claude Code tools to enable
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub local_tools: Vec<String>,
+
+    // Remote MCP tools to enable
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub remote_tools: Vec<String>,
+
+    // Tool configuration preset
+    #[serde(default = "default_tool_config", skip_serializing_if = "is_default_tool_config")]
+    pub tool_config: String,
 }
 
 /// Subtask structure from Task Master
@@ -107,42 +119,50 @@ fn is_default_prompt_mode(mode: &str) -> bool {
     mode == "append"
 }
 
+fn default_tool_config() -> String {
+    "default".to_string()
+}
+
+fn is_default_tool_config(config: &str) -> bool {
+    config == "default"
+}
+
 /// Documentation generation request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DocsGenerationRequest {
     /// Repository URL to clone
     pub repository_url: String,
-    
+
     /// Working directory within the repository (path to .taskmaster)
     pub working_directory: String,
-    
+
     /// Source branch to checkout and base new branch from
     pub source_branch: String,
-    
+
     /// Target branch for the PR
     pub target_branch: String,
-    
+
     /// Service name for the job
     pub service_name: String,
-    
+
     /// Agent name for the job
     pub agent_name: String,
-    
+
     /// Claude model selection (sonnet, opus)
     #[serde(default = "default_model")]
     pub model: String,
-    
+
     /// GitHub user for authentication
     pub github_user: String,
-    
+
     /// Optional specific task ID to generate docs for (if None, generates all)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub task_id: Option<u32>,
-    
+
     /// Force overwrite existing documentation
     #[serde(default)]
     pub force: bool,
-    
+
     /// Dry run mode (preview only)
     #[serde(default)]
     pub dry_run: bool,
@@ -220,10 +240,14 @@ impl PmTaskRequest {
             working_directory: None,
             prompt_modification: None,
             prompt_mode: "append".to_string(),
+            local_tools: Vec::new(),
+            remote_tools: Vec::new(),
+            tool_config: "default".to_string(),
         }
     }
 
     /// Create a new PM task request from Task Master task with repository support
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_repository(
         task: Task,
         service_name: String,
@@ -252,10 +276,14 @@ impl PmTaskRequest {
             working_directory: None,
             prompt_modification: None,
             prompt_mode: "append".to_string(),
+            local_tools: Vec::new(),
+            remote_tools: Vec::new(),
+            tool_config: "default".to_string(),
         }
     }
 
     /// Create a new PM task request with full specification including working directory
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_full_spec(
         task: Task,
         service_name: String,
@@ -285,10 +313,14 @@ impl PmTaskRequest {
             working_directory,
             prompt_modification: None,
             prompt_mode: "append".to_string(),
+            local_tools: Vec::new(),
+            remote_tools: Vec::new(),
+            tool_config: "default".to_string(),
         }
     }
 
     /// Create a new PM task request with prompt modification support for retries
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_prompt_modification(
         task: Task,
         service_name: String,
@@ -320,6 +352,51 @@ impl PmTaskRequest {
             working_directory,
             prompt_modification,
             prompt_mode,
+            local_tools: Vec::new(),
+            remote_tools: Vec::new(),
+            tool_config: "default".to_string(),
+        }
+    }
+
+    /// Create a new PM task request with full tool configuration support
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_tool_config(
+        task: Task,
+        service_name: String,
+        agent_name: String,
+        model: String,
+        markdown_files: Vec<MarkdownPayload>,
+        agent_tools: Vec<AgentToolSpec>,
+        repository: Option<RepositorySpec>,
+        working_directory: Option<String>,
+        prompt_modification: Option<String>,
+        prompt_mode: String,
+        local_tools: Vec<String>,
+        remote_tools: Vec<String>,
+        tool_config: String,
+    ) -> Self {
+        Self {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            details: task.details,
+            test_strategy: task.test_strategy,
+            priority: task.priority,
+            dependencies: task.dependencies,
+            status: task.status,
+            subtasks: task.subtasks,
+            service_name,
+            agent_name,
+            model,
+            markdown_files,
+            agent_tools,
+            repository,
+            working_directory,
+            prompt_modification,
+            prompt_mode,
+            local_tools,
+            remote_tools,
+            tool_config,
         }
     }
 }

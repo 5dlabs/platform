@@ -529,7 +529,7 @@ fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Resul
     for (filename, content) in hook_scripts {
         // Use hooks- prefix instead of hooks/ to comply with ConfigMap key constraints
         // Kubernetes ConfigMap keys can only contain: [-._a-zA-Z0-9]+
-        data.insert(format!("hooks-{}", filename), content);
+        data.insert(format!("hooks-{filename}"), content);
     }
 
     // Generate Claude Code configuration file for tool permissions
@@ -784,6 +784,11 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
         data["prompt_modification"] = json!(prompt_modification);
     }
     data["prompt_mode"] = json!(tr.spec.prompt_mode);
+
+    // Add tool configuration fields
+    data["local_tools"] = json!(tr.spec.local_tools);
+    data["remote_tools"] = json!(tr.spec.remote_tools);
+    data["tool_config"] = json!(tr.spec.tool_config);
 
     if is_docs_generation {
         // Generate target branch name for docs generation
@@ -1125,11 +1130,11 @@ fn generate_hook_scripts(tr: &TaskRun) -> Result<Vec<(String, String)>> {
     for (hook_name, template_content) in hook_templates {
         handlebars
             .register_template_string(&hook_name, &template_content)
-            .map_err(|e| Error::ConfigError(format!("Failed to register hook template {}: {e}", hook_name)))?;
+            .map_err(|e| Error::ConfigError(format!("Failed to register hook template {hook_name}: {e}")))?;
 
         let rendered = handlebars
             .render(&hook_name, &data)
-            .map_err(|e| Error::ConfigError(format!("Failed to render hook template {}: {e}", hook_name)))?;
+            .map_err(|e| Error::ConfigError(format!("Failed to render hook template {hook_name}: {e}")))?;
 
         // Generate output filename (remove .hbs extension)
         let output_filename = if hook_name.ends_with(".hbs") {
@@ -1150,8 +1155,7 @@ fn get_hook_templates(task_type: &str) -> Vec<(String, String)> {
     // This can be made more dynamic in the future if needed
     match task_type {
         "docs" => vec![
-            ("stop-pr-creation.sh.hbs".to_string(), include_str!("../../templates/docs/hooks/stop-pr-creation.sh.hbs").to_string()),
-            ("early-test.sh.hbs".to_string(), include_str!("../../templates/docs/hooks/early-test.sh.hbs").to_string()),
+            (".stop-hook-docs-pr.sh.hbs".to_string(), include_str!("../../templates/docs/hooks/stop-pr-creation.sh.hbs").to_string()),
         ],
         "implementation" => vec![
             ("stop-commit.sh.hbs".to_string(), include_str!("../../templates/implementation/hooks/stop-commit.sh.hbs").to_string()),
@@ -1211,6 +1215,9 @@ mod tests {
                 platform_repository: None,
                 prompt_modification: None,
                 prompt_mode: "append".to_string(),
+                local_tools: vec![],
+                remote_tools: vec![],
+                tool_config: "default".to_string(),
             },
             status: None,
         };
@@ -1243,6 +1250,9 @@ mod tests {
                 platform_repository: None,
                 prompt_modification: None,
                 prompt_mode: "append".to_string(),
+                local_tools: vec![],
+                remote_tools: vec![],
+                tool_config: "default".to_string(),
             },
             status: None,
         };
@@ -1278,6 +1288,9 @@ mod tests {
                 platform_repository: None,
                 prompt_modification: None,
                 prompt_mode: "append".to_string(),
+                local_tools: vec![],
+                remote_tools: vec![],
+                tool_config: "default".to_string(),
             },
             status: None,
         };
@@ -1368,6 +1381,9 @@ mod tests {
                 platform_repository: None,
                 prompt_modification: None,
                 prompt_mode: "append".to_string(),
+                local_tools: vec![],
+                remote_tools: vec![],
+                tool_config: "default".to_string(),
             },
             status: None,
         };
@@ -1400,6 +1416,9 @@ mod tests {
                 platform_repository: None,
                 prompt_modification: None,
                 prompt_mode: "append".to_string(),
+                local_tools: vec![],
+                remote_tools: vec![],
+                tool_config: "default".to_string(),
             },
             status: None,
         };
@@ -1432,6 +1451,9 @@ mod tests {
                 platform_repository: None,
                 prompt_modification: None,
                 prompt_mode: "append".to_string(),
+                local_tools: vec![],
+                remote_tools: vec![],
+                tool_config: "default".to_string(),
             },
             status: None,
         };
@@ -1462,6 +1484,9 @@ mod tests {
                 platform_repository: None,
                 prompt_modification: None,
                 prompt_mode: "append".to_string(),
+                local_tools: vec![],
+                remote_tools: vec![],
+                tool_config: "default".to_string(),
             },
             status: None,
         };
@@ -1497,6 +1522,9 @@ mod tests {
                 platform_repository: None,
                 prompt_modification: None,
                 prompt_mode: "append".to_string(),
+                local_tools: vec![],
+                remote_tools: vec![],
+                tool_config: "default".to_string(),
             },
             status: None,
         };
@@ -1541,6 +1569,9 @@ mod tests {
                 platform_repository: None,
                 prompt_modification: None,
                 prompt_mode: "append".to_string(),
+                local_tools: vec![],
+                remote_tools: vec![],
+                tool_config: "default".to_string(),
             },
             status: Some(crate::crds::taskrun::TaskRunStatus {
                 phase: Some(crate::crds::taskrun::TaskRunPhase::Running),
@@ -1590,6 +1621,9 @@ mod tests {
                 platform_repository: None,
                 prompt_modification: None,
                 prompt_mode: "append".to_string(),
+                local_tools: vec![],
+                remote_tools: vec![],
+                tool_config: "default".to_string(),
             },
             status: None,
         };
@@ -1614,6 +1648,9 @@ mod tests {
                 platform_repository: None,
                 prompt_modification: None,
                 prompt_mode: "append".to_string(),
+                local_tools: vec![],
+                remote_tools: vec![],
+                tool_config: "default".to_string(),
             },
             status: None,
         };
@@ -1640,6 +1677,9 @@ mod tests {
                 platform_repository: None,
                 prompt_modification: None,
                 prompt_mode: "append".to_string(),
+                local_tools: vec![],
+                remote_tools: vec![],
+                tool_config: "default".to_string(),
             },
             status: None,
         };

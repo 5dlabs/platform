@@ -37,6 +37,9 @@ pub mod task {
         working_directory: Option<&str>,
         prompt_modification: Option<&str>,
         prompt_mode: &str,
+        local_tools: Option<&str>,
+        remote_tools: Option<&str>,
+        tool_config: &str,
     ) -> Result<()> {
         output.info("Preparing task submission...")?;
         info!(
@@ -230,8 +233,16 @@ pub mod task {
             _ => None,
         };
 
-        // Create PM request with model selection and prompt modification support
-        let pm_request = PmTaskRequest::new_with_prompt_modification(
+        // Parse tool configuration
+        let parsed_local_tools = local_tools
+            .map(|tools| tools.split(',').map(|s| s.trim().to_string()).collect())
+            .unwrap_or_else(Vec::new);
+        let parsed_remote_tools = remote_tools
+            .map(|tools| tools.split(',').map(|s| s.trim().to_string()).collect())
+            .unwrap_or_else(Vec::new);
+
+        // Create PM request with full tool configuration support
+        let pm_request = PmTaskRequest::new_with_tool_config(
             task,
             service_name.to_string(),
             agent_name.to_string(),
@@ -242,6 +253,9 @@ pub mod task {
             working_directory.map(|s| s.to_string()),
             prompt_modification.map(|s| s.to_string()),
             prompt_mode.to_string(),
+            parsed_local_tools,
+            parsed_remote_tools,
+            tool_config.to_string(),
         );
 
         // Debug: print the request JSON

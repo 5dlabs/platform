@@ -54,6 +54,18 @@ pub struct TaskRunSpec {
     /// How to apply prompt_modification: 'append' or 'replace'
     #[serde(default = "default_prompt_mode", skip_serializing_if = "is_default_prompt_mode")]
     pub prompt_mode: String,
+
+    /// Local Claude Code tools to enable (e.g., ["bash", "edit", "read"])
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub local_tools: Vec<String>,
+
+    /// Remote MCP tools to enable (e.g., ["github_create_issue", "rustdocs_query_rust_docs"])
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub remote_tools: Vec<String>,
+
+    /// Tool configuration preset: 'default', 'minimal', 'advanced'
+    #[serde(default = "default_tool_config", skip_serializing_if = "is_default_tool_config")]
+    pub tool_config: String,
 }
 
 fn default_context_version() -> u32 {
@@ -70,6 +82,14 @@ fn default_prompt_mode() -> String {
 
 fn is_default_prompt_mode(mode: &str) -> bool {
     mode == "append"
+}
+
+fn default_tool_config() -> String {
+    "default".to_string()
+}
+
+fn is_default_tool_config(config: &str) -> bool {
+    config == "default"
 }
 
 
@@ -242,6 +262,9 @@ mod tests {
                 platform_repository: None,
                 prompt_modification: None,
                 prompt_mode: "append".to_string(),
+                local_tools: vec![],
+                remote_tools: vec![],
+                tool_config: "default".to_string(),
             },
             status: None,
         };

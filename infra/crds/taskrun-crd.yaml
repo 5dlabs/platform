@@ -24,7 +24,7 @@ spec:
         properties:
           spec:
             type: object
-            required: ["taskId", "serviceName", "agentName", "contextVersion", "markdownFiles"]
+            required: ["taskId", "serviceName", "agentName", "contextVersion"]
             properties:
               taskId:
                 type: integer
@@ -49,27 +49,7 @@ spec:
                 minimum: 1
                 default: 1
                 description: "Version of the context, incremented on updates"
-              markdownFiles:
-                type: array
-                minItems: 1
-                description: "Markdown files containing task context"
-                items:
-                  type: object
-                  required: ["filename", "content"]
-                  properties:
-                    filename:
-                      type: string
-                      minLength: 1
-                      pattern: "^[a-zA-Z0-9._-]+\\.md$"
-                      description: "Filename for the markdown content"
-                    content:
-                      type: string
-                      minLength: 1
-                      description: "Markdown content"
-                    fileType:
-                      type: string
-                      enum: ["task", "design-spec", "prompt", "context", "acceptance-criteria"]
-                      description: "Type of markdown file"
+
               agentTools:
                 type: array
                 description: "Tools available to the agent"

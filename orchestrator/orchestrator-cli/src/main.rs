@@ -108,6 +108,15 @@ enum TaskCommands {
         /// How to apply prompt_modification: 'append' (add to existing prompt) or 'replace' (replace system prompt)
         #[arg(long, default_value = "append")]
         prompt_mode: String,
+        /// Local Claude Code tools to enable (comma-separated: bash,edit,read)
+        #[arg(long)]
+        local_tools: Option<String>,
+        /// Remote MCP tools to enable (comma-separated: github_create_issue,rustdocs_query_rust_docs)
+        #[arg(long)]
+        remote_tools: Option<String>,
+        /// Tool configuration preset: default, minimal, advanced
+        #[arg(long, default_value = "default")]
+        tool_config: String,
     },
     /// Submit a new task (advanced workflow with explicit paths)
     SubmitAdvanced {
@@ -292,6 +301,9 @@ async fn main() -> Result<()> {
                 working_directory,
                 prompt_modification,
                 prompt_mode,
+                local_tools,
+                remote_tools,
+                tool_config,
             } => {
                 commands::task::submit_task_simplified(
                     &api_client,
@@ -310,6 +322,9 @@ async fn main() -> Result<()> {
                     working_directory.as_deref(),
                     prompt_modification.as_deref(),
                     &prompt_mode,
+                    local_tools.as_deref(),
+                    remote_tools.as_deref(),
+                    &tool_config,
                 )
                 .await
             }
@@ -477,6 +492,9 @@ mod tests {
                         working_directory,
                         prompt_modification,
                         prompt_mode,
+                        local_tools,
+                        remote_tools, 
+                        tool_config,
                     },
             } => {
                 assert_eq!(task_id, 1001);
@@ -490,6 +508,9 @@ mod tests {
                 assert_eq!(github_user, None);
                 assert!(!retry);
                 assert_eq!(model, "sonnet");
+                assert_eq!(local_tools, None);
+                assert_eq!(remote_tools, None);
+                assert_eq!(tool_config, "default");
             }
             _ => panic!("Expected Task Submit command"),
         }
