@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "toolman": {
+      "type": "stdio",
+      "command": "/usr/local/bin/toolman-client",
+      "args": ["--working-dir", "/workspace"],
+      "env": {
+        "TOOLMAN_SERVER_URL": "${TOOLMAN_SERVER_URL:-http://toolman.mcp.svc.cluster.local:3000/mcp}"
+      }
+    }
+  }
+}

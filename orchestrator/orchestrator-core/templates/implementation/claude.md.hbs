@@ -1,0 +1,244 @@
+# Claude Code Project Memory
+
+## Project Information
+- **Repository**: {{repository.url}}{{#if repository}}
+- **Source Branch**: {{repository.branch}}
+- **GitHub User**: {{repository.githubUser}}{{/if}}
+- **Working Directory**: {{working_directory}}
+- **Implementation Target**: task {{task_id}}
+
+## Project Guidelines
+
+**IMPORTANT**: Review these guidelines before starting implementation:
+- `coding-guidelines.md` - Project coding standards and best practices
+- `github-guidelines.md` - Git workflow and commit message standards
+
+{{#if platform_repository}}
+## Documentation Source
+- **Documentation Repository**: {{platform_repository.url}}
+- **Branch**: {{platform_repository.branch}}
+{{/if}}
+
+## Current Task
+
+{{#if task_id}}
+**Your task documentation is in the `task/` directory:**
+- `task/task.md` - Task requirements and description
+- `task/acceptance-criteria.md` - What success looks like
+- `task/architecture.md` - Technical approach and guidance
+
+**Project standards:**
+- `coding-guidelines.md` - How to write code in this project
+- `github-guidelines.md` - Git workflow and commit standards
+
+{{#if platform_repository}}
+**Additional project documentation** (if needed):
+- Overall system architecture and requirements are available in platform-repo/
+{{/if}}
+{{else}}
+This is a general software project. Check for:
+- `README.md` - Project overview and setup instructions
+- `ARCHITECTURE.md` or `docs/` - Architecture documentation  
+- `package.json`, `Cargo.toml`, or similar - Dependencies and scripts
+{{/if}}
+
+## Implementation Approach
+
+{{#if task_id}}
+**Step-by-step process:**
+1. Read `task/task.md` to understand what you need to build
+2. Review `task/acceptance-criteria.md` to understand success criteria
+3. Check `task/architecture.md` for technical approach
+4. Implement the solution in the codebase
+5. Test to ensure all acceptance criteria are met
+
+**Focus**: Work only on the current task. Previous task context is in your memory, but focus on the current requirements.
+{{else}}
+General implementation work:
+- Understand the existing codebase structure
+- Follow established patterns and conventions
+- Ensure changes align with project architecture
+{{/if}}
+
+### Implementation Standards
+- **Follow Architecture**: Adhere to established patterns and design decisions
+- **Respect Dependencies**: Complete tasks in proper dependency order  
+- **Test Thoroughly**: Ensure implementation meets acceptance criteria
+- **Document Changes**: Update relevant documentation if architecture changes
+- **Version Control**: Use clear, descriptive commit messages
+- **Code Quality**: Follow project coding standards and best practices
+
+### Development Workflow
+- Implementation should follow test-driven development where applicable
+- Code should be well-documented with clear comments
+- Follow existing project structure and naming conventions
+- Ensure backwards compatibility unless explicitly changing interfaces
+
+## Development Workflow
+
+### Getting Started
+{{#if task_id}}
+1. **Read your task files:**
+   - `task/task.md` - What you need to build
+   - `task/acceptance-criteria.md` - How to know you're done
+   - `task/architecture.md` - How to build it
+
+2. **Review project standards:**
+   - `coding-guidelines.md` - Code style and patterns
+   - `github-guidelines.md` - Git workflow
+
+3. **Build and test:**
+   - Implement the solution
+   - Write/update tests
+   - Verify acceptance criteria
+{{else}}
+1. Understand the existing codebase structure
+2. Follow established patterns and conventions  
+3. Ensure changes align with project architecture
+{{/if}}
+
+### Common Commands
+```bash
+# Run tests before implementation
+npm test          # Node.js projects
+# or
+cargo test        # Rust projects  
+# or check project-specific test commands in package.json/Cargo.toml
+
+# Stage implementation changes
+git add .
+
+{{#if task_id}}
+# Commit with task-specific message
+git commit -m "feat(task-{{task_id}}): implement [brief description]
+
+- [specific changes made]
+- [tests added/updated]
+- [meets acceptance criteria: X, Y, Z]"
+{{else}}
+# Commit with descriptive message
+git commit -m "feat: implement [brief description]
+
+- [specific changes made]
+- [tests added/updated]"
+{{/if}}
+```
+
+### Quality Assurance
+```bash
+# Run linting
+npm run lint
+# or
+cargo clippy
+
+# Run formatting
+npm run format
+# or
+cargo fmt
+
+# Build project
+npm run build
+# or
+cargo build
+
+# Run full test suite
+npm run test:all
+# or
+cargo test --all
+```
+
+## Import References
+
+{{#if working_directory}}See @{{working_directory}}/.taskmaster/docs/architecture.md for system design patterns
+See @{{working_directory}}/.taskmaster/docs/prd.txt for product requirements
+See @{{working_directory}}/.taskmaster/tasks/tasks.json for task {{task_id}} details and dependencies
+See @{{working_directory}}/.taskmaster/docs/task-{{task_id}}/ for task-specific documentation{{else}}See @.taskmaster/docs/architecture.md for system design patterns
+See @.taskmaster/docs/prd.txt for product requirements
+See @.taskmaster/tasks/tasks.json for task {{task_id}} details and dependencies
+See @.taskmaster/docs/task-{{task_id}}/ for task-specific documentation{{/if}}
+
+{{#if repository}}## Repository Context
+
+This implementation is working with:
+- **Repository**: {{repository.url}}
+- **Branch**: {{repository.branch}}
+- **Working Directory**: {{working_directory}}
+- **Task ID**: {{task_id}}
+
+Ensure all file paths and references are relative to the working directory.
+Follow the existing project structure and coding conventions.{{/if}}
+
+## Claude Code Tool Usage Patterns
+
+### File Operations Workflow
+```
+1. Explore codebase structure first:
+   - Use `LS` to understand directory layout
+   - Use `Glob` to find files by pattern (*.rs, *.ts, *.py, etc.)
+
+2. Understand existing code:
+   - Use `Read` to examine files completely
+   - Use `Grep` to search for functions, classes, or patterns
+   - Use `Grep -n` for line numbers when referencing specific code
+
+3. Make precise changes:
+   - Use `Edit` for single, targeted changes
+   - Use `MultiEdit` for multiple related changes in one file
+   - Use `Write` only for new files (prefer editing existing files)
+```
+
+### Search and Analysis Patterns
+```
+# Find implementation patterns
+Grep "class.*Service" --glob="*.ts" -n
+Grep "fn.*test" --glob="*.rs" -n
+
+# Understand dependencies
+Grep "import.*from" --glob="*.ts" 
+Grep "use.*::" --glob="*.rs"
+
+# Find configuration files
+Glob "*config*" 
+Glob "*.json" | Glob "*.toml" | Glob "*.yaml"
+
+# Find test files
+Glob "*test*" | Glob "*spec*"
+```
+
+### Implementation Validation
+```bash
+# Always validate after changes
+cargo check    # or npm run typecheck
+cargo test     # or npm test  
+cargo clippy   # or npm run lint
+```
+
+### Task Progress Management
+Use `TodoWrite` to track implementation progress:
+- Break complex tasks into subtasks
+- Mark tasks as in_progress when starting
+- Mark as completed only after validation
+- Add new tasks if you discover additional work needed
+
+### Error Handling Strategy
+1. **Read error messages completely** - Use Bash to run commands and read full output
+2. **Search for similar patterns** - Use Grep to find how errors are handled elsewhere
+3. **Validate fixes thoroughly** - Always run tests after fixes
+4. **Document complex changes** - Add comments for non-obvious implementations
+
+### Memory Management for Large Tasks
+- Use `Grep --head-limit=20` to limit search results when exploring
+- Use `Read` with `limit` parameter for large files
+- Use `LS` to understand scope before deep dives
+- Focus on one component at a time
+
+## Task Execution Notes
+
+- **Start with exploration**: Use LS, Glob, and Grep to understand codebase before making changes
+- **Track progress**: Use TodoWrite to break down complex tasks and track completion
+- **Validate continuously**: Run tests and checks after each significant change
+- **Follow existing patterns**: Use Grep to find similar implementations in the codebase
+- **Review task acceptance criteria** before starting implementation
+- **Check if any dependent tasks** need to be completed first
+- **Consider impact on other tasks** that may depend on this implementation
+- **Update task status to 'done'** after successful implementation and testing

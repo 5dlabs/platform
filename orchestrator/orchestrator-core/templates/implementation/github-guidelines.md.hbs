@@ -1,0 +1,251 @@
+# GitHub Workflow Guidelines
+
+This document outlines the Git workflow and GitHub conventions for this project.
+
+## Commit Message Format
+
+### Structure
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+### Types
+- **feat**: New feature
+- **fix**: Bug fix  
+- **docs**: Documentation changes
+- **style**: Code style changes (formatting, missing semi-colons, etc)
+- **refactor**: Code refactoring without changing functionality
+- **test**: Adding or updating tests
+- **chore**: Maintenance tasks, dependency updates
+- **perf**: Performance improvements
+- **ci**: CI/CD pipeline changes
+
+### Examples
+```
+feat(auth): add OAuth2 authentication flow
+
+Implement OAuth2 authentication using the authorization code flow.
+Includes token refresh logic and proper error handling.
+
+Closes #123
+```
+
+```
+fix(database): resolve connection pool exhaustion
+
+Connection pool was not properly releasing connections after failed
+queries. Added proper cleanup in error paths.
+
+Fixes #456
+```
+
+```
+refactor(handlers): extract validation logic to separate module
+
+Move request validation logic from handlers to dedicated validation
+module to improve code organization and reusability.
+```
+
+## Branch Naming
+
+### Convention
+```
+<type>/<task-id>-<short-description>
+```
+
+### Examples
+- `feature/task-1-user-authentication`
+- `bugfix/task-15-memory-leak` 
+- `hotfix/security-vulnerability`
+- `docs/update-api-documentation`
+
+## Pull Request Guidelines
+
+### Title Format
+```
+<type>(<scope>): <description>
+```
+
+### Description Template
+```markdown
+## Summary
+Brief description of what this PR does and why.
+
+## Changes Made
+- List of significant changes
+- New features added
+- Bugs fixed
+- Breaking changes
+
+## Testing
+- [ ] Unit tests pass
+- [ ] Integration tests pass
+- [ ] Manual testing completed
+- [ ] Edge cases tested
+
+## Documentation
+- [ ] Code is properly documented
+- [ ] README updated if needed
+- [ ] API documentation updated
+- [ ] Breaking changes documented
+
+## Checklist
+- [ ] Code follows project style guidelines
+- [ ] Self-review completed
+- [ ] No debugging code left in
+- [ ] Security considerations reviewed
+```
+
+## Code Review Standards
+
+### As a Reviewer
+- **Be constructive**: Provide helpful feedback, not just criticism
+- **Be specific**: Point out exact issues with code examples
+- **Be timely**: Review PRs within 24 hours when possible
+- **Focus on logic**: Review for correctness, performance, and maintainability
+- **Check tests**: Ensure adequate test coverage for changes
+
+### Review Checklist
+- [ ] Code is readable and well-structured
+- [ ] Error handling is appropriate
+- [ ] Security vulnerabilities addressed
+- [ ] Performance implications considered
+- [ ] Tests are comprehensive
+- [ ] Documentation is accurate
+- [ ] No secrets or sensitive data exposed
+
+### As an Author
+- **Keep PRs small**: Aim for < 400 lines of changes when possible
+- **Write clear descriptions**: Explain what and why, not just what
+- **Test thoroughly**: Include unit and integration tests
+- **Address feedback promptly**: Respond to comments within 24 hours
+- **Be open to suggestions**: Consider alternative approaches
+
+## Git Workflow
+
+### Development Process
+1. **Create branch** from `main` using naming convention
+2. **Make commits** with clear, atomic changes
+3. **Write tests** for new functionality
+4. **Update documentation** as needed
+5. **Create pull request** with proper description
+6. **Address review feedback** promptly
+7. **Merge** after approval and CI passes
+8. **Delete branch** after merge
+
+### Commit Best Practices
+- **Atomic commits**: Each commit should represent one logical change
+- **Clear messages**: Write commit messages for your future self
+- **Frequent commits**: Commit early and often during development
+- **Clean history**: Use `git rebase -i` to clean up commits before PR
+
+### Merge Strategy
+- Use **Squash and Merge** for feature branches
+- Preserve individual commits only for complex features
+- Delete branch after merge to keep repository clean
+
+## Git Commands Reference
+
+### Common Workflow
+```bash
+# Create and switch to new branch
+git checkout -b feature/task-1-new-feature
+
+# Stage and commit changes
+git add .
+git commit -m "feat(core): add new feature implementation"
+
+# Push branch to remote
+git push -u origin feature/task-1-new-feature
+
+# Update branch with latest main
+git checkout main
+git pull origin main
+git checkout feature/task-1-new-feature
+git rebase main
+
+# Interactive rebase to clean up commits
+git rebase -i HEAD~3
+```
+
+### Useful Git Aliases
+```bash
+git config --global alias.st status
+git config --global alias.co checkout
+git config --global alias.br branch
+git config --global alias.cm commit
+git config --global alias.cp cherry-pick
+git config --global alias.lg "log --oneline --graph --decorate --all"
+```
+
+## Issue Management
+
+### Issue Labels
+- **type: bug** - Something isn't working
+- **type: enhancement** - New feature or request
+- **type: documentation** - Improvements to documentation
+- **priority: high** - Critical issues requiring immediate attention
+- **priority: medium** - Important but not urgent
+- **priority: low** - Nice to have improvements
+- **status: in-progress** - Currently being worked on
+- **status: blocked** - Waiting on external dependency
+
+### Issue Templates
+Use GitHub issue templates for:
+- Bug reports
+- Feature requests  
+- Documentation improvements
+- Security vulnerabilities
+
+## Security Guidelines
+
+### Sensitive Information
+- **Never commit** secrets, API keys, or passwords
+- **Use environment variables** for configuration
+- **Review carefully** before pushing commits
+- **Use .gitignore** to exclude sensitive files
+
+### Security Reviews
+- Review all external dependencies
+- Check for known vulnerabilities
+- Validate input handling
+- Review authentication/authorization logic
+- Check for information leakage in logs/errors
+
+## Release Management
+
+### Versioning
+Follow [Semantic Versioning](https://semver.org/):
+- **MAJOR**: Breaking changes
+- **MINOR**: New features (backward compatible)
+- **PATCH**: Bug fixes (backward compatible)
+
+### Release Process
+1. Create release branch from `main`
+2. Update version numbers and CHANGELOG
+3. Create release PR
+4. Tag release after merge
+5. Create GitHub release with notes
+6. Deploy to production
+
+## Emergency Procedures
+
+### Hotfixes
+1. Create hotfix branch from `main`
+2. Make minimal fix with tests
+3. Fast-track review process
+4. Deploy immediately after merge
+5. Create post-mortem issue
+
+### Rollback Process
+1. Identify problematic commit/release
+2. Create rollback PR reverting changes
+3. Emergency review and merge
+4. Deploy rollback immediately
+5. Investigate root cause
+
+Remember: Good Git practices make collaboration easier and code history more valuable for debugging and understanding system evolution.
