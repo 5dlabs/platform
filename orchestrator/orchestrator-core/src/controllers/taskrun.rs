@@ -298,80 +298,11 @@ async fn reconcile_create_or_update(
         return Ok(Action::requeue(Duration::from_secs(30)));
     }
 
-    // Check prep job status for normal tasks
-    let prep_job_name = format!(
-        "prep-{}-{}-task{}-attempt{}",
-        tr.spec.agent_name.replace('_', "-"),
-        tr.spec.service_name.replace('_', "-"),
-        tr.spec.task_id,
-        tr.spec.context_version
-    );
+    // For implementation tasks, create Claude job directly (no prep job needed)
+    info!("Creating Claude job directly for implementation task");
+    create_claude_job(tr, jobs, taskruns, &cm_name, config).await?;
 
-    // Try to get prep job
-    match jobs.get(&prep_job_name).await {
-        Ok(prep_job) => {
-            // Prep job exists, check its status
-            if let Some(job_status) = &prep_job.status {
-                if job_status.succeeded.unwrap_or(0) > 0 {
-                    // Prep job succeeded, create main Claude job
-                    info!("Prep job succeeded, creating Claude job");
-                    create_claude_job(tr, jobs, taskruns, &cm_name, config).await?;
-                } else if job_status.failed.unwrap_or(0) > 0 {
-                    // Prep job failed
-                    update_status(
-                        taskruns,
-                        &name,
-                        TaskRunPhase::Failed,
-                        "Workspace preparation failed",
-                    )
-                    .await?;
-                } else {
-                    // Prep job still running
-                    if tr.status.as_ref().and_then(|s| s.phase.as_ref())
-                        != Some(&TaskRunPhase::Preparing)
-                    {
-                        update_status(
-                            taskruns,
-                            &name,
-                            TaskRunPhase::Preparing,
-                            "Preparing workspace",
-                        )
-                        .await?;
-                    }
-                }
-            }
-        }
-        Err(kube::Error::Api(ae)) if ae.code == 404 => {
-            // Prep job doesn't exist, create it
-            info!("Creating prep job: {}", prep_job_name);
-            let prep_job = build_prep_job(&tr, &prep_job_name, &cm_name, config)?;
-            match jobs.create(&PostParams::default(), &prep_job).await {
-                Ok(_) => {
-                    info!("Created prep job: {}", prep_job_name);
-                    update_status(
-                        taskruns,
-                        &name,
-                        TaskRunPhase::Preparing,
-                        "Workspace preparation started",
-                    )
-                    .await?;
-                }
-                Err(e) => {
-                    update_status(
-                        taskruns,
-                        &name,
-                        TaskRunPhase::Failed,
-                        &format!("Failed to create prep job: {e}"),
-                    )
-                    .await?;
-                    return Err(e.into());
-                }
-            }
-        }
-        Err(e) => return Err(e.into()),
-    }
-
-    Ok(Action::requeue(Duration::from_secs(10))) // Check more frequently during preparation
+    Ok(Action::requeue(Duration::from_secs(30)))
 }
 
 /// Create the main Claude job after prep job succeeds
@@ -582,20 +513,18 @@ fn build_configmap(tr: &TaskRun, name: &str, config: &ControllerConfig) -> Resul
         data.insert(file.filename.clone(), file.content.clone());
     }
 
-    // For docs generation jobs, generate CLAUDE.md from template (overwrites any existing)
-    if is_docs_generation(tr) {
-        let claude_memory = generate_docs_claude_memory(tr)?;
-        data.insert("CLAUDE.md".to_string(), claude_memory);
+    // Generate CLAUDE.md from appropriate memory template based on task type
+    let claude_memory = if is_docs_generation(tr) {
+        generate_claude_memory(tr, DOCS_MEMORY_TEMPLATE)?
+    } else {
+        generate_claude_memory(tr, IMPLEMENTATION_MEMORY_TEMPLATE)?
+    };
+    data.insert("CLAUDE.md".to_string(), claude_memory);
 
-        let hook_script = generate_docs_hook_script(tr)?;
-        data.insert(".stop-hook-docs-pr.sh".to_string(), hook_script);
-
-        // Add early hook test script for docs generation
-        let early_hook_script = generate_early_hook_script()?;
-        data.insert(".early-hook-test.sh".to_string(), early_hook_script);
-
-        // For docs generation, the claude-settings.json will be copied to enterprise location
-        // in the shell script to use as managed settings at /etc/claude-code/managed-settings.json
+    // Add all hook scripts from the hooks directory
+    let hook_scripts = generate_hook_scripts(tr)?;
+    for (filename, content) in hook_scripts {
+        data.insert(format!("hooks/{}", filename), content);
     }
 
     // Generate Claude Code configuration file for tool permissions
@@ -745,169 +674,23 @@ fn build_claude_job(
     serde_json::from_value(job_json).map_err(Error::SerializationError)
 }
 
-/// Build Prep Job for workspace preparation
-fn build_prep_job(
-    tr: &TaskRun,
-    job_name: &str,
-    cm_name: &str,
-    config: &ControllerConfig,
-) -> Result<Job> {
-    // Build volumes for prep job
-    let service_name = &tr.spec.service_name;
-    let pvc_name = format!("workspace-{service_name}");
 
-    let mut volumes = vec![
-        json!({
-            "name": "task-files",
-            "configMap": {
-                "name": cm_name
-            }
-        }),
-        json!({
-            "name": "workspace",
-            "persistentVolumeClaim": {
-                "claimName": pvc_name
-            }
-        }),
-    ];
-
-    let mut volume_mounts = vec![
-        json!({
-            "name": "task-files",
-            "mountPath": "/config"
-        }),
-        json!({
-            "name": "workspace",
-            "mountPath": "/workspace"
-            // No subPath - needs full PVC access to create directories
-        }),
-    ];
-
-    // Add secret volume if repository is configured
-    if let Some(repo) = &tr.spec.repository {
-        let secret_name = format!("github-pat-{}", repo.github_user);
-        let secret_volume_name = format!("{secret_name}-secret");
-
-        volume_mounts.push(json!({
-            "name": secret_volume_name.clone(),
-            "mountPath": format!("/secrets/{}", secret_name),
-            "readOnly": true
-        }));
-
-        volumes.push(json!({
-            "name": secret_volume_name,
-            "secret": {
-                "secretName": secret_name
-            }
-        }));
-    }
-
-    let job_json = json!({
-        "apiVersion": "batch/v1",
-        "kind": "Job",
-        "metadata": {
-            "name": job_name,
-            "namespace": tr.namespace().unwrap_or_default(),
-            "labels": {
-                "task-id": tr.spec.task_id.to_string(),
-                "service-name": tr.spec.service_name.clone(),
-                "context-version": tr.spec.context_version.to_string(),
-                "managed-by": "taskrun-controller",
-                "job-type": "prep",
-            }
-        },
-        "spec": {
-            "backoffLimit": 2,  // Less retries for prep
-            "activeDeadlineSeconds": 300,  // 5 minutes should be enough
-            "ttlSecondsAfterFinished": config.job.ttl_seconds_after_finished,
-            "template": {
-                "spec": {
-                    "restartPolicy": "Never",
-                    "imagePullSecrets": [{"name": "ghcr-secret"}],
-                    "containers": [{
-                        "name": "prep-workspace",
-                        "image": "alpine/git:latest",  // Alpine with git for cloning
-                        "command": ["/bin/sh", "-c"],
-                        "args": [build_prep_script(tr, config)?],
-                        "volumeMounts": volume_mounts,
-                        "securityContext": {
-                            "runAsUser": 0,
-                            "runAsGroup": 0,
-                            "runAsNonRoot": false
-                        },
-                        "resources": {
-                            "requests": {
-                                "memory": "128Mi",
-                                "cpu": "100m"
-                            },
-                            "limits": {
-                                "memory": "512Mi",
-                                "cpu": "500m"
-                            }
-                        }
-                    }],
-                    "volumes": volumes,
-                    // Force onto same node as PVC for local-path provisioner
-                    "nodeSelector": {
-                        "kubernetes.io/hostname": "talos-a43-ee1"
-                    }
-                }
-            }
-        }
-    });
-
-    serde_json::from_value(job_json).map_err(Error::SerializationError)
-}
 
 
 
 // Template constants
-const PREP_JOB_TEMPLATE: &str = include_str!("../../templates/prep-job.sh.hbs");
-const MAIN_CONTAINER_TEMPLATE: &str = include_str!("../../templates/main-container.sh.hbs");
-const DOCS_GENERATION_CONTAINER_TEMPLATE: &str = include_str!("../../templates/docs-generation-container.sh.hbs");
-const DOCS_GENERATION_PROMPT_TEMPLATE: &str = include_str!("../../templates/docs-generation-prompt.hbs");
+const IMPLEMENTATION_CONTAINER_TEMPLATE: &str = include_str!("../../templates/implementation/container.sh.hbs");
+const DOCS_GENERATION_CONTAINER_TEMPLATE: &str = include_str!("../../templates/docs/container.sh.hbs");
+const DOCS_GENERATION_PROMPT_TEMPLATE: &str = include_str!("../../templates/docs/prompt.hbs");
+const IMPLEMENTATION_PROMPT_TEMPLATE: &str = include_str!("../../templates/implementation/prompt.hbs");
+const DOCS_MEMORY_TEMPLATE: &str = include_str!("../../templates/docs/memory.md.hbs");
+const IMPLEMENTATION_MEMORY_TEMPLATE: &str = include_str!("../../templates/implementation/memory.md.hbs");
+const DOCS_SETTINGS_TEMPLATE: &str = include_str!("../../templates/docs/settings.json.hbs");
+const IMPLEMENTATION_SETTINGS_TEMPLATE: &str = include_str!("../../templates/implementation/settings.json.hbs");
 
 
-/// Build prep job script for workspace preparation
-fn build_prep_script(tr: &TaskRun, _config: &ControllerConfig) -> Result<String, Error> {
-    let mut handlebars = Handlebars::new();
-    handlebars.set_strict_mode(false); // Allow missing fields
 
-    // Choose template based on task type
-    let template = PREP_JOB_TEMPLATE;
 
-    handlebars
-        .register_template_string("prep", template)
-        .map_err(|e| Error::ConfigError(format!("Failed to register template: {e}")))?;
-
-    // Extract working directory for docs generation tasks (same logic as main container)
-    let is_docs_generation = is_docs_generation(tr);
-    let mut working_dir = String::new();
-    if is_docs_generation {
-        // For docs generation, parse working directory from markdown
-        if let Some(claude_md) = tr.spec.markdown_files.iter().find(|f| f.filename == "CLAUDE.md") {
-            for line in claude_md.content.lines() {
-                if line.starts_with("- **Working Directory**: ") {
-                    working_dir = line.trim_start_matches("- **Working Directory**: ").to_string();
-                    break;
-                }
-            }
-        }
-    }
-
-    let data = json!({
-        "task_id": tr.spec.task_id,
-        "service_name": tr.spec.service_name,
-        "repository": tr.spec.repository.as_ref(),
-        "attempts": tr.status.as_ref().map_or(1, |s| s.attempts),
-        "is_docs_generation": is_docs_generation,
-        "working_dir": working_dir,
-    });
-
-    handlebars
-        .render("prep", &data)
-        .map_err(|e| Error::ConfigError(format!("Failed to render template: {e}")))
-}
 
 /// Build startup script for the agent container
 fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result<String, Error> {
@@ -921,7 +704,7 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
     let template = if is_docs_generation {
         DOCS_GENERATION_CONTAINER_TEMPLATE
     } else {
-        MAIN_CONTAINER_TEMPLATE
+        IMPLEMENTATION_CONTAINER_TEMPLATE
     };
 
     // Register the appropriate container template
@@ -980,7 +763,11 @@ fn build_agent_startup_script(tr: &TaskRun, config: &ControllerConfig) -> Result
         }
 
         // Generate the prompt content for docs generation
-        let prompt_content = generate_docs_prompt(tr)?;
+        let prompt_content = generate_prompt(tr, DOCS_GENERATION_PROMPT_TEMPLATE)?;
+        data["prompt_content"] = json!(prompt_content);
+    } else {
+        // Generate the prompt content for implementation tasks
+        let prompt_content = generate_prompt(tr, IMPLEMENTATION_PROMPT_TEMPLATE)?;
         data["prompt_content"] = json!(prompt_content);
     }
 
@@ -1060,12 +847,10 @@ fn build_env_vars(
 
 
 
-/// Generate CLAUDE.md content for docs generation tasks
-fn generate_docs_claude_memory(tr: &TaskRun) -> Result<String> {
+/// Generate CLAUDE.md content from memory template
+fn generate_claude_memory(tr: &TaskRun, template: &str) -> Result<String> {
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false); // Allow missing fields
-
-    let template = include_str!("../../templates/claude-memory-docs.md.hbs");
 
     handlebars
         .register_template_string("claude_memory", template)
@@ -1109,9 +894,9 @@ fn generate_claude_settings(tr: &TaskRun, config: &ControllerConfig) -> Result<S
     // Choose template based on job type
     let is_docs_generation = is_docs_generation(tr);
     let template = if is_docs_generation {
-        include_str!("../../templates/claude-settings-docs.json.hbs")
+        DOCS_SETTINGS_TEMPLATE
     } else {
-        include_str!("../../templates/claude-settings-implementation.json.hbs")
+        IMPLEMENTATION_SETTINGS_TEMPLATE
     };
 
     handlebars
@@ -1220,17 +1005,19 @@ fn build_retry_data(tr: &TaskRun) -> serde_json::Value {
     })
 }
 
-/// Generate the hook script for documentation generation jobs
-fn generate_docs_hook_script(tr: &TaskRun) -> Result<String> {
+/// Generate all hook scripts from the hooks directory based on task type
+fn generate_hook_scripts(tr: &TaskRun) -> Result<Vec<(String, String)>> {
+    let mut hook_scripts = Vec::new();
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false); // Allow missing fields
 
-    let template = include_str!("../../templates/stop-hook-docs-pr.sh.hbs");
-    handlebars
-        .register_template_string("hook", template)
-        .map_err(|e| Error::ConfigError(format!("Failed to register hook template: {e}")))?;
+    // Determine task type directory
+    let task_type = if is_docs_generation(tr) { "docs" } else { "implementation" };
 
-    // Extract working directory from the TaskRun (same logic as CLAUDE.md generation)
+    // Get list of hook templates for this task type
+    let hook_templates = get_hook_templates(task_type);
+
+    // Extract working directory from the TaskRun (for docs generation compatibility)
     let working_directory = if tr.spec.repository.is_some() {
         tr.spec.markdown_files.iter()
             .find(|f| f.filename == "CLAUDE.md")
@@ -1244,6 +1031,7 @@ fn generate_docs_hook_script(tr: &TaskRun) -> Result<String> {
         ".".to_string()
     };
 
+    // Prepare template data
     let data = json!({
         "task_id": if tr.spec.task_id == DOCS_GENERATION_TASK_ID { json!(null) } else { json!(tr.spec.task_id) },
         "service_name": tr.spec.service_name,
@@ -1253,36 +1041,53 @@ fn generate_docs_hook_script(tr: &TaskRun) -> Result<String> {
         "is_docs_generation": is_docs_generation(tr),
     });
 
-    handlebars
-        .render("hook", &data)
-        .map_err(|e| Error::ConfigError(format!("Failed to render hook template: {e}")))
+    // Process each hook template
+    for (hook_name, template_content) in hook_templates {
+        handlebars
+            .register_template_string(&hook_name, &template_content)
+            .map_err(|e| Error::ConfigError(format!("Failed to register hook template {}: {e}", hook_name)))?;
+
+        let rendered = handlebars
+            .render(&hook_name, &data)
+            .map_err(|e| Error::ConfigError(format!("Failed to render hook template {}: {e}", hook_name)))?;
+
+        // Generate output filename (remove .hbs extension)
+        let output_filename = if hook_name.ends_with(".hbs") {
+            hook_name.trim_end_matches(".hbs").to_string()
+        } else {
+            hook_name
+        };
+
+        hook_scripts.push((output_filename, rendered));
+    }
+
+    Ok(hook_scripts)
 }
 
-/// Generate the early hook test script for docs generation jobs
-fn generate_early_hook_script() -> Result<String> {
+/// Get all hook templates for a specific task type
+fn get_hook_templates(task_type: &str) -> Vec<(String, String)> {
+    // For now, return the hardcoded templates based on task type
+    // This can be made more dynamic in the future if needed
+    match task_type {
+        "docs" => vec![
+            ("stop-pr-creation.sh.hbs".to_string(), include_str!("../../templates/docs/hooks/stop-pr-creation.sh.hbs").to_string()),
+            ("early-test.sh.hbs".to_string(), include_str!("../../templates/docs/hooks/early-test.sh.hbs").to_string()),
+        ],
+        "implementation" => vec![
+            ("stop-commit.sh.hbs".to_string(), include_str!("../../templates/implementation/hooks/stop-commit.sh.hbs").to_string()),
+            ("early-test.sh.hbs".to_string(), include_str!("../../templates/implementation/hooks/early-test.sh.hbs").to_string()),
+        ],
+        _ => vec![],
+    }
+}
+
+/// Generate prompt content from prompt template
+fn generate_prompt(tr: &TaskRun, template: &str) -> Result<String> {
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false); // Allow missing fields
 
-    let template = include_str!("../../templates/early-hook-test.sh.hbs");
     handlebars
-        .register_template_string("early_hook", template)
-        .map_err(|e| Error::ConfigError(format!("Failed to register early hook template: {e}")))?;
-
-    // Early hook doesn't need any dynamic data currently
-    let data = json!({});
-
-    handlebars
-        .render("early_hook", &data)
-        .map_err(|e| Error::ConfigError(format!("Failed to render early hook template: {e}")))
-}
-
-/// Generate the prompt content for documentation generation jobs
-fn generate_docs_prompt(tr: &TaskRun) -> Result<String> {
-    let mut handlebars = Handlebars::new();
-    handlebars.set_strict_mode(false); // Allow missing fields
-
-    handlebars
-        .register_template_string("prompt", DOCS_GENERATION_PROMPT_TEMPLATE)
+        .register_template_string("prompt", template)
         .map_err(|e| Error::ConfigError(format!("Failed to register prompt template: {e}")))?;
 
     // Extract task_id for docs generation (999999 means "all tasks")

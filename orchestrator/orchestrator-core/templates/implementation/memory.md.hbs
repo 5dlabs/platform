@@ -1,0 +1,139 @@
+# Task Master Project Memory
+
+## Project Information
+- **Repository**: {{repository.url}}{{#if repository}}
+- **Source Branch**: {{repository.branch}}
+- **GitHub User**: {{repository.githubUser}}{{/if}}
+- **Working Directory**: {{working_directory}}
+- **Implementation Target**: task {{task_id}}
+
+## Project Architecture
+
+This is a Task Master project with the following structure:
+- `.taskmaster/tasks/tasks.json` - Complete task definitions and relationships
+- `.taskmaster/docs/` - Task documentation directory
+- `.taskmaster/docs/architecture.md` - System architecture and design
+- `.taskmaster/docs/prd.txt` or `.taskmaster/docs/prd.md` - Product requirements
+
+## Implementation Context
+
+### Current Task
+Working on task {{task_id}} implementation:
+- Review task details in `.taskmaster/tasks/tasks.json`
+- Check dependencies and ensure prerequisite tasks are completed
+- Follow architecture patterns from `.taskmaster/docs/architecture.md`
+- Align implementation with product requirements from PRD
+
+### Implementation Standards
+- **Follow Architecture**: Adhere to established patterns and design decisions
+- **Respect Dependencies**: Complete tasks in proper dependency order
+- **Test Thoroughly**: Ensure implementation meets acceptance criteria
+- **Document Changes**: Update relevant documentation if architecture changes
+- **Version Control**: Use clear, descriptive commit messages
+- **Code Quality**: Follow project coding standards and best practices
+
+### Development Workflow
+- Implementation should follow test-driven development where applicable
+- Code should be well-documented with clear comments
+- Follow existing project structure and naming conventions
+- Ensure backwards compatibility unless explicitly changing interfaces
+
+## Common Commands
+
+### Development Workflow
+```bash
+# Check current task status and dependencies
+task-master show {{task_id}}
+
+# Run tests before implementation
+npm test
+# or
+cargo test
+# or project-specific test command
+
+# Stage implementation changes
+git add .
+
+# Commit with standard message
+git commit -m "feat(task-{{task_id}}): implement [brief description]
+
+- [specific changes made]
+- [tests added/updated]
+- [any breaking changes]
+
+Resolves task {{task_id}}"
+
+# Push implementation
+git push origin HEAD
+
+# Create pull request{{#if repository}}
+gh pr create --base "{{repository.branch}}" --title "feat(task-{{task_id}}): implement [brief description]" --body "Implementation for Task Master task {{task_id}}
+
+## Changes
+- [List key changes]
+- [Any new dependencies]
+- [Breaking changes if any]
+
+## Testing
+- [How to test the implementation]
+- [Any manual testing steps]
+
+## Task Details
+Repository: {{repository.url}}
+Task ID: {{task_id}}
+Working directory: {{working_directory}}
+
+🤖 Implemented via Claude Code Task Master"{{else}}
+gh pr create --base "main" --title "feat(task-{{task_id}}): implement [brief description]" --body "Implementation for Task Master task {{task_id}}"{{/if}}
+```
+
+### Quality Assurance
+```bash
+# Run linting
+npm run lint
+# or
+cargo clippy
+
+# Run formatting
+npm run format
+# or
+cargo fmt
+
+# Build project
+npm run build
+# or
+cargo build
+
+# Run full test suite
+npm run test:all
+# or
+cargo test --all
+```
+
+## Import References
+
+{{#if working_directory}}See @{{working_directory}}/.taskmaster/docs/architecture.md for system design patterns
+See @{{working_directory}}/.taskmaster/docs/prd.txt for product requirements
+See @{{working_directory}}/.taskmaster/tasks/tasks.json for task {{task_id}} details and dependencies
+See @{{working_directory}}/.taskmaster/docs/task-{{task_id}}/ for task-specific documentation{{else}}See @.taskmaster/docs/architecture.md for system design patterns
+See @.taskmaster/docs/prd.txt for product requirements
+See @.taskmaster/tasks/tasks.json for task {{task_id}} details and dependencies
+See @.taskmaster/docs/task-{{task_id}}/ for task-specific documentation{{/if}}
+
+{{#if repository}}## Repository Context
+
+This implementation is working with:
+- **Repository**: {{repository.url}}
+- **Branch**: {{repository.branch}}
+- **Working Directory**: {{working_directory}}
+- **Task ID**: {{task_id}}
+
+Ensure all file paths and references are relative to the working directory.
+Follow the existing project structure and coding conventions.{{/if}}
+
+## Task Execution Notes
+
+- Review task acceptance criteria before starting implementation
+- Check if any dependent tasks need to be completed first
+- Consider impact on other tasks that may depend on this implementation
+- Update task status to 'done' after successful implementation and testing

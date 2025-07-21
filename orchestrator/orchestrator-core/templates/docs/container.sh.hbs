@@ -1,0 +1,796 @@
+#!/bin/sh
+
+echo '════════════════════════════════════════════════════════════════'
+echo '║                 DOCS GENERATION STARTING                     ║'
+echo '════════════════════════════════════════════════════════════════'
+
+# Disable interactive Git prompts globally
+export GIT_TERMINAL_PROMPT=0
+export GIT_ASKPASS=/bin/true
+export SSH_ASKPASS=/bin/true
+
+# Setup authentication based on repository URL type
+{{#if repository}}
+REPO_URL="{{repository.url}}"
+if echo "$REPO_URL" | grep -q "^git@\|^ssh://"; then
+  echo "SSH repository URL detected"
+  USE_SSH=true
+else
+  echo "HTTPS repository URL detected"
+  USE_SSH=false
+fi
+
+# SSH Authentication Setup
+if [ "$USE_SSH" = "true" ]; then
+  echo "=== SSH AUTHENTICATION SETUP ==="
+
+  # Check if SSH key is mounted (mounted to /ssh-keys by orchestrator)
+  if [ -f "/ssh-keys/ssh-privatekey" ]; then
+    echo "✓ SSH private key found"
+
+    # Create .ssh directory with proper permissions
+    mkdir -p /root/.ssh
+    chmod 700 /root/.ssh
+
+    # Copy SSH keys to writable location with correct permissions
+    cp /ssh-keys/ssh-privatekey /root/.ssh/id_rsa
+    chmod 600 /root/.ssh/id_rsa
+
+    # Copy public key if available
+    if [ -f "/ssh-keys/ssh-publickey" ]; then
+      cp /ssh-keys/ssh-publickey /root/.ssh/id_rsa.pub
+      chmod 644 /root/.ssh/id_rsa.pub
+    fi
+
+    # Add GitHub to known hosts
+    ssh-keyscan github.com >> /root/.ssh/known_hosts 2>/dev/null || echo "Warning: Failed to add GitHub to known hosts"
+
+    # Test SSH connection
+    echo "Testing SSH connection to GitHub..."
+    ssh -T git@github.com 2>&1 | head -3 || echo "SSH test completed (expected to fail with 'successfully authenticated')"
+
+    echo "✓ SSH authentication configured successfully"
+  else
+    echo "❌ SSH private key not found at /ssh-keys/ssh-privatekey"
+    echo "   Expected SSH key secret to be mounted at /ssh-keys"
+    exit 1
+  fi
+else
+  # HTTPS Authentication Setup (existing logic)
+  echo "=== HTTPS AUTHENTICATION SETUP ==="
+
+  # Use environment variables directly (they're mounted as secrets)
+  if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USER" ]; then
+    echo "✓ GitHub environment variables found"
+
+    # Configure git user FIRST
+    git config --global user.name "$GITHUB_USER"
+    git config --global user.email "${GITHUB_USER}@users.noreply.github.com"
+
+    # Disable interactive prompts for git operations
+    git config --global credential.helper ""
+    git config --global core.askPass ""
+
+    # Create credentials file with proper format
+    mkdir -p /root/.git-credentials-dir
+    echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > /root/.git-credentials
+    chmod 600 /root/.git-credentials
+
+    # Configure git to use the credentials file
+    git config --global credential.helper 'store --file=/root/.git-credentials'
+
+    # Also set up workspace-specific credentials (for compatibility)
+    echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+    chmod 600 /workspace/.git-credentials
+
+    echo "✓ Git credentials configured for user: $GITHUB_USER"
+
+    # Create .github-env file for stop hook compatibility
+    cat > /workspace/.github-env << EOF
+GITHUB_TOKEN="$GITHUB_TOKEN"
+GITHUB_USER="$GITHUB_USER"
+USE_SSH=false
+EOF
+    chmod 600 /workspace/.github-env
+    echo "✓ Created .github-env file for stop hook"
+
+  else
+    echo "❌ Missing GITHUB_TOKEN or GITHUB_USER environment variables"
+    echo "   GITHUB_TOKEN present: $([ -n "$GITHUB_TOKEN" ] && echo "yes" || echo "no")"
+    echo "   GITHUB_USER present: $([ -n "$GITHUB_USER" ] && echo "yes" || echo "no")"
+    exit 1
+  fi
+
+# Source GitHub environment if it exists (legacy compatibility)
+if [ -f /workspace/.github-env ]; then
+  . /workspace/.github-env
+  echo "✓ GitHub authentication configured"
+
+  # Configure git credentials for HTTPS authentication (fallback)
+  if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USER" ]; then
+    git config --global user.name "$GITHUB_USER"
+    git config --global user.email "${GITHUB_USER}@users.noreply.github.com"
+
+    # Ensure git credentials file exists with correct format
+    echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+    chmod 600 /workspace/.git-credentials
+
+    # Configure git to use the credentials
+    git config --global credential.helper 'store --file=/workspace/.git-credentials'
+    cd /workspace && git config credential.helper 'store --file=/workspace/.git-credentials'
+
+    echo "✓ Git credentials configured for user: $GITHUB_USER"
+  fi
+fi
+fi
+
+# =============================================================================
+# COMPREHENSIVE GITHUB AUTHENTICATION TESTING
+# =============================================================================
+echo ""
+echo "═══════════════════════════════════════════════════════════════"
+echo "║                 GITHUB AUTHENTICATION TESTING                ║"
+echo "═══════════════════════════════════════════════════════════════"
+echo ""
+
+# Test 1: Basic GitHub API access
+echo "=== TEST 1: GitHub API Authentication ==="
+if [ -n "$GITHUB_TOKEN" ]; then
+  echo "Testing GitHub API access..."
+  API_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user)
+  if echo "$API_RESPONSE" | grep -q '"login"'; then
+    API_USER=$(echo "$API_RESPONSE" | grep '"login"' | sed 's/.*"login": *"\([^"]*\)".*/\1/')
+    echo "✓ GitHub API authentication successful"
+    echo "  Authenticated as: $API_USER"
+
+    # API authentication successful - user verification handled by SSH auth
+  else
+    echo "❌ GitHub API authentication failed"
+    echo "   Response: $API_RESPONSE"
+    echo ""
+    echo "🚫 ABORTING: Cannot proceed without GitHub API access"
+    exit 1
+  fi
+else
+  echo "❌ No GITHUB_TOKEN available for API testing"
+  exit 1
+fi
+
+# Test 2: Repository access permissions
+echo ""
+echo "=== TEST 2: Repository Access Verification ==="
+REPO_URL="{{repository.url}}"
+# Extract owner/repo from URL
+if echo "$REPO_URL" | grep -q "github.com"; then
+  REPO_PATH=$(echo "$REPO_URL" | sed 's|.*github.com[/:]||' | sed 's|\.git$||')
+  echo "Testing repository access for: $REPO_PATH"
+
+  REPO_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO_PATH")
+  if echo "$REPO_RESPONSE" | grep -q '"full_name"'; then
+    echo "✓ Repository is accessible via API"
+
+    # Check permissions
+    PERMISSIONS=$(echo "$REPO_RESPONSE" | grep -o '"permissions":{[^}]*}' || echo "")
+    if echo "$PERMISSIONS" | grep -q '"push":true'; then
+      echo "✓ Push permissions confirmed"
+    else
+      echo "⚠️  WARNING: Push permissions may be limited"
+      echo "   Permissions: $PERMISSIONS"
+    fi
+  else
+    echo "❌ Repository not accessible via API"
+    echo "   Response: $REPO_RESPONSE"
+    echo ""
+    echo "🚫 ABORTING: Cannot access target repository"
+    exit 1
+  fi
+else
+  echo "⚠️  Non-GitHub repository detected, skipping API permission check"
+fi
+
+# Test 3: Git credential functionality
+echo ""
+echo "=== TEST 3: Git Credential Testing ==="
+echo "Testing git credential configuration..."
+
+# Show current git config
+echo "Git configuration:"
+git config --global --list | grep -E "(user\.|credential\.|core\.askPass)" || echo "No relevant git config found"
+
+# Test git credential helper
+echo ""
+echo "Testing credential helper..."
+if [ "$USE_SSH" = "true" ]; then
+  echo "Using SSH authentication - testing SSH key access"
+  if ssh -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
+    echo "✓ SSH authentication working"
+  else
+    echo "❌ SSH authentication failed"
+    exit 1
+  fi
+else
+  echo "Testing HTTPS credential helper..."
+  # Create a minimal test to verify credentials work
+  TEST_REPO_URL="https://github.com/$REPO_PATH.git"
+  echo "Testing with URL: $TEST_REPO_URL"
+
+  # Test git ls-remote (read operation)
+  if git ls-remote "$TEST_REPO_URL" HEAD >/dev/null 2>&1; then
+    echo "✓ Git HTTPS authentication working (read access confirmed)"
+  else
+    echo "❌ Git HTTPS authentication failed"
+    echo "   Testing credential helper directly..."
+
+    # Debug credential helper
+    echo "url=https://github.com" | git credential fill 2>&1 || echo "Credential helper test completed"
+
+    echo ""
+    echo "🚫 ABORTING: Git authentication not working"
+    exit 1
+  fi
+fi
+
+{{else}}
+echo "⚠️ No repository configured for authentication setup"
+{{/if}}
+
+# Clone repository to get .taskmaster directory and project files
+echo ""
+echo "═══════════════════════════════════════════════════════════════"
+echo "║                    REPOSITORY SETUP                          ║"
+echo "═══════════════════════════════════════════════════════════════"
+
+{{#if repository}}
+# Repository information
+REPO_URL="{{repository.url}}"
+REPO_BRANCH="{{repository.branch}}"
+GITHUB_USER="{{repository.githubUser}}"
+
+echo "Cloning repository: $REPO_URL"
+echo "Branch: $REPO_BRANCH"
+echo "GitHub User: $GITHUB_USER"
+
+# Clone the repository to /workspace
+if [ -d "/workspace/.git" ]; then
+  echo "Repository already exists, pulling latest changes..."
+  cd /workspace
+
+  # Ensure we have the right remote configuration
+  git remote set-url origin "$REPO_URL"
+
+  echo "Fetching from origin..."
+  if ! git fetch origin; then
+    echo "❌ Failed to fetch from origin"
+    echo "🚫 ABORTING: Cannot fetch repository updates"
+    exit 1
+  fi
+
+  echo "Checking out branch: $REPO_BRANCH"
+  if ! git checkout "$REPO_BRANCH"; then
+    echo "❌ Failed to checkout branch: $REPO_BRANCH"
+    exit 1
+  fi
+
+  echo "Pulling latest changes..."
+  if ! git pull origin "$REPO_BRANCH"; then
+    echo "❌ Failed to pull latest changes"
+    exit 1
+  fi
+else
+  echo "Cloning repository..."
+  echo "DEBUG: Contents of /workspace before clone:"
+  ls -la /workspace
+
+  # Handle non-empty workspace directory by temporarily backing up existing files
+  if [ "$(ls -A /workspace 2>/dev/null)" ]; then
+    echo "Workspace is not empty, backing up existing files..."
+    BACKUP_DIR="/tmp/workspace-backup"
+    rm -rf "$BACKUP_DIR"
+    mkdir -p "$BACKUP_DIR"
+
+    # Backup existing files (like .gitconfig)
+    cp -r /workspace/. "$BACKUP_DIR/" 2>/dev/null || true
+
+    # Clear workspace for clean clone
+    rm -rf /workspace/*
+    rm -rf /workspace/.[^.]*  # Remove hidden files but keep . and ..
+
+    # Clone to temp directory first, then move contents
+    TEMP_CLONE_DIR="/tmp/repo-clone"
+    rm -rf "$TEMP_CLONE_DIR"
+
+    if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$TEMP_CLONE_DIR"; then
+      echo ""
+      echo "═══════════════════════════════════════════════════════════════"
+      echo "║                   REPOSITORY CLONE FAILED                    ║"
+      echo "═══════════════════════════════════════════════════════════════"
+      echo ""
+      echo "❌ Failed to clone repository: $REPO_URL"
+      echo "   Branch: $REPO_BRANCH"
+      echo ""
+      echo "Debugging information:"
+      echo "  • Git version: $(git --version)"
+      echo "  • Git config (user): $(git config --global user.name) <$(git config --global user.email)>"
+      echo "  • Git config (credential): $(git config --global credential.helper)"
+      echo "  • Environment variables:"
+      echo "    - GIT_TERMINAL_PROMPT: $GIT_TERMINAL_PROMPT"
+      echo "    - GIT_ASKPASS: $GIT_ASKPASS"
+      echo "    - SSH_ASKPASS: $SSH_ASKPASS"
+      echo ""
+      echo "🚫 DOCS GENERATION CANNOT PROCEED WITHOUT REPOSITORY"
+      echo ""
+      exit 1
+    fi
+
+    # Move cloned repository contents to workspace
+    echo "Moving repository contents to workspace..."
+    mv "$TEMP_CLONE_DIR"/* /workspace/ 2>/dev/null || true
+    mv "$TEMP_CLONE_DIR"/.[^.]* /workspace/ 2>/dev/null || true
+    rm -rf "$TEMP_CLONE_DIR"
+    cd /workspace
+
+    # Restore backed up files that don't conflict with repository
+    echo "Restoring non-conflicting workspace files..."
+    for file in "$BACKUP_DIR"/.gitconfig "$BACKUP_DIR"/.github-env "$BACKUP_DIR"/.git-credentials; do
+      if [ -f "$file" ]; then
+        cp "$file" /workspace/ 2>/dev/null || true
+        echo "✓ Restored: $(basename "$file")"
+      fi
+    done
+    cd /workspace
+  else
+    # Workspace is empty, clone directly
+    if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" /workspace; then
+      echo ""
+      echo "═══════════════════════════════════════════════════════════════"
+      echo "║                   REPOSITORY CLONE FAILED                    ║"
+      echo "═══════════════════════════════════════════════════════════════"
+      echo ""
+      echo "❌ Failed to clone repository: $REPO_URL"
+      echo "   Branch: $REPO_BRANCH"
+      echo ""
+      echo "Debugging information:"
+      echo "  • Git version: $(git --version)"
+      echo "  • Git config (user): $(git config --global user.name) <$(git config --global user.email)>"
+      echo "  • Git config (credential): $(git config --global credential.helper)"
+      echo "  • Environment variables:"
+      echo "    - GIT_TERMINAL_PROMPT: $GIT_TERMINAL_PROMPT"
+      echo "    - GIT_ASKPASS: $GIT_ASKPASS"
+      echo "    - SSH_ASKPASS: $SSH_ASKPASS"
+      echo ""
+      echo "🚫 DOCS GENERATION CANNOT PROCEED WITHOUT REPOSITORY"
+      echo ""
+      exit 1
+    fi
+    cd /workspace
+  fi
+fi
+
+echo "✓ Repository cloned successfully"
+
+# Configure git user after successful clone
+{{#if repository}}
+echo "=== POST-CLONE GIT CONFIGURATION ==="
+# Fix dubious ownership issue when repository is cloned as different user
+git config --global --add safe.directory /workspace
+echo "✓ Added /workspace to safe directories"
+
+git config --global user.name "{{repository.githubUser}}"
+git config --global user.email "{{repository.githubUser}}@users.noreply.github.com"
+echo "✓ Configured git user: {{repository.githubUser}}"
+{{/if}}
+
+# =============================================================================
+# TEST GITHUB WRITE ACCESS WITH ACTUAL BRANCH/PR CREATION
+# =============================================================================
+echo ""
+echo "═══════════════════════════════════════════════════════════════"
+echo "║                 GITHUB WRITE ACCESS TEST                     ║"
+echo "═══════════════════════════════════════════════════════════════"
+echo ""
+
+echo "=== TEST 4: GitHub Write Access Verification ==="
+echo "Creating test branch to verify write permissions..."
+
+# Create a unique test branch name
+TEST_BRANCH="docs-auth-test-$(date +%s)"
+TARGET_BRANCH="{{targetBranch}}"
+
+echo "Test branch: $TEST_BRANCH"
+echo "Target branch: $TARGET_BRANCH"
+
+# Create and push test branch
+cd /workspace
+if git checkout -b "$TEST_BRANCH"; then
+  echo "✓ Created test branch locally"
+
+  # Create a small test file
+  echo "# Authentication Test" > ".auth-test-$(date +%s).md"
+  echo "This file was created to test GitHub write access." >> ".auth-test-$(date +%s).md"
+  echo "Generated at: $(date)" >> ".auth-test-$(date +%s).md"
+
+  if git add ".auth-test-"*.md && git commit -m "Test: Verify GitHub write access"; then
+    echo "✓ Created test commit"
+
+    # Try to push the test branch
+    if git push origin "$TEST_BRANCH"; then
+      echo "✓ Successfully pushed test branch to GitHub"
+      echo "✓ Write access confirmed!"
+
+      # Clean up test branch immediately
+      echo "Cleaning up test branch..."
+      git checkout "$REPO_BRANCH"
+      git branch -D "$TEST_BRANCH" 2>/dev/null || true
+      git push origin --delete "$TEST_BRANCH" 2>/dev/null || echo "Test branch cleanup completed"
+      rm -f ".auth-test-"*.md 2>/dev/null || true
+
+      echo "✓ Test branch cleaned up"
+    else
+      echo "❌ Failed to push test branch to GitHub"
+      echo "   This indicates insufficient write permissions"
+      echo ""
+      echo "🚫 ABORTING: Cannot proceed without GitHub write access"
+      echo "   Docs generation requires the ability to create and push branches"
+      exit 1
+    fi
+  else
+    echo "❌ Failed to create test commit"
+    exit 1
+  fi
+else
+  echo "❌ Failed to create test branch"
+  exit 1
+fi
+
+echo ""
+echo "✅ ALL GITHUB AUTHENTICATION TESTS PASSED"
+echo "   • API access: ✓"
+echo "   • Repository access: ✓"
+echo "   • Git credentials: ✓"
+echo "   • Write permissions: ✓"
+echo ""
+echo "🚀 Proceeding with docs generation..."
+
+{{else}}
+echo ""
+echo "═══════════════════════════════════════════════════════════════"
+echo "║                NO REPOSITORY CONFIGURED                      ║"
+echo "═══════════════════════════════════════════════════════════════"
+echo ""
+echo "❌ CRITICAL ERROR: No repository configured for docs generation"
+echo ""
+echo "Docs generation requires:"
+echo "  • Repository URL to clone source code"
+echo "  • .taskmaster directory with tasks.json"
+echo "  • Git repository for committing generated docs"
+echo ""
+echo "🚫 DOCS GENERATION CANNOT PROCEED WITHOUT REPOSITORY"
+echo ""
+exit 1
+{{/if}}
+
+# Copy ConfigMap files to working directory (AFTER repository clone)
+echo "=== CONFIGMAP FILE SETUP ==="
+
+# Determine the working directory for Claude
+WORKING_DIR="{{working_dir}}"
+if [ -n "$WORKING_DIR" ] && [ "$WORKING_DIR" != "." ]; then
+  CLAUDE_WORK_DIR="/workspace/$WORKING_DIR"
+else
+  CLAUDE_WORK_DIR="/workspace"
+fi
+
+echo "Setting up files in Claude working directory: $CLAUDE_WORK_DIR"
+# Note: Directory should already exist from repository clone, but ensure it exists
+mkdir -p "$CLAUDE_WORK_DIR"
+
+# Copy all files from ConfigMap to working directory
+if [ -d "/config" ]; then
+  echo "Copying ConfigMap files to working directory..."
+
+  # Copy markdown files (force overwrite any existing files)
+  cp -f /config/*.md "$CLAUDE_WORK_DIR/" 2>/dev/null && echo "✓ Copied markdown files (overwriting existing)" || echo "! No markdown files to copy"
+
+  # Create enterprise managed settings for HIGHEST precedence (guaranteed override)
+  echo "=== ENTERPRISE MANAGED SETTINGS (Highest Precedence) ==="
+  mkdir -p /etc/claude-code
+  chmod 755 /etc/claude-code
+
+  # Copy Claude settings as enterprise managed settings for highest precedence
+  if [ -f "/config/claude-settings.json" ]; then
+    cp /config/claude-settings.json /etc/claude-code/managed-settings.json
+    # Set explicit permissions so Claude Code can read the enterprise settings
+    chmod 644 /etc/claude-code/managed-settings.json
+    echo "✓ Copied claude-settings.json as enterprise managed settings to /etc/claude-code/managed-settings.json"
+    echo "✓ Set readable permissions (644) for enterprise settings"
+  else
+    echo "❌ ERROR: Claude settings template not found in ConfigMap!"
+    echo "Expected: /config/claude-settings.json"
+    exit 1
+  fi
+
+  # Validate the enterprise settings JSON
+  if jq empty /etc/claude-code/managed-settings.json 2>/dev/null; then
+    echo "✓ Enterprise settings JSON is valid"
+    echo "✓ This will override ALL other Claude Code settings (highest precedence)"
+    echo "✓ Model configuration, tools, and hooks are all defined"
+
+    echo ""
+    echo "Enterprise settings contents:"
+    cat /etc/claude-code/managed-settings.json | jq . 2>/dev/null || cat /etc/claude-code/managed-settings.json
+  else
+    echo "❌ Enterprise settings JSON is invalid"
+    cat /etc/claude-code/managed-settings.json
+    exit 1
+  fi
+
+  echo ""
+  echo "=== UNIFIED CONFIGURATION: Enterprise Managed Settings ==="
+  echo "✓ All Claude Code configuration in one comprehensive settings file"
+  echo "✓ Model: claude-opus-4-20250514"
+  echo "✓ Hooks: Early test hooks + final PR creation hook"
+  echo "✓ Permissions: acceptEdits mode + --dangerously-skip-permissions flag"
+  echo "✓ No additional settings files needed"
+
+  # Copy all hook scripts from hooks directory
+  if [ -d "/config/hooks" ]; then
+    echo "Copying hook scripts..."
+    cp /config/hooks/*.sh "$CLAUDE_WORK_DIR/" 2>/dev/null && echo "✓ Copied hook scripts" || echo "! No hook scripts to copy"
+    chmod +x "$CLAUDE_WORK_DIR"/*.sh 2>/dev/null
+  else
+    echo "! No hooks directory found in ConfigMap"
+  fi
+
+  echo "✓ ConfigMap files copied to $CLAUDE_WORK_DIR"
+else
+  echo "⚠️  Warning: /config directory not found (ConfigMap not mounted?)"
+fi
+
+echo '=== WORKSPACE VALIDATION ==='
+
+# Check for required files in Claude's working directory
+MISSING_FILES=""
+REQUIRED_FILES="CLAUDE.md .stop-hook-docs-pr.sh"
+
+echo "Checking for required files..."
+for file in $REQUIRED_FILES; do
+  if [ ! -f "$CLAUDE_WORK_DIR/$file" ]; then
+    echo "ERROR: Missing required file: $CLAUDE_WORK_DIR/$file"
+    MISSING_FILES="$MISSING_FILES $file"
+  else
+    echo "✓ Found: $CLAUDE_WORK_DIR/$file"
+    # Show file size for verification
+    size=$(wc -c < "$CLAUDE_WORK_DIR/$file" 2>/dev/null || echo "0")
+    echo "  File size: $size bytes"
+  fi
+done
+
+# If any files are missing, abort
+if [ -n "$MISSING_FILES" ]; then
+  echo ""
+  echo "═══════════════════════════════════════════════════════════════"
+  echo "║                 WORKSPACE VALIDATION FAILED                  ║"
+  echo "═══════════════════════════════════════════════════════════════"
+  echo ""
+  echo "The following required files are missing:"
+  for missing in $MISSING_FILES; do
+    case "$missing" in
+      "CLAUDE.md")
+        echo "  ❌ $missing - Main prompt file with task instructions"
+        ;;
+      ".stop-hook-docs-pr.sh")
+        echo "  ❌ $missing - Post-completion hook for auto-commit and PR creation"
+        ;;
+      *)
+        echo "  ❌ $missing"
+        ;;
+    esac
+  done
+  echo ""
+  echo "These files should have been created by the ConfigMap setup process."
+  echo "Claude will NOT be started to avoid wasting API credits."
+  echo ""
+  exit 1
+fi
+
+echo "✓ All required files present. Workspace is valid."
+
+echo '=== DOCUMENTATION GENERATION DIAGNOSTICS ==='
+echo "Project directory: $CLAUDE_WORK_DIR"
+echo "Project directory contents:"
+ls -la "$CLAUDE_WORK_DIR"
+echo ""
+
+# Check for REQUIRED .taskmaster directory and tasks.json
+CRITICAL_MISSING=""
+
+if [ ! -d "$CLAUDE_WORK_DIR/.taskmaster" ]; then
+  echo "✗ CRITICAL ERROR: .taskmaster directory not found!"
+  CRITICAL_MISSING="$CRITICAL_MISSING .taskmaster"
+else
+  echo "✓ Found .taskmaster directory"
+  if [ ! -f "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" ]; then
+    echo "✗ CRITICAL ERROR: tasks/tasks.json not found!"
+    CRITICAL_MISSING="$CRITICAL_MISSING tasks.json"
+  else
+    echo "✓ Found tasks/tasks.json"
+    task_count=$(jq '.tasks | length' "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" 2>/dev/null || echo "unknown")
+    echo "  Task count: $task_count"
+  fi
+fi
+
+# Check git repository (REQUIRED for docs generation)
+# Note: Git repository is always at /workspace root, not the Claude working directory
+if [ ! -d "/workspace/.git" ]; then
+  echo "✗ CRITICAL ERROR: No git repository found!"
+  CRITICAL_MISSING="$CRITICAL_MISSING git-repository"
+else
+  echo "✓ Found: git repository"
+fi
+
+# ABORT if any critical components are missing
+if [ -n "$CRITICAL_MISSING" ]; then
+  echo ""
+  echo "═══════════════════════════════════════════════════════════════"
+  echo "║                CRITICAL VALIDATION FAILED                    ║"
+  echo "═══════════════════════════════════════════════════════════════"
+  echo ""
+  echo "❌ CRITICAL COMPONENTS MISSING:"
+  for missing in $CRITICAL_MISSING; do
+    case "$missing" in
+      ".taskmaster")
+        echo "  • .taskmaster directory - Required for task definitions"
+        ;;
+      "tasks.json")
+        echo "  • tasks.json file - Required for documentation generation"
+        ;;
+      "git-repository")
+        echo "  • Git repository - Required for committing and pushing docs"
+        ;;
+      *)
+        echo "  • $missing"
+        ;;
+    esac
+  done
+  echo ""
+  echo "🚫 DOCS GENERATION CANNOT PROCEED WITHOUT THESE COMPONENTS"
+  echo ""
+  echo "This indicates a fundamental setup issue:"
+  echo "  - Repository may not have been cloned properly"
+  echo "  - .taskmaster directory missing from repository"
+  echo "  - Git authentication may have failed"
+  echo ""
+  echo "Claude will NOT be started to avoid wasting API credits."
+  echo ""
+  exit 1
+fi
+
+echo '=== CLAUDE EXECUTION ==='
+
+# Export necessary variables for the stop hook
+export SERVICE_NAME="{{service_name}}"
+export TARGET_BRANCH="{{targetBranch}}"
+export SOURCE_BRANCH="{{repository.branch}}"
+export WORKING_DIR="{{working_dir}}"
+export GITHUB_USER="{{repository.githubUser}}"
+
+# Enterprise managed settings provide comprehensive configuration:
+# - Model selection, tools, hooks, environment variables
+# - Combined with --dangerously-skip-permissions flag for guaranteed permission bypass
+echo "✓ Using enterprise managed settings for complete configuration + permission bypass flag"
+
+# Change to project directory before running Claude
+cd "$CLAUDE_WORK_DIR"
+echo "Changed to directory: $(pwd)"
+
+# Verify we're in the correct directory and have required files
+echo "=== WORKING DIRECTORY VERIFICATION ==="
+echo "Current working directory: $(pwd)"
+echo "Expected directory: $CLAUDE_WORK_DIR"
+if [ "$(pwd)" != "$CLAUDE_WORK_DIR" ]; then
+  echo "❌ ERROR: Failed to change to correct working directory!"
+  echo "Attempting to change directory again..."
+  cd "$CLAUDE_WORK_DIR" || exit 1
+  echo "✓ Successfully changed to: $(pwd)"
+fi
+
+# Print all the content Claude will receive
+echo ""
+echo "════════════════════════════════════════════════════════════════"
+echo "║                    FULL CONTENT PREVIEW                       ║"
+echo "════════════════════════════════════════════════════════════════"
+echo ""
+
+echo "=== 1. ENTERPRISE MANAGED SETTINGS (/etc/claude-code/managed-settings.json) ==="
+if [ -f "/etc/claude-code/managed-settings.json" ]; then
+  echo "Enterprise settings contents:"
+  cat "/etc/claude-code/managed-settings.json" | jq . 2>/dev/null || cat "/etc/claude-code/managed-settings.json"
+else
+  echo "❌ Enterprise settings file not found!"
+fi
+echo ""
+
+echo "=== 2. HOOK SCRIPT (.stop-hook-docs-pr.sh) ==="
+if [ -f ".stop-hook-docs-pr.sh" ]; then
+  echo "Hook script contents:"
+  cat ".stop-hook-docs-pr.sh"
+else
+  echo "❌ Hook script not found!"
+fi
+echo ""
+
+echo "=== 3. CLAUDE PROMPT (CLAUDE.md) ==="
+if [ -f "CLAUDE.md" ]; then
+  echo "Full CLAUDE.md contents:"
+  cat "CLAUDE.md"
+else
+  echo "❌ CLAUDE.md not found!"
+fi
+echo ""
+
+echo "=== 4. ADDITIONAL MARKDOWN FILES ==="
+echo "Other markdown files in working directory:"
+for md_file in *.md; do
+  if [ -f "$md_file" ] && [ "$md_file" != "CLAUDE.md" ]; then
+    echo ""
+    echo "--- FILE: $md_file ---"
+    cat "$md_file"
+    echo ""
+  fi
+done
+echo ""
+
+echo "=== 5. TASKMASTER TASKS.JSON ==="
+if [ -f ".taskmaster/tasks/tasks.json" ]; then
+  echo "Tasks.json contents:"
+  cat ".taskmaster/tasks/tasks.json" | jq . 2>/dev/null || cat ".taskmaster/tasks/tasks.json"
+else
+  echo "❌ tasks.json not found!"
+fi
+echo ""
+
+echo "════════════════════════════════════════════════════════════════"
+echo "║                    END CONTENT PREVIEW                        ║"
+echo "════════════════════════════════════════════════════════════════"
+echo ""
+
+# Build Claude command with --dangerously-skip-permissions to bypass all permission prompts
+# This is simpler and more reliable than enterprise managed settings for permission control
+CLAUDE_CMD="claude -p --output-format stream-json --verbose"
+
+echo "=== 6. ENVIRONMENT VARIABLES ==="
+echo "Environment variables Claude will see:"
+env | grep -E '^(CLAUDE|ANTHROPIC|OTEL|SERVICE_NAME|TARGET_BRANCH|SOURCE_BRANCH|WORKING_DIR|GITHUB|NODE_ENV|DISABLE)' | sort || echo "No relevant env vars found"
+echo ""
+
+echo "=== 7. WORKING DIRECTORY STATE ==="
+echo "Current working directory: $(pwd)"
+echo "Directory contents:"
+ls -la
+echo ""
+echo "Git status:"
+git status 2>/dev/null || echo "Not a git repository or git not available"
+echo ""
+
+echo "════════════════════════════════════════════════════════════════"
+echo "║                    STARTING CLAUDE EXECUTION                  ║"
+echo "════════════════════════════════════════════════════════════════"
+echo "Command: $CLAUDE_CMD"
+echo "Note: Claude will automatically read CLAUDE.md from the working directory"
+echo "Starting Claude execution..."
+echo "=========================="
+
+# Run Claude with proper separation of memory vs prompt
+# CLAUDE.md = Project memory (automatically loaded by Claude)
+# Prompt = Task-specific instruction from template
+
+# Load the prompt template content
+PROMPT="{{prompt_content}}"
+
+echo "=== 8. FINAL EXECUTION ==="
+echo "CLAUDE.md (project memory): Will be automatically loaded by Claude"
+echo "Prompt (task instruction): $PROMPT"
+echo "=== END EXECUTION INFO ==="
+echo ""
+
+exec $CLAUDE_CMD "$PROMPT"
