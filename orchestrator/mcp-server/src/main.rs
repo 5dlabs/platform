@@ -1,260 +1,347 @@
-mod orchestrator_tools;
+use anyhow::{anyhow, Context, Result};
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+use std::collections::HashMap;
+use std::env;
+use std::process::{Command, Stdio};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::runtime::Runtime;
 
-use anyhow::Result;
-use rmcp::{
-    transport::io::stdio,
-    ServiceExt,
-    ServerHandler,
-    Error as McpError,
-    model::{
-        CallToolResult,
-        Content,
-        ServerInfo,
-        ServerCapabilities,
-        ProtocolVersion,
-        Implementation,
-        PaginatedRequestParam,
-        ListResourcesResult,
-        ListResourceTemplatesResult,
-        ListPromptsResult,
-        ReadResourceRequestParam,
-        ReadResourceResult,
-        GetPromptRequestParam,
-        GetPromptResult,
-    },
-    service::{RequestContext, RoleServer},
-    tool,
-};
-use schemars::JsonSchema;
-use serde::Deserialize;
+mod tools;
 
-#[derive(Clone)]
-struct OrchestratorService;
-
-#[derive(Debug, Deserialize, JsonSchema)]
-#[serde(default)]
-#[schemars(title = "InitDocsArgs")]
-struct InitDocsArgs {
-    #[schemars(description = "Claude model to use ('sonnet' or 'opus', default: 'opus')")]
-    model: Option<String>,
-    #[schemars(description = "Working directory containing .taskmaster folder (auto-detected from TASKMASTER_ROOT env var if not specified)")]
-    working_directory: Option<String>,
-    #[schemars(description = "Overwrite existing documentation (default: false)")]
-    force: Option<bool>,
-    #[schemars(description = "Generate docs for specific task only (default: generates for all tasks)")]
-    task_id: Option<u32>,
+// Custom error type for production-ready error handling.
+#[derive(Debug, Serialize)]
+struct RpcError {
+    code: i32,
+    message: String,
+    data: Option<Value>,
 }
 
-impl Default for InitDocsArgs {
-    fn default() -> Self {
-        Self {
-            model: Some("opus".to_string()),
-            working_directory: None,
-            force: Some(false),
-            task_id: None,
-        }
-    }
+// JSON-RPC Success Response structure.
+#[derive(Serialize)]
+struct RpcSuccessResponse {
+    jsonrpc: String,
+    result: Value,
+    id: Option<Value>,
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
-#[serde(default)]
-#[schemars(title = "PingArgs")]
-struct PingArgs {
-    #[schemars(description = "Dummy parameter for no-parameter tools")]
-    random_string: Option<String>,
+// JSON-RPC Error Response structure.
+#[derive(Serialize)]
+struct RpcErrorResponse {
+    jsonrpc: String,
+    error: RpcError,
+    id: Option<Value>,
 }
 
-impl Default for PingArgs {
-    fn default() -> Self {
-        Self {
-            random_string: Some("test".to_string()),
-        }
-    }
+// JSON-RPC Request structure.
+#[derive(Deserialize)]
+struct RpcRequest {
+    #[allow(dead_code)]
+    jsonrpc: String,
+    method: String,
+    params: Option<Value>,
+    id: Option<Value>,
 }
 
-#[tool(tool_box)]
-impl OrchestratorService {
-    #[tool(description = "Initialize documentation for Task Master tasks using Claude\n\n**Recommended Usage**: For most cases, call without parameters to use auto-detection from TASKMASTER_ROOT env var.\n\n**Examples**:\n- All tasks with defaults: init_docs()\n- Specific model: init_docs({model: 'opus'})\n- Specific task: init_docs({task_id: 5})\n- Custom directory: init_docs({working_directory: '/absolute/path/to/project'})\n- Force overwrite: init_docs({force: true})\n- Full specification: init_docs({model: 'opus', working_directory: '/path/to/project', force: true, task_id: 5})\n\n**Parameters (all optional with robust defaults)**:\n- model: 'opus' (default) | 'sonnet' - Claude model to use\n- working_directory: auto-detected from TASKMASTER_ROOT env var (default) | '/absolute/path' - must be absolute path if provided\n- force: false (default) | true - set true to overwrite existing docs\n- task_id: null (default, generates docs for all tasks) | number - generate docs for specific task only\n\n**Robust Defaults Applied**:\n- No parameters uses: model='opus', force=false, auto-detect working_directory, all tasks\n- Missing parameters are automatically filled with safe defaults\n- All parameter combinations are supported\n\n**Common Errors & Fixes**:\n- If working_directory fails: Ensure path exists, is absolute, and has no trailing slash\n- If auto-detection fails: Set TASKMASTER_ROOT in your MCP config env section\n- Invalid model: Must be 'sonnet' or 'opus'\n- Directory not found: Verify the path is accessible and contains a .taskmaster folder")]
-    async fn init_docs(
-        &self,
-        #[tool(aggr)] args: InitDocsArgs,
-    ) -> Result<CallToolResult, McpError> {
-                // Log raw input for debugging
-        eprintln!("DEBUG: MCP init_docs called with raw args: {:?}", args);
-
-        // Provide robust defaults and validate model parameter
-        let model = args.model.as_deref().unwrap_or("opus");
-        if !["sonnet", "opus"].contains(&model) {
-            return Err(McpError::invalid_params(
-                format!("Invalid model '{}' - must be 'sonnet' or 'opus'. See tool description for examples.", model),
-                None
-            ));
-        }
-
-        // Log the resolved parameters for debugging
-        eprintln!("INFO: MCP init_docs called with resolved parameters:");
-        eprintln!("  model: {}", model);
-        eprintln!("  working_directory: {:?}", args.working_directory);
-        eprintln!("  force: {:?}", args.force);
-        eprintln!("  task_id: {:?}", args.task_id);
-
-        // Validate working_directory if provided
-        let working_directory = args.working_directory.as_deref();
-        if let Some(dir) = working_directory {
-            if dir.ends_with('/') {
-                return Err(McpError::invalid_params(
-                    "working_directory should not end with a trailing slash. Remove the '/' and try again.".to_string(),
-                    None
-                ));
-            }
-            if !dir.starts_with('/') {
-                return Err(McpError::invalid_params(
-                    "working_directory must be an absolute path starting with '/'. Example: '/path/to/project'".to_string(),
-                    None
-                ));
-            }
-            // Check if directory exists
-            match std::fs::metadata(dir) {
-                Ok(meta) if meta.is_dir() => {},
-                Ok(_) => return Err(McpError::invalid_params(
-                    format!("'{}' exists but is not a directory. Please provide a valid directory path.", dir),
-                    None
-                )),
-                Err(e) => return Err(McpError::invalid_params(
-                    format!("Directory '{}' not found or inaccessible: {}. Verify the path and permissions.", dir, e),
-                    None
-                )),
-            }
-
-            // Check for .taskmaster folder
-            let taskmaster_path = format!("{}/.taskmaster", dir);
-            if !std::path::Path::new(&taskmaster_path).is_dir() {
-                return Err(McpError::invalid_params(
-                    format!("No '.taskmaster' folder found in '{}'. Ensure this is a valid Task Master project directory.", dir),
-                    None
-                ));
-            }
-        }
-
-        // Apply robust defaults
-        let force = args.force.unwrap_or(false);
-        let task_id = args.task_id;
-
-        eprintln!("INFO: Calling orchestrator_tools::init_docs with:");
-        eprintln!("  model: '{}' (type: &str)", model);
-        eprintln!("  working_directory: {:?}", working_directory);
-        eprintln!("  force: {}", force);
-        eprintln!("  task_id: {:?}", task_id);
-
-        match orchestrator_tools::init_docs(model, working_directory, force, task_id) {
-            Ok(output) => Ok(CallToolResult::success(vec![Content::text(output)])),
-            Err(e) => {
-                // Provide more specific error messages
-                let error_msg = if e.to_string().contains("No such file or directory") {
-                    format!("Directory not found: {}. Please check the working_directory path or TASKMASTER_ROOT env var.\nTip: Use absolute paths without trailing slashes. See tool description for examples.", e)
-                } else if e.to_string().contains("tasks.json") {
-                    format!("Task Master tasks.json not found: {}. Please ensure you're in a valid Task Master project directory.\nIf using auto-detection, verify TASKMASTER_ROOT is set correctly.", e)
-                } else if e.to_string().contains("orchestrator command") {
-                    format!("Orchestrator CLI not found: {}. Please ensure the orchestrator CLI is installed and in PATH.\nTip: Install with cargo install --path orchestrator/orchestrator-cli", e)
-                } else {
-                    format!("Documentation generation failed: {}. See tool description for common fixes.", e)
-                };
-
-                Err(McpError::internal_error(error_msg, None))
-            }
-        }
+// Helper to run orchestrator CLI command and capture output.
+fn run_orchestrator_cli(args: &[&str]) -> Result<String> {
+    let mut cmd = Command::new("orchestrator-cli");
+    cmd.args(args);
+    cmd.stderr(Stdio::piped());
+    let output = cmd.output().context("Failed to execute orchestrator-cli")?;
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr).to_string();
+        return Err(anyhow!("orchestrator-cli failed: {}", err));
     }
-
-    #[tool(description = "Test MCP server connectivity and configuration\n\nReturns server status, environment info, and validates orchestrator CLI availability.")]
-    async fn ping(
-        &self,
-        #[tool(aggr)] _args: PingArgs,
-    ) -> Result<CallToolResult, McpError> {
-        eprintln!("DEBUG: MCP ping called");
-        match orchestrator_tools::ping_test() {
-            Ok(status) => Ok(CallToolResult::success(vec![Content::text(status)])),
-            Err(e) => Err(McpError::internal_error(format!("Ping failed: {}", e), None)),
-        }
-    }
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
-#[tool(tool_box)]
-impl ServerHandler for OrchestratorService {
-    fn get_info(&self) -> ServerInfo {
-        let capabilities = ServerCapabilities::builder()
-            .enable_tools()
-            .build();
+// Capabilities advertised by the server with full MCP tool schemas.
+fn get_capabilities() -> Value {
+    tools::get_all_tool_schemas()
+}
 
-        ServerInfo {
-            protocol_version: ProtocolVersion::V_2024_11_05,
-            capabilities,
-            server_info: Implementation {
-                name: "Orchestrator MCP Server".to_string(),
-                version: "0.1.0".to_string(),
-            },
-            instructions: Some("This server provides tools to initialize documentation for Task Master tasks using Claude.".to_string()),
-        }
-    }
-
-    async fn list_resources(
-        &self,
-        _request: PaginatedRequestParam,
-        _context: RequestContext<RoleServer>,
-    ) -> Result<ListResourcesResult, McpError> {
-        Ok(ListResourcesResult {
-            resources: vec![],
-            next_cursor: None,
+// Extract parameters from JSON value into HashMap
+fn extract_params(params: Option<&Value>) -> HashMap<String, Value> {
+    params
+        .and_then(|p| {
+            p.as_object()
+                .map(|o| o.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
         })
-    }
+        .unwrap_or_default()
+}
 
-    async fn read_resource(
-        &self,
-        _request: ReadResourceRequestParam,
-        _context: RequestContext<RoleServer>,
-    ) -> Result<ReadResourceResult, McpError> {
-        Err(McpError::resource_not_found("No resources available".to_string(), None))
-    }
+// Handle MCP protocol methods
+fn handle_mcp_protocol_methods(
+    method: &str,
+    params_map: &HashMap<String, Value>,
+) -> Option<Result<Value>> {
+    match method {
+        "initialize" => {
+            // MCP initialization - validate required fields and return proper server capabilities
+            let _protocol_version = params_map
+                .get("protocolVersion")
+                .and_then(|v| v.as_str())
+                .unwrap_or("2024-11-05");
 
-    async fn list_prompts(
-        &self,
-        _request: PaginatedRequestParam,
-        _context: RequestContext<RoleServer>,
-    ) -> Result<ListPromptsResult, McpError> {
-        Ok(ListPromptsResult {
-            prompts: vec![],
-            next_cursor: None,
-        })
-    }
+            // Validate that required fields are present (as per MCP schema)
+            if params_map.get("capabilities").is_none()
+                || params_map.get("clientInfo").is_none()
+                || params_map.get("protocolVersion").is_none()
+            {
+                return Some(Err(anyhow!("Missing required initialize parameters: capabilities, clientInfo, and protocolVersion are required")));
+            }
 
-    async fn get_prompt(
-        &self,
-        _request: GetPromptRequestParam,
-        _context: RequestContext<RoleServer>,
-    ) -> Result<GetPromptResult, McpError> {
-        Err(McpError::invalid_params("No prompts available".to_string(), None))
-    }
-
-    async fn list_resource_templates(
-        &self,
-        _request: PaginatedRequestParam,
-        _context: RequestContext<RoleServer>,
-    ) -> Result<ListResourceTemplatesResult, McpError> {
-        Ok(ListResourceTemplatesResult {
-            resource_templates: vec![],
-            next_cursor: None,
-        })
+            Some(Ok(json!({
+                "protocolVersion": "2024-11-05",
+                "capabilities": {
+                    "tools": {
+                        "listChanged": true
+                    }
+                },
+                "serverInfo": {
+                    "name": "orchestrator-mcp-server",
+                    "title": "Orchestrator MCP Server",
+                    "version": "1.0.0"
+                }
+            })))
+        }
+        "notifications/initialized" => {
+            // MCP initialized notification - no response should be sent
+            None
+        }
+        method if method.starts_with("notifications/") => {
+            // Debug: catch any notifications we might be missing
+            None
+        }
+        "ping" => {
+            // MCP ping request - respond with empty object for connection health
+            Some(Ok(json!({})))
+        }
+        "tools/list" => {
+            // Return list of available tools with schemas
+            Some(Ok(get_capabilities()))
+        }
+        _ => None,
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    let service = OrchestratorService;
+// Handle orchestrator tool methods
+fn handle_orchestrator_tools(
+    method: &str,
+    params_map: &HashMap<String, Value>,
+) -> Option<Result<Value>> {
+    match method {
+        "ping" => {
+            // Test connectivity and show tool information
+            Some(Ok(json!({
+                "status": "OK",
+                "server": "orchestrator-mcp-server",
+                "version": "1.0.0",
+                "environment": {
+                    "working_directory": env::current_dir().unwrap_or_default().to_string_lossy(),
+                    "orchestrator_cli_available": std::path::Path::new("./target/release/orchestrator-cli").exists()
+                },
+                "usage_examples": {
+                    "init_docs": [
+                        "init_docs()",
+                        "init_docs({model: 'opus'})",
+                        "init_docs({working_directory: '/absolute/path/to/project'})",
+                        "init_docs({task_id: 5})",
+                        "init_docs({force: true})"
+                    ]
+                }
+            })))
+        }
+        "init_docs" => {
+            // Initialize documentation for Task Master tasks
+            eprintln!("DEBUG: MCP init_docs called with raw args: {:?}", params_map);
 
-    // Start the server and get a handle
-    let server_handle = service.serve(stdio()).await?;
+            // Extract parameters with defaults
+            let model = params_map
+                .get("model")
+                .and_then(|v| v.as_str())
+                .unwrap_or("opus");
 
-    // Wait for the server to complete (keeps it running)
-    server_handle.waiting().await?;
+            let working_directory = params_map
+                .get("working_directory")
+                .and_then(|v| v.as_str());
+
+            let force = params_map
+                .get("force")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let task_id = params_map
+                .get("task_id")
+                .and_then(|v| v.as_u64());
+
+            // Validate model parameter
+            if !["opus", "sonnet"].contains(&model) {
+                return Some(Err(anyhow!("Invalid model '{}'. Must be 'opus' or 'sonnet'", model)));
+            }
+
+            // Build CLI arguments
+            let mut args = vec!["task", "init-docs"];
+
+            // Add model
+            args.extend(&["--model", model]);
+
+            // Add working directory if specified
+            if let Some(wd) = working_directory {
+                args.extend(&["--working-directory", wd]);
+            }
+
+            // Add force flag if true
+            if force {
+                args.push("--force");
+            }
+
+            // Add task ID if specified
+            let task_id_str = task_id.map(|tid| tid.to_string());
+            if let Some(ref tid_str) = task_id_str {
+                args.extend(&["--task-id", tid_str]);
+            }
+
+            eprintln!("DEBUG: Running orchestrator-cli with args: {:?}", args);
+
+            // Execute the CLI command
+            match run_orchestrator_cli(&args) {
+                Ok(output) => {
+                    Some(Ok(json!({
+                        "success": true,
+                        "message": "Documentation generation initiated successfully",
+                        "output": output,
+                        "parameters_used": {
+                            "model": model,
+                            "working_directory": working_directory,
+                            "force": force,
+                            "task_id": task_id
+                        }
+                    })))
+                }
+                Err(e) => {
+                    Some(Err(anyhow!("Failed to execute init-docs: {}", e)))
+                }
+            }
+        }
+        _ => None,
+    }
+}
+
+// Handle tool invocation
+fn handle_tool_invocation(params_map: &HashMap<String, Value>) -> Result<Value> {
+    let name = params_map
+        .get("name")
+        .and_then(|v| v.as_str())
+        .ok_or(anyhow!("Missing tool name"))?;
+    let default_args = json!({});
+    let arguments = params_map.get("arguments").unwrap_or(&default_args);
+
+    // Extract arguments as a map for the tool handlers
+    let args_map = extract_params(Some(arguments));
+
+    // Try orchestrator tools
+    if let Some(result) = handle_orchestrator_tools(name, &args_map) {
+        match result {
+            Ok(content) => Ok(json!({
+                "content": [
+                    {
+                        "type": "text",
+                        "text": serde_json::to_string_pretty(&content).unwrap_or_else(|_| content.to_string())
+                    }
+                ]
+            })),
+            Err(e) => Err(e),
+        }
+    } else {
+        Err(anyhow!("Unknown tool: {}", name))
+    }
+}
+
+// Handle core MCP methods (including tool calls)
+fn handle_core_methods(
+    method: &str,
+    params_map: &HashMap<String, Value>,
+) -> Option<Result<Value>> {
+    match method {
+        "tools/call" => Some(handle_tool_invocation(params_map)),
+        _ => None,
+    }
+}
+
+// Handler for each method (following MCP specification).
+fn handle_method(method: &str, params: Option<&Value>) -> Option<Result<Value>> {
+    let params_map = extract_params(params);
+
+    // Try MCP protocol methods FIRST (ping, initialize, tools/list, etc.)
+    if let Some(result) = handle_mcp_protocol_methods(method, &params_map) {
+        return Some(result); // Found a matching MCP method
+    }
+
+    // Special handling for notifications that should return None
+    if method.starts_with("notifications/") {
+        return None; // Notifications should not have responses
+    }
+
+    // Try core methods (tools/call)
+    if let Some(result) = handle_core_methods(method, &params_map) {
+        return Some(result);
+    }
+
+    // Try orchestrator tools directly (for debugging)
+    if let Some(result) = handle_orchestrator_tools(method, &params_map) {
+        return Some(result);
+    }
+
+    Some(Err(anyhow!("Unknown method: {}", method)))
+}
+
+// Main async RPC loop over stdio (from MCP specification).
+async fn rpc_loop() -> Result<()> {
+    let stdin = tokio::io::stdin();
+    let reader = BufReader::new(stdin);
+    let mut lines = reader.lines();
+    let mut stdout = tokio::io::stdout();
+
+    while let Some(line) = lines.next_line().await? {
+        let request: RpcRequest = serde_json::from_str(&line).context("Invalid JSON request")?;
+
+        let result = handle_method(&request.method, request.params.as_ref());
+        if let Some(method_result) = result {
+            let resp_json = match method_result {
+                Ok(res) => {
+                    let response = RpcSuccessResponse {
+                        jsonrpc: "2.0".to_string(),
+                        result: res,
+                        id: request.id,
+                    };
+                    serde_json::to_string(&response)?
+                }
+                Err(err) => {
+                    let response = RpcErrorResponse {
+                        jsonrpc: "2.0".to_string(),
+                        error: RpcError {
+                            code: -32600,
+                            message: err.to_string(),
+                            data: None,
+                        },
+                        id: request.id,
+                    };
+                    serde_json::to_string(&response)?
+                }
+            };
+            stdout.write_all((resp_json + "\n").as_bytes()).await?;
+            stdout.flush().await?;
+        }
+        // If result is None, it's a notification - no response should be sent
+    }
+    Ok(())
+}
+
+fn main() -> Result<()> {
+    let rt = Runtime::new()?;
+    rt.block_on(rpc_loop())?;
 
     Ok(())
 }

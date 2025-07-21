@@ -5,13 +5,17 @@
 			"args": ["-y",  "task-master-ai"]
 		},
 		"orchestrator": {
-			"command": "/Users/jonathonfritz/platform/orchestrator/target/debug/mcp-server",
+			"command": "/Users/jonathonfritz/platform/orchestrator/target/release/mcp-server",
 			"args": [],
 			"env": {
-			  "ORCHESTRATOR_API_URL": "http://orchestrator.orchestrator.svc.cluster.local/api/v1",
-			  "TASKMASTER_ROOT": "/Users/jonathonfritz/platform/-projects/example-express"
+			  "ORCHESTRATOR_API_URL": "http://orchestrator.orchestrator.svc.cluster.local/api/v1"
 			}
-		}
+		},
+		"rust-docs-new": {
 
+				"type": "sse",
+				"url": "http://rustdocs-mcp-rust-docs-mcp-server.mcp.svc.cluster.local:3000/sse"
+
+		}
 	}
 }

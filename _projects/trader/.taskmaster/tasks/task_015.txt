@@ -1,0 +1,193 @@
+# Task ID: 15
+# Title: Implement Performance Benchmarking and Monitoring Tools
+# Status: pending
+# Dependencies: 3, 6, 12
+# Priority: medium
+# Description: Create tools for benchmarking and monitoring system performance, including latency measurements and MEV avoidance rates
+# Details:
+1. Implement performance benchmarking tools:
+   - Measure trade execution latency
+   - Track slippage accuracy
+   - Calculate MEV avoidance rates
+   - Monitor node health and circuit breaker status
+
+2. Create monitoring dashboard:
+   - Real-time latency metrics
+   - System health indicators
+   - Circuit breaker status
+   - Performance statistics
+
+3. Implement alerting system:
+   - Notify when latency exceeds thresholds
+   - Alert on circuit breaker activation
+   - Report on MEV protection effectiveness
+
+Example implementation:
+```rust
+pub struct PerformanceMonitor {
+    quest_db: Arc<QuestDbClient>,
+    redis: Pool<RedisConnectionManager>,
+    system_health: Arc<SystemHealth>,
+}
+
+pub struct PerformanceMetrics {
+    trade_latency_p50: Duration,
+    trade_latency_p95: Duration,
+    trade_latency_p99: Duration,
+    node_latency_p99: Duration,
+    slippage_accuracy: f64,
+    mev_avoidance_rate: f64,
+    circuit_breaker_status: CircuitBreakerState,
+    uptime_percentage: f64,
+}
+
+impl PerformanceMonitor {
+    pub async fn collect_metrics(&self) -> Result<PerformanceMetrics> {
+        // Collect trade latency metrics from QuestDB
+        let trade_latencies = self.quest_db.get_trade_latencies(Duration::from_secs(3600)).await?;
+        let trade_latency_p50 = self.calculate_percentile(&trade_latencies, 50)?;
+        let trade_latency_p95 = self.calculate_percentile(&trade_latencies, 95)?;
+        let trade_latency_p99 = self.calculate_percentile(&trade_latencies, 99)?;
+        
+        // Collect node latency metrics
+        let node_latencies = self.quest_db.get_node_latencies(Duration::from_secs(3600)).await?;
+        let node_latency_p99 = self.calculate_percentile(&node_latencies, 99)?;
+        
+        // Calculate slippage accuracy
+        let slippage_accuracy = self.calculate_slippage_accuracy().await?;
+        
+        // Calculate MEV avoidance rate
+        let mev_avoidance_rate = self.calculate_mev_avoidance_rate().await?;
+        
+        // Get circuit breaker status
+        let circuit_breaker_status = self.system_health.get_circuit_breaker_state().await;
+        
+        // Calculate uptime percentage
+        let uptime_percentage = self.calculate_uptime_percentage().await?;
+        
+        Ok(PerformanceMetrics {
+            trade_latency_p50,
+            trade_latency_p95,
+            trade_latency_p99,
+            node_latency_p99,
+            slippage_accuracy,
+            mev_avoidance_rate,
+            circuit_breaker_status,
+            uptime_percentage,
+        })
+    }
+    
+    fn calculate_percentile(&self, values: &[Duration], percentile: u8) -> Result<Duration> {
+        if values.is_empty() {
+            return Err(Error::InsufficientData("No latency data available".into()));
+        }
+        
+        let mut sorted_values = values.to_vec();
+        sorted_values.sort();
+        
+        let index = (percentile as f64 / 100.0 * (sorted_values.len() - 1) as f64).round() as usize;
+        Ok(sorted_values[index])
+    }
+    
+    async fn calculate_slippage_accuracy(&self) -> Result<f64> {
+        // Query trades and compare expected vs actual slippage
+        // ...
+    }
+    
+    async fn calculate_mev_avoidance_rate(&self) -> Result<f64> {
+        // Calculate percentage of trades that successfully avoided MEV attacks
+        // ...
+    }
+    
+    async fn calculate_uptime_percentage(&self) -> Result<f64> {
+        // Calculate system uptime based on health check history
+        // ...
+    }
+    
+    pub async fn start_monitoring(&self) -> JoinHandle<()> {
+        let monitor = self.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(60)); // Update every minute
+            
+            loop {
+                interval.tick().await;
+                match monitor.collect_metrics().await {
+                    Ok(metrics) => {
+                        // Store metrics in QuestDB
+                        if let Err(e) = monitor.quest_db.store_performance_metrics(&metrics).await {
+                            eprintln!("Failed to store performance metrics: {}", e);
+                        }
+                        
+                        // Check for alert conditions
+                        monitor.check_alert_conditions(&metrics).await;
+                        
+                        // Update Redis for real-time dashboard
+                        if let Err(e) = monitor.update_dashboard(&metrics).await {
+                            eprintln!("Failed to update dashboard: {}", e);
+                        }
+                    },
+                    Err(e) => eprintln!("Failed to collect performance metrics: {}", e),
+                }
+            }
+        })
+    }
+    
+    async fn check_alert_conditions(&self, metrics: &PerformanceMetrics) {
+        // Check for conditions that require alerts
+        if metrics.node_latency_p99 > Duration::from_millis(200) {
+            self.send_alert("High node latency detected", &format!("P99 latency: {:?}", metrics.node_latency_p99)).await;
+        }
+        
+        if metrics.circuit_breaker_status == CircuitBreakerState::Open {
+            self.send_alert("Circuit breaker activated", "Trading has been paused due to system issues").await;
+        }
+        
+        if metrics.mev_avoidance_rate < 0.8 {
+            self.send_alert("Low MEV avoidance rate", &format!("Current rate: {:.2}%", metrics.mev_avoidance_rate * 100.0)).await;
+        }
+    }
+    
+    async fn send_alert(&self, title: &str, message: &str) {
+        // Send alert via configured channels
+        // ...
+    }
+    
+    async fn update_dashboard(&self, metrics: &PerformanceMetrics) -> Result<()> {
+        let mut conn = self.redis.get().await?;
+        let _: () = conn.set("dashboard:trade_latency_p99", metrics.trade_latency_p99.as_millis() as u64).await?;
+        let _: () = conn.set("dashboard:node_latency_p99", metrics.node_latency_p99.as_millis() as u64).await?;
+        let _: () = conn.set("dashboard:slippage_accuracy", metrics.slippage_accuracy).await?;
+        let _: () = conn.set("dashboard:mev_avoidance_rate", metrics.mev_avoidance_rate).await?;
+        let _: () = conn.set("dashboard:circuit_breaker_status", format!("{:?}", metrics.circuit_breaker_status)).await?;
+        let _: () = conn.set("dashboard:uptime_percentage", metrics.uptime_percentage).await?;
+        
+        // Publish update event
+        let _: () = conn.publish("dashboard:updated", "1").await?;
+        
+        Ok(())
+    }
+}
+```
+
+# Test Strategy:
+Create unit tests for percentile calculations with known distributions. Test alert condition detection with various metric values. Verify dashboard updates with Redis mocks. Create integration tests for the full monitoring system. Test performance under load to ensure monitoring doesn't impact system performance. Verify that alerts are triggered when conditions are met. Test uptime calculation accuracy.
+
+# Subtasks:
+## 1. Implement Performance Metric Collection System [pending]
+### Dependencies: None
+### Description: Develop a system to collect and calculate key performance metrics including transaction latency, price slippage, and MEV protection effectiveness.
+### Details:
+Create data collectors for each metric type: 1) Latency tracking with timestamps at key transaction stages, 2) Slippage calculation comparing expected vs actual execution prices, 3) MEV avoidance effectiveness by comparing our execution with potential frontrunning scenarios. Implement efficient storage using time-series data structures. Ensure minimal performance overhead by using sampling techniques where appropriate.
+
+## 2. Build Real-time Monitoring Dashboard [pending]
+### Dependencies: 15.1
+### Description: Create a dashboard that displays performance metrics in real-time using Redis as the data transport layer.
+### Details:
+Implement Redis pub/sub mechanism for real-time metric updates. Design dashboard UI with charts for latency distribution, slippage trends, and MEV protection effectiveness. Include filtering capabilities by time range, asset pairs, and transaction types. Ensure dashboard updates efficiently without browser refreshes using WebSockets or Server-Sent Events.
+
+## 3. Develop Performance Alerting System [pending]
+### Dependencies: 15.1, 15.2
+### Description: Create an alerting system that monitors metrics against thresholds and notifies appropriate personnel when violations occur or circuit breakers activate.
+### Details:
+Implement configurable thresholds for each metric type. Create alert severity levels (warning, critical, emergency). Develop notification channels including email, Slack, and SMS. Build alert aggregation logic to prevent alert storms. Create a visual indicator on the dashboard for active alerts and their status. Include an acknowledgment system for operators to mark alerts as being addressed.
+

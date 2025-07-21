@@ -6,7 +6,7 @@ authors.workspace = true
 license.workspace = true
 
 [[bin]]
-name = "orchestrator"
+name = "orchestrator-cli"
 path = "src/main.rs"
 
 [dependencies]

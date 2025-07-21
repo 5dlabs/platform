@@ -1,33 +1,15 @@
 [package]
 name = "mcp-server"
-version.workspace = true
-edition.workspace = true
-authors.workspace = true
-license.workspace = true
-repository.workspace = true
+version = "0.1.0"
+edition = "2021"
 
 [[bin]]
 name = "mcp-server"
 path = "src/main.rs"
 
 [dependencies]
-# MCP Protocol - using manual implementation for better compatibility
-
-# Workspace dependencies
-orchestrator-common = { path = "../orchestrator-common" }
-
-# From workspace
-tokio = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-anyhow = { workspace = true }
-thiserror = { workspace = true }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-clap = { workspace = true }
-async-trait = { workspace = true }
-rmcp = { version = "0.1.5", features = ["server", "transport-io", "macros"] }
-schemars = "0.8"
-
-[dev-dependencies]
-tempfile = "3.8"
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }

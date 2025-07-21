@@ -1,0 +1,174 @@
+# Task ID: 9
+# Title: Implement Paper Trade Executor with Configurable Models
+# Status: pending
+# Dependencies: 4, 7, 8
+# Priority: high
+# Description: Create a paper trade execution system with configurable slippage models and MEV simulation
+# Details:
+1. Implement paper trade execution flow:
+   - Accept trade parameters (token pair, amount, action)
+   - Get current prices from Redis cache
+   - Apply slippage model to determine execution price
+   - Apply MEV simulation if applicable
+   - Update virtual portfolio
+   - Record trade in QuestDB
+
+2. Create configurable slippage models:
+   - Fixed slippage model (0.5-2% configurable) for MVP
+   - Support for future dynamic slippage using real pool states
+
+3. Integrate with other components:
+   - Use Jupiter client for price discovery
+   - Use Redis for price caching
+   - Use MEV simulator for realistic execution
+
+Example implementation:
+```rust
+pub struct PaperTradeExecutor {
+    portfolio: Arc<RwLock<VirtualPortfolio>>,
+    price_cache: Arc<PriceCache>,
+    mev_simulator: Arc<Mutex<MevSimulator>>,
+    jupiter_client: Arc<JupiterClient>,
+    quest_db: Arc<QuestDbClient>,
+    slippage_config: SlippageConfig,
+}
+
+pub enum SlippageConfig {
+    Fixed(Decimal),  // Fixed percentage (0.5-2%)
+    Dynamic,         // For future implementation
+}
+
+impl PaperTradeExecutor {
+    pub async fn execute_trade(&self, params: TradeParams) -> Result<Trade> {
+        // Get current prices from cache or Jupiter
+        let base_price = self.get_token_price(&params.base_token).await?;
+        let quote_price = self.get_token_price(&params.quote_token).await?;
+        
+        // Calculate expected execution price
+        let expected_price = match params.action {
+            TradeAction::Buy => quote_price / base_price,
+            TradeAction::Sell => base_price / quote_price,
+            TradeAction::Swap => {
+                // Get route from Jupiter for more accurate pricing
+                self.jupiter_client.get_price(
+                    &params.base_token,
+                    &params.quote_token,
+                    params.amount,
+                ).await?
+            }
+        };
+        
+        // Apply slippage model
+        let slippage = match self.slippage_config {
+            SlippageConfig::Fixed(pct) => pct,
+            SlippageConfig::Dynamic => {
+                // For future implementation
+                Decimal::new(5, 3) // Default 0.5%
+            }
+        };
+        
+        let slippage_factor = match params.action {
+            TradeAction::Buy => Decimal::ONE + slippage,
+            TradeAction::Sell => Decimal::ONE - slippage,
+            TradeAction::Swap => {
+                if params.is_base_input {
+                    Decimal::ONE - slippage
+                } else {
+                    Decimal::ONE + slippage
+                }
+            }
+        };
+        
+        let execution_price = expected_price * slippage_factor;
+        
+        // Apply MEV simulation if enabled
+        let (final_price, mev_status) = if params.simulate_mev {
+            let trade_size_usd = if params.is_base_input {
+                params.amount * base_price
+            } else {
+                params.amount
+            };
+            
+            let mev_assessment = self.mev_simulator.lock().await.simulate_mev(
+                &params.base_token,
+                trade_size_usd,
+            );
+            
+            if mev_assessment.is_attacked && params.priority_fee < mev_assessment.recommended_fee {
+                // Apply MEV impact to price
+                let impact_factor = Decimal::new(mev_assessment.estimated_loss_bps as i64, 4);
+                let mev_price = match params.action {
+                    TradeAction::Buy => execution_price * (Decimal::ONE + impact_factor),
+                    TradeAction::Sell => execution_price * (Decimal::ONE - impact_factor),
+                    TradeAction::Swap => {
+                        if params.is_base_input {
+                            execution_price * (Decimal::ONE - impact_factor)
+                        } else {
+                            execution_price * (Decimal::ONE + impact_factor)
+                        }
+                    }
+                };
+                (mev_price, MevStatus::AtRisk)
+            } else {
+                (execution_price, MevStatus::Protected)
+            }
+        } else {
+            (execution_price, MevStatus::Unknown)
+        };
+        
+        // Create trade record
+        let trade = Trade {
+            timestamp: Utc::now(),
+            action: params.action,
+            base_token: TokenInfo { symbol: params.base_token.clone(), /* other fields */ },
+            quote_token: TokenInfo { symbol: params.quote_token.clone(), /* other fields */ },
+            base_amount: params.amount,
+            quote_amount: params.amount * final_price,
+            executed_price: final_price,
+            transaction_fee: 5000, // Simulated transaction fee
+            priority_fee: params.priority_fee,
+            expected_slippage: slippage,
+            actual_slippage: (final_price - expected_price) / expected_price,
+            mev_status,
+            transfer_fees: None, // To be implemented for Token-2022
+        };
+        
+        // Update portfolio
+        self.portfolio.write().await.execute_trade(trade.clone()).await?;
+        
+        // Record trade in QuestDB
+        self.quest_db.record_trade(&trade).await?;
+        
+        Ok(trade)
+    }
+}
+```
+
+# Test Strategy:
+Create unit tests for the trade executor with different slippage configurations. Test MEV simulation integration with various attack scenarios. Verify correct price calculation with fixed slippage model. Test integration with virtual portfolio and QuestDB. Create end-to-end tests that simulate complete trade flows. Verify that trade records contain all required fields from the Enhanced Trade Model.
+
+# Subtasks:
+## 1. Implement core paper trade execution flow [pending]
+### Dependencies: None
+### Description: Create the main execution pipeline that processes trade parameters, validates them, executes the trade, and updates the portfolio accordingly.
+### Details:
+Implement the PaperTradeExecutor class with methods to handle the full trade lifecycle: 1) Parse and validate trade parameters, 2) Calculate pre-trade portfolio state, 3) Determine execution price based on current market data, 4) Apply transaction fees, 5) Update portfolio balances atomically, and 6) Return trade result with execution details. Ensure thread-safety for concurrent trade executions.
+
+## 2. Develop configurable slippage model system [pending]
+### Dependencies: 9.1
+### Description: Create a flexible slippage modeling framework with both fixed percentage and dynamic market-based options.
+### Details:
+Design a SlippageModel interface and implement multiple strategies: 1) FixedSlippageModel with configurable percentage, 2) DynamicSlippageModel that scales with trade size relative to liquidity, and 3) CompositeSlippageModel that can combine multiple models. Include configuration options to select and parameterize models at runtime. Integrate slippage calculation into the core execution flow.
+
+## 3. Integrate MEV simulation for price impact [pending]
+### Dependencies: 9.1, 9.2
+### Description: Connect to the MEV simulator to apply realistic price impact to paper trades based on current market conditions.
+### Details:
+Implement MEV simulation integration that: 1) Queries the MEV simulator with trade parameters, 2) Processes simulation results to extract price impact, 3) Applies the calculated impact to execution price, and 4) Handles fallback logic when simulation fails. Include configuration options to enable/disable MEV simulation and adjust impact parameters. Document the simulation model and assumptions.
+
+## 4. Build trade recording and metrics collection system [pending]
+### Dependencies: 9.1
+### Description: Create a comprehensive system to record trade details and collect performance metrics for analysis.
+### Details:
+Implement a TradeRecorder that: 1) Captures detailed trade information including timestamps, prices, slippage, fees, and portfolio state before/after, 2) Stores trade history in a thread-safe manner, 3) Calculates performance metrics like execution time, price deviation, and slippage statistics, 4) Provides query methods to retrieve and analyze historical trades, and 5) Includes export functionality for external analysis. Ensure minimal performance impact on the trade execution flow.
+

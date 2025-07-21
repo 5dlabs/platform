@@ -138,7 +138,7 @@ Generate documentation for Task Master tasks using AI agents.
 ```json
 {
   "repository_url": "https://github.com/owner/repo.git",
-  "working_directory": "example", 
+  "working_directory": "-projects/example-express", 
   "source_branch": "feature/example-project-and-cli",
   "target_branch": "docs-generation-20250710-143600",
   "service_name": "docs-generator",

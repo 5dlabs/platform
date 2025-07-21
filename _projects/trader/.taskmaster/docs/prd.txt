@@ -1,0 +1,322 @@
+<context>
+# Overview
+
+The Solana Trading Platform is an internal tool designed for high-frequency cryptocurrency trading on the Solana blockchain. It solves the critical need for accurate trade simulation and low-latency execution by providing two synchronized services: a paper trader for strategy testing and a live trader for real fund management. The platform leverages our proprietary low-latency Solana node infrastructure via gRPC connections, combined with both self-hosted and public Jupiter instances, to achieve superior execution speeds and resilience compared to traditional API-based solutions.
+
+The primary users are internal traders and automated trading strategies that require millisecond-precision execution and accurate simulation capabilities. The platform's value lies in its ability to seamlessly switch between paper and live trading modes while maintaining identical interfaces, enabling risk-free strategy development and confident deployment to production. The initial focus is on proving trading strategy concepts with high accuracy between simulation and live execution.
+
+**Note:** Detailed technical implementation specifications can be found in `.taskmaster/docs/plan.md` which contains comprehensive system architecture, database schemas, code examples, and performance requirements.
+
+# Core Features
+
+## Dual-Mode Trading Engine
+The platform operates in two synchronized modes:
+- **Paper Trading Mode**: Simulates trades with virtual funds, tracking positions and P&L in real-time with MEV risk simulation
+- **Live Trading Mode**: Executes actual trades with real funds using identical interfaces and MEV protection
+
+This dual-mode architecture is critical because it allows traders to test strategies with production-identical execution paths before risking capital. The modes share common libraries and interfaces, ensuring that behavior in paper trading accurately reflects live trading performance. A key differentiator is the inclusion of MEV (Maximum Extractable Value) risk simulation in paper trading to match the 15-20% sandwich attack rate observed in memecoin trading.
+
+## High-Performance Order Execution with Resilience
+- **Dual Jupiter Integration**: Self-hosted instance for low latency, public instance for failover
+- **gRPC Integration**: Direct connection to Solana nodes for minimal latency
+- **MEV Protection**: Dynamic priority fees and transaction bundling to avoid sandwich attacks
+- **Circuit Breaker**: Automatic trading pause when node latency exceeds 200ms P99 threshold
+
+The platform prioritizes execution speed while maintaining resilience. The self-hosted Jupiter instance provides primary routing with <200ms response times, automatically failing over to public endpoints if degraded. MEV protection parameters including tip amounts (1,000-10,000 lamports) and wrapped SOL operations are built into every trade.
+
+## Automated Risk Management
+- **Stop-Loss Orders**: Automatically exit positions when losses exceed thresholds
+- **Take-Profit Orders**: Capture gains at predetermined profit levels
+- **Position Monitoring**: Continuous tracking with sub-second price updates via Redis cache
+- **Node Health Monitoring**: Circuit breaker triggers when latency or error rates exceed limits
+
+Risk management operates client-side with Redis-backed price feeds for <1ms access times. The system monitors positions every 100ms and executes orders when conditions are met, providing protection against adverse market movements while maintaining strategy flexibility.
+
+## Real-Time Portfolio Tracking with Enhanced Metrics
+- **Position Management**: Track holdings, cost basis, and unrealized P&L
+- **Trade History**: Complete record with MEV protection status and priority fees
+- **Performance Analytics**: Latency measurements, slippage accuracy, and MEV avoidance rates
+- **Visual P&L Tracking**: Terminal-based sparkline charts for quick performance assessment
+
+The platform maintains comprehensive records in QuestDB for time-series data with 30-day retention at full resolution, PostgreSQL for configuration and Token-2022 extension data, and Redis for hot data caching.
+
+# User Experience
+
+## User Personas
+
+**Strategy Validator**
+- Needs: Accurate simulation matching live conditions, fast iteration cycles
+- Goals: Prove strategy viability with 85-90% paper/live correlation before scaling
+- Pain Points: MEV attacks skewing results, inaccurate slippage models, node outages
+
+**High-Frequency Trader**
+- Needs: Sub-100ms execution, resilient infrastructure, real-time monitoring
+- Goals: Execute strategies with minimal latency and maximum uptime
+- Pain Points: Single points of failure, unpredictable network conditions
+
+## Key User Flows
+
+**Strategy Testing Flow**
+1. Launch paper trader via CLI with initial SOL/USDC allocation
+2. Configure MEV protection parameters and slippage tolerance
+3. Execute test trades through TUI with real-time feedback
+4. Monitor positions and P&L with visual charts
+5. Review MEV simulation results and slippage accuracy
+6. Validate 85-90% correlation before live deployment
+
+**Resilient Trade Execution Flow**
+1. System checks node health before trade
+2. Calculate dynamic priority fee based on network congestion
+3. Attempt execution via self-hosted Jupiter (<200ms timeout)
+4. Automatic failover to public Jupiter if needed
+5. Monitor confirmation with retry logic
+6. Update position with actual execution metrics
+
+## UI/UX Considerations
+
+The platform uses a terminal-based interface (TUI) built with Rust's `ratatui` library, providing:
+- **Real-time updates** via Redis Streams with 10Hz refresh rate
+- **Visual feedback** including P&L sparkline charts
+- **Keyboard-driven navigation** optimized for rapid trading
+- **Status indicators** for node health and circuit breaker state
+
+The TUI displays portfolio summary, active positions with color-coded P&L, recent trades with MEV status, and system health metrics in a dashboard optimized for quick decision-making.
+</context>
+<PRD>
+# Technical Architecture
+
+## System Components
+
+**Core Services**
+- Paper Trader Service (Rust binary with MEV simulation)
+- Live Trader Service (Rust binary with MEV protection)
+- Common Libraries (shared Rust crates for consistency)
+
+**Data Infrastructure**
+- QuestDB for time-series trade data and metrics (100ms batch writes)
+- PostgreSQL for configuration, token metadata, and health tracking
+- Redis for price caching (<1ms reads) and event streaming
+
+**External Integrations**
+- Self-hosted Jupiter instance (primary routing)
+- Public Jupiter API (failover routing)
+- Solana blockchain via gRPC (latency-optimized)
+- Future: Direct Raydium integration for ultra-low latency
+
+## Data Models
+
+**Enhanced Trade Model**
+```
+- timestamp: Execution time
+- action: Buy/Sell/Swap
+- tokens: Base and quote pairs
+- amounts: Size and executed price
+- fees: Transaction and priority (MEV protection)
+- metrics: Actual vs expected slippage
+- mev_status: Protected/At-risk
+- transfer_fees: Token-2022 extension fees
+```
+
+**MEV Risk Model**
+```
+- sandwich_probability: 0-50% based on trade size
+- estimated_loss: Basis points of potential MEV loss
+- recommended_fee: Dynamic priority fee calculation
+```
+
+**Circuit Breaker Model**
+```
+- status: Open/Closed/Half-open
+- failure_count: Recent failures
+- recovery_timeout: Time before retry
+- trigger_conditions: Latency/error thresholds
+```
+
+## APIs and Integrations
+
+**Internal APIs**
+- Trade Execution Interface with MEV parameters
+- Portfolio Query API with Redis caching
+- Health Monitoring API with circuit breaker status
+- Event Stream API via Redis Streams
+
+**External APIs**
+- Jupiter V6 API with lite-api.jup.ag domain (post-May 2025)
+- Solana RPC via gRPC with health checks
+- Future: Direct Raydium SDK integration
+
+# Development Roadmap
+
+## MVP Requirements (Phase 1) - Strategy Validation Focus
+
+**Core Trading Engine**
+- Paper trader with fixed slippage model (0.5-2% configurable)
+- MEV risk simulation (15-20% attack probability for memecoins)
+- Virtual portfolio for SOL, USDC, BONK, JitoSOL, RAY
+- Jupiter integration with self-hosted/public failover
+- Redis price caching with 1-2 second TTL
+- Basic TUI with positions, trades, and P&L sparklines
+- Stop-loss and take-profit monitoring (100ms intervals)
+- QuestDB integration with 100ms batch writes
+
+**Resilience Features**
+- Circuit breaker for >200ms latency
+- Node health monitoring with alerts
+- Automatic failover between Jupiter instances
+- Transaction retry with exponential backoff
+
+**Deliverables**
+- `paper_trader` binary with MEV simulation
+- Common libraries with failover logic
+- TUI with real-time charts
+- Database schemas with Token-2022 support
+- Performance benchmarking tools
+
+## Enhanced Accuracy (Phase 2)
+
+**Advanced Simulation**
+- Dynamic slippage using real pool states
+- Multi-DEX price aggregation
+- Historical MEV pattern analysis
+- Backtesting with QuestDB data
+- 85-90% paper/live correlation validation
+
+**Deliverables**
+- Pool state subscription system
+- MEV pattern recognition
+- Correlation analysis tools
+- Enhanced TUI analytics
+
+## Live Trading Implementation (Phase 3)
+
+**Secure Live Trading**
+- Encrypted wallet management with daily rotation
+- Dynamic priority fee optimization
+- Multi-signature support for large trades
+- Comprehensive audit logging
+- Real-time P&L tracking
+
+**Deliverables**
+- `live_trader` binary with security hardening
+- Transaction monitoring dashboard
+- Risk limit configuration
+- Performance comparison tools
+
+## Direct AMM Integration (Phase 4)
+
+**Ultra-Low Latency**
+- Direct Raydium integration (10-50ms improvement)
+- Custom transaction building
+- Mempool optimization strategies
+- Advanced MEV avoidance
+
+**Deliverables**
+- Raydium SDK integration
+- Latency comparison framework
+- MEV avoidance strategies
+- Performance documentation
+
+# Logical Dependency Chain
+
+## Foundation Layer (Must Build First)
+1. **Common Libraries**: Trade models, MEV structures, circuit breakers
+2. **Database Setup**: QuestDB, PostgreSQL, Redis with schemas
+3. **gRPC Connection**: Solana node with health monitoring
+
+## Resilient Infrastructure (Enables Reliable Testing)
+4. **Jupiter Failover Client**: Self-hosted primary, public backup
+5. **Redis Integration**: Price caching and event streams
+6. **Circuit Breaker**: Latency-based trading pause
+
+## Paper Trader Core (MVP Deliverable)
+7. **Virtual Portfolio**: Track simulated balances with fees
+8. **MEV Simulator**: Risk calculation for realistic slippage
+9. **Trade Executor**: Paper trades with configurable models
+
+## Usable Interface (First Visible Outcome)
+10. **Enhanced TUI**: Real-time updates with charts
+11. **Event Streaming**: Redis Streams for UI updates
+12. **Performance Metrics**: Latency and accuracy tracking
+
+## Strategy Validation Tools
+13. **Correlation Analysis**: Compare paper vs small live trades
+14. **MEV Analytics**: Track avoided vs suffered attacks
+15. **Slippage Verification**: Model accuracy assessment
+
+## Production Readiness
+16. **Security Hardening**: Encrypted keys, audit logs
+17. **Live Trade Executor**: Real fund management
+18. **Monitoring Integration**: Comprehensive observability
+
+# Risks and Mitigations
+
+## Technical Challenges
+
+**Risk**: Single Solana node point of failure
+- *Impact*: Complete platform outage during node issues
+- *Mitigation*: Document failover architecture for Phase 2, implement circuit breaker to prevent bad trades, add monitoring to detect degradation early
+
+**Risk**: MEV attacks in live trading despite protection
+- *Impact*: 1-5% additional slippage on vulnerable trades
+- *Mitigation*: Dynamic priority fees based on trade size, implement pre-trade MEV risk assessment, use wrapped SOL operations for atomicity
+
+**Risk**: Inaccurate paper trading leading to strategy losses
+- *Impact*: False confidence causing real fund losses
+- *Mitigation*: Start with conservative fixed slippage model, validate with small live trades, track correlation metrics, iterate based on real data
+
+## Figuring out the MVP
+
+**Risk**: Over-optimizing for latency in MVP
+- *Impact*: Delayed strategy validation
+- *Mitigation*: Focus on Jupiter-only integration initially, use simple slippage model, prioritize accuracy over speed for MVP
+
+**Risk**: Token selection limiting strategy validation
+- *Impact*: Incomplete testing of market conditions
+- *Mitigation*: Include diverse token set (SOL, USDC, BONK, JitoSOL, RAY) covering stability, volatility, and liquidity profiles
+
+## Resource Constraints
+
+**Risk**: Redis complexity for caching layer
+- *Impact*: Development delays or performance issues
+- *Mitigation*: Start with simple key-value caching, use proven patterns from Redis best practices, implement gradually
+
+**Risk**: Accurate MEV simulation complexity
+- *Impact*: Unrealistic paper trading results
+- *Mitigation*: Begin with statistical model (15-20% probability), refine with real execution data, document assumptions clearly
+
+# Appendix
+
+## Research Findings
+
+**2025 Solana Ecosystem Insights**
+- MEV affects 15-20% of memecoin trades (Gate.com analysis)
+- Jupiter uptime: 99.5% requiring failover strategy
+- P99 latency target: 200-300ms for resilient design
+- Slippage variance: 0.1-10% depending on token type and size
+
+**Infrastructure Benchmarks**
+- Redis cache: <1ms price access vs 50-200ms gRPC
+- Self-hosted Jupiter: 50% latency reduction
+- Priority fees: 1,000-10,000 lamports optimal range
+- Circuit breaker threshold: 200ms prevents cascading failures
+
+## Technical Specifications
+
+**Performance Requirements**
+- Paper trade execution: <100ms (excluding simulation)
+- Live trade execution: <100ms to broadcast
+- TUI refresh rate: 10Hz via Redis Streams
+- Price cache TTL: 1-2 seconds optimal
+- Event stream length: 10,000 entries before trim
+
+**MVP Token Characteristics**
+- SOL: High liquidity baseline
+- USDC: Stable value reference
+- BONK: High volatility memecoin (5-10% slippage spikes)
+- JitoSOL: Liquid staking dynamics
+- RAY: Established DeFi token
+
+**Accuracy Targets**
+- Paper/Live correlation: 85-90% for strategy viability
+- Slippage prediction: ±15% of actual
+- MEV simulation: Capture 80% of attack patterns

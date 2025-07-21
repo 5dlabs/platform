@@ -59,8 +59,8 @@ pub async fn submit_docs_generation(&self, request: &DocsGenerationRequest) -> R
 **Request Structure** (`DocsGenerationRequest`):
 ```json
 {
-  "repository_url": "https://github.com/5dlabs/agent-platform.git",
-  "working_directory": "example",
+  "repository_url": "https://github.com/5dlabs/platform.git",
+  "working_directory": "-projects/example-express",
   "source_branch": "feature/example-project-and-cli",
   "target_branch": "docs-generation-20250710-201352",
   "service_name": "docs-generator",

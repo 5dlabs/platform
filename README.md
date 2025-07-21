@@ -430,7 +430,7 @@ The platform includes an automated documentation generation feature for Task Mas
 
 **Generate Comprehensive Task Documentation**:
 ```bash
-# Using CLI - generates docs for all tasks in example/.taskmaster
+# Using CLI - generates docs for all tasks in -projects/example-express/.taskmaster
 orchestrator task init-docs \
   --model opus \
   --repo https://github.com/your-org/your-repo \
@@ -451,14 +451,14 @@ orchestrator task init-docs \
 ```
 
 **How It Works**:
-1. Reads tasks from `example/.taskmaster/tasks/tasks.json`
+1. Reads tasks from `-projects/example-express/.taskmaster/tasks/tasks.json`
 2. Creates a dedicated Claude agent with the Task Master context
 3. Generates comprehensive documentation for each task
 4. Automatically creates a GitHub PR with the generated docs
 5. Uses `--stop-hook` for secure PR creation after completion
 
 **Prerequisites**:
-- Task Master project initialized in `example/` directory
+- Task Master project initialized in `-projects/example-express/` directory
 - GitHub token configured in Kubernetes secrets
 - Repository access for PR creation
 

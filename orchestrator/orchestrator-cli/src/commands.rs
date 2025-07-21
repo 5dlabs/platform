@@ -741,11 +741,7 @@ pub mod task {
         };
 
         // Check if tasks.json needs to be committed
-        let tasks_json_path = if working_directory == "." {
-            ".taskmaster/tasks/tasks.json".to_string()
-        } else {
-            format!("{}/.taskmaster/tasks/tasks.json", working_directory)
-        };
+        let tasks_json_path = format!("{}/.taskmaster/tasks/tasks.json", working_directory);
         output.info(&format!("Checking status of {}", tasks_json_path))?;
 
         let status_output = Command::new("git")
@@ -816,8 +812,7 @@ pub mod task {
         output.info(&format!("Target branch: {target_branch_name}"))?;
 
         // Auto-commit .taskmaster directory if it exists and has uncommitted changes
-        // Always use ".taskmaster" since we're running from the working directory
-        let taskmaster_path = ".taskmaster".to_string();
+        let taskmaster_path = format!("{}/.taskmaster", working_directory);
 
         // Check if .taskmaster directory exists
         if std::path::Path::new(&taskmaster_path).exists() {
