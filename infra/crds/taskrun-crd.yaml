@@ -94,6 +94,11 @@ spec:
                   token:
                     type: string
                     description: "Direct token submission (reserved for future use)"
+
+              workingDirectory:
+                type: string
+                description: "Working directory within the repository (e.g., '_projects/infra')"
+
           status:
             type: object
             properties:
