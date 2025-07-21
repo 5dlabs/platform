@@ -99,6 +99,56 @@ spec:
                 type: string
                 description: "Working directory within the repository (e.g., '_projects/infra')"
 
+              platformRepository:
+                type: object
+                description: "Platform repository for documentation access"
+                required: ["url", "branch", "githubUser"]
+                properties:
+                  url:
+                    type: string
+                    minLength: 1
+                    description: "Platform repository URL (HTTPS or SSH)"
+                  branch:
+                    type: string
+                    minLength: 1
+                    default: "main"
+                    description: "Branch or tag to checkout"
+                  githubUser:
+                    type: string
+                    minLength: 1
+                    description: "GitHub username for authentication"
+                  token:
+                    type: string
+                    description: "Direct token submission (reserved for future use)"
+
+              promptModification:
+                type: string
+                description: "Additional prompt instructions for retry attempts"
+
+              promptMode:
+                type: string
+                default: "append"
+                enum: ["append", "replace"]
+                description: "How to apply prompt_modification: 'append' or 'replace'"
+
+              localTools:
+                type: array
+                description: "Local Claude Code tools to enable (e.g., ['bash', 'edit', 'read'])"
+                items:
+                  type: string
+
+              remoteTools:
+                type: array
+                description: "Remote MCP tools to enable (e.g., ['github_create_issue', 'rustdocs_query_rust_docs'])"
+                items:
+                  type: string
+
+              toolConfig:
+                type: string
+                default: "default"
+                enum: ["default", "minimal", "advanced"]
+                description: "Tool configuration preset: 'default', 'minimal', 'advanced'"
+
           status:
             type: object
             properties:
