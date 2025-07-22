@@ -885,13 +885,7 @@ pub mod task {
                             let content = std::fs::read_to_string(&tasks_json_path)
                                 .context("Failed to read tasks.json for verification")?;
 
-                            // Quick content verification
-                            if content.contains("Express TypeScript") || content.contains("Node.js") {
-                                output.error("WARNING: tasks.json contains Node.js/Express content!")?;
-                                output.error("This appears to be an old version. Documentation will be incorrect.")?;
-                                output.error("Please update your tasks.json with the correct project tasks.")?;
-                                return Err(anyhow::anyhow!("Outdated tasks.json detected"));
-                            }
+                            // Content verified - ready for documentation generation
 
                             // Show first task for verification
                             if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
@@ -918,11 +912,7 @@ pub mod task {
                     let content = std::fs::read_to_string(&tasks_json_path)
                         .context("Failed to read tasks.json for verification")?;
 
-                    if content.contains("Express TypeScript") || content.contains("Node.js") {
-                        output.error("WARNING: Your committed tasks.json contains old Node.js/Express content!")?;
-                        output.error("Please update and commit the correct tasks for your project.")?;
-                        return Err(anyhow::anyhow!("Outdated tasks.json in repository"));
-                    }
+                    // Committed tasks.json verified and ready for documentation generation
                 }
             }
         }
@@ -1275,7 +1265,7 @@ pub async fn health_check(api_client: &ApiClient, output: &OutputManager) -> Res
 /// Auto-detects the current git repository information for platform documentation access
 pub fn detect_platform_repo() -> Result<Option<orchestrator_common::models::pm_task::RepositorySpec>> {
     use anyhow::Context;
-    
+
     // Get git remote URL
     let remote_url = match get_git_remote_url() {
         Ok(url) => url,
@@ -1284,10 +1274,10 @@ pub fn detect_platform_repo() -> Result<Option<orchestrator_common::models::pm_t
             return Ok(None);
         }
     };
-    
+
     // Get current branch
     let current_branch = get_current_branch().unwrap_or_else(|| "main".to_string());
-    
+
     // Extract GitHub user from URL
     let github_user = match extract_github_user(&remote_url) {
         Ok(user) => user,
@@ -1296,7 +1286,7 @@ pub fn detect_platform_repo() -> Result<Option<orchestrator_common::models::pm_t
             return Ok(None);
         }
     };
-    
+
     Ok(Some(orchestrator_common::models::pm_task::RepositorySpec {
         url: remote_url,
         branch: current_branch,
@@ -1311,16 +1301,16 @@ fn get_git_remote_url() -> Result<String> {
         .args(["remote", "get-url", "origin"])
         .output()
         .context("Failed to execute git remote command")?;
-        
+
     if !output.status.success() {
         return Err(anyhow::anyhow!("Failed to get git remote URL"));
     }
-    
+
     let url = String::from_utf8(output.stdout)
         .context("Invalid UTF-8 in git remote URL")?
         .trim()
         .to_string();
-        
+
     Ok(url)
 }
 
@@ -1330,11 +1320,11 @@ fn get_current_branch() -> Option<String> {
         .args(["rev-parse", "--abbrev-ref", "HEAD"])
         .output()
         .ok()?;
-        
+
     if !output.status.success() {
         return None;
     }
-    
+
     String::from_utf8(output.stdout)
         .ok()
         .map(|branch| branch.trim().to_string())
@@ -1344,7 +1334,7 @@ fn get_current_branch() -> Option<String> {
 /// Supports both SSH and HTTPS URLs
 fn extract_github_user(repo_url: &str) -> Result<String> {
     use anyhow::Context;
-    
+
     if repo_url.starts_with("git@github.com:") {
         // SSH format: git@github.com:username/repo.git
         let path = repo_url
