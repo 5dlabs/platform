@@ -39,6 +39,10 @@ pub struct JobConfig {
 pub struct AgentConfig {
     /// Container image configuration
     pub image: ImageConfig,
+
+    /// Image pull secrets for private registries
+    #[serde(default, rename = "imagePullSecrets")]
+    pub image_pull_secrets: Vec<String>,
 }
 
 /// Image configuration
@@ -133,6 +137,7 @@ impl Default for ControllerConfig {
                     repository: "ghcr.io/5dlabs/claude".to_string(),
                     tag: "latest".to_string(),
                 },
+                image_pull_secrets: vec!["ghcr-secret".to_string()],
             },
             secrets: SecretsConfig {
                 api_key_secret_name: "anthropic-api-key".to_string(),

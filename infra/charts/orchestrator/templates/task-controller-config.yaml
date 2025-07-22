@@ -19,6 +19,10 @@ data:
       image:
         repository: "ghcr.io/5dlabs/platform/claude-code"
         tag: "1.0.56"
+      imagePullSecrets:
+        {{- range .Values.imagePullSecrets }}
+        - {{ .name | quote }}
+        {{- end }}
 
     # Secrets configuration
     secrets:

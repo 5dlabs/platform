@@ -240,6 +240,9 @@ fn build_job_spec(task: &TaskType, job_name: &str, cm_name: &str, config: &Contr
                 },
                 "spec": {
                     "restartPolicy": "Never",
+                    "imagePullSecrets": config.agent.image_pull_secrets.iter().map(|name| {
+                        json!({"name": name})
+                    }).collect::<Vec<_>>(),
                     "containers": [{
                         "name": "claude",
                         "image": agent_image,

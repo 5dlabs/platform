@@ -1,9 +1,9 @@
 # Claude Code Project Memory
 
 ## Project Information
-- **Repository**: {{repository.url}}{{#if repository}}
-- **Source Branch**: {{repository.branch}}
-- **GitHub User**: {{repository.githubUser}}{{/if}}
+- **Repository**: {{repository_url}}
+- **Source Branch**: {{branch}}
+- **GitHub User**: {{github_user}}
 - **Working Directory**: {{working_directory}}
 - **Implementation Target**: task {{task_id}}
 
@@ -13,11 +13,8 @@
 - `coding-guidelines.md` - Project coding standards and best practices
 - `github-guidelines.md` - Git workflow and commit message standards
 
-{{#if platform_repository}}
 ## Documentation Source
-- **Documentation Repository**: {{platform_repository.url}}
-- **Branch**: {{platform_repository.branch}}
-{{/if}}
+- **Documentation Repository**: {{platform_repository_url}}
 
 ## Current Task
 
@@ -31,14 +28,12 @@
 - `coding-guidelines.md` - How to write code in this project
 - `github-guidelines.md` - Git workflow and commit standards
 
-{{#if platform_repository}}
 **Additional project documentation** (if needed):
-- Overall system architecture and requirements are available in platform-repo/
-{{/if}}
+- Overall system architecture and requirements are available in platform repository
 {{else}}
 This is a general software project. Check for:
 - `README.md` - Project overview and setup instructions
-- `ARCHITECTURE.md` or `docs/` - Architecture documentation  
+- `ARCHITECTURE.md` or `docs/` - Architecture documentation
 - `package.json`, `Cargo.toml`, or similar - Dependencies and scripts
 {{/if}}
 
@@ -62,7 +57,7 @@ General implementation work:
 
 ### Implementation Standards
 - **Follow Architecture**: Adhere to established patterns and design decisions
-- **Respect Dependencies**: Complete tasks in proper dependency order  
+- **Respect Dependencies**: Complete tasks in proper dependency order
 - **Test Thoroughly**: Ensure implementation meets acceptance criteria
 - **Document Changes**: Update relevant documentation if architecture changes
 - **Version Control**: Use clear, descriptive commit messages
@@ -93,7 +88,7 @@ General implementation work:
    - Verify acceptance criteria
 {{else}}
 1. Understand the existing codebase structure
-2. Follow established patterns and conventions  
+2. Follow established patterns and conventions
 3. Ensure changes align with project architecture
 {{/if}}
 
@@ -102,7 +97,7 @@ General implementation work:
 # Run tests before implementation
 npm test          # Node.js projects
 # or
-cargo test        # Rust projects  
+cargo test        # Rust projects
 # or check project-specific test commands in package.json/Cargo.toml
 
 # Stage implementation changes
@@ -157,16 +152,16 @@ See @.taskmaster/docs/prd.txt for product requirements
 See @.taskmaster/tasks/tasks.json for task {{task_id}} details and dependencies
 See @.taskmaster/docs/task-{{task_id}}/ for task-specific documentation{{/if}}
 
-{{#if repository}}## Repository Context
+## Repository Context
 
 This implementation is working with:
-- **Repository**: {{repository.url}}
-- **Branch**: {{repository.branch}}
+- **Repository**: {{repository_url}}
+- **Branch**: {{branch}}
 - **Working Directory**: {{working_directory}}
 - **Task ID**: {{task_id}}
 
 Ensure all file paths and references are relative to the working directory.
-Follow the existing project structure and coding conventions.{{/if}}
+Follow the existing project structure and coding conventions.
 
 ## Claude Code Tool Usage Patterns
 
@@ -194,11 +189,11 @@ Grep "class.*Service" --glob="*.ts" -n
 Grep "fn.*test" --glob="*.rs" -n
 
 # Understand dependencies
-Grep "import.*from" --glob="*.ts" 
+Grep "import.*from" --glob="*.ts"
 Grep "use.*::" --glob="*.rs"
 
 # Find configuration files
-Glob "*config*" 
+Glob "*config*"
 Glob "*.json" | Glob "*.toml" | Glob "*.yaml"
 
 # Find test files
@@ -209,7 +204,7 @@ Glob "*test*" | Glob "*spec*"
 ```bash
 # Always validate after changes
 cargo check    # or npm run typecheck
-cargo test     # or npm test  
+cargo test     # or npm test
 cargo clippy   # or npm run lint
 ```
 
