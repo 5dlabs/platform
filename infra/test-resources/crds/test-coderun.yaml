@@ -1,0 +1,19 @@
+apiVersion: orchestrator.platform/v1
+kind: CodeRun
+metadata:
+  name: test-coderun-ci
+  namespace: test-platform
+spec:
+  taskId: 9999
+  service: "test-service"
+  repositoryUrl: "https://github.com/5dlabs/platform.git"
+  platformRepositoryUrl: "https://github.com/5dlabs/platform.git"
+  branch: "test-branch"
+  workingDirectory: "_projects/test-service"
+  model: "sonnet"
+  githubUser: "test-user"
+  localTools: "mcp-orchestrator"
+  remoteTools: "taskmaster"
+  toolConfig: "default"
+  contextVersion: 1
+  promptMode: "append"

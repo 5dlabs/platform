@@ -261,14 +261,6 @@ jobs:
           wait: 120s
           verbosity: 1
 
-      - name: Install CRDs
-        run: |
-          echo "Installing TaskRun CRD..."
-          kubectl apply -f infra/crds/taskrun-crd.yaml
-          echo "Waiting for CRD to be established..."
-          kubectl wait --for condition=established --timeout=60s crd/taskruns.orchestrator.io
-          echo "CRD installed successfully"
-
       - name: Test Helm Chart Structure
         run: |
           echo "🎯 Testing orchestrator Helm chart..."
@@ -305,13 +297,15 @@ jobs:
           # Create test namespace
           kubectl create namespace test-platform
 
-          # Apply test TaskRun
-          kubectl apply -f infra/crds/test-taskrun.yaml -n test-platform || true
+          # Apply test CodeRun and DocsRun
+          kubectl apply -f infra/crds/test-coderun.yaml -n test-platform || true
+          kubectl apply -f infra/crds/test-docsrun.yaml -n test-platform || true
 
       - name: Verify CRD deployment
         run: |
-          kubectl get crd taskruns.orchestrator.io
-          kubectl get taskruns -A
+          kubectl get crd coderuns.orchestrator.platform
+          kubectl get crd docsruns.orchestrator.platform
+          kubectl get coderuns,docsruns -A
 
   # Security scanning (non-blocking, self-hosted)
   security-scan:
@@ -722,15 +716,6 @@ jobs:
           echo "🔍 Verifying Kubernetes access..."
           kubectl cluster-info
 
-      - name: Install TaskRun CRD
-        run: |
-          echo "📋 Installing TaskRun CRD..."
-          kubectl apply -f infra/crds/taskrun-crd.yaml
-
-          # Wait for CRD to be established
-          kubectl wait --for condition=established --timeout=60s crd/taskruns.orchestrator.io
-          echo "✅ TaskRun CRD installed successfully"
-
       - name: Deploy Orchestrator with Helm
         run: |
           echo "🚀 Deploying platform version ${{ needs.version.outputs.version }}"
@@ -760,7 +745,7 @@ jobs:
           echo "🔍 Verifying deployment..."
           kubectl get pods -n orchestrator
           kubectl get services -n orchestrator
-          kubectl get taskruns -A || echo "No TaskRuns found (expected for fresh deployment)"
+          kubectl get coderuns,docsruns -A || echo "No CodeRuns/DocsRuns found (expected for fresh deployment)"
 
           # Wait for orchestrator to be ready
           kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=orchestrator -n orchestrator --timeout=300s

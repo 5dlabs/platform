@@ -1,0 +1,147 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: coderuns.orchestrator.platform
+spec:
+  group: orchestrator.platform
+  scope: Namespaced
+  names:
+    plural: coderuns
+    singular: coderun
+    kind: CodeRun
+    shortNames:
+    - cr
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: Task
+      type: integer
+      jsonPath: .spec.taskId
+    - name: Service
+      type: string
+      jsonPath: .spec.service
+    - name: Model
+      type: string
+      jsonPath: .spec.model
+    - name: Phase
+      type: string
+      jsonPath: .status.phase
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    schema:
+      openAPIV3Schema:
+        type: object
+        required: ["spec"]
+        properties:
+          spec:
+            type: object
+            required: ["taskId", "service", "repositoryUrl", "platformRepositoryUrl", "branch", "workingDirectory", "model", "githubUser"]
+            properties:
+              taskId:
+                type: integer
+                description: "Task ID to implement"
+              service:
+                type: string
+                description: "Target service name"
+              repositoryUrl:
+                type: string
+                description: "Target project repository URL (where implementation work happens)"
+              platformRepositoryUrl:
+                type: string
+                description: "Platform repository URL (where Task Master definitions come from)"
+              branch:
+                type: string
+                description: "Git branch to work on in target repository"
+              workingDirectory:
+                type: string
+                description: "Working directory within target repository"
+              model:
+                type: string
+                description: "Claude model to use (sonnet, opus)"
+              githubUser:
+                type: string
+                description: "GitHub username for authentication and commits"
+              localTools:
+                type: string
+                description: "Local MCP tools/servers to enable (comma-separated)"
+              remoteTools:
+                type: string
+                description: "Remote MCP tools/servers to enable (comma-separated)"
+              toolConfig:
+                type: string
+                default: "default"
+                description: "Tool configuration preset (default, minimal, advanced)"
+              contextVersion:
+                type: integer
+                default: 1
+                description: "Context version for retry attempts (incremented on each retry)"
+              promptModification:
+                type: string
+                description: "Additional context for retry attempts"
+              promptMode:
+                type: string
+                default: "append"
+                description: "How to apply prompt modifications (append, replace)"
+          status:
+            type: object
+            properties:
+              phase:
+                type: string
+                description: "Current phase of the code implementation"
+              message:
+                type: string
+                description: "Human-readable message about the current state"
+              lastUpdate:
+                type: string
+                description: "Timestamp when this phase was reached"
+              jobName:
+                type: string
+                description: "Associated Kubernetes Job name"
+              pullRequestUrl:
+                type: string
+                description: "Pull request URL if created"
+              retryCount:
+                type: integer
+                description: "Current retry attempt (if applicable)"
+              conditions:
+                type: array
+                description: "Conditions for the CodeRun"
+                items:
+                  type: object
+                  required: ["type", "status"]
+                  properties:
+                    type:
+                      type: string
+                      description: "Type of condition"
+                    status:
+                      type: string
+                      description: "Status of the condition (True, False, or Unknown)"
+                    lastTransitionTime:
+                      type: string
+                      description: "Last time the condition transitioned (RFC3339 format)"
+                    reason:
+                      type: string
+                      description: "Reason for the condition's last transition"
+                    message:
+                      type: string
+                      description: "Human-readable message about the condition"
+              configmapName:
+                type: string
+                description: "Name of the ConfigMap containing the prompt and context"
+              contextVersion:
+                type: integer
+                description: "Version of the context and prompt used"
+              promptModification:
+                type: string
+                description: "Modification to the prompt if any"
+              promptMode:
+                type: string
+                description: "Mode of prompt (e.g., direct, indirect)"
+              sessionId:
+                type: string
+                description: "Session ID for tracking"

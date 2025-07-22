@@ -36,7 +36,7 @@ config:
   kubernetesNamespace: "orchestrator"
   rustLog: "orchestrator=info,tower_http=info,axum=info,kube=info"
   controllerEnabled: "true"
-  controllerConfigMap: "taskrun-controller-config"
+  controllerConfigMap: "task-controller-config"
 
 # Secrets - using existing secrets
 secrets:

@@ -98,9 +98,9 @@ config:
   # Logging
   rustLog: "orchestrator=debug,tower_http=debug,axum=debug,kube=info"
 
-  # TaskRun Controller configuration
+  # Task Controller configuration
   controllerEnabled: true
-  controllerConfigMap: "taskrun-controller-config"
+  controllerConfigMap: "task-controller-config"
 
 # Secret configuration for API keys
 secrets:
