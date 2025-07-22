@@ -3,20 +3,23 @@ use serde_json::json;
 use super::config::ControllerConfig;
 use super::types::{Result, TaskType};
 use std::collections::BTreeMap;
+use std::fs;
+use std::path::Path;
+use tracing::debug;
 
-// Template constants - actual template files
-const DOCS_CLAUDE_TEMPLATE: &str = include_str!("../../../templates/docs/claude.md.hbs");
-const CODE_CLAUDE_TEMPLATE: &str = include_str!("../../../templates/code/claude.md.hbs");
-const DOCS_PROMPT_TEMPLATE: &str = include_str!("../../../templates/docs/prompt.hbs");
-const CODE_PROMPT_TEMPLATE: &str = include_str!("../../../templates/code/prompt.hbs");
-const DOCS_SETTINGS_TEMPLATE: &str = include_str!("../../../templates/docs/settings.json.hbs");
-const CODE_SETTINGS_TEMPLATE: &str = include_str!("../../../templates/code/settings.json.hbs");
-const DOCS_CONTAINER_TEMPLATE: &str = include_str!("../../../templates/docs/container.sh.hbs");
-const CODE_CONTAINER_TEMPLATE: &str = include_str!("../../../templates/code/container.sh.hbs");
-const CODE_MCP_TEMPLATE: &str = include_str!("../../../templates/code/mcp.json.hbs");
-const CODE_CLIENT_CONFIG_TEMPLATE: &str = include_str!("../../../templates/code/client-config.json.hbs");
-const CODE_CODING_GUIDELINES_TEMPLATE: &str = include_str!("../../../templates/code/coding-guidelines.md.hbs");
-const CODE_GITHUB_GUIDELINES_TEMPLATE: &str = include_str!("../../../templates/code/github-guidelines.md.hbs");
+// Template base path (mounted from ConfigMap)
+const CLAUDE_TEMPLATES_PATH: &str = "/claude-templates";
+
+/// Load a template file from the mounted ConfigMap
+fn load_template(relative_path: &str) -> Result<String> {
+    let full_path = Path::new(CLAUDE_TEMPLATES_PATH).join(relative_path);
+    debug!("Loading template from: {}", full_path.display());
+
+    fs::read_to_string(&full_path)
+        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(
+            format!("Failed to load template {}: {}", relative_path, e)
+        ))
+}
 
 /// Generate all template files for a task
 pub fn generate_templates(
@@ -25,7 +28,7 @@ pub fn generate_templates(
 ) -> Result<BTreeMap<String, String>> {
     let mut templates = BTreeMap::new();
 
-    // Generate container startup script (CRITICAL!)
+    // Generate container startup script
     templates.insert("container.sh".to_string(), generate_container_script(task)?);
 
     // Generate Claude memory
@@ -57,11 +60,13 @@ fn generate_claude_memory(task: &TaskType) -> Result<String> {
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false);
 
-    let template = if task.is_docs() {
-        DOCS_CLAUDE_TEMPLATE
+    let template_path = if task.is_docs() {
+        "docs/claude.md.hbs"
     } else {
-        CODE_CLAUDE_TEMPLATE
+        "code/claude.md.hbs"
     };
+
+    let template = load_template(template_path)?;
 
     handlebars
         .register_template_string("claude_memory", template)
@@ -88,11 +93,13 @@ fn generate_claude_settings(task: &TaskType, config: &ControllerConfig) -> Resul
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false);
 
-    let template = if task.is_docs() {
-        DOCS_SETTINGS_TEMPLATE
+    let template_path = if task.is_docs() {
+        "docs/settings.json.hbs"
     } else {
-        CODE_SETTINGS_TEMPLATE
+        "code/settings.json.hbs"
     };
+
+    let template = load_template(template_path)?;
 
     handlebars
         .register_template_string("settings", template)
@@ -110,11 +117,13 @@ fn generate_prompt(task: &TaskType) -> Result<String> {
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false);
 
-    let template = if task.is_docs() {
-        DOCS_PROMPT_TEMPLATE
+    let template_path = if task.is_docs() {
+        "docs/prompt.hbs"
     } else {
-        CODE_PROMPT_TEMPLATE
+        "code/prompt.hbs"
     };
+
+    let template = load_template(template_path)?;
 
     handlebars
         .register_template_string("prompt", template)
@@ -142,11 +151,13 @@ fn generate_container_script(task: &TaskType) -> Result<String> {
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false);
 
-    let template = if task.is_docs() {
-        DOCS_CONTAINER_TEMPLATE
+    let template_path = if task.is_docs() {
+        "docs/container.sh.hbs"
     } else {
-        CODE_CONTAINER_TEMPLATE
+        "code/container.sh.hbs"
     };
+
+    let template = load_template(template_path)?;
 
     handlebars
         .register_template_string("container_script", template)
@@ -178,8 +189,10 @@ fn generate_mcp_config(task: &TaskType, config: &ControllerConfig) -> Result<Str
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false);
 
+    let template = load_template("code/mcp.json.hbs")?;
+
     handlebars
-        .register_template_string("mcp", CODE_MCP_TEMPLATE)
+        .register_template_string("mcp", &template)
         .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register MCP template: {e}")))?;
 
     let data = build_settings_template_data(task, config);
@@ -194,8 +207,10 @@ fn generate_client_config(task: &TaskType, config: &ControllerConfig) -> Result<
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false);
 
+    let template = load_template("code/client-config.json.hbs")?;
+
     handlebars
-        .register_template_string("client_config", CODE_CLIENT_CONFIG_TEMPLATE)
+        .register_template_string("client_config", &template)
         .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register client config template: {e}")))?;
 
     let data = build_settings_template_data(task, config);
@@ -210,8 +225,10 @@ fn generate_coding_guidelines(task: &TaskType) -> Result<String> {
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false);
 
+    let template = load_template("code/coding-guidelines.md.hbs")?;
+
     handlebars
-        .register_template_string("coding_guidelines", CODE_CODING_GUIDELINES_TEMPLATE)
+        .register_template_string("coding_guidelines", &template)
         .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register coding guidelines template: {e}")))?;
 
     let data = json!({
@@ -229,8 +246,10 @@ fn generate_github_guidelines(task: &TaskType) -> Result<String> {
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false);
 
+    let template = load_template("code/github-guidelines.md.hbs")?;
+
     handlebars
-        .register_template_string("github_guidelines", CODE_GITHUB_GUIDELINES_TEMPLATE)
+        .register_template_string("github_guidelines", &template)
         .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register GitHub guidelines template: {e}")))?;
 
     let data = json!({
@@ -319,7 +338,7 @@ fn generate_hook_scripts(task: &TaskType) -> Result<BTreeMap<String, String>> {
     handlebars.set_strict_mode(false);
 
     // Get hook templates based on task type
-    let hook_templates = get_hook_templates(task);
+    let hook_templates = get_hook_templates(task)?;
 
     // Prepare template data
     let data = json!({
@@ -354,15 +373,46 @@ fn generate_hook_scripts(task: &TaskType) -> Result<BTreeMap<String, String>> {
     Ok(hook_scripts)
 }
 
-/// Get all hook templates for a specific task type
-fn get_hook_templates(task: &TaskType) -> Vec<(String, String)> {
-    match task {
-        TaskType::Docs(_) => vec![
-            ("stop-pr-creation.sh.hbs".to_string(), include_str!("../../../templates/docs/hooks/stop-pr-creation.sh.hbs").to_string()),
-        ],
-        TaskType::Code(_) => vec![
-            ("stop-commit.sh.hbs".to_string(), include_str!("../../../templates/code/hooks/stop-commit.sh.hbs").to_string()),
-            ("early-test.sh.hbs".to_string(), include_str!("../../../templates/code/hooks/early-test.sh.hbs").to_string()),
-        ],
+/// Get all hook templates for a specific task type by scanning the filesystem
+fn get_hook_templates(task: &TaskType) -> Result<Vec<(String, String)>> {
+    let hooks_dir = match task {
+        TaskType::Docs(_) => "docs/hooks",
+        TaskType::Code(_) => "code/hooks",
+    };
+
+    let hooks_path = Path::new(CLAUDE_TEMPLATES_PATH).join(hooks_dir);
+    debug!("Scanning for hook templates in: {}", hooks_path.display());
+
+    let mut templates = Vec::new();
+
+    // Read the hooks directory
+    match std::fs::read_dir(&hooks_path) {
+        Ok(entries) => {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let path = entry.path();
+                    if path.is_file() && path.extension().map_or(false, |ext| ext == "hbs") {
+                        if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
+                            let template_path = format!("{}/{}", hooks_dir, filename);
+                            match load_template(&template_path) {
+                                Ok(content) => {
+                                    debug!("Loaded hook template: {}", filename);
+                                    templates.push((filename.to_string(), content));
+                                },
+                                Err(e) => {
+                                    debug!("Failed to load hook template {}: {}", filename, e);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        Err(e) => {
+            debug!("Hooks directory {} not found or not accessible: {}", hooks_path.display(), e);
+            // Don't fail - hooks are optional
+        }
     }
+
+    Ok(templates)
 }

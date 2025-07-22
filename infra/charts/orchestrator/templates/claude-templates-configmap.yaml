@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "orchestrator.fullname" . }}-claude-templates
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "orchestrator.labels" . | nindent 4 }}
+data:
+{{- (.Files.Glob "claude-templates/**/*.hbs").AsConfig | nindent 2 }}
