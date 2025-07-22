@@ -22,6 +22,8 @@
       {{#each permissions.deny}}
       "{{this}}"{{#unless @last}},{{/unless}}
       {{/each}}
+      {{else}}
+      "Bash(npm:install*, yarn:install*, cargo:install*, docker:*, kubectl:*, rm:-rf*, git:*)"
       {{/if}}
     ],
     "defaultMode": "acceptEdits"
