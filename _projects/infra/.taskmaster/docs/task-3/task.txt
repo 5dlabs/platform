@@ -1,0 +1,68 @@
+{
+  "id": 3,
+  "title": "Deploy Talos OS Kubernetes Cluster",
+  "description": "Deploy the custom Talos OS image to control plane and worker nodes, bootstrap the Kubernetes cluster, and apply performance-optimized configurations for Solana validator workloads.",
+  "details": "1. Generate Talos machine configurations for control plane and worker nodes\n2. Apply NUMA and huge pages configuration to worker node\n3. Bootstrap Kubernetes control plane across 3 nodes\n4. Join Solana validator node as worker\n5. Configure storage mounts and permissions\n6. Apply performance-optimized Kubernetes settings\n7. Verify cluster stability and node communication\n\nExample Talos configuration for worker node:\n```yaml\nmachine:\n  type: worker\n  install:\n    disk: /dev/nvme0n1\n    image: ghcr.io/our-org/installer:custom-solana-v1.10.3\n  kubelet:\n    extraArgs:\n      system-reserved: memory=8Gi\n      kube-reserved: memory=8Gi\n      eviction-hard: memory.available<16Gi\n      cpu-manager-policy: static\n      topology-manager-policy: best-effort\n  kernel:\n    modules:\n      - tcp_bbr\n      - sch_fq\n  sysctls:\n    vm.max_map_count: 1048576\n    vm.dirty_ratio: 50\n    net.core.rmem_max: 268435456\n    net.ipv4.tcp_congestion_control: bbr\n  files:\n    - content: |\n        GRUB_CMDLINE_LINUX=\"default_hugepagesz=1G hugepagesz=1G hugepages=100 iommu=pt intel_iommu=on\"\n      path: /etc/default/grub.d/99-solana.cfg\n      mode: 0644\n```",
+  "testStrategy": "1. Verify all nodes join the cluster successfully\n2. Validate control plane health with `talosctl health`\n3. Check Kubernetes API server responsiveness\n4. Verify huge pages allocation on worker node\n5. Test NUMA configuration with `numactl --hardware`\n6. Validate storage mounts and permissions\n7. Run a test pod to verify scheduling and resource allocation\n8. Test cluster failover by taking down one control plane node",
+  "priority": "high",
+  "dependencies": [
+    1,
+    2
+  ],
+  "status": "pending",
+  "subtasks": [
+    {
+      "id": 1,
+      "title": "Provision Talos OS on Control Plane and Worker Nodes",
+      "description": "Boot all control plane and worker nodes using the custom Talos OS image, ensuring each node is accessible and ready for configuration.",
+      "dependencies": [],
+      "details": "Download the appropriate Talos OS ISO or image for your hardware, boot each node from the image, and verify network connectivity to all nodes before proceeding with configuration.[3]",
+      "status": "pending",
+      "testStrategy": "Confirm each node boots into Talos OS and is reachable via the management network."
+    },
+    {
+      "id": 2,
+      "title": "Generate and Apply Talos Machine Configurations",
+      "description": "Create tailored Talos machine configuration files for control plane and worker nodes, including NUMA and huge pages settings for worker nodes, and apply them to the respective nodes.",
+      "dependencies": [
+        "3.1"
+      ],
+      "details": "Use the Talos configuration generator to produce YAML configs for each node type. Incorporate performance optimizations (NUMA, huge pages, kernel modules, sysctls) for Solana validator workloads in worker node configs. Apply configurations using talosctl.[1][3]",
+      "status": "pending",
+      "testStrategy": "Validate that each node receives the correct configuration and reboots into the intended role (control plane or worker)."
+    },
+    {
+      "id": 3,
+      "title": "Bootstrap Kubernetes Control Plane",
+      "description": "Initialize the Kubernetes cluster by bootstrapping the control plane across three nodes, forming the etcd cluster and starting core Kubernetes components.",
+      "dependencies": [
+        "3.2"
+      ],
+      "details": "Use talosctl to bootstrap the cluster on one control plane node. Ensure etcd and Kubernetes API server are running and healthy across all control plane nodes.[2][4]",
+      "status": "pending",
+      "testStrategy": "Verify cluster health with talosctl health and confirm all control plane nodes are part of the etcd cluster."
+    },
+    {
+      "id": 4,
+      "title": "Join Worker Nodes and Solana Validator Node to Cluster",
+      "description": "Add all worker nodes, including the node designated for Solana validator workloads, to the Kubernetes cluster.",
+      "dependencies": [
+        "3.3"
+      ],
+      "details": "Approve worker nodes to join the cluster using talosctl. Ensure the Solana validator node is recognized as a worker and receives the correct performance-optimized configuration.[2][4]",
+      "status": "pending",
+      "testStrategy": "Check that all worker nodes appear in kubectl get nodes and are in Ready state."
+    },
+    {
+      "id": 5,
+      "title": "Apply Storage, Permissions, and Performance-Optimized Kubernetes Settings",
+      "description": "Configure storage mounts, set appropriate permissions, and apply additional Kubernetes-level performance optimizations for Solana validator workloads.",
+      "dependencies": [
+        "3.4"
+      ],
+      "details": "Mount required storage volumes, set filesystem permissions, and apply Kubernetes settings such as resource reservations, eviction policies, and node labels/taints for workload isolation.",
+      "status": "pending",
+      "testStrategy": "Validate storage mounts and permissions, confirm huge pages and NUMA settings are active, and verify cluster stability and node communication."
+    }
+  ]
+}
