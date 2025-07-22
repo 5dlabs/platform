@@ -346,36 +346,32 @@ if [ -d "/config" ]; then
   # Copy markdown files (force overwrite any existing files)
   cp -f /config/*.md "$CLAUDE_WORK_DIR/" 2>/dev/null && echo "✓ Copied markdown files (overwriting existing)" || echo "! No markdown files to copy"
 
-  # Create enterprise managed settings for HIGHEST precedence (guaranteed override)
+    # Enterprise managed settings are mounted directly from ConfigMap
   echo "=== ENTERPRISE MANAGED SETTINGS (Highest Precedence) ==="
-  mkdir -p /etc/claude-code
-  chmod 755 /etc/claude-code
 
-  # Copy Claude settings as enterprise managed settings for highest precedence
-  if [ -f "/config/claude-settings.json" ]; then
-    cp /config/claude-settings.json /etc/claude-code/managed-settings.json
-    # Set explicit permissions so Claude Code can read the enterprise settings
-    chmod 644 /etc/claude-code/managed-settings.json
-    echo "✓ Copied claude-settings.json as enterprise managed settings to /etc/claude-code/managed-settings.json"
-    echo "✓ Set readable permissions (644) for enterprise settings"
+  # Check that the settings are mounted correctly
+  if [ -f "/etc/claude-code/managed-settings.json" ]; then
+    echo "✓ Enterprise managed settings found at /etc/claude-code/managed-settings.json"
+    echo "✓ Mounted directly from ConfigMap (no copying needed)"
+
+    # Validate the enterprise settings JSON
+    if jq empty /etc/claude-code/managed-settings.json 2>/dev/null; then
+      echo "✓ Enterprise settings JSON is valid"
+      echo "✓ This will override ALL other Claude Code settings (highest precedence)"
+      echo "✓ Model configuration, tools, and hooks are all defined"
+
+      echo ""
+      echo "Enterprise settings contents:"
+      cat /etc/claude-code/managed-settings.json | jq . 2>/dev/null || cat /etc/claude-code/managed-settings.json
+    else
+      echo "❌ Enterprise settings JSON is invalid"
+      cat /etc/claude-code/managed-settings.json
+      exit 1
+    fi
   else
-    echo "❌ ERROR: Claude settings template not found in ConfigMap!"
-    echo "Expected: /config/claude-settings.json"
-    exit 1
-  fi
-
-  # Validate the enterprise settings JSON
-  if jq empty /etc/claude-code/managed-settings.json 2>/dev/null; then
-    echo "✓ Enterprise settings JSON is valid"
-    echo "✓ This will override ALL other Claude Code settings (highest precedence)"
-    echo "✓ Model configuration, tools, and hooks are all defined"
-
-    echo ""
-    echo "Enterprise settings contents:"
-    cat /etc/claude-code/managed-settings.json | jq . 2>/dev/null || cat /etc/claude-code/managed-settings.json
-  else
-    echo "❌ Enterprise settings JSON is invalid"
-    cat /etc/claude-code/managed-settings.json
+    echo "❌ ERROR: Enterprise managed settings not found!"
+    echo "Expected: /etc/claude-code/managed-settings.json"
+    echo "This should be mounted from the ConfigMap"
     exit 1
   fi
 
