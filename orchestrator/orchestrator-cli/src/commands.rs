@@ -68,7 +68,7 @@ async fn handle_docs_command(
     output.info("Initializing documentation generator...")?;
 
     // Do local file preparation and get git info
-    let (repo_url, working_dir, source_branch, target_branch) =
+    let (repo_url, working_dir, source_branch, _generated_docs_branch) =
         DocsGenerator::prepare_for_submission(working_directory)?;
 
     // Auto-detect GitHub user from git config (simplified for now)
@@ -79,7 +79,6 @@ async fn handle_docs_command(
         repository_url: repo_url.clone(),
         working_directory: working_dir.clone(),
         source_branch: source_branch.clone(),
-        target_branch: target_branch.clone(),
         model: model.to_string(),
         github_user,
     };

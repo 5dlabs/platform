@@ -35,7 +35,6 @@ pub async fn generate_docs(
         repository_url: request.repository_url.clone(),
         working_directory: request.working_directory.clone(),
         source_branch: request.source_branch.clone(),
-        target_branch: request.target_branch.clone(),
         model: request.model.clone(),
         github_user: request.github_user.clone(),
     };

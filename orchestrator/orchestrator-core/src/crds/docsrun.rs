@@ -14,7 +14,6 @@ pub struct DocsRunSpec {
     pub repository_url: String,
     pub working_directory: String,
     pub source_branch: String,
-    pub target_branch: String,
     pub model: String,
     pub github_user: String,
 }

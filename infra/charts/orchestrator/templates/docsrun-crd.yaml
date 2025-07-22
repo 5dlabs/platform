@@ -31,7 +31,7 @@ spec:
         properties:
           spec:
             type: object
-            required: ["repositoryUrl", "workingDirectory", "sourceBranch", "targetBranch", "model", "githubUser"]
+            required: ["repositoryUrl", "workingDirectory", "sourceBranch", "model", "githubUser"]
             properties:
               repositoryUrl:
                 type: string
@@ -42,9 +42,6 @@ spec:
               sourceBranch:
                 type: string
                 description: "Source branch to analyze"
-              targetBranch:
-                type: string
-                description: "Target branch for documentation PR"
               model:
                 type: string
                 description: "Claude model to use (sonnet, opus)"

@@ -196,7 +196,6 @@ fn build_job_spec(task: &TaskType, job_name: &str, cm_name: &str, config: &Contr
     match task {
         TaskType::Docs(dr) => {
             env_vars.push(json!({"name": "SOURCE_BRANCH", "value": dr.spec.source_branch}));
-            env_vars.push(json!({"name": "TARGET_BRANCH", "value": dr.spec.target_branch}));
         }
         TaskType::Code(cr) => {
             env_vars.push(json!({"name": "TASK_ID", "value": cr.spec.task_id.to_string()}));
