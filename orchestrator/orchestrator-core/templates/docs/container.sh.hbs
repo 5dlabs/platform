@@ -13,6 +13,23 @@ export SSH_ASKPASS=/bin/true
 REPO_URL="{{repository_url}}"
 echo "=== SSH-ONLY AUTHENTICATION ==="
 
+# Debug: Check what's actually mounted
+echo "=== FILESYSTEM DEBUG ==="
+echo "Contents of /root/:"
+ls -la /root/ || echo "Failed to list /root/"
+echo ""
+echo "Contents of /root/.ssh/ (if exists):"
+ls -la /root/.ssh/ 2>/dev/null || echo "/root/.ssh/ does not exist"
+echo ""
+echo "Looking for any ssh-related mounts:"
+find /root -name "*ssh*" -o -name "*ed25519*" -o -name "*rsa*" 2>/dev/null || echo "No SSH files found in /root"
+echo ""
+echo "Checking if any secrets are mounted elsewhere:"
+find /var/secrets -name "*" 2>/dev/null || echo "No /var/secrets directory"
+find /secrets -name "*" 2>/dev/null || echo "No /secrets directory"
+echo "=== END DEBUG ==="
+echo ""
+
 # Check if SSH key is mounted directly to /root/.ssh/
 if [ -f "/root/.ssh/id_ed25519" ]; then
   echo "✓ SSH private key found at /root/.ssh/id_ed25519"
