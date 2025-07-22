@@ -52,11 +52,11 @@ Place all documentation in `.taskmaster/docs/task-{id}/` directories.
 **⚠️ CRITICAL: You MUST generate ALL documentation files as specified above.**
 
 **Git Workflow:** The orchestrator post-completion hook will automatically handle:
-- Creating and checking out the feature branch: `{{targetBranch}}`
+- Creating and checking out the feature branch: `docs-gen-{{source_branch}}`
 - Staging all documentation files
 - Committing with proper message
 - Pushing to origin
-- Creating pull request to target branch: `{{repository.branch}}`
+- Creating pull request to target branch: `{{source_branch}}`
 
 **Your Job:** Focus ONLY on generating the documentation files. Do NOT run any git commands.
 

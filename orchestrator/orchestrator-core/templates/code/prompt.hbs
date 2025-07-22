@@ -1,4 +1,4 @@
-# 🚀 Implementation Task: {{task_title}}
+# 🚀 Implementation Task: Task {{task_id}}
 
 **🚨 MANDATORY CHECKPOINT SYSTEM 🚨**
 You MUST use the checkpoint system throughout this implementation. This is critical for resumability if the task fails or times out.
@@ -7,43 +7,29 @@ You MUST use the checkpoint system throughout this implementation. This is criti
 
 **Service**: {{service_name}}
 **Task ID**: {{task_id}}
-**Attempt**: {{attempt_number}}
-{{#if is_retry}}
-**⚠️ This is a retry attempt** - Check existing progress before starting!
-{{/if}}
+**Branch**: {{branch}}
+**Repository**: {{repository_url}}
+**Working Directory**: {{working_directory}}
 
 ## Task Details
 
-{{{task_content}}}
+Implementation task {{task_id}} for service {{service_name}}.
 
-{{#if design_spec}}
-## Design Specification
+**Context**: You have access to comprehensive task documentation in the `.taskmaster/docs/task-{{task_id}}/` directory which includes:
+- `task.md` - Complete task overview and requirements
+- `prompt.md` - Detailed implementation guidance
+- `acceptance-criteria.md` - Success criteria and testing requirements
 
-{{{design_spec}}}
-{{/if}}
-
-{{#if acceptance_criteria}}
-## Acceptance Criteria
-
-{{{acceptance_criteria}}}
-{{/if}}
+**Important**: Read these documentation files first to understand the complete requirements before starting implementation.
 
 ## 📋 Implementation Process (MANDATORY STEPS)
 
 ### Step 1: Assessment & Planning
-{{#if is_retry}}
-**🔄 RETRY ASSESSMENT REQUIRED:**
-1. **Review checkpoint file**: `cat .orchestrator/task-{{task_id}}-checkpoint.json`
-2. **Check progress log**: `cat .orchestrator/task-{{task_id}}-progress.log`
-3. **Analyze git commits**: `git log --oneline -10`
-4. **Identify what's been completed and what remains**
-5. **Plan continuation from current state**
-{{else}}
-1. **Analyze current codebase state**
-2. **Review task requirements and dependencies**
-3. **Plan implementation approach**
-4. **Identify potential challenges**
-{{/if}}
+1. **Read task documentation**: Review `.taskmaster/docs/task-{{task_id}}/` files
+2. **Analyze current codebase state**
+3. **Review task requirements and dependencies**
+4. **Plan implementation approach**
+5. **Identify potential challenges**
 
 **🏁 Checkpoint**: `update_checkpoint "assessment_complete" "Analyzed requirements and planned approach"`
 

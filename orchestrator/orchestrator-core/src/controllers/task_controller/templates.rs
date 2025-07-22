@@ -7,8 +7,12 @@ use std::collections::BTreeMap;
 // Template constants - actual template files
 const DOCS_CLAUDE_TEMPLATE: &str = include_str!("../../../templates/docs/claude.md.hbs");
 const CODE_CLAUDE_TEMPLATE: &str = include_str!("../../../templates/code/claude.md.hbs");
+const DOCS_PROMPT_TEMPLATE: &str = include_str!("../../../templates/docs/prompt.hbs");
+const CODE_PROMPT_TEMPLATE: &str = include_str!("../../../templates/code/prompt.hbs");
 const DOCS_SETTINGS_TEMPLATE: &str = include_str!("../../../templates/docs/settings.json.hbs");
 const CODE_SETTINGS_TEMPLATE: &str = include_str!("../../../templates/code/settings.json.hbs");
+const DOCS_CONTAINER_TEMPLATE: &str = include_str!("../../../templates/docs/container.sh.hbs");
+const CODE_CONTAINER_TEMPLATE: &str = include_str!("../../../templates/code/container.sh.hbs");
 const CODE_MCP_TEMPLATE: &str = include_str!("../../../templates/code/mcp.json.hbs");
 const CODE_CLIENT_CONFIG_TEMPLATE: &str = include_str!("../../../templates/code/client-config.json.hbs");
 const CODE_CODING_GUIDELINES_TEMPLATE: &str = include_str!("../../../templates/code/coding-guidelines.md.hbs");
@@ -20,6 +24,9 @@ pub fn generate_templates(
     config: &ControllerConfig,
 ) -> Result<BTreeMap<String, String>> {
     let mut templates = BTreeMap::new();
+
+    // Generate container startup script (CRITICAL!)
+    templates.insert("container.sh".to_string(), generate_container_script(task)?);
 
     // Generate Claude memory
     templates.insert("claude.md".to_string(), generate_claude_memory(task)?);
@@ -96,6 +103,74 @@ fn generate_claude_settings(task: &TaskType, config: &ControllerConfig) -> Resul
     handlebars
         .render("settings", &data)
         .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render settings template: {e}")))
+}
+
+/// Generate prompt content from template
+fn generate_prompt(task: &TaskType) -> Result<String> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false);
+
+    let template = if task.is_docs() {
+        DOCS_PROMPT_TEMPLATE
+    } else {
+        CODE_PROMPT_TEMPLATE
+    };
+
+    handlebars
+        .register_template_string("prompt", template)
+        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register prompt template: {e}")))?;
+
+    let data = json!({
+        "repository_url": task.repository_url(),
+        "source_branch": task.branch(),
+        "branch": task.branch(),
+        "github_user": task.github_user(),
+        "working_directory": task.working_directory(),
+        "model": task.model(),
+        "service_name": task.service_name(),
+        "task_id": task.task_id(),
+        "platform_repository_url": task.platform_repository_url()
+    });
+
+    handlebars
+        .render("prompt", &data)
+        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render prompt template: {e}")))
+}
+
+/// Generate container startup script from template
+fn generate_container_script(task: &TaskType) -> Result<String> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false);
+
+    let template = if task.is_docs() {
+        DOCS_CONTAINER_TEMPLATE
+    } else {
+        CODE_CONTAINER_TEMPLATE
+    };
+
+    handlebars
+        .register_template_string("container_script", template)
+        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register container script template: {e}")))?;
+
+    // Generate the prompt content first
+    let prompt_content = generate_prompt(task)?;
+
+    let data = json!({
+        "repository_url": task.repository_url(),
+        "source_branch": task.branch(),
+        "branch": task.branch(),
+        "github_user": task.github_user(),
+        "working_directory": task.working_directory(),
+        "model": task.model(),
+        "service_name": task.service_name(),
+        "task_id": task.task_id(),
+        "platform_repository_url": task.platform_repository_url(),
+        "prompt_content": prompt_content  // Add the rendered prompt content
+    });
+
+    handlebars
+        .render("container_script", &data)
+        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render container script template: {e}")))
 }
 
 /// Generate MCP configuration for implementation tasks
