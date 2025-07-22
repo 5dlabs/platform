@@ -154,10 +154,10 @@ fn handle_orchestrator_tools(
                 .get("task_id")
                 .and_then(|v| v.as_u64());
 
-            // Validate model parameter
-            if !["opus", "sonnet"].contains(&model) {
-                return Some(Err(anyhow!("Invalid model '{}'. Must be 'opus' or 'sonnet'", model)));
-        }
+            // Validate model parameter - allow any model that starts with "claude-"
+            if !model.starts_with("claude-") {
+                return Some(Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name (e.g., 'claude-3-5-sonnet-20241022')", model)));
+            }
 
             // Build CLI arguments
             let mut args = vec!["task", "init-docs"];
@@ -277,9 +277,9 @@ fn handle_orchestrator_tools(
                 .and_then(|v| v.as_str())
                 .unwrap_or("default");
 
-            // Validate model parameter
-            if !["opus", "sonnet"].contains(&model) {
-                return Some(Err(anyhow!("Invalid model '{}'. Must be 'opus' or 'sonnet'", model)));
+            // Validate model parameter - allow any model that starts with "claude-"
+            if !model.starts_with("claude-") {
+                return Some(Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name (e.g., 'claude-3-5-sonnet-20241022')", model)));
             }
 
             // Validate tool_config parameter

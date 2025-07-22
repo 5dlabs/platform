@@ -11,10 +11,14 @@ use serde::{Deserialize, Serialize};
 #[kube(printcolumn = r#"{"name":"Phase","type":"string","jsonPath":".status.phase"}"#)]
 #[kube(printcolumn = r#"{"name":"Age","type":"date","jsonPath":".metadata.creationTimestamp"}"#)]
 pub struct DocsRunSpec {
+    #[serde(rename = "repositoryUrl")]
     pub repository_url: String,
+    #[serde(rename = "workingDirectory")]
     pub working_directory: String,
+    #[serde(rename = "sourceBranch")]
     pub source_branch: String,
     pub model: String,
+    #[serde(rename = "githubUser")]
     pub github_user: String,
 }
 

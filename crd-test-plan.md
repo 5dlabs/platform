@@ -69,10 +69,10 @@ metadata:
 spec:
   # All required fields
   repositoryUrl: "https://github.com/5dlabs/platform"
-  workingDirectory: "orchestrator"
-  sourceBranch: "feature/test-branch"
-  model: "claude-3.5-sonnet"
-  githubUser: "test-user"
+  workingDirectory: "_projects/simple-api"
+  sourceBranch: "feature/example-project-and-cli"
+  model: "claude-3-5-sonnet-20241022"
+  githubUser: "pm0-5dlabs"
 ```
 
 ### Expected Behavior:

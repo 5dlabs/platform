@@ -62,7 +62,7 @@ spec:
                 description: "Working directory within target repository"
               model:
                 type: string
-                description: "Claude model to use (sonnet, opus)"
+                description: "Claude model to use (full model name like 'claude-3-5-sonnet-20241022')"
               githubUser:
                 type: string
                 description: "GitHub username for authentication and commits"

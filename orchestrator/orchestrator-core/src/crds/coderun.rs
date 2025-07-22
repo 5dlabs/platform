@@ -31,51 +31,56 @@ fn default_prompt_mode() -> String {
 #[kube(printcolumn = r#"{"name":"Age","type":"date","jsonPath":".metadata.creationTimestamp"}"#)]
 pub struct CodeRunSpec {
     /// Task ID to implement
+    #[serde(rename = "taskId")]
     pub task_id: u32,
 
     /// Target service name
     pub service: String,
 
     /// Target project repository URL (where implementation work happens)
+    #[serde(rename = "repositoryUrl")]
     pub repository_url: String,
 
     /// Platform repository URL (where Task Master definitions come from)
+    #[serde(rename = "platformRepositoryUrl")]
     pub platform_repository_url: String,
 
     /// Git branch to work on in target repository
     pub branch: String,
 
     /// Working directory within target repository
+    #[serde(rename = "workingDirectory")]
     pub working_directory: String,
 
     /// Claude model to use (sonnet, opus)
     pub model: String,
 
     /// GitHub username for authentication and commits
+    #[serde(rename = "githubUser")]
     pub github_user: String,
 
     /// Local MCP tools/servers to enable (comma-separated)
-    #[serde(default)]
+    #[serde(default, rename = "localTools")]
     pub local_tools: Option<String>,
 
     /// Remote MCP tools/servers to enable (comma-separated)
-    #[serde(default)]
+    #[serde(default, rename = "remoteTools")]
     pub remote_tools: Option<String>,
 
     /// Tool configuration preset (default, minimal, advanced)
-    #[serde(default = "default_tool_config")]
+    #[serde(default = "default_tool_config", rename = "toolConfig")]
     pub tool_config: String,
 
     /// Context version for retry attempts (incremented on each retry)
-    #[serde(default = "default_context_version")]
+    #[serde(default = "default_context_version", rename = "contextVersion")]
     pub context_version: u32,
 
     /// Additional context for retry attempts
-    #[serde(default)]
+    #[serde(default, rename = "promptModification")]
     pub prompt_modification: Option<String>,
 
     /// How to apply prompt modifications (append, replace)
-    #[serde(default = "default_prompt_mode")]
+    #[serde(default = "default_prompt_mode", rename = "promptMode")]
     pub prompt_mode: String,
 }
 
