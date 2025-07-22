@@ -4,60 +4,46 @@ use anyhow::Result;
 use axum::{
     extract::State,
     http::StatusCode,
-    middleware,
     response::Json,
     routing::{get, post},
     Router,
 };
 use kube::Client;
 use orchestrator_core::{
-    handlers::pm_taskrun::{
-        add_context, generate_docs, get_task, get_task_status, list_tasks, submit_task, update_session,
-        AppState as TaskRunAppState,
+    controllers::{run_task_controller, task_controller::ControllerConfig}, // Updated to use new controller
+    handlers::{
+        code_handler::submit_code_task,
+        common::{AppError, AppState},
+        docs_handler::generate_docs,
     },
-    run_taskrun_controller,
 };
 use serde_json::{json, Value};
-use std::sync::Arc;
 use tokio::signal;
 use tower::ServiceBuilder;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::{error, info, warn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-/// Application state shared across handlers  
-#[derive(Clone)]
-pub struct AppState {
-    taskrun_state: Arc<TaskRunAppState>,
-}
+async fn create_app_state() -> Result<AppState> {
+    // Initialize Kubernetes client
+    let k8s_client = Client::try_default()
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to create K8s client: {}", e))?;
 
-impl AppState {
-    pub async fn new() -> Result<Self> {
-        // Initialize Kubernetes client
-        let k8s_client = Client::try_default()
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to create K8s client: {}", e))?;
+    // Get namespace from environment or use default
+    let namespace =
+        std::env::var("KUBERNETES_NAMESPACE").unwrap_or_else(|_| "orchestrator".to_string());
 
-        // Get namespace from environment or use default
-        let namespace =
-            std::env::var("KUBERNETES_NAMESPACE").unwrap_or_else(|_| "orchestrator".to_string());
+    info!("Initialized orchestrator for namespace: {}", namespace);
 
-        // Create TaskRun app state
-        let taskrun_state = TaskRunAppState {
-            k8s_client: k8s_client.clone(),
-            namespace: namespace.clone(),
-        };
-
-        info!("Initialized orchestrator for namespace: {}", namespace);
-
-        Ok(Self {
-            taskrun_state: Arc::new(taskrun_state),
-        })
-    }
+    Ok(AppState {
+        k8s_client,
+        namespace,
+    })
 }
 
 /// Health check endpoint
-async fn health_check(State(_state): State<Arc<AppState>>) -> Result<Json<Value>, StatusCode> {
+async fn health_check(State(_state): State<AppState>) -> Result<Json<Value>, StatusCode> {
     Ok(Json(json!({
         "status": "healthy",
         "version": env!("CARGO_PKG_VERSION"),
@@ -65,71 +51,11 @@ async fn health_check(State(_state): State<Arc<AppState>>) -> Result<Json<Value>
     })))
 }
 
-/// Error handling middleware
-async fn error_handler(
-    request: axum::http::Request<axum::body::Body>,
-    next: axum::middleware::Next,
-) -> axum::response::Response {
-    let response = next.run(request).await;
-
-    // Log errors if status code indicates a problem
-    if response.status().is_server_error() {
-        warn!("Server error: {}", response.status());
-    }
-
-    response
-}
-
 /// Create API routes
-fn api_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
+fn api_routes() -> Router<AppState> {
     Router::new()
-        .route("/health", get(health_check))
-        .route(
-            "/pm/tasks",
-            post({
-                let taskrun_state = state.taskrun_state.clone();
-                move |req| submit_task(State(taskrun_state), req)
-            })
-            .get({
-                let taskrun_state = state.taskrun_state.clone();
-                move || list_tasks(State(taskrun_state))
-            }),
-        )
-        .route(
-            "/pm/tasks/{task_id}",
-            get({
-                let taskrun_state = state.taskrun_state.clone();
-                move |path| get_task(State(taskrun_state), path)
-            }),
-        )
-        .route(
-            "/pm/tasks/{task_id}/status",
-            get({
-                let taskrun_state = state.taskrun_state.clone();
-                move |path| get_task_status(State(taskrun_state), path)
-            }),
-        )
-        .route(
-            "/pm/tasks/{task_id}/context",
-            post({
-                let taskrun_state = state.taskrun_state.clone();
-                move |path, req| add_context(State(taskrun_state), path, req)
-            }),
-        )
-        .route(
-            "/pm/tasks/{task_id}/session",
-            post({
-                let taskrun_state = state.taskrun_state.clone();
-                move |path, req| update_session(State(taskrun_state), path, req)
-            }),
-        )
-        .route(
-            "/pm/docs/generate",
-            post({
-                let taskrun_state = state.taskrun_state.clone();
-                move |req| generate_docs(State(taskrun_state), req)
-            }),
-        )
+        .route("/pm/tasks", post(submit_code_task))
+        .route("/pm/docs/generate", post(generate_docs))
 }
 
 #[tokio::main]
@@ -149,39 +75,38 @@ async fn main() -> Result<()> {
     );
 
     // Initialize application state
-    let app_state = Arc::new(AppState::new().await?);
+    let app_state = create_app_state().await?;
 
-    // Start TaskRun controller if enabled
+    // Start task controller if enabled
     let controller_enabled = std::env::var("CONTROLLER_ENABLED")
         .unwrap_or_else(|_| "true".to_string())
         .parse::<bool>()
         .unwrap_or(true);
 
     if controller_enabled {
-        let client = app_state.taskrun_state.k8s_client.clone();
-        let namespace = app_state.taskrun_state.namespace.clone();
+        let client = app_state.k8s_client.clone();
+        let namespace = app_state.namespace.clone();
 
-        info!("Starting TaskRun controller in namespace: {}", namespace);
+        info!("Starting task controller in namespace: {}", namespace);
 
         // Spawn the controller in the background
         tokio::spawn(async move {
-            if let Err(e) = run_taskrun_controller(client, namespace).await {
-                error!("TaskRun controller error: {}", e);
+            if let Err(e) = run_task_controller(client, namespace).await {
+                error!("Task controller error: {}", e);
             }
         });
     } else {
-        info!("TaskRun controller disabled");
+        info!("Task controller disabled");
     }
 
     // Build the application with middleware layers
     let app = Router::new()
-        .nest("/api/v1", api_routes(app_state.clone()))
+        .nest("/api/v1", api_routes())
         .route("/health", get(health_check)) // Root health check for load balancers
         .layer(
             ServiceBuilder::new()
                 .layer(TraceLayer::new_for_http())
-                .layer(CorsLayer::permissive()) // TODO: Configure proper CORS for production
-                .layer(middleware::from_fn(error_handler)),
+                .layer(CorsLayer::permissive()), // Simplified for now
         )
         .with_state(app_state);
 
@@ -228,9 +153,3 @@ async fn shutdown_signal() {
     info!("Shutdown signal received, starting graceful shutdown");
 }
 
-#[cfg(test)]
-mod tests {
-    // Note: Skipping tests that require actual K8s cluster connection
-    // These would be better as integration tests
-}
-// Trigger build: Thu  3 Jul 2025 02:35:13 PDT

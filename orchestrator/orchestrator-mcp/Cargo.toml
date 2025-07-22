@@ -1,10 +1,10 @@
 [package]
-name = "mcp-server"
+name = "orchestrator-mcp"
 version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "mcp-server"
+name = "orchestrator-mcp"
 path = "src/main.rs"
 
 [dependencies]

@@ -44,7 +44,7 @@ struct RpcRequest {
 
 // Helper to run orchestrator CLI command and capture output.
 fn run_orchestrator_cli(args: &[&str]) -> Result<String> {
-    let mut cmd = Command::new("orchestrator-cli");
+    let mut cmd = Command::new("orchestrator");
     cmd.args(args);
     cmd.stderr(Stdio::piped());
     let output = cmd.output().context("Failed to execute orchestrator-cli")?;
@@ -99,7 +99,7 @@ fn handle_mcp_protocol_methods(
                     }
                 },
                 "serverInfo": {
-                    "name": "orchestrator-mcp-server",
+                    "name": "orchestrator-mcp",
                     "title": "Orchestrator MCP Server",
                     "version": "1.0.0"
                 }
@@ -300,9 +300,9 @@ fn handle_orchestrator_tools(
             // Build CLI arguments
             let mut args = vec!["task", "submit"];
 
-            // Add required parameters
+            // Add required parameters (task_id is positional, not a flag)
             let task_id_str = task_id.to_string();
-            args.extend(&["--task-id", &task_id_str]);
+            args.push(&task_id_str);
             args.extend(&["--service", service]);
 
             // Add optional parameters
@@ -348,7 +348,7 @@ fn handle_orchestrator_tools(
             if let Some(local) = local_tools {
                 args.extend(&["--local-tools", local]);
             }
-            
+
             if let Some(remote) = remote_tools {
                 args.extend(&["--remote-tools", remote]);
             }

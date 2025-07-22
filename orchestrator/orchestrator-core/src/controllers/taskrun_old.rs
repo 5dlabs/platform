@@ -1,5 +1,5 @@
 use crate::config::controller_config::ControllerConfig;
-use crate::crds::{TaskRun, TaskRunPhase};
+use crate::k8s::{K8sClient, K8sError, K8sResult};
 use chrono::Utc;
 use futures::StreamExt;
 use handlebars::Handlebars;
@@ -897,7 +897,7 @@ fn build_env_vars(
         }),
     ];
 
-    // Add GitHub token if repository is configured
+    // Add GitHub token and user if repository is configured
     if let Some(repo) = &tr.spec.repository {
         // Auto-resolve secret name from GitHub user
         let secret_name = format!("github-pat-{}", repo.github_user);
@@ -909,6 +909,12 @@ fn build_env_vars(
                     "key": "token" // Standard convention
                 }
             }
+        }));
+
+        // Add GitHub user environment variable (matches docs generation pattern)
+        env_vars.push(json!({
+            "name": "GITHUB_USER",
+            "value": repo.github_user.clone()
         }));
     }
 

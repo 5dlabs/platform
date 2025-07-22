@@ -109,7 +109,7 @@ else
 fi
 
 # Create PR from new branch back to source branch
-if command -v gh >/dev/null 2>&1; then
+    if command -v gh >/dev/null 2>&1; then
     PR_TITLE="feat({{service_name}}): implement task {{task_id}}{{#if task_title}} - {{task_title}}{{/if}}"
     PR_BODY="## Implementation Summary
 
@@ -150,7 +150,7 @@ The Claude agent completed the implementation and this hook created the PR.
     else
         echo "⚠️ PR creation failed (may already exist or GitHub CLI authentication issue)"
     fi
-else
+    else
     echo "⚠️ GitHub CLI not available - PR must be created manually"
     echo "📝 Manual PR details:"
     echo "   Title: feat({{service_name}}): implement task {{task_id}}"

@@ -1,0 +1,47 @@
+//! Clean code task submission request structure
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CodeRequest {
+    /// Task ID to implement
+    pub task_id: u32,
+
+    /// Target service name
+    pub service: String,
+
+    /// Target project repository URL (where implementation work happens)
+    pub repository_url: String,
+
+    /// Platform repository URL (where Task Master definitions come from)
+    pub platform_repository_url: String,
+
+    /// Git branch to work on in target repository
+    pub branch: String,
+
+    /// GitHub username for authentication
+    pub github_user: String,
+
+    /// Working directory within target repository
+    pub working_directory: String,
+
+        /// Claude model to use (sonnet, opus)
+    pub model: String,
+
+    /// Local MCP tools/servers to enable (comma-separated)
+    #[serde(default)]
+    pub local_tools: Option<String>,
+
+    /// Remote MCP tools/servers to enable (comma-separated)
+    #[serde(default)]
+    pub remote_tools: Option<String>,
+
+    /// Tool configuration preset (default, minimal, advanced)
+    #[serde(default = "default_tool_config")]
+    pub tool_config: String,
+}
+
+/// Default tool configuration
+fn default_tool_config() -> String {
+    "default".to_string()
+}

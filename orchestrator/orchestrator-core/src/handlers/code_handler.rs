@@ -1,0 +1,100 @@
+//! Code task submission handler
+
+use axum::{extract::State, http::StatusCode, Json};
+use chrono::Utc;
+use kube::Api;
+use std::collections::HashMap;
+use tracing::{error, info};
+
+use crate::crds::{CodeRun, CodeRunSpec, CodeRunStatus};
+use crate::handlers::common::{AppState, ApiResponse};
+use orchestrator_common::models::CodeRequest;
+
+pub async fn submit_code_task(
+    State(state): State<AppState>,
+    Json(request): Json<CodeRequest>,
+) -> Result<Json<ApiResponse>, StatusCode> {
+    info!(
+        "Received code task request: task_id={}, service={}",
+        request.task_id, request.service
+    );
+
+    let spec = CodeRunSpec {
+        task_id: request.task_id,
+        service: request.service.clone(),
+        repository_url: request.repository_url,
+        platform_repository_url: request.platform_repository_url,
+        branch: request.branch,
+        working_directory: request.working_directory,
+        model: request.model,
+        github_user: request.github_user,
+        local_tools: request.local_tools,
+        remote_tools: request.remote_tools,
+        tool_config: request.tool_config,
+        context_version: Some(1), // Start with version 1
+        prompt_modification: None, // No modification on initial run
+        prompt_mode: Some("append".to_string()), // Default mode
+    };
+
+    let coderun = CodeRun {
+        metadata: kube::api::ObjectMeta {
+            name: Some(format!("code-{}-{}", request.task_id, Utc::now().timestamp())),
+            namespace: Some(state.namespace.clone()),
+            ..Default::default()
+        },
+        spec,
+        status: Some(CodeRunStatus {
+            phase: "Pending".to_string(),
+            message: Some("CodeRun created successfully".to_string()),
+            last_update: Some(Utc::now().to_rfc3339()),
+            job_name: None,
+            pull_request_url: None,
+            retry_count: Some(0),
+            conditions: None,
+            configmap_name: None,
+            context_version: Some(1),
+            prompt_modification: None,
+            prompt_mode: Some("direct".to_string()),
+            session_id: None,
+        }),
+    };
+
+    let api: Api<CodeRun> = Api::namespaced(state.k8s_client.clone(), &state.namespace);
+
+    // Check if a CodeRun already exists for this task
+    let existing_name = format!("code-{}", request.task_id);
+    if let Ok(_existing) = api.get(&existing_name).await {
+        error!("CodeRun already exists for task {}", request.task_id);
+        return Ok(Json(ApiResponse {
+            success: false,
+            message: format!("CodeRun already exists for task {}", request.task_id),
+            data: None,
+        }));
+    }
+
+    match api.create(&Default::default(), &coderun).await {
+        Ok(created) => {
+            info!("CodeRun created successfully: {:?}", created.metadata.name);
+
+            let mut response_data = HashMap::new();
+            if let Some(name) = &created.metadata.name {
+                response_data.insert("coderun_name".to_string(), serde_json::Value::String(name.clone()));
+            }
+            response_data.insert("namespace".to_string(), serde_json::Value::String(state.namespace.clone()));
+
+            Ok(Json(ApiResponse {
+                success: true,
+                message: "Code task submitted successfully".to_string(),
+                data: Some(serde_json::Value::Object(response_data.into_iter().collect())),
+            }))
+        }
+        Err(e) => {
+            error!("Failed to create CodeRun: {}", e);
+            Ok(Json(ApiResponse {
+                success: false,
+                message: format!("Failed to create CodeRun: {}", e),
+                data: None,
+            }))
+        }
+    }
+}
