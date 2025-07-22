@@ -173,14 +173,22 @@ fn build_job_spec(task: &TaskType, job_name: &str, cm_name: &str, config: &Contr
         let ssh_volumes = generate_ssh_volumes(task);
         volumes.extend(ssh_volumes);
 
-        volume_mounts.push(json!({
-            "name": "ssh-key",
-            "mountPath": "/workspace/.ssh",
-            "readOnly": true
-        }));
-    }
+            volume_mounts.push(json!({
+        "name": "ssh-key",
+        "mountPath": "/workspace/.ssh",
+        "readOnly": true
+    }));
+}
 
-    // Environment variables
+// Mount settings.json directly to /etc/claude-code/managed-settings.json
+volume_mounts.push(json!({
+    "name": "task-files",
+    "mountPath": "/etc/claude-code/managed-settings.json",
+    "subPath": "settings.json",
+    "readOnly": true
+}));
+
+// Environment variables
     let mut env_vars = vec![
         json!({"name": "ANTHROPIC_API_KEY", "valueFrom": {"secretKeyRef": {"name": config.secrets.api_key_secret_name, "key": config.secrets.api_key_secret_key}}}),
         json!({"name": "TASK_TYPE", "value": if task.is_docs() { "docs" } else { "code" }}),
