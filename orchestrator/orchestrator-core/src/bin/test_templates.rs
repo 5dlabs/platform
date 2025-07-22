@@ -5,7 +5,6 @@
 
 use handlebars::Handlebars;
 use serde_json::json;
-use std::collections::HashMap;
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

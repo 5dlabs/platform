@@ -117,17 +117,16 @@ async fn create_job(
     Ok(())
 }
 
-/// Generate a unique job name for the task
+/// Generate a deterministic job name for the task (based on resource name, not timestamp)
 fn generate_job_name(task: &TaskType) -> String {
+    let resource_name = task.name().replace('_', "-").replace('.', "-");
     match task {
         TaskType::Docs(_) => {
-            format!("docs-gen-{}", chrono::Utc::now().timestamp())
+            format!("docs-gen-{}", resource_name)
         }
         TaskType::Code(_) => {
-            let task_id = task.task_id().unwrap_or(0);
             let context_version = task.context_version();
-            let service_name = task.service_name().replace('_', "-");
-            format!("{service_name}-task{task_id}-attempt{context_version}")
+            format!("code-impl-{}-v{}", resource_name, context_version)
         }
     }
 }

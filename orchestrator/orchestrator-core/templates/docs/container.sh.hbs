@@ -10,8 +10,7 @@ export GIT_ASKPASS=/bin/true
 export SSH_ASKPASS=/bin/true
 
 # Setup authentication based on repository URL type
-{{#if repository}}
-REPO_URL="{{repository.url}}"
+REPO_URL="{{repository_url}}"
 if echo "$REPO_URL" | grep -q "^git@\|^ssh://"; then
   echo "SSH repository URL detected"
   USE_SSH=true
@@ -159,7 +158,7 @@ fi
 # Test 2: Repository access permissions
 echo ""
 echo "=== TEST 2: Repository Access Verification ==="
-REPO_URL="{{repository.url}}"
+REPO_URL="{{repository_url}}"
 # Extract owner/repo from URL
 if echo "$REPO_URL" | grep -q "github.com"; then
   REPO_PATH=$(echo "$REPO_URL" | sed 's|.*github.com[/:]||' | sed 's|\.git$||')
@@ -230,21 +229,16 @@ else
   fi
 fi
 
-{{else}}
-echo "⚠️ No repository configured for authentication setup"
-{{/if}}
-
 # Clone repository to get .taskmaster directory and project files
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
 echo "║                    REPOSITORY SETUP                          ║"
 echo "═══════════════════════════════════════════════════════════════"
 
-{{#if repository}}
 # Repository information
-REPO_URL="{{repository.url}}"
-REPO_BRANCH="{{repository.branch}}"
-GITHUB_USER="{{repository.githubUser}}"
+REPO_URL="{{repository_url}}"
+REPO_BRANCH="{{source_branch}}"
+GITHUB_USER="{{github_user}}"
 
 echo "Cloning repository: $REPO_URL"
 echo "Branch: $REPO_BRANCH"
@@ -386,16 +380,14 @@ else
 fi
 
 # Configure git user after successful clone
-{{#if repository}}
 echo "=== POST-CLONE GIT CONFIGURATION ==="
 # Fix dubious ownership issue when repository is cloned as different user
 git config --global --add safe.directory /workspace
 echo "✓ Added /workspace to safe directories"
 
-git config --global user.name "{{repository.githubUser}}"
-git config --global user.email "{{repository.githubUser}}@users.noreply.github.com"
-echo "✓ Configured git user: {{repository.githubUser}}"
-{{/if}}
+git config --global user.name "{{github_user}}"
+git config --global user.email "{{github_user}}@users.noreply.github.com"
+echo "✓ Configured git user: {{github_user}}"
 
 # =============================================================================
 # TEST GITHUB WRITE ACCESS WITH ACTUAL BRANCH/PR CREATION
@@ -411,10 +403,9 @@ echo "Creating test branch to verify write permissions..."
 
 # Create a unique test branch name
 TEST_BRANCH="docs-auth-test-$(date +%s)"
-TARGET_BRANCH="{{targetBranch}}"
 
 echo "Test branch: $TEST_BRANCH"
-echo "Target branch: $TARGET_BRANCH"
+echo "Source branch: $REPO_BRANCH"
 
 # Create and push test branch
 cd /workspace
@@ -475,24 +466,6 @@ cd "$CLAUDE_WORK_DIR" || {
   exit 1
 }
 echo "✓ Back in working directory: $(pwd)"
-
-{{else}}
-echo ""
-echo "═══════════════════════════════════════════════════════════════"
-echo "║                NO REPOSITORY CONFIGURED                      ║"
-echo "═══════════════════════════════════════════════════════════════"
-echo ""
-echo "❌ CRITICAL ERROR: No repository configured for docs generation"
-echo ""
-echo "Docs generation requires:"
-echo "  • Repository URL to clone source code"
-echo "  • .taskmaster directory with tasks.json"
-echo "  • Git repository for committing generated docs"
-echo ""
-echo "🚫 DOCS GENERATION CANNOT PROCEED WITHOUT REPOSITORY"
-echo ""
-exit 1
-{{/if}}
 
 # Copy ConfigMap files to working directory (AFTER repository clone)
 echo "=== CONFIGMAP FILE SETUP ==="
@@ -695,10 +668,9 @@ echo '=== CLAUDE EXECUTION ==='
 
 # Export necessary variables for the stop hook
 export SERVICE_NAME="{{service_name}}"
-export TARGET_BRANCH="{{targetBranch}}"
-export SOURCE_BRANCH="{{repository.branch}}"
-export WORKING_DIR="{{working_dir}}"
-export GITHUB_USER="{{repository.githubUser}}"
+export SOURCE_BRANCH="{{source_branch}}"
+export WORKING_DIR="{{working_directory}}"
+export GITHUB_USER="{{github_user}}"
 
 # Enterprise managed settings provide comprehensive configuration:
 # - Model selection, tools, hooks, environment variables
