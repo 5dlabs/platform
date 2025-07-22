@@ -13,26 +13,19 @@ pub fn generate_ssh_volumes(task: &TaskType) -> Vec<serde_json::Value> {
         "name": "ssh-key",
         "secret": {
             "secretName": ssh_secret_name,
-            "defaultMode": 0o600
+            "defaultMode": 0o600,
+            "items": [
+                {
+                    "key": "ssh-privatekey",
+                    "path": "id_ed25519",
+                    "mode": 0o600
+                },
+                {
+                    "key": "ssh-publickey",
+                    "path": "id_ed25519.pub",
+                    "mode": 0o644
+                }
+            ]
         }
     })]
-}
-
-/// Generate SSH-related environment variables (minimal - most auth via mounted keys)
-pub fn generate_ssh_env_vars(task: &TaskType) -> Vec<serde_json::Value> {
-    if !task.uses_ssh() {
-        return vec![];
-    }
-
-    // Set SSH key path and configure Git for SSH
-    vec![
-        json!({
-            "name": "SSH_KEY_PATH",
-            "value": "/ssh-keys/id_ed25519"
-        }),
-        json!({
-            "name": "GIT_SSH_COMMAND",
-            "value": "ssh -i /ssh-keys/id_ed25519 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-        }),
-    ]
 }

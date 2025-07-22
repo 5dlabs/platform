@@ -165,10 +165,9 @@ impl TaskType {
         }
     }
 
-    /// Check if this is using SSH authentication
+    /// Always use SSH authentication (we're SSH-only now)
     pub fn uses_ssh(&self) -> bool {
-        let url = self.repository_url();
-        url.starts_with("git@") || url.starts_with("ssh://")
+        true
     }
 
     /// Get SSH secret name for this GitHub user

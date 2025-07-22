@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use tracing::info;
 
-use super::auth::{generate_ssh_env_vars, generate_ssh_volumes};
+use super::auth::{generate_ssh_volumes};
 use super::status::update_job_started;
 use super::templates::generate_templates;
 use super::types::{Result, TaskType};
@@ -175,7 +175,7 @@ fn build_job_spec(task: &TaskType, job_name: &str, cm_name: &str, config: &Contr
 
         volume_mounts.push(json!({
             "name": "ssh-key",
-            "mountPath": "/ssh-keys",
+            "mountPath": "/root/.ssh",
             "readOnly": true
         }));
     }
@@ -211,11 +211,6 @@ fn build_job_spec(task: &TaskType, job_name: &str, cm_name: &str, config: &Contr
         }
     }
 
-    // Add SSH environment variables if needed
-    if task.uses_ssh() {
-        let ssh_env_vars = generate_ssh_env_vars(task);
-        env_vars.extend(ssh_env_vars);
-    }
 
     // Job deadline from config
     let job_deadline = config.job.active_deadline_seconds;

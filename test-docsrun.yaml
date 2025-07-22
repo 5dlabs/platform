@@ -1,7 +1,7 @@
 apiVersion: orchestrator.platform/v1
 kind: DocsRun
 metadata:
-  name: test-docsrun-006
+  name: test-docsrun-007
   namespace: orchestrator
 spec:
   repositoryUrl: "https://github.com/5dlabs/platform"
