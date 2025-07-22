@@ -10,8 +10,7 @@ export GIT_ASKPASS=/bin/true
 export SSH_ASKPASS=/bin/true
 
 # Setup authentication based on repository URL type
-{{#if repository}}
-REPO_URL="{{repository.url}}"
+REPO_URL="{{repository_url}}"
 if echo "$REPO_URL" | grep -q "^git@\|^ssh://"; then
   echo "SSH repository URL detected"
   USE_SSH=true
@@ -126,7 +125,7 @@ fi
 # Test 2: Repository access permissions
 echo ""
 echo "=== TEST 2: Repository Access Verification ==="
-REPO_URL="{{repository.url}}"
+REPO_URL="{{repository_url}}"
 # Extract owner/repo from URL
 if echo "$REPO_URL" | grep -q "github.com"; then
   REPO_PATH=$(echo "$REPO_URL" | sed 's|.*github.com[/:]||' | sed 's|\.git$||')
@@ -155,35 +154,26 @@ else
   echo "⚠️  Non-GitHub repository detected, skipping API permission check"
 fi
 
-{{else}}
-echo "⚠️ No repository configured for authentication setup"
-{{/if}}
-
 # Dual Repository Setup - Platform repo for docs, Target repo for implementation
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
 echo "║                 DUAL REPOSITORY SETUP                        ║"
 echo "═══════════════════════════════════════════════════════════════"
 
-{{#if platform_repository}}
 # Platform Repository Information (for task documentation)
-PLATFORM_URL="{{platform_repository.url}}"
-PLATFORM_BRANCH="{{platform_repository.branch}}"
-PLATFORM_USER="{{platform_repository.githubUser}}"
+PLATFORM_URL="{{platform_repository_url}}"
+PLATFORM_BRANCH="{{branch}}"
+PLATFORM_USER="{{github_user}}"
 
 echo "=== PLATFORM REPOSITORY SETUP ==="
 echo "Platform repo: $PLATFORM_URL"
 echo "Platform branch: $PLATFORM_BRANCH"
 echo "Platform user: $PLATFORM_USER"
-{{else}}
-echo "⚠️  No platform repository configured - using target repository for docs"
-{{/if}}
 
-{{#if repository}}
 # Target Repository Information (for implementation)
-REPO_URL="{{repository.url}}"
-REPO_BRANCH="{{repository.branch}}"
-GITHUB_USER="{{repository.githubUser}}"
+REPO_URL="{{repository_url}}"
+REPO_BRANCH="{{branch}}"
+GITHUB_USER="{{github_user}}"
 
 echo "=== TARGET REPOSITORY SETUP ==="
 echo "Target repo: $REPO_URL"
@@ -191,7 +181,6 @@ echo "Target branch: $REPO_BRANCH"
 echo "Target user: $GITHUB_USER"
 
 # 1. Clone Platform Repository (for docs)
-{{#if platform_repository}}
 echo "=== CLONING PLATFORM REPOSITORY ==="
 if ! git clone "$PLATFORM_URL" platform-repo; then
     echo "❌ Failed to clone platform repository: $PLATFORM_URL"
@@ -219,9 +208,6 @@ fi
 
 # 3. MCP Client Configuration (now generated dynamically)
 echo "✓ MCP client configuration will be copied from ConfigMap during file setup"
-{{else}}
-echo "⚠️  Skipping platform repository setup - not configured"
-{{/if}}
 
 # 4. Target Repository Setup (Smart Detection & Cleanup)
 echo "=== TARGET REPOSITORY OPERATIONS ==="
@@ -276,11 +262,7 @@ else
 fi
 
 # 5. Set Working Directory
-{{#if working_directory}}
 WORK_DIR="{{working_directory}}"
-{{else}}
-WORK_DIR="{{service_name}}"
-{{/if}}
 mkdir -p "$WORK_DIR" && cd "$WORK_DIR"
 echo "✓ Set working directory: /workspace/target-repo/$WORK_DIR"
 
@@ -299,23 +281,6 @@ echo "✓ Added repositories to safe directories"
 git config --global user.name "$GITHUB_USER"
 git config --global user.email "${GITHUB_USER}@users.noreply.github.com"
 echo "✓ Configured git user: $GITHUB_USER"
-
-{{else}}
-echo ""
-echo "═══════════════════════════════════════════════════════════════"
-echo "║                NO REPOSITORY CONFIGURED                      ║"
-echo "═══════════════════════════════════════════════════════════════"
-echo ""
-echo "❌ CRITICAL ERROR: No repository configured for implementation task"
-echo ""
-echo "Implementation tasks require:"
-echo "  • Repository URL to clone source code"
-echo "  • Git repository for committing changes"
-echo ""
-echo "🚫 IMPLEMENTATION TASK CANNOT PROCEED WITHOUT REPOSITORY"
-echo ""
-exit 1
-{{/if}}
 
 # Copy ConfigMap files to working directory (AFTER repository clone)
 echo "=== CONFIGMAP FILE SETUP ==="
@@ -474,7 +439,7 @@ echo ""
 echo '=== CLAUDE EXECUTION ==='
 
 # Export necessary variables
-export SERVICE_NAME="{{service_name}}"
+export SERVICE_NAME="{{service}}"
 export TASK_ID="{{task_id}}"
 
 # Change to project directory before running Claude
@@ -577,20 +542,20 @@ CRITICAL: You are implementing code that MUST work in production. Be extremely p
 
 MANDATORY VERIFICATION REQUIREMENTS:
 Before marking ANY task as complete, you MUST:
-- Execute the actual functionality in a real environment 
+- Execute the actual functionality in a real environment
 - Show the user the exact output/logs proving it works
 - If you cannot test it, explicitly state \"IMPLEMENTATION UNVERIFIED\" and STOP working on dependent tasks
 
 NEVER say you are \"done\" or \"completed\" unless you have:
 1. Actually executed your code in a real environment
 2. Observed it working correctly with your own eyes
-3. Run regression tests and seen them pass  
+3. Run regression tests and seen them pass
 4. Verified all edge cases and error conditions
 
 EVIDENCE REQUIREMENT:
 When claiming something works, you MUST provide one of:
 - Actual execution logs showing success
-- Test output demonstrating the functionality  
+- Test output demonstrating the functionality
 - Live demonstration of the feature working
 - Explicit statement: \"Cannot verify - implementation incomplete\"
 
@@ -603,7 +568,7 @@ Before saying \"done\" or \"complete\", ask yourself: \"If this breaks in produc
 If you cannot test in a real environment, explicitly state what testing you were unable to perform and why the implementation should be considered incomplete until proper testing is done.
 
 As a senior principal engineer, you understand that production failures are extremely costly.
-Err on the side of being too cautious rather than too confident.  
+Err on the side of being too cautious rather than too confident.
 Apply the highest standards of code quality, testing, and verification."
 
 {{#if prompt_modification}}

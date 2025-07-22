@@ -245,6 +245,7 @@ fn build_job_spec(task: &TaskType, job_name: &str, cm_name: &str, config: &Contr
                     "containers": [{
                         "name": "claude",
                         "image": agent_image,
+                        "command": ["/bin/bash", "/config/container.sh"],
                         "env": env_vars,
                         "volumeMounts": volume_mounts,
                         "resources": {
