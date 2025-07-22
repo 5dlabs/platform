@@ -30,16 +30,48 @@ find /secrets -name "*" 2>/dev/null || echo "No /secrets directory"
 echo "=== END DEBUG ==="
 echo ""
 
-# Check if SSH key is mounted to workspace (where user has permissions)
+# Check if SSH key is mounted (Kubernetes secrets are read-only)
 if [ -f "/workspace/.ssh/id_ed25519" ]; then
   echo "✓ SSH private key found at /workspace/.ssh/id_ed25519"
 
-  # Set proper permissions
-  chmod 700 /workspace/.ssh
-  chmod 600 /workspace/.ssh/id_ed25519
+  # Create writable SSH directory in home
+  mkdir -p ~/.ssh
+  chmod 700 ~/.ssh
+
+  # Copy SSH keys from read-only mount to writable location (with sudo if needed)
+  if cp /workspace/.ssh/id_ed25519 ~/.ssh/id_ed25519 2>/dev/null; then
+    echo "✓ Copied SSH private key"
+  elif sudo cp /workspace/.ssh/id_ed25519 ~/.ssh/id_ed25519 2>/dev/null; then
+    echo "✓ Copied SSH private key (with sudo)"
+    sudo chown $(whoami):$(whoami) ~/.ssh/id_ed25519
+  else
+    echo "❌ Failed to copy SSH private key - trying alternative approach"
+    # Alternative: use the SSH key directly from the mount point
+    export SSH_KEY_PATH="/workspace/.ssh/id_ed25519"
+    # Create symlink instead of copy
+    ln -sf /workspace/.ssh/id_ed25519 ~/.ssh/id_ed25519 2>/dev/null || echo "Warning: Could not create symlink"
+  fi
+
+  chmod 600 ~/.ssh/id_ed25519 2>/dev/null || echo "Warning: Could not set private key permissions"
+
+  if [ -f "/workspace/.ssh/id_ed25519.pub" ]; then
+    if cp /workspace/.ssh/id_ed25519.pub ~/.ssh/id_ed25519.pub 2>/dev/null; then
+      echo "✓ Copied SSH public key"
+    elif sudo cp /workspace/.ssh/id_ed25519.pub ~/.ssh/id_ed25519.pub 2>/dev/null; then
+      echo "✓ Copied SSH public key (with sudo)"
+      sudo chown $(whoami):$(whoami) ~/.ssh/id_ed25519.pub
+    else
+      ln -sf /workspace/.ssh/id_ed25519.pub ~/.ssh/id_ed25519.pub 2>/dev/null || echo "Warning: Could not copy/link public key"
+    fi
+    chmod 644 ~/.ssh/id_ed25519.pub 2>/dev/null || echo "Warning: Could not set public key permissions"
+  fi
 
   # Add GitHub to known hosts
-  ssh-keyscan github.com >> /workspace/.ssh/known_hosts 2>/dev/null || echo "Warning: Failed to add GitHub to known hosts"
+  ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || echo "Warning: Failed to add GitHub to known hosts"
+
+  # Configure Git to use SSH instead of HTTPS for GitHub
+  git config --global url."git@github.com:".insteadOf "https://github.com/"
+  echo "✓ Configured Git to use SSH for GitHub URLs"
 
   # Test SSH connection
   echo "Testing SSH connection to GitHub..."
@@ -61,112 +93,6 @@ echo "✓ Added /workspace to safe directories"
 git config --global user.name "{{github_user}}"
 git config --global user.email "{{github_user}}@users.noreply.github.com"
 echo "✓ Configured git user: {{github_user}}"
-
-# =============================================================================
-# COMPREHENSIVE GITHUB AUTHENTICATION TESTING
-# =============================================================================
-echo ""
-echo "═══════════════════════════════════════════════════════════════"
-echo "║                 GITHUB AUTHENTICATION TESTING                ║"
-echo "═══════════════════════════════════════════════════════════════"
-echo ""
-
-# Test 1: Basic GitHub API access
-echo "=== TEST 1: GitHub API Authentication ==="
-if [ -n "$GITHUB_TOKEN" ]; then
-  echo "Testing GitHub API access..."
-  API_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user)
-  if echo "$API_RESPONSE" | grep -q '"login"'; then
-    API_USER=$(echo "$API_RESPONSE" | grep '"login"' | sed 's/.*"login": *"\([^"]*\)".*/\1/')
-    echo "✓ GitHub API authentication successful"
-    echo "  Authenticated as: $API_USER"
-
-    # API authentication successful - user verification handled by SSH auth
-  else
-    echo "❌ GitHub API authentication failed"
-    echo "   Response: $API_RESPONSE"
-    echo ""
-    echo "🚫 ABORTING: Cannot proceed without GitHub API access"
-    exit 1
-  fi
-else
-  echo "❌ No GITHUB_TOKEN available for API testing"
-  exit 1
-fi
-
-# Test 2: Repository access permissions
-echo ""
-echo "=== TEST 2: Repository Access Verification ==="
-REPO_URL="{{repository_url}}"
-# Extract owner/repo from URL
-if echo "$REPO_URL" | grep -q "github.com"; then
-  REPO_PATH=$(echo "$REPO_URL" | sed 's|.*github.com[/:]||' | sed 's|\.git$||')
-  echo "Testing repository access for: $REPO_PATH"
-
-  REPO_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO_PATH")
-  if echo "$REPO_RESPONSE" | grep -q '"full_name"'; then
-    echo "✓ Repository is accessible via API"
-
-    # Check permissions
-    PERMISSIONS=$(echo "$REPO_RESPONSE" | grep -o '"permissions":{[^}]*}' || echo "")
-    if echo "$PERMISSIONS" | grep -q '"push":true'; then
-      echo "✓ Push permissions confirmed"
-    else
-      echo "⚠️  WARNING: Push permissions may be limited"
-      echo "   Permissions: $PERMISSIONS"
-    fi
-  else
-    echo "❌ Repository not accessible via API"
-    echo "   Response: $REPO_RESPONSE"
-    echo ""
-    echo "🚫 ABORTING: Cannot access target repository"
-    exit 1
-  fi
-else
-  echo "⚠️  Non-GitHub repository detected, skipping API permission check"
-fi
-
-# Test 3: Git credential functionality
-echo ""
-echo "=== TEST 3: Git Credential Testing ==="
-echo "Testing git credential configuration..."
-
-# Show current git config
-echo "Git configuration:"
-git config --global --list | grep -E "(user\.|credential\.|core\.askPass)" || echo "No relevant git config found"
-
-# Test git credential helper
-echo ""
-echo "Testing credential helper..."
-if [ "$USE_SSH" = "true" ]; then
-  echo "Using SSH authentication - testing SSH key access"
-  if ssh -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
-    echo "✓ SSH authentication working"
-  else
-    echo "❌ SSH authentication failed"
-    exit 1
-  fi
-else
-  echo "Testing HTTPS credential helper..."
-  # Create a minimal test to verify credentials work
-  TEST_REPO_URL="https://github.com/$REPO_PATH.git"
-  echo "Testing with URL: $TEST_REPO_URL"
-
-  # Test git ls-remote (read operation)
-  if git ls-remote "$TEST_REPO_URL" HEAD >/dev/null 2>&1; then
-    echo "✓ Git HTTPS authentication working (read access confirmed)"
-  else
-    echo "❌ Git HTTPS authentication failed"
-    echo "   Testing credential helper directly..."
-
-    # Debug credential helper
-    echo "url=https://github.com" | git credential fill 2>&1 || echo "Credential helper test completed"
-
-    echo ""
-    echo "🚫 ABORTING: Git authentication not working"
-    exit 1
-  fi
-fi
 
 # Clone repository to get .taskmaster directory and project files
 echo ""

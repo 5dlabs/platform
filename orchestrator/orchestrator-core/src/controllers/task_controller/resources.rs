@@ -234,6 +234,11 @@ fn build_job_spec(task: &TaskType, job_name: &str, cm_name: &str, config: &Contr
                 },
                 "spec": {
                     "restartPolicy": "Never",
+                    "securityContext": {
+                        "fsGroup": 1000,
+                        "runAsUser": 1000,
+                        "runAsGroup": 1000
+                    },
                     "imagePullSecrets": config.agent.image_pull_secrets.iter().map(|name| {
                         json!({"name": name})
                     }).collect::<Vec<_>>(),

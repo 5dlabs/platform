@@ -18,7 +18,7 @@ spec:
         claude-templates/checksum: {{ include (print $.Template.BasePath "/claude-templates-configmap.yaml") . | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
-        {{- end }}
+      {{- end }}
       labels:
         {{- include "orchestrator.selectorLabels" . | nindent 8 }}
     spec:

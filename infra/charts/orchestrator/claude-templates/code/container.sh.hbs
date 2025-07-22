@@ -23,16 +23,48 @@ fi
 if [ "$USE_SSH" = "true" ]; then
   echo "=== SSH AUTHENTICATION SETUP ==="
 
-  # Check if SSH key is mounted to workspace (where user has permissions)
+    # Check if SSH key is mounted (Kubernetes secrets are read-only)
   if [ -f "/workspace/.ssh/id_ed25519" ]; then
     echo "✓ SSH private key found at /workspace/.ssh/id_ed25519"
 
-    # Set proper permissions
-    chmod 700 /workspace/.ssh
-    chmod 600 /workspace/.ssh/id_ed25519
+    # Create writable SSH directory in home
+    mkdir -p ~/.ssh
+    chmod 700 ~/.ssh
+
+    # Copy SSH keys from read-only mount to writable location (with sudo if needed)
+    if cp /workspace/.ssh/id_ed25519 ~/.ssh/id_ed25519 2>/dev/null; then
+      echo "✓ Copied SSH private key"
+    elif sudo cp /workspace/.ssh/id_ed25519 ~/.ssh/id_ed25519 2>/dev/null; then
+      echo "✓ Copied SSH private key (with sudo)"
+      sudo chown $(whoami):$(whoami) ~/.ssh/id_ed25519
+    else
+      echo "❌ Failed to copy SSH private key - trying alternative approach"
+      # Alternative: use the SSH key directly from the mount point
+      export SSH_KEY_PATH="/workspace/.ssh/id_ed25519"
+      # Create symlink instead of copy
+      ln -sf /workspace/.ssh/id_ed25519 ~/.ssh/id_ed25519 2>/dev/null || echo "Warning: Could not create symlink"
+    fi
+
+    chmod 600 ~/.ssh/id_ed25519 2>/dev/null || echo "Warning: Could not set private key permissions"
+
+    if [ -f "/workspace/.ssh/id_ed25519.pub" ]; then
+      if cp /workspace/.ssh/id_ed25519.pub ~/.ssh/id_ed25519.pub 2>/dev/null; then
+        echo "✓ Copied SSH public key"
+      elif sudo cp /workspace/.ssh/id_ed25519.pub ~/.ssh/id_ed25519.pub 2>/dev/null; then
+        echo "✓ Copied SSH public key (with sudo)"
+        sudo chown $(whoami):$(whoami) ~/.ssh/id_ed25519.pub
+      else
+        ln -sf /workspace/.ssh/id_ed25519.pub ~/.ssh/id_ed25519.pub 2>/dev/null || echo "Warning: Could not copy/link public key"
+      fi
+      chmod 644 ~/.ssh/id_ed25519.pub 2>/dev/null || echo "Warning: Could not set public key permissions"
+    fi
 
     # Add GitHub to known hosts
-    ssh-keyscan github.com >> /workspace/.ssh/known_hosts 2>/dev/null || echo "Warning: Failed to add GitHub to known hosts"
+    ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || echo "Warning: Failed to add GitHub to known hosts"
+
+    # Configure Git to use SSH instead of HTTPS for GitHub
+    git config --global url."git@github.com:".insteadOf "https://github.com/"
+    echo "✓ Configured Git to use SSH for GitHub URLs"
 
     # Test SSH connection
     echo "Testing SSH connection to GitHub..."
