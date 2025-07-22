@@ -34,7 +34,7 @@ pub fn generate_templates(
     templates.insert("container.sh".to_string(), generate_container_script(task)?);
 
     // Generate Claude memory
-    templates.insert("claude.md".to_string(), generate_claude_memory(task)?);
+    templates.insert("CLAUDE.md".to_string(), generate_claude_memory(task)?);
 
     // Generate Claude settings
     templates.insert("settings.json".to_string(), generate_claude_settings(task, config)?);
@@ -63,9 +63,9 @@ fn generate_claude_memory(task: &TaskType) -> Result<String> {
     handlebars.set_strict_mode(false);
 
     let template_path = if task.is_docs() {
-        "docs/claude.md.hbs"
+        "docs/CLAUDE.md.hbs"
     } else {
-        "code/claude.md.hbs"
+        "code/CLAUDE.md.hbs"
     };
 
     let template = load_template(template_path)?;
