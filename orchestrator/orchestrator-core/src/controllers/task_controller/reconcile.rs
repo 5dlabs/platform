@@ -16,7 +16,7 @@ use kube::{
 };
 use std::sync::Arc;
 use tokio::time::Duration;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use super::resources::{cleanup_resources, reconcile_create_or_update};
 use super::status::monitor_job_status;
@@ -27,14 +27,24 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
     info!("Starting task controller in namespace: {}", namespace);
 
     // Load controller configuration from ConfigMap
-    let config = match ControllerConfig::from_configmap(&client, &namespace, "taskrun-controller-config").await {
+    let config = match ControllerConfig::from_configmap(&client, &namespace, "task-controller-config").await {
         Ok(cfg) => {
             info!("Loaded controller configuration from ConfigMap");
+            // Validate configuration has required fields
+            if let Err(validation_error) = cfg.validate() {
+                return Err(Error::ConfigError(validation_error.to_string()));
+            }
             cfg
         }
         Err(e) => {
-            info!("Failed to load configuration from ConfigMap, using defaults: {}", e);
-            ControllerConfig::default()
+            warn!("Failed to load configuration from ConfigMap, using defaults: {}", e);
+            let default_config = ControllerConfig::default();
+            // Validate default configuration - this should fail if image config is missing
+            if let Err(validation_error) = default_config.validate() {
+                error!("Default configuration is invalid: {}", validation_error);
+                return Err(Error::ConfigError(validation_error.to_string()));
+            }
+            default_config
         }
     };
 

@@ -10,6 +10,13 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"
 
+# Agent/Task Runner image configuration (used by controller to create Jobs)
+agent:
+  image:
+    repository: ghcr.io/5dlabs/platform/claude-code
+    tag: "1.0.56"
+    pullPolicy: Always
+
 imagePullSecrets:
   - name: ghcr-secret
 

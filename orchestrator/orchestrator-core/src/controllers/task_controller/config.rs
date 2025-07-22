@@ -105,6 +105,18 @@ pub struct TelemetryConfig {
 }
 
 impl ControllerConfig {
+    /// Validate that configuration has required fields
+    pub fn validate(&self) -> Result<(), anyhow::Error> {
+        if self.agent.image.repository == "MISSING_IMAGE_CONFIG" ||
+           self.agent.image.tag == "MISSING_IMAGE_CONFIG" {
+            return Err(anyhow::anyhow!(
+                "Agent image configuration is missing! This indicates the controller ConfigMap was not loaded properly. \
+                Please ensure the 'agent.image.repository' and 'agent.image.tag' are set in the Helm values."
+            ));
+        }
+        Ok(())
+    }
+
     /// Load configuration from a ConfigMap
     pub async fn from_configmap(
         client: &Client,
@@ -134,8 +146,8 @@ impl Default for ControllerConfig {
             },
             agent: AgentConfig {
                 image: ImageConfig {
-                    repository: "ghcr.io/5dlabs/claude".to_string(),
-                    tag: "latest".to_string(),
+                    repository: "MISSING_IMAGE_CONFIG".to_string(),
+                    tag: "MISSING_IMAGE_CONFIG".to_string(),
                 },
                 image_pull_secrets: vec!["ghcr-secret".to_string()],
             },

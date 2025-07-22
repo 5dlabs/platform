@@ -17,8 +17,8 @@ data:
     # Claude agent configuration
     agent:
       image:
-        repository: "ghcr.io/5dlabs/platform/claude-code"
-        tag: "1.0.56"
+        repository: {{ .Values.agent.image.repository | quote }}
+        tag: {{ .Values.agent.image.tag | quote }}
       imagePullSecrets:
         {{- range .Values.imagePullSecrets }}
         - {{ .name | quote }}
