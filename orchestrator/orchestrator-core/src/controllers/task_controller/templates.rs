@@ -12,12 +12,14 @@ const CLAUDE_TEMPLATES_PATH: &str = "/claude-templates";
 
 /// Load a template file from the mounted ConfigMap
 fn load_template(relative_path: &str) -> Result<String> {
-    let full_path = Path::new(CLAUDE_TEMPLATES_PATH).join(relative_path);
-    debug!("Loading template from: {}", full_path.display());
+    // Convert path separators to underscores for ConfigMap key lookup
+    let configmap_key = relative_path.replace('/', "_");
+    let full_path = Path::new(CLAUDE_TEMPLATES_PATH).join(&configmap_key);
+    debug!("Loading template from: {} (key: {})", full_path.display(), configmap_key);
 
     fs::read_to_string(&full_path)
         .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(
-            format!("Failed to load template {}: {}", relative_path, e)
+            format!("Failed to load template {} (key: {}): {}", relative_path, configmap_key, e)
         ))
 }
 
@@ -375,32 +377,37 @@ fn generate_hook_scripts(task: &TaskType) -> Result<BTreeMap<String, String>> {
 
 /// Get all hook templates for a specific task type by scanning the filesystem
 fn get_hook_templates(task: &TaskType) -> Result<Vec<(String, String)>> {
-    let hooks_dir = match task {
-        TaskType::Docs(_) => "docs/hooks",
-        TaskType::Code(_) => "code/hooks",
+    let hooks_prefix = match task {
+        TaskType::Docs(_) => "docs_hooks_",
+        TaskType::Code(_) => "code_hooks_",
     };
 
-    let hooks_path = Path::new(CLAUDE_TEMPLATES_PATH).join(hooks_dir);
-    debug!("Scanning for hook templates in: {}", hooks_path.display());
+    debug!("Scanning for hook templates with prefix: {}", hooks_prefix);
 
     let mut templates = Vec::new();
 
-    // Read the hooks directory
-    match std::fs::read_dir(&hooks_path) {
+    // Read the ConfigMap directory and find files with the hook prefix
+    match std::fs::read_dir(CLAUDE_TEMPLATES_PATH) {
         Ok(entries) => {
             for entry in entries {
                 if let Ok(entry) = entry {
                     let path = entry.path();
-                    if path.is_file() && path.extension().map_or(false, |ext| ext == "hbs") {
+                    if path.is_file() {
                         if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
-                            let template_path = format!("{}/{}", hooks_dir, filename);
-                            match load_template(&template_path) {
-                                Ok(content) => {
-                                    debug!("Loaded hook template: {}", filename);
-                                    templates.push((filename.to_string(), content));
-                                },
-                                Err(e) => {
-                                    debug!("Failed to load hook template {}: {}", filename, e);
+                            // Check if this is a hook template for our task type
+                            if filename.starts_with(hooks_prefix) && filename.ends_with(".hbs") {
+                                // Extract just the hook filename (remove prefix and convert back)
+                                let hook_name = filename.strip_prefix(hooks_prefix)
+                                    .unwrap_or(filename);
+
+                                match fs::read_to_string(&path) {
+                                    Ok(content) => {
+                                        debug!("Loaded hook template: {} (from {})", hook_name, filename);
+                                        templates.push((hook_name.to_string(), content));
+                                    },
+                                    Err(e) => {
+                                        debug!("Failed to load hook template {}: {}", filename, e);
+                                    }
                                 }
                             }
                         }
@@ -409,7 +416,7 @@ fn get_hook_templates(task: &TaskType) -> Result<Vec<(String, String)>> {
             }
         },
         Err(e) => {
-            debug!("Hooks directory {} not found or not accessible: {}", hooks_path.display(), e);
+            debug!("Templates directory {} not found or not accessible: {}", CLAUDE_TEMPLATES_PATH, e);
             // Don't fail - hooks are optional
         }
     }

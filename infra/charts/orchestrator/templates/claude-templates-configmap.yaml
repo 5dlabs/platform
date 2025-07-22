@@ -6,4 +6,7 @@ metadata:
   labels:
     {{- include "orchestrator.labels" . | nindent 4 }}
 data:
-{{- (.Files.Glob "claude-templates/**/*.hbs").AsConfig | nindent 2 }}
+{{- range $path, $content := .Files.Glob "claude-templates/**/*.hbs" }}
+  {{ $path | trimPrefix "claude-templates/" | replace "/" "_" }}: |
+{{ $.Files.Get $path | nindent 4 }}
+{{- end }}
