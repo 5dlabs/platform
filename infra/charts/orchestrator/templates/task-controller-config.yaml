@@ -26,7 +26,7 @@ data:
 
     # Secrets configuration
     secrets:
-      apiKeySecretName: "anthropic-api-key"
+      apiKeySecretName: "claude-api-key"
       apiKeySecretKey: "api-key"
 
     # Tool permissions configuration (used in templates)
