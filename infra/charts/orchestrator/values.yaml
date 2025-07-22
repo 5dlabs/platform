@@ -97,7 +97,7 @@ config:
 
   # Logging
   rustLog: "orchestrator=debug,tower_http=debug,axum=debug,kube=info"
-  
+
   # TaskRun Controller configuration
   controllerEnabled: true
   controllerConfigMap: "taskrun-controller-config"
@@ -116,12 +116,12 @@ rbac:
   # Use Role/RoleBinding (true) or ClusterRole/ClusterRoleBinding (false)
   namespaced: true
   rules:
-    # TaskRun CRD management
-    - apiGroups: ["orchestrator.io"]
-      resources: ["taskruns"]
+    # CodeRun and DocsRun CRD management
+    - apiGroups: ["orchestrator.platform"]
+      resources: ["coderuns", "docsruns"]
       verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
-    - apiGroups: ["orchestrator.io"]
-      resources: ["taskruns/status"]
+    - apiGroups: ["orchestrator.platform"]
+      resources: ["coderuns/status", "docsruns/status"]
       verbs: ["get", "update", "patch"]
     # Job management in orchestrator namespace
     - apiGroups: ["batch"]
