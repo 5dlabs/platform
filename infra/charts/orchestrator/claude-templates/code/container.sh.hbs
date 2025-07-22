@@ -23,26 +23,16 @@ fi
 if [ "$USE_SSH" = "true" ]; then
   echo "=== SSH AUTHENTICATION SETUP ==="
 
-  # Check if SSH key is mounted (mounted to /ssh-keys by orchestrator)
-  if [ -f "/ssh-keys/ssh-privatekey" ]; then
-    echo "✓ SSH private key found"
+  # Check if SSH key is mounted to workspace (where user has permissions)
+  if [ -f "/workspace/.ssh/id_ed25519" ]; then
+    echo "✓ SSH private key found at /workspace/.ssh/id_ed25519"
 
-    # Create .ssh directory with proper permissions
-    mkdir -p /root/.ssh
-    chmod 700 /root/.ssh
-
-    # Copy SSH keys to writable location with correct permissions
-    cp /ssh-keys/ssh-privatekey /root/.ssh/id_rsa
-    chmod 600 /root/.ssh/id_rsa
-
-    # Copy public key if available
-    if [ -f "/ssh-keys/ssh-publickey" ]; then
-      cp /ssh-keys/ssh-publickey /root/.ssh/id_rsa.pub
-      chmod 644 /root/.ssh/id_rsa.pub
-    fi
+    # Set proper permissions
+    chmod 700 /workspace/.ssh
+    chmod 600 /workspace/.ssh/id_ed25519
 
     # Add GitHub to known hosts
-    ssh-keyscan github.com >> /root/.ssh/known_hosts 2>/dev/null || echo "Warning: Failed to add GitHub to known hosts"
+    ssh-keyscan github.com >> /workspace/.ssh/known_hosts 2>/dev/null || echo "Warning: Failed to add GitHub to known hosts"
 
     # Test SSH connection
     echo "Testing SSH connection to GitHub..."
@@ -50,8 +40,8 @@ if [ "$USE_SSH" = "true" ]; then
 
     echo "✓ SSH authentication configured successfully"
   else
-    echo "❌ SSH private key not found at /ssh-keys/ssh-privatekey"
-    echo "   Expected SSH key secret to be mounted at /ssh-keys"
+    echo "❌ SSH private key not found at /workspace/.ssh/id_ed25519"
+    echo "   Expected SSH key secret to be mounted to /workspace/.ssh/"
     exit 1
   fi
 else

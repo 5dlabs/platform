@@ -225,7 +225,7 @@ telemetry:
     fn test_default_config() {
         let config = ControllerConfig::default();
         assert_eq!(config.job.active_deadline_seconds, 7200);
-        assert_eq!(config.agent.image.repository, "ghcr.io/5dlabs/claude");
+        assert_eq!(config.agent.image.repository, "MISSING_IMAGE_CONFIG");
         assert_eq!(config.secrets.api_key_secret_name, "anthropic-api-key");
         assert!(!config.telemetry.enabled);
         assert!(!config.permissions.agent_tools_override);

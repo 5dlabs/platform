@@ -175,7 +175,7 @@ fn build_job_spec(task: &TaskType, job_name: &str, cm_name: &str, config: &Contr
 
         volume_mounts.push(json!({
             "name": "ssh-key",
-            "mountPath": "/root/.ssh",
+            "mountPath": "/workspace/.ssh",
             "readOnly": true
         }));
     }

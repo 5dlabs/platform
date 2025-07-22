@@ -30,15 +30,16 @@ find /secrets -name "*" 2>/dev/null || echo "No /secrets directory"
 echo "=== END DEBUG ==="
 echo ""
 
-# Check if SSH key is mounted directly to /root/.ssh/
-if [ -f "/root/.ssh/id_ed25519" ]; then
-  echo "✓ SSH private key found at /root/.ssh/id_ed25519"
+# Check if SSH key is mounted to workspace (where user has permissions)
+if [ -f "/workspace/.ssh/id_ed25519" ]; then
+  echo "✓ SSH private key found at /workspace/.ssh/id_ed25519"
 
-  # Set proper permissions (should already be correct from secret mount)
-  chmod 700 /root/.ssh
+  # Set proper permissions
+  chmod 700 /workspace/.ssh
+  chmod 600 /workspace/.ssh/id_ed25519
 
   # Add GitHub to known hosts
-  ssh-keyscan github.com >> /root/.ssh/known_hosts 2>/dev/null || echo "Warning: Failed to add GitHub to known hosts"
+  ssh-keyscan github.com >> /workspace/.ssh/known_hosts 2>/dev/null || echo "Warning: Failed to add GitHub to known hosts"
 
   # Test SSH connection
   echo "Testing SSH connection to GitHub..."
@@ -46,8 +47,8 @@ if [ -f "/root/.ssh/id_ed25519" ]; then
 
   echo "✓ SSH authentication configured successfully"
 else
-  echo "❌ SSH private key not found at /root/.ssh/id_ed25519"
-  echo "   Expected SSH key secret to be mounted directly to /root/.ssh/"
+  echo "❌ SSH private key not found at /workspace/.ssh/id_ed25519"
+  echo "   Expected SSH key secret to be mounted to /workspace/.ssh/"
   echo "   This system is SSH-only - no HTTPS authentication support"
   exit 1
 fi
