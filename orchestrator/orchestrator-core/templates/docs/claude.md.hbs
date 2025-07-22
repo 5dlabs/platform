@@ -59,11 +59,11 @@ See @{{working_directory}}/.taskmaster/tasks/tasks.json for complete task defini
 See @.taskmaster/docs/prd.txt for product requirements
 See @.taskmaster/tasks/tasks.json for complete task definitions{{/if}}
 
-{{#if repository}}## Repository Context
+## Repository Context
 
 This documentation generation is working with:
-- **Repository**: {{repository.url}}
-- **Branch**: {{repository.branch}}
+- **Repository**: {{repository_url}}
+- **Branch**: {{source_branch}}
 - **Working Directory**: {{working_directory}}
 
-Ensure all file paths and references are relative to the working directory.{{/if}}
+Ensure all file paths and references are relative to the working directory.
