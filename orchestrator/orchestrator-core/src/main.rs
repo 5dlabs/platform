@@ -10,10 +10,10 @@ use axum::{
 };
 use kube::Client;
 use orchestrator_core::{
-    controllers::{run_task_controller, task_controller::ControllerConfig}, // Updated to use new controller
+    controllers::run_task_controller,
     handlers::{
         code_handler::submit_code_task,
-        common::{AppError, AppState},
+        common::AppState,
         docs_handler::generate_docs,
     },
 };
@@ -21,7 +21,7 @@ use serde_json::{json, Value};
 use tokio::signal;
 use tower::ServiceBuilder;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
-use tracing::{error, info, warn};
+use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 async fn create_app_state() -> Result<AppState> {
@@ -146,8 +146,8 @@ async fn shutdown_signal() {
     let terminate = std::future::pending::<()>();
 
     tokio::select! {
-        _ = ctrl_c => {},
-        _ = terminate => {},
+        () = ctrl_c => {},
+        () = terminate => {},
     }
 
     info!("Shutdown signal received, starting graceful shutdown");

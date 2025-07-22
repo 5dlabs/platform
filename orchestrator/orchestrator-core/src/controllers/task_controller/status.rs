@@ -98,7 +98,7 @@ async fn update_task_status(
     let current_time = chrono::Utc::now().to_rfc3339();
 
     match task {
-        TaskType::Docs(dr) => {
+        TaskType::Docs(_dr) => {
             let docs_api: Api<DocsRun> = Api::namespaced(client.clone(), namespace);
 
             let status_patch = json!({

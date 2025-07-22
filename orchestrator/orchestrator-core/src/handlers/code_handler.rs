@@ -31,9 +31,9 @@ pub async fn submit_code_task(
         local_tools: request.local_tools,
         remote_tools: request.remote_tools,
         tool_config: request.tool_config,
-        context_version: Some(1), // Start with version 1
+        context_version: 1, // Start with version 1
         prompt_modification: None, // No modification on initial run
-        prompt_mode: Some("append".to_string()), // Default mode
+        prompt_mode: "append".to_string(), // Default mode
     };
 
     let coderun = CodeRun {

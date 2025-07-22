@@ -99,10 +99,10 @@ impl TaskType {
         }
     }
 
-    /// Get retry/versioning information for CodeRun (docs don't have retries)
-    pub fn context_version(&self) -> Option<u32> {
+    /// Get retry/versioning information for `CodeRun` (docs don't have retries)
+    pub fn context_version(&self) -> u32 {
         match self {
-            TaskType::Docs(_) => None,
+            TaskType::Docs(_) => 1, // Docs don't have context versions
             TaskType::Code(cr) => cr.spec.context_version,
         }
     }
@@ -128,10 +128,10 @@ impl TaskType {
         }
     }
 
-    pub fn prompt_mode(&self) -> Option<&str> {
+    pub fn prompt_mode(&self) -> &str {
         match self {
-            TaskType::Docs(_) => None,
-            TaskType::Code(cr) => cr.spec.prompt_mode.as_deref(),
+            TaskType::Docs(_) => "direct", // Docs use direct mode
+            TaskType::Code(cr) => &cr.spec.prompt_mode,
         }
     }
 

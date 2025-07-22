@@ -9,14 +9,14 @@ fn default_tool_config() -> String {
     "default".to_string()
 }
 
-/// Default function for context_version field
-fn default_context_version() -> Option<u32> {
-    Some(1)
+/// Default function for `context_version` field
+fn default_context_version() -> u32 {
+    1
 }
 
-/// Default function for prompt_mode field
-fn default_prompt_mode() -> Option<String> {
-    Some("append".to_string())
+/// Default function for `prompt_mode` field
+fn default_prompt_mode() -> String {
+    "append".to_string()
 }
 
 /// CodeRun CRD for code implementation tasks
@@ -68,7 +68,7 @@ pub struct CodeRunSpec {
 
     /// Context version for retry attempts (incremented on each retry)
     #[serde(default = "default_context_version")]
-    pub context_version: Option<u32>,
+    pub context_version: u32,
 
     /// Additional context for retry attempts
     #[serde(default)]
@@ -76,7 +76,7 @@ pub struct CodeRunSpec {
 
     /// How to apply prompt modifications (append, replace)
     #[serde(default = "default_prompt_mode")]
-    pub prompt_mode: Option<String>,
+    pub prompt_mode: String,
 }
 
 /// Status of the CodeRun

@@ -9,7 +9,7 @@ use kube::runtime::controller::Action;
 use serde_json::json;
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use tracing::{info, warn};
+use tracing::info;
 
 use super::auth::{generate_ssh_env_vars, generate_ssh_volumes};
 use super::status::update_job_started;
@@ -58,16 +58,14 @@ pub async fn reconcile_create_or_update(
 
 /// Generate a unique ConfigMap name for the task
 fn generate_configmap_name(task: &TaskType) -> String {
-    match task {
-        TaskType::Docs(_) => {
-            format!("docs-gen-{}-files", chrono::Utc::now().timestamp())
-        }
-        TaskType::Code(_) => {
-            let task_id = task.task_id().unwrap_or(0);
-            let context_version = task.context_version().unwrap_or(1);
-            let service_name = task.service_name().replace('_', "-");
-            format!("{}-task{}-v{}-files", service_name, task_id, context_version)
-        }
+    let task_id = task.task_id().unwrap_or(0); // Fallback for docs
+    let service_name = task.service_name().replace('_', "-");
+    let context_version = task.context_version();
+
+    if task.is_docs() {
+        format!("{}-docs-v{}-files", service_name, context_version)
+    } else {
+        format!("{service_name}-task{task_id}-v{context_version}-files")
     }
 }
 
@@ -127,9 +125,9 @@ fn generate_job_name(task: &TaskType) -> String {
         }
         TaskType::Code(_) => {
             let task_id = task.task_id().unwrap_or(0);
-            let context_version = task.context_version().unwrap_or(1);
+            let context_version = task.context_version();
             let service_name = task.service_name().replace('_', "-");
-            format!("{}-task{}-attempt{}", service_name, task_id, context_version)
+            format!("{service_name}-task{task_id}-attempt{context_version}")
         }
     }
 }
@@ -335,7 +333,7 @@ async fn ensure_pvc_exists(pvcs: &Api<PersistentVolumeClaim>, pvc_name: &str, se
 /// Clean up older job versions for retry attempts
 async fn cleanup_old_jobs(task: &TaskType, jobs: &Api<Job>) -> Result<()> {
     if let Some(task_id) = task.task_id() {
-        let current_version = task.context_version().unwrap_or(1);
+        let current_version = task.context_version();
 
         let job_list = jobs
             .list(&ListParams::default().labels(&format!("task-id={}", task_id)))
