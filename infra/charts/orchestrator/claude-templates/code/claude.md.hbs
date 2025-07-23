@@ -7,244 +7,118 @@
 - **Working Directory**: {{working_directory}}
 - **Implementation Target**: task {{task_id}}
 
-## Project Guidelines
+## Project Guidelines & Standards
 
-**IMPORTANT**: Review these guidelines before starting implementation:
-- `coding-guidelines.md` - Project coding standards and best practices
-- `github-guidelines.md` - Git workflow and commit message standards
+See @coding-guidelines.md for project coding standards and best practices
+See @github-guidelines.md for git workflow and commit message standards
 
-## Documentation Source
-- **Documentation Repository**: {{platform_repository_url}}
-
-## Current Task
+## Current Task Documentation
 
 {{#if task_id}}
-**Your task documentation is in the `task/` directory:**
-- `task/task.md` - Task requirements and description
-- `task/acceptance-criteria.md` - What success looks like
-- `task/architecture.md` - Technical approach and guidance
-
-**Project standards:**
-- `coding-guidelines.md` - How to write code in this project
-- `github-guidelines.md` - Git workflow and commit standards
-
-**Additional project documentation** (if needed):
-- Overall system architecture and requirements are available in platform repository
+**Your current task ({{task_id}}) documentation:**
+- See @task/task.md for requirements and description
+- See @task/acceptance-criteria.md for success criteria
+- See @task/architecture.md for technical approach and guidance
 {{else}}
-This is a general software project. Check for:
-- `README.md` - Project overview and setup instructions
-- `ARCHITECTURE.md` or `docs/` - Architecture documentation
-- `package.json`, `Cargo.toml`, or similar - Dependencies and scripts
+**General project documentation:**
+- See @README.md for project overview and setup instructions
+- See @.taskmaster/docs/architecture.md for system design patterns
+- See @.taskmaster/docs/prd.txt for product requirements
 {{/if}}
 
-## Implementation Approach
+## System Architecture & Context
+
+See @.taskmaster/docs/architecture.md for system design patterns and architectural decisions
+{{#if docsRepositoryUrl}}See @.taskmaster/docs/prd.txt for complete product requirements{{/if}}
+
+## Implementation Workflow
 
 {{#if task_id}}
-**Step-by-step process:**
-1. Read `task/task.md` to understand what you need to build
-2. Review `task/acceptance-criteria.md` to understand success criteria
-3. Check `task/architecture.md` for technical approach
-4. Implement the solution in the codebase
-5. Test to ensure all acceptance criteria are met
+### Current Task Process
+1. **Understand**: Read @task/task.md for requirements
+2. **Plan**: Review @task/architecture.md for technical approach
+3. **Validate**: Check @task/acceptance-criteria.md for success criteria
+4. **Code**: Follow patterns in @coding-guidelines.md
+5. **Commit**: Use standards from @github-guidelines.md
+6. **Test**: Verify all acceptance criteria are met
 
-**Focus**: Work only on the current task. Previous task context is in your memory, but focus on the current requirements.
+### Task Context
+- **Task ID**: {{task_id}}
+- **Repository**: {{repository_url}}
+- **Branch**: {{branch}}
+- **Working Directory**: {{working_directory}}
 {{else}}
-General implementation work:
-- Understand the existing codebase structure
-- Follow established patterns and conventions
-- Ensure changes align with project architecture
+### General Development Process
+1. **Explore**: Understand existing codebase structure
+2. **Plan**: Follow established patterns and conventions
+3. **Implement**: Adhere to @coding-guidelines.md standards
+4. **Test**: Ensure changes meet project quality standards
+5. **Commit**: Follow @github-guidelines.md workflow
 {{/if}}
 
-### Implementation Standards
-- **Follow Architecture**: Adhere to established patterns and design decisions
-- **Respect Dependencies**: Complete tasks in proper dependency order
-- **Test Thoroughly**: Ensure implementation meets acceptance criteria
-- **Document Changes**: Update relevant documentation if architecture changes
-- **Version Control**: Use clear, descriptive commit messages
-- **Code Quality**: Follow project coding standards and best practices
+## Quick Command Reference
 
-### Development Workflow
-- Implementation should follow test-driven development where applicable
-- Code should be well-documented with clear comments
-- Follow existing project structure and naming conventions
-- Ensure backwards compatibility unless explicitly changing interfaces
-
-## Development Workflow
-
-### Getting Started
-{{#if task_id}}
-1. **Read your task files:**
-   - `task/task.md` - What you need to build
-   - `task/acceptance-criteria.md` - How to know you're done
-   - `task/architecture.md` - How to build it
-
-2. **Review project standards:**
-   - `coding-guidelines.md` - Code style and patterns
-   - `github-guidelines.md` - Git workflow
-
-3. **Build and test:**
-   - Implement the solution
-   - Write/update tests
-   - Verify acceptance criteria
-{{else}}
-1. Understand the existing codebase structure
-2. Follow established patterns and conventions
-3. Ensure changes align with project architecture
-{{/if}}
-
-### Common Commands
+### Testing & Quality
 ```bash
-# Run tests before implementation
-npm test          # Node.js projects
-# or
-cargo test        # Rust projects
-# or check project-specific test commands in package.json/Cargo.toml
+# Run tests (check package.json/Cargo.toml for project-specific commands)
+npm test || cargo test
 
-# Stage implementation changes
-git add .
+# Linting and formatting
+npm run lint || cargo clippy
+npm run format || cargo fmt
 
+# Build verification
+npm run build || cargo build
+```
+
+### Git Workflow
+```bash
 {{#if task_id}}
-# Commit with task-specific message
+# Commit with task-specific message (see @github-guidelines.md for details)
 git commit -m "feat(task-{{task_id}}): implement [brief description]
 
 - [specific changes made]
 - [tests added/updated]
 - [meets acceptance criteria: X, Y, Z]"
 {{else}}
-# Commit with descriptive message
-git commit -m "feat: implement [brief description]
-
-- [specific changes made]
-- [tests added/updated]"
+# Standard commit message (see @github-guidelines.md for format)
+git commit -m "feat: implement [brief description]"
 {{/if}}
 ```
 
-### Quality Assurance
-```bash
-# Run linting
-npm run lint
-# or
-cargo clippy
+## Pull Request Requirements
 
-# Run formatting
-npm run format
-# or
-cargo fmt
+**CRITICAL**: After completing implementation, create `PR_DESCRIPTION.md` in the working directory root with:
 
-# Build project
-npm run build
-# or
-cargo build
-
-# Run full test suite
-npm run test:all
-# or
-cargo test --all
-```
-
-## Import References
-
-{{#if working_directory}}See @{{working_directory}}/.taskmaster/docs/architecture.md for system design patterns
-See @{{working_directory}}/.taskmaster/docs/prd.txt for product requirements
-See @{{working_directory}}/.taskmaster/tasks/tasks.json for task {{task_id}} details and dependencies
-See @{{working_directory}}/.taskmaster/docs/task-{{task_id}}/ for task-specific documentation{{else}}See @.taskmaster/docs/architecture.md for system design patterns
-See @.taskmaster/docs/prd.txt for product requirements
-See @.taskmaster/tasks/tasks.json for task {{task_id}} details and dependencies
-See @.taskmaster/docs/task-{{task_id}}/ for task-specific documentation{{/if}}
-
-## Repository Context
-
-This implementation is working with:
-- **Repository**: {{repository_url}}
-- **Branch**: {{branch}}
-- **Working Directory**: {{working_directory}}
-- **Task ID**: {{task_id}}
-
-Ensure all file paths and references are relative to the working directory.
-Follow the existing project structure and coding conventions.
-
-## IMPORTANT: Pull Request Description
-
-**CRITICAL**: After completing the implementation, you MUST create a file named `PR_DESCRIPTION.md` in the root of the working directory that contains:
-
-1. A concise summary of what was implemented (2-3 sentences)
+1. Concise implementation summary (2-3 sentences)
 2. Key changes made (bullet points)
-3. Any important notes for reviewers
+3. Important reviewer notes
 4. Testing recommendations
 
-This file will be used to create the pull request automatically. Make it informative and professional.
+This file enables automatic pull request creation.
 
-## Claude Code Tool Usage Patterns
+## Development Tools & Patterns
 
-### File Operations Workflow
-```
-1. Explore codebase structure first:
-   - Use `LS` to understand directory layout
-   - Use `Glob` to find files by pattern (*.rs, *.ts, *.py, etc.)
+### Claude Code Integration
+- Use `LS` and `Glob` to explore codebase structure
+- Use `Read` to examine existing code patterns
+- Use `Grep` to find similar implementations
+- Use `Edit` for targeted changes, `MultiEdit` for related changes
+- Validate with `Bash` commands after each change
 
-2. Understand existing code:
-   - Use `Read` to examine files completely
-   - Use `Grep` to search for functions, classes, or patterns
-   - Use `Grep -n` for line numbers when referencing specific code
+### Implementation Guidelines
+{{#if task_id}}
+- Focus on current task requirements in `task/` directory
+- Follow architectural guidance provided in @task/architecture.md
+- Ensure all acceptance criteria are met before completion
+- Use established patterns from @coding-guidelines.md
+{{else}}
+- Explore existing codebase structure before making changes
+- Follow established patterns and conventions
+- Ensure changes align with project architecture
+- Maintain backward compatibility unless explicitly changing interfaces
+{{/if}}
 
-3. Make precise changes:
-   - Use `Edit` for single, targeted changes
-   - Use `MultiEdit` for multiple related changes in one file
-   - Use `Write` only for new files (prefer editing existing files)
-```
+---
 
-### Search and Analysis Patterns
-```
-# Find implementation patterns
-Grep "class.*Service" --glob="*.ts" -n
-Grep "fn.*test" --glob="*.rs" -n
-
-# Understand dependencies
-Grep "import.*from" --glob="*.ts"
-Grep "use.*::" --glob="*.rs"
-
-# Find configuration files
-Glob "*config*"
-Glob "*.json" | Glob "*.toml" | Glob "*.yaml"
-
-# Find test files
-Glob "*test*" | Glob "*spec*"
-```
-
-### Implementation Validation
-```bash
-# Always validate after changes
-cargo check    # or npm run typecheck
-cargo test     # or npm test
-cargo clippy   # or npm run lint
-```
-
-### Task Progress Management
-Use `TodoWrite` to track implementation progress:
-- Break complex tasks into subtasks
-- Mark tasks as in_progress when starting
-- Mark as completed only after validation
-- Add new tasks if you discover additional work needed
-
-### Error Handling Strategy
-1. **Read error messages completely** - Use Bash to run commands and read full output
-2. **Search for similar patterns** - Use Grep to find how errors are handled elsewhere
-3. **Validate fixes thoroughly** - Always run tests after fixes
-4. **Document complex changes** - Add comments for non-obvious implementations
-
-### Memory Management for Large Tasks
-- Use `Grep --head-limit=20` to limit search results when exploring
-- Use `Read` with `limit` parameter for large files
-- Use `LS` to understand scope before deep dives
-- Focus on one component at a time
-
-## Task Execution Notes
-
-- **Start with exploration**: Use LS, Glob, and Grep to understand codebase before making changes
-- **Track progress**: Use TodoWrite to break down complex tasks and track completion
-- **Validate continuously**: Run tests and checks after each significant change
-- **Follow existing patterns**: Use Grep to find similar implementations in the codebase
-- **Review task acceptance criteria** before starting implementation
-- **Check if any dependent tasks** need to be completed first
-- **Consider impact on other tasks** that may depend on this implementation
-- **Update task status to 'done'** after successful implementation and testing
+*All referenced files (@filename) are automatically imported into Claude's context. For detailed information on any topic, refer to the specific imported files above.*

@@ -114,39 +114,7 @@ fn generate_claude_settings(task: &TaskType, config: &ControllerConfig) -> Resul
         .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render settings template: {e}")))
 }
 
-/// Generate prompt content from template
-fn generate_prompt(task: &TaskType) -> Result<String> {
-    let mut handlebars = Handlebars::new();
-    handlebars.set_strict_mode(false);
 
-    let template_path = if task.is_docs() {
-        "docs/prompt.hbs"
-    } else {
-        "code/prompt.hbs"
-    };
-
-    let template = load_template(template_path)?;
-
-    handlebars
-        .register_template_string("prompt", template)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register prompt template: {e}")))?;
-
-    let data = json!({
-        "repository_url": task.repository_url(),
-        "source_branch": task.branch(),
-        "branch": task.branch(),
-        "github_user": task.github_user(),
-        "working_directory": task.working_directory(),
-        "model": task.model(),
-        "service_name": task.service_name(),
-        "task_id": task.task_id(),
-        "docs_repository_url": task.docs_repository_url()
-    });
-
-    handlebars
-        .render("prompt", &data)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render prompt template: {e}")))
-}
 
 /// Generate container startup script from template
 fn generate_container_script(task: &TaskType) -> Result<String> {
@@ -165,8 +133,7 @@ fn generate_container_script(task: &TaskType) -> Result<String> {
         .register_template_string("container_script", template)
         .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register container script template: {e}")))?;
 
-    // Generate the prompt content for fallback
-    let prompt_content = generate_prompt(task)?;
+    // Prompt content is now embedded inline in container script - no template needed
 
     let data = json!({
         "repository_url": task.repository_url(),
@@ -181,8 +148,7 @@ fn generate_container_script(task: &TaskType) -> Result<String> {
         "docs_branch": task.docs_branch(),
         "docs_project_directory": task.docs_project_directory(),
         "overwrite_memory": task.overwrite_memory(),
-        "resume_session": task.resume_session(),
-        "prompt_content": prompt_content  // Keep for fallback if prompt.md is missing
+        "resume_session": task.resume_session()
     });
 
     handlebars

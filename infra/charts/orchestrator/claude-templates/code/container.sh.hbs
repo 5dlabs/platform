@@ -30,11 +30,11 @@ echo "=== SSH AUTHENTICATION SETUP ==="
 
 if [ -f "/workspace/.ssh/id_ed25519" ]; then
   echo "✓ SSH private key found at /workspace/.ssh/id_ed25519"
-  
+
   # Create SSH directory in home
   mkdir -p ~/.ssh
   chmod 700 ~/.ssh
-  
+
   # Copy SSH keys from mounted read-only volume to writable location
   if cp /workspace/.ssh/id_ed25519 ~/.ssh/id_ed25519 2>/dev/null; then
     echo "✓ SSH private key copied to ~/.ssh/id_ed25519"
@@ -42,12 +42,12 @@ if [ -f "/workspace/.ssh/id_ed25519" ]; then
     echo "⚠️  Could not copy SSH key, using mounted location"
     export SSH_KEY_PATH="/workspace/.ssh/id_ed25519"
   fi
-  
+
   # Copy public key if exists
   if [ -f "/workspace/.ssh/id_ed25519.pub" ]; then
     cp /workspace/.ssh/id_ed25519.pub ~/.ssh/id_ed25519.pub 2>/dev/null || echo "⚠️  Could not copy public key"
   fi
-  
+
   # Set proper permissions if we copied the keys
   if [ -f ~/.ssh/id_ed25519 ]; then
     chmod 600 ~/.ssh/id_ed25519
@@ -159,21 +159,24 @@ echo "Target user: $GITHUB_USER"
 # 1. Clone Docs Repository (for task documentation)
 # Handle existing docs repo
 if [ -d "docs-repo" ]; then
-    echo "Docs repository already exists, updating..."
+    echo "🔄 DOCS REPOSITORY: CLONE SKIPPED - directory already exists"
+    echo "📁 Found existing docs-repo directory, updating instead of cloning..."
+    echo "   This indicates workspace persistence is working correctly"
     cd docs-repo
     git fetch origin
     git checkout "$DOCS_BRANCH"
     git reset --hard "origin/$DOCS_BRANCH"
     cd /workspace
-    echo "✓ Docs repository updated successfully"
+    echo "✓ Docs repository updated successfully (no clone needed)"
 else
-    echo "Cloning docs repository..."
+    echo "📥 DOCS REPOSITORY: CLONING - first time setup"
+    echo "   No existing docs-repo directory found, performing fresh clone..."
     if ! git clone "$DOCS_URL" docs-repo; then
         echo "❌ Failed to clone docs repository: $DOCS_URL"
         exit 1
     fi
     cd docs-repo && git checkout "$DOCS_BRANCH" && cd /workspace
-    echo "✓ Docs repository cloned successfully"
+    echo "✓ Docs repository cloned successfully (fresh clone)"
 fi
 
 # 2. Copy Current Task Documentation (Clean Previous Task Content)
@@ -189,7 +192,9 @@ echo "=== DESTINATION REPOSITORY SETUP ==="
 
 # Check if repository already exists (retry scenario)
 if [ -d "$REPO_NAME" ]; then
-    echo "Found existing target repository - attempting sophisticated branch management"
+    echo "🔄 TARGET REPOSITORY: CLONE SKIPPED - directory already exists"
+    echo "📁 Found existing target repository '$REPO_NAME', using sophisticated branch management..."
+    echo "   This indicates workspace persistence is working correctly"
     cd "$REPO_NAME"
 
     # Ensure main branch is current
@@ -209,7 +214,8 @@ if [ -d "$REPO_NAME" ]; then
             echo "✓ Successfully merged main into feature branch"
         else
             echo "⚠️  Merge conflicts detected during main integration"
-            echo "Performing fresh clone fallback to resolve conflicts..."
+            echo "🔄 TARGET REPOSITORY: CLONE FORCED - conflict resolution fallback"
+            echo "   Deleting existing directory and performing fresh clone to resolve conflicts..."
 
             # Fallback: delete and fresh clone
             cd ..
@@ -220,7 +226,7 @@ if [ -d "$REPO_NAME" ]; then
             fi
             cd "$REPO_NAME"
             git checkout -b $FEATURE_BRANCH
-            echo "✓ Created fresh feature branch after conflict resolution"
+            echo "✓ Created fresh feature branch after conflict resolution (forced fresh clone)"
         fi
     else
         # Create new feature branch from main
@@ -229,12 +235,15 @@ if [ -d "$REPO_NAME" ]; then
         echo "✓ Created feature branch: $FEATURE_BRANCH"
     fi
 else
+    echo "📥 TARGET REPOSITORY: CLONING - first time setup"
     echo "=== CLONING FRESH TARGET REPOSITORY ==="
+    echo "   No existing '$REPO_NAME' directory found, performing fresh clone..."
     if ! git clone "$REPO_URL" "$REPO_NAME"; then
         echo "❌ Failed to clone target repository: $REPO_URL"
         exit 1
     fi
     cd "$REPO_NAME"
+    echo "✓ Target repository cloned successfully (fresh clone)"
 
     # Ensure we're on main and create feature branch
     git checkout main 2>/dev/null || git checkout -b main origin/main
@@ -335,12 +344,28 @@ if [ -d "/config" ]; then
   if [ -f "/etc/claude-code/managed-settings.json" ]; then
     echo "✓ Enterprise managed settings found at /etc/claude-code/managed-settings.json"
     echo "✓ Mounted directly from ConfigMap (no copying needed)"
-    
+
     # Validate the enterprise settings JSON
     if jq empty /etc/claude-code/managed-settings.json 2>/dev/null; then
       echo "✓ Enterprise settings JSON is valid"
       echo "✓ This will override ALL other Claude Code settings (highest precedence)"
       echo "✓ Model configuration, tools, and permissions are defined"
+
+      # Debug: Print current settings configuration
+      echo ""
+      echo "🔧 SETTINGS CONFIGURATION DEBUG:"
+      echo "═══════════════════════════════════════════════════════════════"
+      echo "📋 Current Claude Code Settings:"
+      jq . /etc/claude-code/managed-settings.json | head -20
+      echo ""
+      echo "🔑 API Key Status:"
+      if [ -n "$ANTHROPIC_API_KEY" ]; then
+        echo "   ✓ ANTHROPIC_API_KEY is set (${#ANTHROPIC_API_KEY} characters)"
+      else
+        echo "   ⚠️  ANTHROPIC_API_KEY is not set"
+      fi
+      echo "═══════════════════════════════════════════════════════════════"
+      echo ""
     else
       echo "❌ Enterprise settings JSON is invalid"
       cat /etc/claude-code/managed-settings.json
@@ -351,17 +376,20 @@ if [ -d "/config" ]; then
     echo "Expected: /etc/claude-code/managed-settings.json (mounted from ConfigMap)"
     exit 1
   fi
-  
+
   # Copy guidelines files to working directory
   if [ -f "/config/coding-guidelines.md" ]; then
     cp /config/coding-guidelines.md "$CLAUDE_WORK_DIR/"
     echo "✓ Copied coding-guidelines.md to working directory"
   fi
-  
+
   if [ -f "/config/github-guidelines.md" ]; then
     cp /config/github-guidelines.md "$CLAUDE_WORK_DIR/"
     echo "✓ Copied github-guidelines.md to working directory"
   fi
+
+  # System prompt will be rendered inline (no file copying needed)
+  echo "✓ System prompt template will be rendered inline"
 
   # Hook copying disabled
   echo "! Hook scripts disabled - no hooks will be copied"
@@ -370,7 +398,7 @@ if [ -d "/config" ]; then
   echo "Setting up MCP configuration..."
   mkdir -p "$CLAUDE_WORK_DIR/.claude"
   chmod 755 "$CLAUDE_WORK_DIR/.claude"
-  
+
   # Copy MCP configuration files from ConfigMap
   if [ -f "/config/mcp.json" ]; then
     cp /config/mcp.json "$CLAUDE_WORK_DIR/.claude/mcp.json"
@@ -378,7 +406,7 @@ if [ -d "/config" ]; then
   else
     echo "⚠️  mcp.json template not found"
   fi
-  
+
   if [ -f "/config/client-config.json" ]; then
     cp /config/client-config.json "$CLAUDE_WORK_DIR/.claude/client-config.json"
     echo "✓ Copied client-config.json to .claude/client-config.json"
@@ -413,7 +441,7 @@ if [ -d "$TASK_DIR" ]; then
     cp "$TASK_DIR/acceptance-criteria.md" "$CLAUDE_WORK_DIR/task/" 2>/dev/null || echo "⚠️  acceptance-criteria.md not found"
     cp "$TASK_DIR/prompt.md" "$CLAUDE_WORK_DIR/task/" 2>/dev/null || echo "⚠️  prompt.md not found"
     echo "✓ Task {{task_id}} documentation copied from $TASK_DIR"
-    
+
     # Copy architecture.md from the root docs directory
     {{#if docs_project_directory}}
     ARCH_FILE="/workspace/docs-repo/{{docs_project_directory}}/.taskmaster/docs/architecture.md"
@@ -421,7 +449,7 @@ if [ -d "$TASK_DIR" ]; then
     ARCH_FILE="/workspace/docs-repo/_projects/{{service_name}}/.taskmaster/docs/architecture.md"
     {{/if}}
     if [ -f "$ARCH_FILE" ]; then
-        cp "$ARCH_FILE" "$CLAUDE_WORK_DIR/task/" 
+        cp "$ARCH_FILE" "$CLAUDE_WORK_DIR/task/"
         echo "✓ Architecture documentation copied from docs root"
     else
         echo "❌ CRITICAL: architecture.md not found at: $ARCH_FILE"
@@ -558,23 +586,79 @@ echo "║                    STARTING CLAUDE EXECUTION                  ║"
 echo "════════════════════════════════════════════════════════════════"
 echo "Command: $CLAUDE_CMD"
 echo "Note: Claude will automatically read CLAUDE.md from the working directory"
+
+# Inline system prompt (static content)
+SYSTEM_PROMPT='## 🚨 CRITICAL SYSTEM REQUIREMENTS 🚨
+
+**⛔ OVERCONFIDENCE MITIGATION - MANDATORY VERIFICATION ⛔**
+
+You have a DANGEROUS tendency to declare task completion before actually verifying everything works. This is ABSOLUTELY UNACCEPTABLE.
+
+**MANDATORY VERIFICATION REQUIREMENTS:**
+- ✅ **MUST** actually run and test your code - never assume it works
+- ✅ **MUST** verify ALL acceptance criteria through actual testing
+- ✅ **MUST** confirm your changes don'\''t break existing functionality
+- ✅ **MUST** test end-to-end workflows and edge cases
+- ✅ **MUST** run all linters and build checks successfully
+- ✅ **CANNOT** claim completion based on code appearance alone
+
+**YOU ARE PROHIBITED FROM CLAIMING SUCCESS UNTIL:**
+1. You have executed and verified every piece of functionality
+2. You have tested integration with existing systems
+3. You have confirmed all acceptance criteria pass through testing
+4. All automated tests pass (linting, builds, unit tests)
+5. You have verified the solution works end-to-end in practice
+
+**IF YOU DECLARE SUCCESS WITHOUT VERIFICATION, YOU HAVE FAILED.**
+
+## 🔧 ORCHESTRATOR EXECUTION CONTEXT
+
+- **Service**: {{service}}
+- **Task ID**: {{task_id}}
+- **Repository**: {{repository_url}}
+- **Branch**: {{branch}}
+- **Working Directory**: {{working_directory}}
+
+## ⚠️ EXECUTION REQUIREMENTS
+
+- **Follow patterns**: Use @coding-guidelines.md and @github-guidelines.md
+- **GitHub workflow**: Read @github-guidelines.md for commit standards and **ensure you submit a pull request automatically when implementation is complete**
+- **Verify continuously**: Run tests and checks after each significant change
+- **Commit incrementally**: Don'\''t save all changes for the end
+- **Test thoroughly**: Validate against acceptance criteria before completion
+
+**Remember**: Focus on thorough implementation and verification.'
+
 echo "Starting Claude execution..."
 echo "=========================="
 
-# Check if prompt.md exists and use it
+# Check if prompt.md exists and use it as main prompt
 if [ -f "$CLAUDE_WORK_DIR/task/prompt.md" ]; then
-    echo "Using task-specific prompt from prompt.md"
-    $CLAUDE_CMD "$(cat $CLAUDE_WORK_DIR/task/prompt.md)"
+    echo "✓ Using task-specific prompt from docs service: task/prompt.md"
+
+    # Debug: Print both prompts
+    echo ""
+    echo "=== DEBUG: MAIN PROMPT FROM DOCS SERVICE ==="
+    cat "$CLAUDE_WORK_DIR/task/prompt.md"
+    echo ""
+    echo "=== DEBUG: SYSTEM PROMPT (INLINE) ==="
+    echo "$SYSTEM_PROMPT"
+    echo ""
+    echo "=== END DEBUG PROMPTS ==="
+    echo ""
+
+    # Use main prompt with appended system prompt
+    $CLAUDE_CMD --append-system-prompt "$SYSTEM_PROMPT" "$(cat $CLAUDE_WORK_DIR/task/prompt.md)"
 else
-    echo "WARNING: No prompt.md found, using default prompt"
-    # Fallback to embedded prompt if needed
-    PROMPT="{{prompt_content}}"
-    $CLAUDE_CMD "$PROMPT"
+    echo "❌ ERROR: No prompt.md found from docs service"
+    echo "The docs service should always provide task/prompt.md"
+    echo "Check docs repository and task configuration"
+    exit 1
 fi
 
 echo '════════════════════════════════════════════════════════════════'
 echo '║                 IMPLEMENTATION TASK COMPLETE                 ║'
 echo '════════════════════════════════════════════════════════════════'
 
-# The Stop hook will run automatically when Claude completes
-echo "Claude has completed. Hooks will run if configured."
+# Claude execution completed - no hooks configured
+echo "Claude has completed successfully."
