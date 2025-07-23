@@ -380,9 +380,21 @@ TASK_DIR="/workspace/platform-repo/_projects/{{service_name}}/.taskmaster/docs/t
 if [ -d "$TASK_DIR" ]; then
     cp "$TASK_DIR/task.md" "$CLAUDE_WORK_DIR/task/" 2>/dev/null || echo "⚠️  task.md not found"
     cp "$TASK_DIR/acceptance-criteria.md" "$CLAUDE_WORK_DIR/task/" 2>/dev/null || echo "⚠️  acceptance-criteria.md not found"
-    cp "$TASK_DIR/architecture.md" "$CLAUDE_WORK_DIR/task/" 2>/dev/null || echo "⚠️  architecture.md not found"
     cp "$TASK_DIR/prompt.md" "$CLAUDE_WORK_DIR/task/" 2>/dev/null || echo "⚠️  prompt.md not found"
     echo "✓ Task {{task_id}} documentation copied from $TASK_DIR"
+    
+    # Copy architecture.md from the root docs directory
+    {{#if platform_project_directory}}
+    ARCH_FILE="/workspace/platform-repo/{{platform_project_directory}}/.taskmaster/docs/architecture.md"
+    {{else}}
+    ARCH_FILE="/workspace/platform-repo/_projects/{{service_name}}/.taskmaster/docs/architecture.md"
+    {{/if}}
+    if [ -f "$ARCH_FILE" ]; then
+        cp "$ARCH_FILE" "$CLAUDE_WORK_DIR/task/" 
+        echo "✓ Architecture documentation copied from docs root"
+    else
+        echo "❌ CRITICAL: architecture.md not found at: $ARCH_FILE"
+    fi
 else
     echo "⚠️  Task {{task_id}} documentation directory not found at: $TASK_DIR"
 fi
