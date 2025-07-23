@@ -65,13 +65,13 @@ pub enum TaskCommands {
         #[arg(long)]
         repository_url: Option<String>,
 
-        /// Platform repository URL (where Task Master definitions come from)
+        /// Documentation repository URL (where Task Master definitions come from)
         #[arg(long)]
-        platform_repository_url: Option<String>,
+        docs_repository_url: Option<String>,
 
-        /// Project directory within platform repository (e.g. "_projects/simple-api")
+        /// Project directory within docs repository (e.g. "_projects/simple-api")
         #[arg(long)]
-        platform_project_directory: Option<String>,
+        docs_project_directory: Option<String>,
 
         /// Git branch to work on
         #[arg(long, default_value = "main")]

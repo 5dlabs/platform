@@ -30,8 +30,8 @@ pub async fn handle_task_command(
             task_id,
             service,
             repository_url,
-            platform_repository_url,
-            platform_project_directory,
+            docs_repository_url,
+            docs_project_directory,
             branch,
             github_user,
             working_directory,
@@ -46,8 +46,8 @@ pub async fn handle_task_command(
                 task_id,
                 &service,
                 repository_url.as_deref(),
-                platform_repository_url.as_deref(),
-                platform_project_directory.as_deref(),
+                docs_repository_url.as_deref(),
+                docs_project_directory.as_deref(),
                 &branch,
                 github_user.as_deref(),
                 working_directory.as_deref(),
@@ -124,8 +124,8 @@ async fn handle_code_command(
     task_id: u32,
     service: &str,
     repository_url: Option<&str>,
-    platform_repository_url: Option<&str>,
-    platform_project_directory: Option<&str>,
+    docs_repository_url: Option<&str>,
+    docs_project_directory: Option<&str>,
     branch: &str,
     github_user: Option<&str>,
     working_directory: Option<&str>,
@@ -142,8 +142,8 @@ async fn handle_code_command(
         None => get_git_remote_url()?,
     };
 
-    // Auto-detect platform repository URL if not provided
-    let platform_repo_url = match platform_repository_url {
+    // Auto-detect docs repository URL if not provided
+    let docs_repo_url = match docs_repository_url {
         Some(url) => url.to_string(),
         None => get_git_remote_url()?, // TODO: This should be configurable
     };
@@ -165,8 +165,8 @@ async fn handle_code_command(
         task_id,
         service: service.to_string(),
         repository_url: repo_url.clone(),
-        platform_repository_url: platform_repo_url.clone(),
-        platform_project_directory: platform_project_directory.map(|s| s.to_string()),
+        docs_repository_url: docs_repo_url.clone(),
+        docs_project_directory: docs_project_directory.map(|s| s.to_string()),
         branch: branch.to_string(),
         github_user: github_user_name.clone(),
         working_directory: Some(working_dir.clone()),
@@ -177,7 +177,7 @@ async fn handle_code_command(
     };
 
     output.info(&format!("Target repository: {repo_url}"))?;
-    output.info(&format!("Platform repository: {platform_repo_url}"))?;
+    output.info(&format!("Docs repository: {docs_repo_url}"))?;
     output.info(&format!("Branch: {branch}"))?;
     output.info(&format!("Working directory: {working_dir}"))?;
     output.info(&format!("GitHub user: {github_user_name}"))?;
