@@ -472,7 +472,7 @@ fi
 echo "✓ Code implementation environment ready"
 
 # Build Claude command
-CLAUDE_CMD="{{command}} -p --output-format stream-json --verbose"
+CLAUDE_CMD="claude -p --output-format stream-json --verbose"
 
 # Add model flag if specified and different from default
 {{#if model_override}}
