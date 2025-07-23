@@ -2,12 +2,15 @@
 # Post-completion hook for code implementation - PR creation
 
 # IMMEDIATE DEBUG - Write to PVC to verify hook is called
-echo "=== STOP HOOK DEBUG START ===" >> /workspace/hook-debug.log
-echo "Hook called at: $(date)" >> /workspace/hook-debug.log
-echo "PWD: $(pwd)" >> /workspace/hook-debug.log
-echo "USER: $(whoami)" >> /workspace/hook-debug.log
-echo "ENV PATH: $PATH" >> /workspace/hook-debug.log
-echo "=== END DEBUG ===" >> /workspace/hook-debug.log
+HOOK_LOG="/workspace/hook-execution.log"
+exec > >(tee -a "$HOOK_LOG") 2>&1
+
+echo "=== STOP HOOK DEBUG START ===" 
+echo "Hook called at: $(date)" 
+echo "PWD: $(pwd)" 
+echo "USER: $(whoami)" 
+echo "ENV PATH: $PATH" 
+echo "=== END DEBUG ==="
 
 echo "🔗 STOP HOOK - Starting code implementation PR creation..."
 echo "Timestamp: $(date)"

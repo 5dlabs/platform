@@ -1,7 +1,7 @@
 apiVersion: orchestrator.platform/v1
 kind: CodeRun
 metadata:
-  name: test-working-hook
+  name: test-opus-pr
   namespace: orchestrator
 spec:
   service: "simple-api"
@@ -12,7 +12,7 @@ spec:
   platformRepositoryUrl: "git@github.com:5dlabs/platform.git"
   platformProjectDirectory: "_projects/simple-api"
   platformBranch: "feature/example-project-and-cli"
-  model: "claude-3-5-sonnet-20241022"
+  model: "claude-sonnet-4-20250514"
   githubUser: "pm0-5dlabs"
   toolConfig: "default"
   overwriteMemory: true
