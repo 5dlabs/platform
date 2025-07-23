@@ -110,7 +110,7 @@ else
 fi
 
 # Test platform repository access
-DOCS_URL="{{platform_repository_url}}"
+DOCS_URL="{{docs_repository_url}}"
 echo "Testing docs repository access..."
 if git ls-remote "$DOCS_URL" HEAD > /dev/null 2>&1; then
   echo "✓ Docs repository access successful"
@@ -130,8 +130,8 @@ echo "║                 DUAL REPOSITORY SETUP                        ║"
 echo "═══════════════════════════════════════════════════════════════"
 
 # Docs Repository Information (for task documentation)
-DOCS_URL="{{platform_repository_url}}"
-DOCS_BRANCH="{{platform_branch}}"
+DOCS_URL="{{docs_repository_url}}"
+DOCS_BRANCH="{{docs_branch}}"
 DOCS_USER="{{github_user}}"
 
 # Docs repository setup
@@ -144,9 +144,8 @@ REPO_URL="{{repository_url}}"
 REPO_BRANCH="{{branch}}"
 GITHUB_USER="{{github_user}}"
 
-# Extract repository name from URL for directory naming
-REPO_NAME=$(basename "$REPO_URL" .git)
-echo "Repository name: $REPO_NAME"
+# Use consistent target-repo directory name
+REPO_NAME="target-repo"
 
 # Target repository setup
 echo "Target repo: $REPO_URL"
@@ -403,8 +402,8 @@ rm -rf "$CLAUDE_WORK_DIR/task/" 2>/dev/null
 mkdir -p "$CLAUDE_WORK_DIR/task"
 
 # Determine task directory path
-{{#if platform_project_directory}}
-TASK_DIR="/workspace/docs-repo/{{platform_project_directory}}/.taskmaster/docs/task-{{task_id}}"
+{{#if docs_project_directory}}
+TASK_DIR="/workspace/docs-repo/{{docs_project_directory}}/.taskmaster/docs/task-{{task_id}}"
 {{else}}
 # Default to _projects/{service} if not specified
 TASK_DIR="/workspace/docs-repo/_projects/{{service_name}}/.taskmaster/docs/task-{{task_id}}"
@@ -417,8 +416,8 @@ if [ -d "$TASK_DIR" ]; then
     echo "✓ Task {{task_id}} documentation copied from $TASK_DIR"
     
     # Copy architecture.md from the root docs directory
-    {{#if platform_project_directory}}
-    ARCH_FILE="/workspace/docs-repo/{{platform_project_directory}}/.taskmaster/docs/architecture.md"
+    {{#if docs_project_directory}}
+    ARCH_FILE="/workspace/docs-repo/{{docs_project_directory}}/.taskmaster/docs/architecture.md"
     {{else}}
     ARCH_FILE="/workspace/docs-repo/_projects/{{service_name}}/.taskmaster/docs/architecture.md"
     {{/if}}

@@ -210,7 +210,7 @@ volume_mounts.push(json!({
         TaskType::Code(cr) => {
             env_vars.push(json!({"name": "TASK_ID", "value": cr.spec.task_id.to_string()}));
             env_vars.push(json!({"name": "SERVICE_NAME", "value": cr.spec.service}));
-            env_vars.push(json!({"name": "PLATFORM_REPOSITORY_URL", "value": cr.spec.platform_repository_url}));
+            env_vars.push(json!({"name": "DOCS_REPOSITORY_URL", "value": cr.spec.docs_repository_url}));
             env_vars.push(json!({"name": "MCP_CLIENT_CONFIG", "value": "/.claude/client-config.json"}));
 
             if let Some(local_tools) = &cr.spec.local_tools {

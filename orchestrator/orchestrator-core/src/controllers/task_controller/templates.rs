@@ -82,7 +82,7 @@ fn generate_claude_memory(task: &TaskType) -> Result<String> {
         }),
         "working_directory": task.working_directory(),
         "task_id": task.task_id(),
-        "platform_repository_url": task.platform_repository_url()
+        "docs_repository_url": task.docs_repository_url()
     });
 
     handlebars
@@ -140,7 +140,7 @@ fn generate_prompt(task: &TaskType) -> Result<String> {
         "model": task.model(),
         "service_name": task.service_name(),
         "task_id": task.task_id(),
-        "platform_repository_url": task.platform_repository_url()
+        "docs_repository_url": task.docs_repository_url()
     });
 
     handlebars
@@ -177,9 +177,9 @@ fn generate_container_script(task: &TaskType) -> Result<String> {
         "model": task.model(),
         "service_name": task.service_name(),
         "task_id": task.task_id(),
-        "platform_repository_url": task.platform_repository_url(),
-        "platform_branch": task.platform_branch(),
-        "platform_project_directory": task.platform_project_directory(),
+        "docs_repository_url": task.docs_repository_url(),
+        "docs_branch": task.docs_branch(),
+        "docs_project_directory": task.docs_project_directory(),
         "overwrite_memory": task.overwrite_memory(),
         "resume_session": task.resume_session(),
         "prompt_content": prompt_content  // Keep for fallback if prompt.md is missing
@@ -315,9 +315,9 @@ fn build_settings_template_data(task: &TaskType, config: &ControllerConfig) -> s
             "remote": remote_tools
         });
 
-        // Add platform repository info
-        if let Some(platform_url) = task.platform_repository_url() {
-            data["platform_repository_url"] = json!(platform_url);
+        // Add docs repository info
+        if let Some(docs_url) = task.docs_repository_url() {
+            data["docs_repository_url"] = json!(docs_url);
         }
     }
 
@@ -358,7 +358,7 @@ fn generate_hook_scripts(task: &TaskType) -> Result<BTreeMap<String, String>> {
         "working_directory": task.working_directory(),
         "attempts": task.retry_count() + 1, // retry_count + 1 = attempt number
         "is_docs_generation": task.is_docs(),
-        "platform_repository_url": task.platform_repository_url()
+        "docs_repository_url": task.docs_repository_url()
     });
 
     // Process each hook template

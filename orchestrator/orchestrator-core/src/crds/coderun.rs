@@ -19,8 +19,8 @@ fn default_prompt_mode() -> String {
     "append".to_string()
 }
 
-/// Default function for `platform_branch` field
-fn default_platform_branch() -> String {
+/// Default function for `docs_branch` field
+fn default_docs_branch() -> String {
     "main".to_string()
 }
 
@@ -56,13 +56,13 @@ pub struct CodeRunSpec {
     #[serde(rename = "repositoryUrl")]
     pub repository_url: String,
 
-    /// Platform repository URL (where Task Master definitions come from)
-    #[serde(rename = "platformRepositoryUrl")]
-    pub platform_repository_url: String,
+    /// Documentation repository URL (where Task Master definitions come from)
+    #[serde(rename = "docsRepositoryUrl")]
+    pub docs_repository_url: String,
 
-    /// Project directory within platform repository (e.g. "_projects/simple-api")
-    #[serde(default, rename = "platformProjectDirectory")]
-    pub platform_project_directory: Option<String>,
+    /// Project directory within docs repository (e.g. "_projects/simple-api")
+    #[serde(default, rename = "docsProjectDirectory")]
+    pub docs_project_directory: Option<String>,
 
     /// Git branch to work on in target repository
     pub branch: String,
@@ -102,9 +102,9 @@ pub struct CodeRunSpec {
     #[serde(default = "default_prompt_mode", rename = "promptMode")]
     pub prompt_mode: String,
 
-    /// Platform branch to use (e.g., "main", "feature/branch")
-    #[serde(default = "default_platform_branch", rename = "platformBranch")]
-    pub platform_branch: String,
+    /// Docs branch to use (e.g., "main", "feature/branch")
+    #[serde(default = "default_docs_branch", rename = "docsBranch")]
+    pub docs_branch: String,
 
     /// Whether to resume a previous session
     #[serde(default = "default_resume_session", rename = "resumeSession")]

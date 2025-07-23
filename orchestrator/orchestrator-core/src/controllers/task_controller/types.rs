@@ -165,11 +165,11 @@ impl TaskType {
         }
     }
 
-    /// Get platform repository info (only for CodeRun)
-    pub fn platform_repository_url(&self) -> Option<&str> {
+    /// Get docs repository info (only for CodeRun)
+    pub fn docs_repository_url(&self) -> Option<&str> {
         match self {
             TaskType::Docs(_) => None,
-            TaskType::Code(cr) => Some(&cr.spec.platform_repository_url),
+            TaskType::Code(cr) => Some(&cr.spec.docs_repository_url),
         }
     }
 
@@ -183,11 +183,11 @@ impl TaskType {
         format!("github-ssh-{}", self.github_user())
     }
 
-    /// Get platform branch (only for CodeRun)
-    pub fn platform_branch(&self) -> &str {
+    /// Get docs branch (only for CodeRun)
+    pub fn docs_branch(&self) -> &str {
         match self {
             TaskType::Docs(_) => "main", // Docs use default branch
-            TaskType::Code(cr) => &cr.spec.platform_branch,
+            TaskType::Code(cr) => &cr.spec.docs_branch,
         }
     }
 
@@ -208,11 +208,11 @@ impl TaskType {
         }
     }
 
-    /// Get platform project directory (only for CodeRun)
-    pub fn platform_project_directory(&self) -> Option<&str> {
+    /// Get docs project directory (only for CodeRun)
+    pub fn docs_project_directory(&self) -> Option<&str> {
         match self {
             TaskType::Docs(_) => None,
-            TaskType::Code(cr) => cr.spec.platform_project_directory.as_deref(),
+            TaskType::Code(cr) => cr.spec.docs_project_directory.as_deref(),
         }
     }
 }
