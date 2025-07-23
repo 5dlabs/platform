@@ -188,22 +188,8 @@ volume_mounts.push(json!({
     "readOnly": true
 }));
 
-// Mount guidelines files directly to workspace for code tasks
-if !task.is_docs() {
-    volume_mounts.push(json!({
-        "name": "task-files",
-        "mountPath": "/workspace/coding-guidelines.md",
-        "subPath": "coding-guidelines.md",
-        "readOnly": true
-    }));
-    
-    volume_mounts.push(json!({
-        "name": "task-files",
-        "mountPath": "/workspace/github-guidelines.md",
-        "subPath": "github-guidelines.md",
-        "readOnly": true
-    }));
-}
+// Guidelines files will be copied from ConfigMap to working directory by container.sh
+// No need to mount them separately since they need to be in the working directory
 
 // Environment variables
     let mut env_vars = vec![

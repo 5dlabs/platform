@@ -274,13 +274,9 @@ if [ -d "/config" ]; then
           fi
         fi
       else
-        # Skip guidelines files as they're mounted directly via subPath
-        if [ "$basename_file" != "coding-guidelines.md" ] && [ "$basename_file" != "github-guidelines.md" ]; then
-          cp "$md_file" "$CLAUDE_WORK_DIR/"
-          echo "✓ Updated $basename_file"
-        else
-          echo "✓ Skipped $basename_file (mounted directly via subPath)"
-        fi
+        # Copy all other markdown files
+        cp "$md_file" "$CLAUDE_WORK_DIR/"
+        echo "✓ Updated $basename_file"
       fi
     fi
   done
@@ -306,19 +302,15 @@ if [ -d "/config" ]; then
     exit 1
   fi
   
-  # Check that guidelines files are mounted correctly (code tasks only)
-  if [ "$TASK_TYPE" = "code" ]; then
-    if [ -f "$CLAUDE_WORK_DIR/coding-guidelines.md" ]; then
-      echo "✓ coding-guidelines.md mounted at $CLAUDE_WORK_DIR/coding-guidelines.md"
-    else
-      echo "❌ ERROR: coding-guidelines.md not found at $CLAUDE_WORK_DIR/coding-guidelines.md"
-    fi
-    
-    if [ -f "$CLAUDE_WORK_DIR/github-guidelines.md" ]; then
-      echo "✓ github-guidelines.md mounted at $CLAUDE_WORK_DIR/github-guidelines.md"
-    else
-      echo "❌ ERROR: github-guidelines.md not found at $CLAUDE_WORK_DIR/github-guidelines.md"
-    fi
+  # Copy guidelines files to working directory
+  if [ -f "/config/coding-guidelines.md" ]; then
+    cp /config/coding-guidelines.md "$CLAUDE_WORK_DIR/"
+    echo "✓ Copied coding-guidelines.md to working directory"
+  fi
+  
+  if [ -f "/config/github-guidelines.md" ]; then
+    cp /config/github-guidelines.md "$CLAUDE_WORK_DIR/"
+    echo "✓ Copied github-guidelines.md to working directory"
   fi
 
   # Copy all hook scripts (now prefixed with hooks- to comply with ConfigMap key constraints)

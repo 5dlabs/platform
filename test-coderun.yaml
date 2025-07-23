@@ -11,7 +11,7 @@ spec:
   branch: "main"
   platformRepositoryUrl: "git@github.com:5dlabs/platform.git"
   platformProjectDirectory: "_projects/simple-api"
-  platformBranch: "main"
+  platformBranch: "feature/example-project-and-cli"
   model: "claude-3-5-sonnet-20241022"
   githubUser: "pm0-5dlabs"
   toolConfig: "default"
