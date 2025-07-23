@@ -1,0 +1,18 @@
+apiVersion: orchestrator.platform/v1
+kind: CodeRun
+metadata:
+  name: test-coderun-001
+  namespace: orchestrator
+spec:
+  service: "simple-api"
+  taskId: 1
+  repositoryUrl: "https://github.com/5dlabs/orchestrator-code-test"
+  workingDirectory: "."
+  branch: "main"
+  platformRepositoryUrl: "https://github.com/5dlabs/platform"
+  platformBranch: "main"
+  model: "claude-3-5-sonnet-20241022"
+  githubUser: "jonathonfritz"
+  toolConfig: "default"
+  overwriteMemory: false
+  resumeSession: false
