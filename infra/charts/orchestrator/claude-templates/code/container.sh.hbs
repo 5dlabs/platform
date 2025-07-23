@@ -523,14 +523,17 @@ echo "=========================="
 # Check if prompt.md exists and use it
 if [ -f "$CLAUDE_WORK_DIR/task/prompt.md" ]; then
     echo "Using task-specific prompt from prompt.md"
-    exec $CLAUDE_CMD "$(cat $CLAUDE_WORK_DIR/task/prompt.md)"
+    $CLAUDE_CMD "$(cat $CLAUDE_WORK_DIR/task/prompt.md)"
 else
     echo "WARNING: No prompt.md found, using default prompt"
     # Fallback to embedded prompt if needed
     PROMPT="{{prompt_content}}"
-    exec $CLAUDE_CMD "$PROMPT"
+    $CLAUDE_CMD "$PROMPT"
 fi
 
 echo '════════════════════════════════════════════════════════════════'
 echo '║                 IMPLEMENTATION TASK COMPLETE                 ║'
 echo '════════════════════════════════════════════════════════════════'
+
+# The Stop hook will run automatically when Claude completes
+echo "Claude has completed. Hooks will run if configured."
