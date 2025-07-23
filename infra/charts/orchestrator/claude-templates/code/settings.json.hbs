@@ -53,18 +53,5 @@
   },
   "model": "{{model}}",
   "cleanupPeriodDays": 7,
-  "includeCoAuthoredBy": true,
-  "hooks": {
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "./stop-code-pr-creation.sh"
-          }
-        ]
-      }
-    ]
-  }
+  "includeCoAuthoredBy": false
 }

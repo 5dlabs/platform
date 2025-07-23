@@ -11,8 +11,45 @@ spec:
     fsGroup: 1000
   containers:
   - name: debug
-    image: alpine/git:latest
-    command: ["sleep", "3600"]
+    image: ghcr.io/5dlabs/platform/claude-code:1.0.56
+    command: ["/bin/bash", "-c"]
+    args: 
+    - |
+      echo "=== DEBUG POD: Setting up SSH and Git config to match Claude ==="
+      
+      # Set up SSH keys (same as Claude container)
+      mkdir -p ~/.ssh
+      chmod 700 ~/.ssh
+      cp /workspace/.ssh/id_ed25519 ~/.ssh/id_ed25519
+      cp /workspace/.ssh/id_ed25519.pub ~/.ssh/id_ed25519.pub
+      chmod 600 ~/.ssh/id_ed25519
+      chmod 644 ~/.ssh/id_ed25519.pub
+      
+      # Create SSH config
+      cat > ~/.ssh/config << EOF
+      Host github.com
+          HostName github.com
+          User git
+          IdentityFile ~/.ssh/id_ed25519
+          IdentitiesOnly yes
+          StrictHostKeyChecking no
+      EOF
+      chmod 600 ~/.ssh/config
+      
+      # Set git config in the target repo if it exists
+      if [ -d "/workspace/target-repo/.git" ]; then
+        cd /workspace/target-repo
+        git config --local user.name "pm0-5dlabs"
+        git config --local user.email "pm0-5dlabs@users.noreply.github.com"
+        git config --local push.autoSetupRemote true
+        echo "✓ Git config set in target-repo"
+      fi
+      
+      echo "=== Debug environment ready - SSH and Git configured like Claude ==="
+      echo "You can now test git operations accurately"
+      
+      # Sleep to keep container running  
+      sleep 10800
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:
@@ -21,24 +58,59 @@ spec:
       seccompProfile:
         type: RuntimeDefault
     volumeMounts:
+    - name: task-files
+      mountPath: /config
     - name: workspace
       mountPath: /workspace
     - name: ssh-key
-      mountPath: /root/.ssh
+      mountPath: /workspace/.ssh
       readOnly: true
+    - name: task-files
+      mountPath: /etc/claude-code/managed-settings.json
+      readOnly: true
+      subPath: settings.json
+    env:
+    - name: ANTHROPIC_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: claude-api-key
+          key: api-key
+    - name: TASK_TYPE
+      value: "code"
+    - name: MODEL
+      value: "claude-sonnet-4-20250514"
+    - name: GITHUB_USER
+      value: "pm0-5dlabs"
+    - name: REPOSITORY_URL
+      value: "git@github.com:5dlabs/orchestrator-code-test.git"
+    - name: WORKING_DIRECTORY
+      value: "."
+    - name: BRANCH
+      value: "main"
+    - name: TASK_ID
+      value: "1"
+    - name: SERVICE_NAME
+      value: "simple-api"
+    - name: DOCS_REPOSITORY_URL
+      value: "git@github.com:5dlabs/platform.git"
+  imagePullSecrets:
+  - name: ghcr-secret
   volumes:
+  - name: task-files
+    configMap:
+      name: simple-api-task1-v1-files
   - name: workspace
     persistentVolumeClaim:
       claimName: workspace-simple-api
   - name: ssh-key
     secret:
       secretName: github-ssh-pm0-5dlabs
-      defaultMode: 0600
+      defaultMode: 384
       items:
       - key: ssh-privatekey
         path: id_ed25519
-        mode: 0600
+        mode: 384
       - key: ssh-publickey
         path: id_ed25519.pub
-        mode: 0644
+        mode: 420
   restartPolicy: Never

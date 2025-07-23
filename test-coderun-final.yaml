@@ -1,7 +1,7 @@
 apiVersion: orchestrator.platform/v1
 kind: CodeRun
 metadata:
-  name: test-docs-fields
+  name: test-clean-pvc
   namespace: orchestrator
 spec:
   service: "simple-api"

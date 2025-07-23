@@ -9,9 +9,9 @@ export GIT_TERMINAL_PROMPT=0
 export GIT_ASKPASS=/bin/true
 export SSH_ASKPASS=/bin/true
 
-# Export GitHub environment for hooks
+# Export GitHub environment for hooks (SSH-only system)
 export GITHUB_USER="{{github_user}}"
-export GITHUB_TOKEN="${GITHUB_TOKEN:-}"  # Should be set via secret
+# Note: No GITHUB_TOKEN - using SSH authentication only
 
 # Install GitHub CLI if not present
 if ! command -v gh >/dev/null 2>&1; then
@@ -70,6 +70,12 @@ EOF
   echo "Testing SSH connection to GitHub..."
   ssh -T git@github.com 2>&1 | head -3 || echo "SSH test completed (expected to fail with 'successfully authenticated')"
 
+  # Copy SSH setup to PVC for persistence and debugging
+  if [ ! -f "/workspace/.ssh/config" ]; then
+    cp ~/.ssh/config /workspace/.ssh/config 2>/dev/null || echo "⚠️ Could not copy SSH config to PVC"
+    echo "✓ SSH config copied to PVC for persistence"
+  fi
+
   echo "✓ SSH authentication configured successfully"
 else
   echo "❌ SSH private key not found at /workspace/.ssh/id_ed25519"
@@ -82,9 +88,7 @@ fi
 git config --global --add safe.directory /workspace
 echo "✓ Added /workspace to safe directories"
 
-git config --global user.name "{{github_user}}"
-git config --global user.email "{{github_user}}@users.noreply.github.com"
-echo "✓ Configured git user: {{github_user}}"
+# Note: Git user config will be set locally in repository after clone
 
 # =============================================================================
 # AUTHENTICATION VERIFICATION
@@ -250,13 +254,29 @@ echo "🔑 CRITICAL: Claude will be launched from this directory"
 # Configure git user after successful clone
 echo "=== POST-CLONE GIT CONFIGURATION ==="
 # Fix dubious ownership issues
-git config --global --add safe.directory /workspace/platform-repo
+git config --global --add safe.directory /workspace/docs-repo
 git config --global --add safe.directory /workspace/target-repo
 echo "✓ Added repositories to safe directories"
 
-git config --global user.name "$GITHUB_USER"
-git config --global user.email "${GITHUB_USER}@users.noreply.github.com"
-echo "✓ Configured git user: $GITHUB_USER"
+# Set git config locally in each repository (persistent on PVC)
+if [ -d "/workspace/docs-repo/.git" ]; then
+    cd /workspace/docs-repo
+    git config --local user.name "$GITHUB_USER"
+    git config --local user.email "${GITHUB_USER}@users.noreply.github.com"
+    echo "✓ Configured git user in docs repository: $GITHUB_USER"
+fi
+
+if [ -d "/workspace/target-repo/.git" ]; then
+    cd /workspace/target-repo
+    git config --local user.name "$GITHUB_USER"
+    git config --local user.email "${GITHUB_USER}@users.noreply.github.com"
+    # Set up automatic upstream for new branches
+    git config --local push.autoSetupRemote true
+    echo "✓ Configured git user in target repository: $GITHUB_USER"
+    echo "✓ Enabled automatic upstream setup for new branches"
+fi
+
+cd /workspace
 
 # Copy ConfigMap files to working directory (AFTER repository clone)
 echo "=== CONFIGMAP FILE SETUP ==="
@@ -286,14 +306,21 @@ if [ -d "/config" ]; then
         if [ "$OVERWRITE_MEMORY" = "true" ]; then
           # Overwrite mode: Always replace CLAUDE.md with fresh template
           cp "$md_file" "$CLAUDE_WORK_DIR/CLAUDE.md"
+          cp "$md_file" "/workspace/CLAUDE.md"
           echo "✓ Overwrote CLAUDE.md memory file (fresh start requested)"
+          echo "✓ Copied CLAUDE.md to workspace root for easy access"
         else
           # Preserve mode (default): Only copy if doesn't exist
           if [ ! -f "$CLAUDE_WORK_DIR/CLAUDE.md" ]; then
             cp "$md_file" "$CLAUDE_WORK_DIR/CLAUDE.md"
+            cp "$md_file" "/workspace/CLAUDE.md"
             echo "✓ Created initial CLAUDE.md memory file"
+            echo "✓ Copied CLAUDE.md to workspace root for easy access"
           else
             echo "✓ Preserved existing CLAUDE.md memory file (maintaining accumulated context)"
+            # Still copy to workspace root for consistency
+            cp "$CLAUDE_WORK_DIR/CLAUDE.md" "/workspace/CLAUDE.md"
+            echo "✓ Synced CLAUDE.md to workspace root"
           fi
         fi
       else
@@ -336,36 +363,8 @@ if [ -d "/config" ]; then
     echo "✓ Copied github-guidelines.md to working directory"
   fi
 
-  # Copy all hook scripts (now prefixed with hooks- or code_hooks_ to comply with ConfigMap key constraints)
-  echo "Copying hook scripts..."
-  
-  # Copy old-style hooks (hooks- prefix)
-  for hook_file in /config/hooks-*.sh; do
-    if [ -f "$hook_file" ]; then
-      # Extract the hook name (remove hooks- prefix) and copy to workspace
-      hook_name=$(basename "$hook_file" | sed 's/^hooks-//')
-      cp "$hook_file" "$CLAUDE_WORK_DIR/$hook_name"
-      chmod +x "$CLAUDE_WORK_DIR/$hook_name"
-      echo "✓ Copied hook: $hook_name"
-    fi
-  done
-  
-  # Copy new-style hooks (code_hooks_ prefix)
-  for hook_file in /config/code_hooks_*.sh; do
-    if [ -f "$hook_file" ]; then
-      # Extract the hook name (remove code_hooks_ prefix) and copy to workspace
-      hook_name=$(basename "$hook_file" | sed 's/^code_hooks_//')
-      cp "$hook_file" "$CLAUDE_WORK_DIR/$hook_name"
-      chmod +x "$CLAUDE_WORK_DIR/$hook_name"
-      echo "✓ Copied hook: $hook_name"
-    fi
-  done
-  # Check if any hooks were copied
-  if ls "$CLAUDE_WORK_DIR"/*.sh >/dev/null 2>&1; then
-    echo "✓ Hook scripts copied successfully"
-  else
-    echo "! No hook scripts found to copy"
-  fi
+  # Hook copying disabled
+  echo "! Hook scripts disabled - no hooks will be copied"
 
   # Set up MCP configuration files
   echo "Setting up MCP configuration..."

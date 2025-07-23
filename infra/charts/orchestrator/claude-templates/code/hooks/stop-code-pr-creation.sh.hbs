@@ -3,6 +3,8 @@
 
 # IMMEDIATE DEBUG - Write to PVC to verify hook is called
 HOOK_LOG="/workspace/hook-execution.log"
+
+# Use bash process substitution (now we know bash is available)
 exec > >(tee -a "$HOOK_LOG") 2>&1
 
 echo "=== STOP HOOK DEBUG START ===" 
