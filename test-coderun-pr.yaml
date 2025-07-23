@@ -1,7 +1,7 @@
 apiVersion: orchestrator.platform/v1
 kind: CodeRun
 metadata:
-  name: test-debug-hook
+  name: test-coderun-pr
   namespace: orchestrator
 spec:
   service: "simple-api"
