@@ -37,6 +37,8 @@
     "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
     "OTEL_METRICS_EXPORTER": "otlp",
     "OTEL_LOGS_EXPORTER": "otlp",
+    "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "{{telemetry.otlp_endpoint}}",
+    "OTEL_EXPORTER_OTLP_METRICS_PROTOCOL": "{{telemetry.otlp_protocol}}",
     "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "{{telemetry.logs_endpoint}}",
     "OTEL_EXPORTER_OTLP_LOGS_PROTOCOL": "{{telemetry.logs_protocol}}"{{else}},
     "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
