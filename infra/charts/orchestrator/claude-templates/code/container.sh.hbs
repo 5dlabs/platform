@@ -13,21 +13,42 @@ export SSH_ASKPASS=/bin/true
 echo "=== SSH AUTHENTICATION SETUP ==="
 
 if [ -f "/workspace/.ssh/id_ed25519" ]; then
-  # Set proper SSH key permissions
-  chmod 600 /workspace/.ssh/id_ed25519
-  chmod 700 /workspace/.ssh
+  echo "✓ SSH private key found at /workspace/.ssh/id_ed25519"
+  
+  # Create SSH directory in home
+  mkdir -p ~/.ssh
+  chmod 700 ~/.ssh
+  
+  # Copy SSH keys from mounted read-only volume to writable location
+  if cp /workspace/.ssh/id_ed25519 ~/.ssh/id_ed25519 2>/dev/null; then
+    echo "✓ SSH private key copied to ~/.ssh/id_ed25519"
+  else
+    echo "⚠️  Could not copy SSH key, using mounted location"
+    export SSH_KEY_PATH="/workspace/.ssh/id_ed25519"
+  fi
+  
+  # Copy public key if exists
+  if [ -f "/workspace/.ssh/id_ed25519.pub" ]; then
+    cp /workspace/.ssh/id_ed25519.pub ~/.ssh/id_ed25519.pub 2>/dev/null || echo "⚠️  Could not copy public key"
+  fi
+  
+  # Set proper permissions if we copied the keys
+  if [ -f ~/.ssh/id_ed25519 ]; then
+    chmod 600 ~/.ssh/id_ed25519
+    [ -f ~/.ssh/id_ed25519.pub ] && chmod 644 ~/.ssh/id_ed25519.pub
+  fi
 
   # Configure SSH to use the key
-  cat > /workspace/.ssh/config << EOF
+  cat > ~/.ssh/config << EOF
 Host github.com
     HostName github.com
     User git
-    IdentityFile /workspace/.ssh/id_ed25519
+    IdentityFile ${SSH_KEY_PATH:-~/.ssh/id_ed25519}
     IdentitiesOnly yes
     StrictHostKeyChecking no
 EOF
 
-  chmod 600 /workspace/.ssh/config
+  chmod 600 ~/.ssh/config
 
   # Test SSH connection
   echo "Testing SSH connection to GitHub..."

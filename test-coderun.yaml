@@ -6,14 +6,14 @@ metadata:
 spec:
   service: "simple-api"
   taskId: 1
-  repositoryUrl: "https://github.com/5dlabs/orchestrator-code-test"
+  repositoryUrl: "git@github.com:5dlabs/orchestrator-code-test.git"
   workingDirectory: "."
   branch: "main"
-  platformRepositoryUrl: "https://github.com/5dlabs/platform"
+  platformRepositoryUrl: "git@github.com:5dlabs/platform.git"
   platformProjectDirectory: "_projects/simple-api"
   platformBranch: "main"
   model: "claude-3-5-sonnet-20241022"
-  githubUser: "jonathonfritz"
+  githubUser: "pm0-5dlabs"
   toolConfig: "default"
   overwriteMemory: false
   resumeSession: false
