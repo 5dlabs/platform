@@ -165,7 +165,7 @@ fn generate_container_script(task: &TaskType) -> Result<String> {
         .register_template_string("container_script", template)
         .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register container script template: {e}")))?;
 
-    // Generate the prompt content first
+    // Generate the prompt content for fallback
     let prompt_content = generate_prompt(task)?;
 
     let data = json!({
@@ -182,7 +182,7 @@ fn generate_container_script(task: &TaskType) -> Result<String> {
         "platform_project_directory": task.platform_project_directory(),
         "overwrite_memory": task.overwrite_memory(),
         "resume_session": task.resume_session(),
-        "prompt_content": prompt_content  // Add the rendered prompt content
+        "prompt_content": prompt_content  // Keep for fallback if prompt.md is missing
     });
 
     handlebars

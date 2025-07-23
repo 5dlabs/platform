@@ -374,6 +374,7 @@ if [ -d "$TASK_DIR" ]; then
     cp "$TASK_DIR/task.md" "$CLAUDE_WORK_DIR/task/" 2>/dev/null || echo "⚠️  task.md not found"
     cp "$TASK_DIR/acceptance-criteria.md" "$CLAUDE_WORK_DIR/task/" 2>/dev/null || echo "⚠️  acceptance-criteria.md not found"
     cp "$TASK_DIR/architecture.md" "$CLAUDE_WORK_DIR/task/" 2>/dev/null || echo "⚠️  architecture.md not found"
+    cp "$TASK_DIR/prompt.md" "$CLAUDE_WORK_DIR/task/" 2>/dev/null || echo "⚠️  prompt.md not found"
     echo "✓ Task {{task_id}} documentation copied from $TASK_DIR"
 else
     echo "⚠️  Task {{task_id}} documentation directory not found at: $TASK_DIR"
@@ -500,13 +501,16 @@ echo "Note: Claude will automatically read CLAUDE.md from the working directory"
 echo "Starting Claude execution..."
 echo "=========================="
 
-# Load the prompt template content
-PROMPT="{{prompt_content}}"
-
-# Starting Claude Code with prompt
-echo "Starting Claude Code..."
-
-exec $CLAUDE_CMD "$PROMPT"
+# Check if prompt.md exists and use it
+if [ -f "$CLAUDE_WORK_DIR/task/prompt.md" ]; then
+    echo "Using task-specific prompt from prompt.md"
+    exec $CLAUDE_CMD "$(cat $CLAUDE_WORK_DIR/task/prompt.md)"
+else
+    echo "WARNING: No prompt.md found, using default prompt"
+    # Fallback to embedded prompt if needed
+    PROMPT="{{prompt_content}}"
+    exec $CLAUDE_CMD "$PROMPT"
+fi
 
 echo '════════════════════════════════════════════════════════════════'
 echo '║                 IMPLEMENTATION TASK COMPLETE                 ║'
