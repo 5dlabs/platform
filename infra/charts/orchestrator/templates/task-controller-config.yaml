@@ -33,18 +33,22 @@ data:
     permissions:
       agentToolsOverride: false
       allow:
-        - "Bash(*)"
-        - "Read(*)"
-        - "Write(*)"
-        - "Edit(*)"
-        - "MultiEdit(*)"
-        - "Glob(*)"
-        - "Grep(*)"
-        - "LS(*)"
-        - "TodoRead(*)"
-        - "TodoWrite(*)"
-        - "WebFetch(*)"
-        - "WebSearch(*)"
+        - "Bash"
+        - "Read"
+        - "Write"
+        - "Edit"
+        - "MultiEdit"
+        - "Glob"
+        - "Grep"
+        - "LS"
+        - "TodoRead"
+        - "TodoWrite"
+        - "WebFetch"
+        - "WebSearch"
+        - "NotebookRead"
+        - "NotebookEdit"
+        - "Task"
+        - "ExitPlanMode"
       deny: []
 
     # Telemetry configuration (used in templates)

@@ -7,15 +7,19 @@
       {{/each}}
       {{else}}
       "Bash",
-      "Edit(*)",
-      "Read(*)",
-      "Write(*)",
-      "MultiEdit(*)",
-      "Glob(*)",
-      "Grep(*)",
-      "LS(*)",
-      "WebSearch(*)",
-      "WebFetch(*)"
+      "Edit",
+      "Read",
+      "Write",
+      "MultiEdit",
+      "Glob",
+      "Grep",
+      "LS",
+      "WebSearch",
+      "WebFetch",
+      "Task",
+      "ExitPlanMode",
+      "TodoRead",
+      "TodoWrite"
       {{/if}}
     ],
     "deny": [
@@ -24,7 +28,6 @@
       "{{this}}"{{#unless @last}},{{/unless}}
       {{/each}}
       {{else}}
-      "Bash(npm:install*, yarn:install*, cargo:install*, docker:*, kubectl:*, rm:-rf*, git:*)"
       {{/if}}
     ],
     "defaultMode": "acceptEdits"

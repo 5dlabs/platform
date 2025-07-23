@@ -7,14 +7,22 @@
       "{{this}}"{{#unless @last}},{{/unless}}
       {{/each}}
       {{else}}
-      "Bash(*)",
-      "Edit(*)",
-      "Read(*)",
-      "Write(*)",
-      "MultiEdit(*)",
-      "Glob(*)",
-      "Grep(*)",
-      "LS(*)"
+      "Bash",
+      "Edit",
+      "Read",
+      "Write",
+      "MultiEdit",
+      "Glob",
+      "Grep",
+      "LS",
+      "Task",
+      "ExitPlanMode",
+      "NotebookRead",
+      "NotebookEdit",
+      "WebFetch",
+      "WebSearch",
+      "TodoRead",
+      "TodoWrite"
       {{/if}}
     ],
     "deny": [
@@ -23,7 +31,6 @@
       "{{this}}"{{#unless @last}},{{/unless}}
       {{/each}}
       {{else}}
-      "Bash(npm:install*, yarn:install*, cargo:install*, docker:*, kubectl:*, rm:-rf*, git:*)"
       {{/if}}
     ],
     "defaultMode": "acceptEdits"
@@ -37,10 +44,10 @@
     "CLAUDE_CODE_ENABLE_TELEMETRY": "{{#if telemetry.enabled}}1{{else}}0{{/if}}"{{#if telemetry.enabled}},
     "OTEL_METRICS_EXPORTER": "otlp",
     "OTEL_LOGS_EXPORTER": "otlp",
-    "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "{{telemetry.otlpEndpoint}}",
-    "OTEL_EXPORTER_OTLP_METRICS_PROTOCOL": "{{telemetry.otlpProtocol}}",
-    "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "{{telemetry.logsEndpoint}}",
-    "OTEL_EXPORTER_OTLP_LOGS_PROTOCOL": "{{telemetry.logsProtocol}}"{{/if}}{{#if retry.is_retry}},
+    "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "otel-collector-opentelemetry-collector.telemetry.svc.cluster.local:4317",
+    "OTEL_EXPORTER_OTLP_METRICS_PROTOCOL": "grpc",
+    "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "otel-collector-opentelemetry-collector.telemetry.svc.cluster.local:4317",
+    "OTEL_EXPORTER_OTLP_LOGS_PROTOCOL": "grpc"{{/if}}{{#if retry.is_retry}},
     "BASH_DEFAULT_TIMEOUT_MS": "30000",
     "BASH_MAX_TIMEOUT_MS": "300000"{{/if}}
   },
