@@ -60,6 +60,10 @@ pub struct CodeRunSpec {
     #[serde(rename = "platformRepositoryUrl")]
     pub platform_repository_url: String,
 
+    /// Project directory within platform repository (e.g. "_projects/simple-api")
+    #[serde(default, rename = "platformProjectDirectory")]
+    pub platform_project_directory: Option<String>,
+
     /// Git branch to work on in target repository
     pub branch: String,
 

@@ -32,7 +32,7 @@ pub async fn reconcile_create_or_update(
     if !task.is_docs() {
         let service_name = task.service_name();
         let pvc_name = format!("workspace-{service_name}");
-        ensure_pvc_exists(pvcs, &pvc_name, service_name).await?;
+        ensure_pvc_exists(pvcs, &pvc_name, service_name, config).await?;
     }
 
     // Create ConfigMap with all templates
@@ -322,7 +322,7 @@ fn create_task_labels(task: &TaskType) -> BTreeMap<String, String> {
 }
 
 /// Ensure PVC exists for the given service
-async fn ensure_pvc_exists(pvcs: &Api<PersistentVolumeClaim>, pvc_name: &str, service_name: &str) -> Result<()> {
+async fn ensure_pvc_exists(pvcs: &Api<PersistentVolumeClaim>, pvc_name: &str, service_name: &str, config: &ControllerConfig) -> Result<()> {
     match pvcs.get(pvc_name).await {
         Ok(_) => {
             info!("PVC already exists: {}", pvc_name);
@@ -334,7 +334,7 @@ async fn ensure_pvc_exists(pvcs: &Api<PersistentVolumeClaim>, pvc_name: &str, se
         Err(e) => return Err(e.into()),
     }
 
-    let pvc_spec = json!({
+    let mut pvc_spec = json!({
         "apiVersion": "v1",
         "kind": "PersistentVolumeClaim",
         "metadata": {
@@ -348,11 +348,16 @@ async fn ensure_pvc_exists(pvcs: &Api<PersistentVolumeClaim>, pvc_name: &str, se
             "accessModes": ["ReadWriteOnce"],
             "resources": {
                 "requests": {
-                    "storage": "10Gi"
+                    "storage": config.storage.workspace_size
                 }
             }
         }
     });
+
+    // Add storage class if specified
+    if let Some(storage_class) = &config.storage.storage_class_name {
+        pvc_spec["spec"]["storageClassName"] = json!(storage_class);
+    }
 
     let pvc: PersistentVolumeClaim = serde_json::from_value(pvc_spec)?;
     pvcs.create(&PostParams::default(), &pvc).await?;

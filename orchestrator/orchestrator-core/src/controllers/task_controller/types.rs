@@ -207,4 +207,12 @@ impl TaskType {
             TaskType::Code(cr) => cr.spec.overwrite_memory,
         }
     }
+
+    /// Get platform project directory (only for CodeRun)
+    pub fn platform_project_directory(&self) -> Option<&str> {
+        match self {
+            TaskType::Docs(_) => None,
+            TaskType::Code(cr) => cr.spec.platform_project_directory.as_deref(),
+        }
+    }
 }

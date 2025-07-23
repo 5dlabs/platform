@@ -54,6 +54,9 @@ spec:
               platformRepositoryUrl:
                 type: string
                 description: "Platform repository URL (where Task Master definitions come from)"
+              platformProjectDirectory:
+                type: string
+                description: "Project directory within platform repository (e.g. '_projects/simple-api')"
               branch:
                 type: string
                 description: "Git branch to work on in target repository"

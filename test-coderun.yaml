@@ -10,6 +10,7 @@ spec:
   workingDirectory: "."
   branch: "main"
   platformRepositoryUrl: "https://github.com/5dlabs/platform"
+  platformProjectDirectory: "_projects/simple-api"
   platformBranch: "main"
   model: "claude-3-5-sonnet-20241022"
   githubUser: "jonathonfritz"

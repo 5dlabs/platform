@@ -24,6 +24,9 @@ pub struct ControllerConfig {
 
     /// Telemetry configuration (for templates)
     pub telemetry: TelemetryConfig,
+
+    /// Storage configuration
+    pub storage: StorageConfig,
 }
 
 /// Job configuration
@@ -104,6 +107,22 @@ pub struct TelemetryConfig {
     pub logs_protocol: String,
 }
 
+/// Storage configuration
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct StorageConfig {
+    /// Storage class name for PVCs (e.g., "local-path" for local development)
+    #[serde(rename = "storageClassName")]
+    pub storage_class_name: Option<String>,
+
+    /// Storage size for workspace PVCs
+    #[serde(rename = "workspaceSize", default = "default_workspace_size")]
+    pub workspace_size: String,
+}
+
+fn default_workspace_size() -> String {
+    "10Gi".to_string()
+}
+
 impl ControllerConfig {
     /// Validate that configuration has required fields
     pub fn validate(&self) -> Result<(), anyhow::Error> {
@@ -178,6 +197,10 @@ impl Default for ControllerConfig {
                 logs_endpoint: "http://localhost:4318".to_string(),
                 logs_protocol: "http".to_string(),
             },
+            storage: StorageConfig {
+                storage_class_name: None, // Let K8s use default storage class
+                workspace_size: "10Gi".to_string(),
+            },
         }
     }
 }
@@ -212,6 +235,10 @@ telemetry:
   otlpProtocol: "grpc"
   logsEndpoint: "localhost:4318"
   logsProtocol: "http"
+
+storage:
+  storageClassName: "local-path"
+  workspaceSize: "5Gi"
 "#;
 
         let config: ControllerConfig = serde_yaml::from_str(yaml).unwrap();

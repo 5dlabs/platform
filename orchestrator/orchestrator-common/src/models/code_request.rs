@@ -16,6 +16,9 @@ pub struct CodeRequest {
     /// Platform repository URL (where Task Master definitions come from)
     pub platform_repository_url: String,
 
+    /// Project directory within platform repository (e.g. "_projects/simple-api")
+    pub platform_project_directory: Option<String>,
+
     /// Git branch to work on in target repository
     pub branch: String,
 

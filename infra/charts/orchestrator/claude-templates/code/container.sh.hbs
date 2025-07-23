@@ -340,13 +340,22 @@ rm -rf "$CLAUDE_WORK_DIR/task/" 2>/dev/null
 
 # Create clean task directory for current task only
 mkdir -p "$CLAUDE_WORK_DIR/task"
-if [ -d "/workspace/platform-repo/.taskmaster/docs/task-{{task_id}}" ]; then
-    cp "/workspace/platform-repo/.taskmaster/docs/task-{{task_id}}/task.md" "$CLAUDE_WORK_DIR/task/" 2>/dev/null || echo "⚠️  task.md not found"
-    cp "/workspace/platform-repo/.taskmaster/docs/task-{{task_id}}/acceptance-criteria.md" "$CLAUDE_WORK_DIR/task/" 2>/dev/null || echo "⚠️  acceptance-criteria.md not found"
-    cp "/workspace/platform-repo/.taskmaster/docs/task-{{task_id}}/architecture.md" "$CLAUDE_WORK_DIR/task/" 2>/dev/null || echo "⚠️  architecture.md not found"
-    echo "✓ Task {{task_id}} documentation copied to $CLAUDE_WORK_DIR/task/"
+
+# Determine task directory path
+{{#if platform_project_directory}}
+TASK_DIR="/workspace/platform-repo/{{platform_project_directory}}/.taskmaster/docs/task-{{task_id}}"
+{{else}}
+# Default to _projects/{service} if not specified
+TASK_DIR="/workspace/platform-repo/_projects/{{service_name}}/.taskmaster/docs/task-{{task_id}}"
+{{/if}}
+
+if [ -d "$TASK_DIR" ]; then
+    cp "$TASK_DIR/task.md" "$CLAUDE_WORK_DIR/task/" 2>/dev/null || echo "⚠️  task.md not found"
+    cp "$TASK_DIR/acceptance-criteria.md" "$CLAUDE_WORK_DIR/task/" 2>/dev/null || echo "⚠️  acceptance-criteria.md not found"
+    cp "$TASK_DIR/architecture.md" "$CLAUDE_WORK_DIR/task/" 2>/dev/null || echo "⚠️  architecture.md not found"
+    echo "✓ Task {{task_id}} documentation copied from $TASK_DIR"
 else
-    echo "⚠️  Task {{task_id}} documentation directory not found in platform repo"
+    echo "⚠️  Task {{task_id}} documentation directory not found at: $TASK_DIR"
 fi
 
 echo '=== WORKSPACE VALIDATION ==='

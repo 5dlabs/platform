@@ -54,3 +54,10 @@ data:
       otlpProtocol: "grpc"
       logsEndpoint: "victoria-logs-server.telemetry.svc.cluster.local:9428"
       logsProtocol: "http"
+
+    # Storage configuration
+    storage:
+      {{- if .Values.storage.storageClassName }}
+      storageClassName: {{ .Values.storage.storageClassName | quote }}
+      {{- end }}
+      workspaceSize: {{ .Values.storage.workspaceSize | default "10Gi" | quote }}

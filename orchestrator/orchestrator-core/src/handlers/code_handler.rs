@@ -24,6 +24,7 @@ pub async fn submit_code_task(
         service: request.service.clone(),
         repository_url: request.repository_url,
         platform_repository_url: request.platform_repository_url,
+        platform_project_directory: request.platform_project_directory,
         branch: request.branch,
         working_directory: request.working_directory,
         model: request.model,

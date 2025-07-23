@@ -17,6 +17,13 @@ agent:
     tag: "1.0.56"
     pullPolicy: Always
 
+# Storage configuration for workspace PVCs
+storage:
+  # Storage class name (e.g., "local-path" for local development, leave empty for default)
+  storageClassName: "local-path"
+  # Size of workspace PVCs
+  workspaceSize: "10Gi"
+
 imagePullSecrets:
   - name: ghcr-secret
 

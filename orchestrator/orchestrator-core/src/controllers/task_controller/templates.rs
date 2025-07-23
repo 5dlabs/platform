@@ -179,6 +179,7 @@ fn generate_container_script(task: &TaskType) -> Result<String> {
         "task_id": task.task_id(),
         "platform_repository_url": task.platform_repository_url(),
         "platform_branch": task.platform_branch(),
+        "platform_project_directory": task.platform_project_directory(),
         "overwrite_memory": task.overwrite_memory(),
         "resume_session": task.resume_session(),
         "prompt_content": prompt_content  // Add the rendered prompt content

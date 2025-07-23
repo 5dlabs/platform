@@ -68,6 +68,10 @@ pub enum TaskCommands {
         #[arg(long)]
         platform_repository_url: Option<String>,
 
+        /// Project directory within platform repository (e.g. "_projects/simple-api")
+        #[arg(long)]
+        platform_project_directory: Option<String>,
+
         /// Git branch to work on
         #[arg(long, default_value = "main")]
         branch: String,
