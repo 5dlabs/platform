@@ -23,8 +23,8 @@ pub async fn submit_code_task(
         task_id: request.task_id,
         service: request.service.clone(),
         repository_url: request.repository_url,
-        platform_repository_url: request.platform_repository_url,
-        platform_project_directory: request.platform_project_directory,
+        docs_repository_url: request.platform_repository_url,
+        docs_project_directory: request.platform_project_directory,
         branch: request.branch,
         working_directory: request.working_directory,
         model: request.model,
@@ -35,7 +35,7 @@ pub async fn submit_code_task(
         context_version: 1, // Start with version 1
         prompt_modification: None, // No modification on initial run
         prompt_mode: "append".to_string(), // Default mode
-        platform_branch: "main".to_string(), // Default platform branch
+        docs_branch: "main".to_string(), // Default docs branch
         resume_session: false, // Start fresh by default
         overwrite_memory: false, // Preserve memory by default
     };

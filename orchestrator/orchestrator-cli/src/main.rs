@@ -39,6 +39,7 @@ enum Commands {
 }
 
 #[derive(Subcommand)]
+#[allow(clippy::large_enum_variant)]
 pub enum TaskCommands {
     /// Generate documentation for Task Master tasks
     Docs {
