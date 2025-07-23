@@ -49,7 +49,7 @@ data:
 
     # Telemetry configuration (used in templates)
     telemetry:
-      enabled: true
+      enabled: false
       otlpEndpoint: "otel-collector-opentelemetry-collector.telemetry.svc.cluster.local:4317"
       otlpProtocol: "grpc"
       logsEndpoint: "victoria-logs-server.telemetry.svc.cluster.local:9428"

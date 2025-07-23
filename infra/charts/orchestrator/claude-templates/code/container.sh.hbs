@@ -243,7 +243,11 @@ echo "✓ Configured git user: $GITHUB_USER"
 echo "=== CONFIGMAP FILE SETUP ==="
 
 # For implementation tasks, Claude works in the target repository service directory
-CLAUDE_WORK_DIR="/workspace/target-repo/$WORK_DIR"
+if [ "$WORK_DIR" = "." ] || [ -z "$WORK_DIR" ]; then
+  CLAUDE_WORK_DIR="/workspace/target-repo"
+else
+  CLAUDE_WORK_DIR="/workspace/target-repo/$WORK_DIR"
+fi
 
 echo "Setting up files in Claude working directory: $CLAUDE_WORK_DIR"
 cd "$CLAUDE_WORK_DIR"
