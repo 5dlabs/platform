@@ -1,7 +1,7 @@
 apiVersion: orchestrator.platform/v1
 kind: CodeRun
 metadata:
-  name: test-opus-pr
+  name: test-hook-logging
   namespace: orchestrator
 spec:
   service: "simple-api"

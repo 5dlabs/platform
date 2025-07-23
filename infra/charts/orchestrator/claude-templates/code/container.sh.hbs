@@ -523,11 +523,11 @@ echo "✓ Code implementation environment ready"
 # Build Claude command
 CLAUDE_CMD="claude -p --output-format stream-json --verbose"
 
-# Add model flag if specified and different from default
-{{#if model_override}}
-CLAUDE_CMD="$CLAUDE_CMD --model {{model}}"
-echo "Using specified model: {{model}}"
-{{/if}}
+# Add model flag if specified via environment variable
+if [ -n "$MODEL" ]; then
+    CLAUDE_CMD="$CLAUDE_CMD --model $MODEL"
+    echo "Using specified model: $MODEL"
+fi
 
 # Add retry flag if this is a retry attempt
 {{#if is_retry}}
