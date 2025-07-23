@@ -134,13 +134,24 @@ echo "Target branch: $REPO_BRANCH"
 echo "Target user: $GITHUB_USER"
 
 # 1. Clone Platform Repository (for docs)
-# Cloning platform repository
-if ! git clone "$PLATFORM_URL" platform-repo; then
-    echo "❌ Failed to clone platform repository: $PLATFORM_URL"
-    exit 1
+# Handle existing platform repo
+if [ -d "platform-repo" ]; then
+    echo "Platform repository already exists, updating..."
+    cd platform-repo
+    git fetch origin
+    git checkout "$PLATFORM_BRANCH"
+    git reset --hard "origin/$PLATFORM_BRANCH"
+    cd /workspace
+    echo "✓ Platform repository updated successfully"
+else
+    echo "Cloning platform repository..."
+    if ! git clone "$PLATFORM_URL" platform-repo; then
+        echo "❌ Failed to clone platform repository: $PLATFORM_URL"
+        exit 1
+    fi
+    cd platform-repo && git checkout "$PLATFORM_BRANCH" && cd /workspace
+    echo "✓ Platform repository cloned successfully"
 fi
-cd platform-repo && git checkout "$PLATFORM_BRANCH" && cd /workspace
-echo "✓ Platform repository cloned successfully"
 
 # 2. Copy Current Task Documentation (Clean Previous Task Content)
 # Setting up current task
