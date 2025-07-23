@@ -45,6 +45,7 @@ pub fn generate_templates(
         templates.insert("client-config.json".to_string(), generate_client_config(task, config)?);
         templates.insert("coding-guidelines.md".to_string(), generate_coding_guidelines(task)?);
         templates.insert("github-guidelines.md".to_string(), generate_github_guidelines(task)?);
+        templates.insert("mcp-tools.md".to_string(), generate_mcp_tools_doc(task)?);
     }
 
     // Generate hook scripts
@@ -172,6 +173,45 @@ fn generate_mcp_config(task: &TaskType, config: &ControllerConfig) -> Result<Str
     handlebars
         .render("mcp", &data)
         .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render MCP template: {e}")))
+}
+
+/// Generate MCP tools documentation based on task configuration
+fn generate_mcp_tools_doc(task: &TaskType) -> Result<String> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false);
+
+    let template = load_template("code/mcp-tools.md.hbs")?;
+
+    handlebars
+        .register_template_string("mcp_tools", template)
+        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register MCP tools template: {e}")))?;
+
+    // Parse comma-separated tool strings into arrays
+    let local_tools: Vec<String> = task.local_tools()
+        .unwrap_or_default()
+        .split(',')
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.trim().to_string())
+        .collect();
+
+    let remote_tools: Vec<String> = task.remote_tools()
+        .unwrap_or_default()
+        .split(',')
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.trim().to_string())
+        .collect();
+
+    let data = json!({
+        "toolConfig": task.tool_config(),
+        "localTools": local_tools,
+        "remoteTools": remote_tools,
+        "service": task.service_name(),
+        "task_id": task.task_id()
+    });
+
+    handlebars
+        .render("mcp_tools", &data)
+        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render MCP tools template: {e}")))
 }
 
 /// Generate client configuration for dynamic tool selection

@@ -1,0 +1,45 @@
+apiVersion: orchestrator.platform/v1
+kind: CodeRun
+metadata:
+  name: test-templates-system
+  namespace: orchestrator
+spec:
+  # Test repository and task
+  repositoryUrl: "git@github.com:5dlabs/orchestrator-code-test.git"
+  branch: "feature/test-updated-templates"
+  githubUser: "pm0-5dlabs"
+  taskId: 1
+
+  # Service configuration
+  service: "simple-api"
+  workingDirectory: "."
+
+  # Documentation repository (docs service)
+  docsRepositoryUrl: "git@github.com:5dlabs/platform.git"
+  docsProjectDirectory: "_projects/simple-api"
+  docsBranch: "feature/example-project-and-cli"
+
+  # Model configuration
+  model: "claude-3-opus-20240229"
+
+  # Tool configuration - test the basic setup
+  toolConfig: "default"
+
+  # Template testing flags
+  overwriteMemory: false
+  resumeSession: false
+
+  # Test our updated templates:
+  # - CLAUDE.md with @ pointers
+  # - GitHub guidelines with PR submission requirements
+  # - System prompt with verification requirements
+  # - SSH-only authentication
+
+  # This should test:
+  # 1. Template copying (prompt.hbs, coding-guidelines.md, github-guidelines.md)
+  # 2. @ pointer system in CLAUDE.md
+  # 3. --append-system-prompt functionality
+  # 4. Debug prompt printing
+  # 5. SSH authentication setup
+  # 6. Progress commit requirements
+  # 7. PR submission workflow
