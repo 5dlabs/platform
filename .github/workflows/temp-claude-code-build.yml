@@ -37,13 +37,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Generate unique tag for branch
-        id: tag
-        run: |
-          BRANCH_TAG="feature-$(git rev-parse --short HEAD)"
-          echo "BRANCH_TAG=$BRANCH_TAG" >> $GITHUB_OUTPUT
-          echo "🏷️ Using branch tag: $BRANCH_TAG"
-
       - name: Build and push Claude Code image
         uses: docker/build-push-action@v5
         with:
@@ -52,8 +45,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/claude-code:${{ steps.tag.outputs.BRANCH_TAG }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/claude-code:${{ steps.claude-version.outputs.CLAUDE_VERSION }}-${{ steps.tag.outputs.BRANCH_TAG }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/claude-code:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/claude-code:${{ steps.claude-version.outputs.CLAUDE_VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -65,7 +58,7 @@ jobs:
           echo "🎉 Successfully built and pushed Claude Code image!"
           echo ""
           echo "Available tags:"
-          echo "- ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/claude-code:${{ steps.tag.outputs.BRANCH_TAG }}"
-          echo "- ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/claude-code:${{ steps.claude-version.outputs.CLAUDE_VERSION }}-${{ steps.tag.outputs.BRANCH_TAG }}"
+          echo "- ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/claude-code:latest"
+          echo "- ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/claude-code:${{ steps.claude-version.outputs.CLAUDE_VERSION }}"
           echo ""
-          echo "Use these tags in your TaskRun/CodeRun resources for testing."
+          echo "Use these tags in your TaskRun/CodeRun resources."
