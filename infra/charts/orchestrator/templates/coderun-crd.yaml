@@ -59,7 +59,7 @@ spec:
                 description: "Git branch to work on in target repository"
               workingDirectory:
                 type: string
-                description: "Working directory within target repository"
+                description: "Working directory within target repository (defaults to service name if not specified)"
               model:
                 type: string
                 description: "Claude model to use (full model name like 'claude-3-5-sonnet-20241022')"
@@ -87,6 +87,18 @@ spec:
                 type: string
                 default: "append"
                 description: "How to apply prompt modifications (append, replace)"
+              platformBranch:
+                type: string
+                default: "main"
+                description: "Platform branch to use (e.g., 'main', 'feature/branch')"
+              resumeSession:
+                type: boolean
+                default: false
+                description: "Whether to resume a previous session"
+              overwriteMemory:
+                type: boolean
+                default: false
+                description: "Whether to overwrite memory before starting"
           status:
             type: object
             properties:

@@ -34,6 +34,9 @@ pub async fn submit_code_task(
         context_version: 1, // Start with version 1
         prompt_modification: None, // No modification on initial run
         prompt_mode: "append".to_string(), // Default mode
+        platform_branch: "main".to_string(), // Default platform branch
+        resume_session: false, // Start fresh by default
+        overwrite_memory: false, // Preserve memory by default
     };
 
     let coderun = CodeRun {
@@ -92,7 +95,7 @@ pub async fn submit_code_task(
             error!("Failed to create CodeRun: {}", e);
             Ok(Json(ApiResponse {
                 success: false,
-                message: format!("Failed to create CodeRun: {}", e),
+                message: format!("Failed to create CodeRun: {e}"),
                 data: None,
             }))
         }

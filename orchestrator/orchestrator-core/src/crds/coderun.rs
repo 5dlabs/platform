@@ -19,6 +19,21 @@ fn default_prompt_mode() -> String {
     "append".to_string()
 }
 
+/// Default function for `platform_branch` field
+fn default_platform_branch() -> String {
+    "main".to_string()
+}
+
+/// Default function for `resume_session` field
+fn default_resume_session() -> bool {
+    false
+}
+
+/// Default function for `overwrite_memory` field
+fn default_overwrite_memory() -> bool {
+    false
+}
+
 /// CodeRun CRD for code implementation tasks
 #[derive(CustomResource, Deserialize, Serialize, Clone, Debug, JsonSchema)]
 #[kube(group = "orchestrator.platform", version = "v1", kind = "CodeRun")]
@@ -48,9 +63,9 @@ pub struct CodeRunSpec {
     /// Git branch to work on in target repository
     pub branch: String,
 
-    /// Working directory within target repository
-    #[serde(rename = "workingDirectory")]
-    pub working_directory: String,
+    /// Working directory within target repository (defaults to service name)
+    #[serde(default, rename = "workingDirectory")]
+    pub working_directory: Option<String>,
 
     /// Claude model to use (sonnet, opus)
     pub model: String,
@@ -82,6 +97,18 @@ pub struct CodeRunSpec {
     /// How to apply prompt modifications (append, replace)
     #[serde(default = "default_prompt_mode", rename = "promptMode")]
     pub prompt_mode: String,
+
+    /// Platform branch to use (e.g., "main", "feature/branch")
+    #[serde(default = "default_platform_branch", rename = "platformBranch")]
+    pub platform_branch: String,
+
+    /// Whether to resume a previous session
+    #[serde(default = "default_resume_session", rename = "resumeSession")]
+    pub resume_session: bool,
+
+    /// Whether to overwrite memory before starting
+    #[serde(default = "default_overwrite_memory", rename = "overwriteMemory")]
+    pub overwrite_memory: bool,
 }
 
 /// Status of the CodeRun

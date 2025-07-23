@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 // Error type for the controller
 #[derive(Debug, thiserror::Error)]
+#[allow(clippy::enum_variant_names)]
 pub enum Error {
     #[error("Kubernetes API error: {0}")]
     KubeError(#[from] kube::Error),
@@ -78,10 +79,17 @@ impl TaskType {
         }
     }
 
+    /// Get working directory (defaults to service name if not specified)
     pub fn working_directory(&self) -> &str {
         match self {
             TaskType::Docs(dr) => &dr.spec.working_directory,
-            TaskType::Code(cr) => &cr.spec.working_directory,
+            TaskType::Code(cr) => {
+                // Default to service name if working_directory is None or empty
+                match &cr.spec.working_directory {
+                    Some(wd) if !wd.is_empty() => wd,
+                    _ => &cr.spec.service,
+                }
+            },
         }
     }
 
@@ -173,5 +181,30 @@ impl TaskType {
     /// Get SSH secret name for this GitHub user
     pub fn ssh_secret_name(&self) -> String {
         format!("github-ssh-{}", self.github_user())
+    }
+
+    /// Get platform branch (only for CodeRun)
+    pub fn platform_branch(&self) -> &str {
+        match self {
+            TaskType::Docs(_) => "main", // Docs use default branch
+            TaskType::Code(cr) => &cr.spec.platform_branch,
+        }
+    }
+
+    /// Get resume session flag (only for CodeRun)
+    #[allow(dead_code)]
+    pub fn resume_session(&self) -> bool {
+        match self {
+            TaskType::Docs(_) => false, // Docs don't resume sessions
+            TaskType::Code(cr) => cr.spec.resume_session,
+        }
+    }
+
+    /// Get overwrite memory flag (only for CodeRun)
+    pub fn overwrite_memory(&self) -> bool {
+        match self {
+            TaskType::Docs(_) => true, // Docs always overwrite memory
+            TaskType::Code(cr) => cr.spec.overwrite_memory,
+        }
     }
 }

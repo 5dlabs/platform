@@ -92,12 +92,12 @@ async fn handle_docs_command(
 
                 if let Some(data) = response.data {
                     if let Some(taskrun_name) = data.get("taskrun_name").and_then(|n| n.as_str()) {
-                        output.info(&format!("TaskRun name: {}", taskrun_name))?;
+                        output.info(&format!("TaskRun name: {taskrun_name}"))?;
                     }
                     if let Some(namespace) = data.get("namespace").and_then(|n| n.as_str()) {
-                        output.info(&format!("Namespace: {}", namespace))?;
+                        output.info(&format!("Namespace: {namespace}"))?;
                         output.info("You can monitor the job with:")?;
-                        output.info(&format!("  kubectl -n {} get taskrun", namespace))?;
+                        output.info(&format!("  kubectl -n {namespace} get taskrun"))?;
                     }
                 }
             } else {
@@ -106,7 +106,7 @@ async fn handle_docs_command(
             }
         }
         Err(e) => {
-            output.error(&format!("Failed to submit documentation generation job: {}", e))?;
+            output.error(&format!("Failed to submit documentation generation job: {e}"))?;
             return Err(e);
         }
     }
@@ -115,6 +115,7 @@ async fn handle_docs_command(
 }
 
 /// Handle code command - submits code task directly
+#[allow(clippy::too_many_arguments)]
 async fn handle_code_command(
     api_client: &ApiClient,
     output: &OutputManager,
@@ -130,7 +131,7 @@ async fn handle_code_command(
     remote_tools: Option<&str>,
     tool_config: &str,
 ) -> Result<()> {
-    output.info(&format!("Submitting code task {} for service '{}'...", task_id, service))?;
+    output.info(&format!("Submitting code task {task_id} for service '{service}'..."))?;
 
     // Auto-detect target repository URL if not provided
     let repo_url = match repository_url {
@@ -164,18 +165,18 @@ async fn handle_code_command(
         platform_repository_url: platform_repo_url.clone(),
         branch: branch.to_string(),
         github_user: github_user_name.clone(),
-        working_directory: working_dir.clone(),
+        working_directory: Some(working_dir.clone()),
         model: model.to_string(),
         local_tools: local_tools.map(|s| s.to_string()),
         remote_tools: remote_tools.map(|s| s.to_string()),
         tool_config: tool_config.to_string(),
     };
 
-    output.info(&format!("Target repository: {}", repo_url))?;
-    output.info(&format!("Platform repository: {}", platform_repo_url))?;
-    output.info(&format!("Branch: {}", branch))?;
-    output.info(&format!("Working directory: {}", working_dir))?;
-    output.info(&format!("GitHub user: {}", github_user_name))?;
+    output.info(&format!("Target repository: {repo_url}"))?;
+    output.info(&format!("Platform repository: {platform_repo_url}"))?;
+    output.info(&format!("Branch: {branch}"))?;
+    output.info(&format!("Working directory: {working_dir}"))?;
+    output.info(&format!("GitHub user: {github_user_name}"))?;
 
     match api_client.submit_code_task(&request).await {
         Ok(response) => {
@@ -184,12 +185,12 @@ async fn handle_code_command(
 
                 if let Some(data) = response.data {
                     if let Some(coderun_name) = data.get("coderun_name").and_then(|n| n.as_str()) {
-                        output.info(&format!("CodeRun name: {}", coderun_name))?;
+                        output.info(&format!("CodeRun name: {coderun_name}"))?;
                     }
                     if let Some(namespace) = data.get("namespace").and_then(|n| n.as_str()) {
-                        output.info(&format!("Namespace: {}", namespace))?;
+                        output.info(&format!("Namespace: {namespace}"))?;
                         output.info("You can monitor the job with:")?;
-                        output.info(&format!("  kubectl -n {} get coderun", namespace))?;
+                        output.info(&format!("  kubectl -n {namespace} get coderun"))?;
                     }
                 }
             } else {
@@ -198,7 +199,7 @@ async fn handle_code_command(
             }
         }
         Err(e) => {
-            output.error(&format!("Failed to submit code task: {}", e))?;
+            output.error(&format!("Failed to submit code task: {e}"))?;
             return Err(e);
         }
     }
@@ -221,6 +222,7 @@ fn get_git_remote_url() -> Result<String> {
     Ok(String::from_utf8(output.stdout)?.trim().to_string())
 }
 
+#[allow(dead_code)]
 fn get_current_branch() -> Result<String> {
     use std::process::Command;
 

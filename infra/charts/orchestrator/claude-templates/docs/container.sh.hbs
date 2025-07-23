@@ -11,24 +11,9 @@ export SSH_ASKPASS=/bin/true
 
 # SSH-only authentication (no URL detection needed)
 REPO_URL="{{repository_url}}"
-echo "=== SSH-ONLY AUTHENTICATION ==="
+# SSH-only authentication
 
-# Debug: Check what's actually mounted
-echo "=== FILESYSTEM DEBUG ==="
-echo "Contents of /root/:"
-ls -la /root/ || echo "Failed to list /root/"
-echo ""
-echo "Contents of /root/.ssh/ (if exists):"
-ls -la /root/.ssh/ 2>/dev/null || echo "/root/.ssh/ does not exist"
-echo ""
-echo "Looking for any ssh-related mounts:"
-find /root -name "*ssh*" -o -name "*ed25519*" -o -name "*rsa*" 2>/dev/null || echo "No SSH files found in /root"
-echo ""
-echo "Checking if any secrets are mounted elsewhere:"
-find /var/secrets -name "*" 2>/dev/null || echo "No /var/secrets directory"
-find /secrets -name "*" 2>/dev/null || echo "No /secrets directory"
-echo "=== END DEBUG ==="
-echo ""
+
 
 # Check if SSH key is mounted (Kubernetes secrets are read-only)
 if [ -f "/workspace/.ssh/id_ed25519" ]; then
@@ -86,7 +71,7 @@ else
 fi
 
 # Configure git user after successful SSH setup
-echo "=== POST-SSH GIT CONFIGURATION ==="
+# Git configuration
 git config --global --add safe.directory /workspace
 echo "✓ Added /workspace to safe directories"
 
@@ -245,7 +230,7 @@ else
 fi
 
 # Configure git user after successful clone
-echo "=== POST-CLONE GIT CONFIGURATION ==="
+# Post-clone Git configuration
 # Fix dubious ownership issue when repository is cloned as different user
 git config --global --add safe.directory /workspace
 echo "✓ Added /workspace to safe directories"
@@ -263,7 +248,7 @@ echo "║                 GITHUB WRITE ACCESS TEST                     ║"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
-echo "=== TEST 4: GitHub Write Access Verification ==="
+# Verify GitHub write access
 echo "Creating test branch to verify write permissions..."
 
 # Create a unique test branch name
@@ -333,7 +318,7 @@ cd "$CLAUDE_WORK_DIR" || {
 echo "✓ Back in working directory: $(pwd)"
 
 # Copy ConfigMap files to working directory (AFTER repository clone)
-echo "=== CONFIGMAP FILE SETUP ==="
+# ConfigMap file setup
 
 echo "Setting up files in Claude working directory: $CLAUDE_WORK_DIR"
 # Note: Directory should already exist from repository clone, but ensure it exists
@@ -372,7 +357,7 @@ if [ -d "/config" ]; then
   fi
 
   echo ""
-  echo "=== ENTERPRISE MANAGED SETTINGS READY ==="
+  # Enterprise managed settings ready
   echo "✓ Settings mounted from ConfigMap as read-only"
   echo "✓ No manual copying or permission changes needed"
 
@@ -532,7 +517,7 @@ export GITHUB_USER="{{github_user}}"
 echo "✓ Using enterprise managed settings for complete configuration + permission bypass flag"
 
 # Verify we're in the correct directory and have required files
-echo "=== WORKING DIRECTORY VERIFICATION ==="
+# Working directory verification
 echo "Current working directory: $(pwd)"
 echo "Expected directory: $CLAUDE_WORK_DIR"
 if [ "$(pwd)" != "$CLAUDE_WORK_DIR" ]; then
@@ -542,65 +527,8 @@ if [ "$(pwd)" != "$CLAUDE_WORK_DIR" ]; then
 fi
 echo "✓ Confirmed in correct working directory"
 
-# Print all the content Claude will receive
-echo ""
-echo "════════════════════════════════════════════════════════════════"
-echo "║                    FULL CONTENT PREVIEW                       ║"
-echo "════════════════════════════════════════════════════════════════"
-echo ""
-
-echo "=== 1. ENTERPRISE MANAGED SETTINGS (/etc/claude-code/managed-settings.json) ==="
-if [ -f "/etc/claude-code/managed-settings.json" ]; then
-  echo "Enterprise settings contents:"
-  cat "/etc/claude-code/managed-settings.json" | jq . 2>/dev/null || cat "/etc/claude-code/managed-settings.json"
-else
-  echo "❌ Enterprise settings file not found!"
-fi
-echo ""
-
-echo "=== 2. HOOK SCRIPT (.stop-hook-docs-pr.sh) ==="
-if [ -f ".stop-hook-docs-pr.sh" ]; then
-  echo "Hook script contents:"
-  cat ".stop-hook-docs-pr.sh"
-else
-  echo "❌ Hook script not found!"
-fi
-echo ""
-
-echo "=== 3. CLAUDE PROMPT (CLAUDE.md) ==="
-if [ -f "CLAUDE.md" ]; then
-  echo "Full CLAUDE.md contents:"
-  cat "CLAUDE.md"
-else
-  echo "❌ CLAUDE.md not found!"
-fi
-echo ""
-
-echo "=== 4. ADDITIONAL MARKDOWN FILES ==="
-echo "Other markdown files in working directory:"
-for md_file in *.md; do
-  if [ -f "$md_file" ] && [ "$md_file" != "CLAUDE.md" ]; then
-    echo ""
-    echo "--- FILE: $md_file ---"
-    cat "$md_file"
-    echo ""
-  fi
-done
-echo ""
-
-echo "=== 5. TASKMASTER TASKS.JSON ==="
-if [ -f ".taskmaster/tasks/tasks.json" ]; then
-  echo "Tasks.json contents:"
-  cat ".taskmaster/tasks/tasks.json" | jq . 2>/dev/null || cat ".taskmaster/tasks/tasks.json"
-else
-  echo "❌ tasks.json not found!"
-fi
-echo ""
-
-echo "════════════════════════════════════════════════════════════════"
-echo "║                    END CONTENT PREVIEW                        ║"
-echo "════════════════════════════════════════════════════════════════"
-echo ""
+# Verify setup
+echo "✓ Documentation generation environment ready"
 
 # Build Claude command with --dangerously-skip-permissions to bypass all permission prompts
 # This is simpler and more reliable than enterprise managed settings for permission control
@@ -635,10 +563,7 @@ echo "=========================="
 # Load the prompt template content
 PROMPT="{{prompt_content}}"
 
-echo "=== 8. FINAL EXECUTION ==="
-echo "CLAUDE.md (project memory): Will be automatically loaded by Claude"
-echo "Prompt (task instruction): $PROMPT"
-echo "=== END EXECUTION INFO ==="
-echo ""
+# Starting Claude Code with prompt
+echo "Starting Claude Code..."
 
 exec $CLAUDE_CMD "$PROMPT"

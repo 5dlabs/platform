@@ -1,5 +1,7 @@
 //! Simple output formatting for the CLI
 
+#![allow(clippy::disallowed_macros)]
+
 use anyhow::Result;
 use colored::*;
 
@@ -21,6 +23,7 @@ impl OutputManager {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn warning(&self, message: &str) -> Result<()> {
         println!("{} {}", "⚠".yellow().bold(), message);
         Ok(())

@@ -1,3 +1,247 @@
+# Orchestrator Service
+
+A unified orchestration service for managing AI-powered development tasks.
+
+## Task Types Overview
+
+The orchestrator handles two distinct types of tasks, each with different workflows and requirements:
+
+### 📚 Docs Tasks (`docs`)
+
+**Purpose**: Generate comprehensive documentation for Task Master projects
+
+**Workflow**:
+1. **Single Repository Setup** (Container Initialization):
+   - Clone the repository containing `.taskmaster/tasks/tasks.json`
+   - Source branch = the branch the command was executed from
+   - Checkout to a randomized feature branch for documentation work
+
+2. **Template Rendering** (Server-side):
+   - Controller loads Handlebars templates from ConfigMap (`/claude-templates/docs/`)
+   - Renders templates with task-specific data (repository URLs, branches, task IDs)
+   - Generated files include `CLAUDE.md`, `container.sh`, `settings.json`, and prompt content
+
+3. **Remote Execution** (Kubernetes):
+   - Creates a `DocsRun` CRD in the orchestrator namespace
+   - Spins up a documentation generation job with rendered templates
+   - Claude agent reads task definitions and generates comprehensive documentation
+   - Stop hook commits changes and creates PR back to the source branch
+
+**CLI Command**: `orchestrator task docs --working-directory _projects/trader --model opus`
+
+**Requirements**:
+- Repository with `.taskmaster/` directory structure
+- Valid `tasks.json` file with task definitions
+- Git repository with proper authentication
+
+---
+
+### 🔧 Code Tasks (`code`)
+
+**Purpose**: Execute actual code implementation for specific Task Master tasks
+
+**Workflow**:
+1. **Two Repository Setup** (Container Initialization):
+   - **Platform Repository**: Cloned to access task specifications from `.taskmaster/docs/task-N/`
+   - **Destination Repository**: Where code implementation happens and gets committed
+   - Task files (`task.md`, `acceptance-criteria.md`, `architecture.md`) copied from platform to destination
+   - Creates or resumes feature branch (`feature/task-N-implementation`)
+
+2. **Template Rendering** (Server-side):
+   - Controller loads Handlebars templates from ConfigMap (`/claude-templates/code/`)
+   - Renders templates with task-specific data and tool configurations
+   - Generated files include `CLAUDE.md`, `mcp.json`, `client-config.json`, `coding-guidelines.md`, `github-guidelines.md`
+   - MCP configuration enables additional tools beyond Claude's built-in capabilities
+
+3. **Remote Execution** (Kubernetes):
+   - Creates a `CodeRun` CRD in the orchestrator namespace
+   - Spins up an implementation job with Claude Code + MCP tools
+   - Claude agent works in destination repository working directory
+   - Implements functionality following copied task specifications
+   - Uses `--resume` flag for subsequent runs to continue existing work
+   - Commits implementation directly to feature branch
+
+**CLI Command**: `orchestrator task code 1 --service trader --repo git@github.com:5dlabs/platform.git --github-user swe-1-5dlabs`
+
+**Requirements**:
+- Task ID and service specification
+- Platform repository URL (for task documentation)
+- Destination repository URL with proper SSH/HTTPS authentication
+- Target branch and working directory specification
+
+---
+
+## Key Differences
+
+| Aspect | Docs (`docs`) | Code (`code`) |
+|--------|-----------|-----------|
+| **Repository Setup** | 🔄 Single repository | ✅ Platform + Destination repos |
+| **Template Rendering** | 📋 `docs/` templates via Handlebars | 📋 `code/` templates via Handlebars |
+| **Task File Access** | ✅ Reads from same repo `.taskmaster/` | ✅ Copies task docs from platform to destination |
+| **Tools Available** | 🔧 Claude Code tools only | 🔧 Claude Code + MCP tools |
+| **MCP Configuration** | ❌ No MCP setup needed | ✅ `mcp.json` + `client-config.json` |
+| **CRD Type** | `DocsRun` | `CodeRun` |
+| **Purpose** | Generate documentation | Implement functionality |
+| **Branch Strategy** | Randomized feature branch → PR to source | Feature branch (create/resume) |
+| **Git Workflow** | Clone → checkout random branch → generate → PR | Clone both repos → work on feature branch |
+| **Subsequent Runs** | Start fresh | Handled in CRD (retry/continuation field) |
+
+---
+
+## Authentication Patterns
+
+Both task types support SSH and HTTPS authentication:
+
+**SSH Pattern** (Preferred):
+- Repository URL: `git@github.com:5dlabs/platform.git`
+- Kubernetes Secret: `github-ssh-{username}` (e.g., `github-ssh-swe-1-5dlabs`)
+- Used for: Private repositories, secure access
+
+**HTTPS Pattern**:
+- Repository URL: `https://github.com/5dlabs/platform.git`
+- Kubernetes Secret: `github-pat-{username}` (e.g., `github-pat-swe-1-5dlabs`)
+- Used for: Public repositories, token-based access
+
+The orchestrator automatically detects the authentication method based on the repository URL format.
+
+---
+
+## Template Rendering Architecture
+
+The orchestrator uses a sophisticated template system to generate agent-specific configurations:
+
+### **Server-Side Template Processing**
+
+```
+📂 ConfigMap 1: Raw Templates
+├── claude-templates/
+│   ├── docs/CLAUDE.md.hbs
+│   ├── code/CLAUDE.md.hbs
+│   ├── code/mcp.json.hbs
+│   ├── code/client-config.json.hbs
+│   └── ...
+
+🔄 Controller Processing
+├── Load .hbs templates from ConfigMap
+├── Apply Handlebars rendering with task data
+└── Generate fully rendered files
+
+📂 ConfigMap 2: Rendered Files
+├── CLAUDE.md (task-specific memory)
+├── settings.json (Claude tool permissions)
+├── mcp.json (MCP server configuration)
+├── client-config.json (dynamic tool selection)
+└── container.sh (startup script)
+```
+
+### **Template Data Context**
+
+```rust
+// Example template data passed to Handlebars
+{
+  "task_id": 1,
+  "service_name": "trader",
+  "repository_url": "git@github.com:org/repo.git",
+  "platform_repository_url": "git@github.com:5dlabs/platform.git",
+  "github_user": "swe-1-5dlabs",
+  "working_directory": "_projects/trader",
+  "tool_config": "default", // "minimal", "default", "advanced"
+  "local_tools": ["tool1", "tool2"], // MCP tools (not Claude tools)
+  "remote_tools": ["rustdocs_query_rust_docs", "brave-search_brave_web_search"]
+}
+```
+
+### **Agent Tool Configuration**
+
+**Important Distinction**:
+- **Claude Code Tools**: Built-in file operations (`read`, `write`, `edit`, `bash`, etc.)
+- **MCP Tools**: External tools via MCP servers (`rustdocs_query_rust_docs`, `memory_create_entities`, etc.)
+
+**Configuration Files**:
+- `settings.json`: Claude tool permissions and model settings
+- `mcp.json`: MCP server configuration and endpoints
+- `client-config.json`: Dynamic MCP tool selection based on `tool_config` preset
+
+**Tool Presets**:
+```yaml
+minimal: # Basic tools only
+  remote_tools: []
+
+default: # Standard development tools
+  remote_tools: ["brave-search_brave_web_search", "memory_create_entities", "rustdocs_query_rust_docs"]
+
+advanced: # Full toolset + filesystem server
+  remote_tools: ["brave-search_brave_web_search", "memory_create_entities", "rustdocs_query_rust_docs", "github_create_issue"]
+  local_servers: {"filesystem": {...}}
+```
+
+---
+
+## Container Initialization Process
+
+### **Docs Tasks (Single Repository)**
+
+```bash
+# 1. Clone the repository containing task definitions
+git clone "$REPO_URL" repo
+cd repo && git checkout "$SOURCE_BRANCH"
+
+# 2. Checkout to randomized feature branch
+DOCS_BRANCH="docs-generation-$(date +%Y%m%d-%H%M%S)"
+git checkout -b "$DOCS_BRANCH"
+
+# 3. Deploy rendered configuration files
+cp /config/CLAUDE.md $WORK_DIR/
+cp /config/settings.json $WORK_DIR/
+
+# 4. Execute Claude (reads .taskmaster/tasks/tasks.json directly)
+claude -p --output-format stream-json --verbose "$PROMPT"
+
+# 5. Stop hook creates PR back to source branch
+```
+
+### **Code Tasks (Dual Repository)**
+
+```bash
+# 1. Platform Repository Clone (for task documentation)
+git clone "$PLATFORM_URL" platform-repo
+cd platform-repo && git checkout "$PLATFORM_BRANCH"
+
+# 2. Copy task documentation
+mkdir -p task
+cp platform-repo/.taskmaster/docs/task-1/task.md task/
+cp platform-repo/.taskmaster/docs/task-1/acceptance-criteria.md task/
+cp platform-repo/.taskmaster/docs/task-1/architecture.md task/
+
+# 3. Destination Repository Setup
+git clone "$REPO_URL" target-repo
+cd target-repo
+
+# Create or resume feature branch
+if [ "$CURRENT_BRANCH" = "feature/task-1-implementation" ]; then
+  # Resume existing work
+  git reset --hard HEAD && git clean -fd
+else
+  # Start new task
+  git checkout -b "feature/task-1-implementation"
+fi
+
+# 4. Deploy configuration files (including MCP setup)
+cp /config/CLAUDE.md $CLAUDE_WORK_DIR/
+cp /config/mcp.json $CLAUDE_WORK_DIR/.mcp.json
+cp /config/client-config.json $CLAUDE_WORK_DIR/
+cp /config/coding-guidelines.md $CLAUDE_WORK_DIR/
+
+# 5. Execute Claude with MCP tools
+# The CRD determines if this is a fresh task or continuation
+# based on retry/continuation field in the CodeRun spec
+claude -p --output-format stream-json --verbose "$PROMPT"
+```
+
+**Key Architectural Differences**:
+- **Docs**: Single repo, randomized branch, hook-driven PR creation
+- **Code**: Dual repo, predictable branch naming, CRD-controlled retry/continuation
+
 # Orchestrator
 
 A Rust-based unified orchestration service that processes requests from multiple sources (GitHub, PM Agent, Grafana, CLI) and orchestrates Kubernetes Jobs for AI agent task execution.

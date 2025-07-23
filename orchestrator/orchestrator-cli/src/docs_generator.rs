@@ -28,7 +28,7 @@ impl DocsGenerator {
 
         // Generate unique target branch name with timestamp
         let timestamp = chrono::Utc::now().format("%Y%m%d-%H%M%S");
-        let target_branch = format!("docs-generation-{}", timestamp);
+        let target_branch = format!("docs-generation-{timestamp}");
 
         info!("Repository: {}", repo_url);
         info!("Working directory: {}", working_dir);
@@ -98,7 +98,7 @@ impl DocsGenerator {
     }
 
     fn check_and_commit_taskmaster_changes(working_dir: &str, source_branch: &str) -> Result<()> {
-        let taskmaster_path = format!("{}/.taskmaster", working_dir);
+        let taskmaster_path = format!("{working_dir}/.taskmaster");
 
         if !Path::new(&taskmaster_path).exists() {
             anyhow::bail!("No .taskmaster directory found in {}", working_dir);
@@ -145,8 +145,8 @@ impl DocsGenerator {
     fn create_docs_structure(working_dir: &str) -> Result<()> {
         info!("Creating documentation directory structure...");
 
-        let taskmaster_path = format!("{}/.taskmaster", working_dir);
-        let tasks_json_path = format!("{}/tasks/tasks.json", taskmaster_path);
+        let taskmaster_path = format!("{working_dir}/.taskmaster");
+        let tasks_json_path = format!("{taskmaster_path}/tasks/tasks.json");
 
         if !Path::new(&tasks_json_path).exists() {
             anyhow::bail!("No tasks.json found at {}", tasks_json_path);
@@ -164,7 +164,7 @@ impl DocsGenerator {
             .and_then(|t| t.as_array())
             .context("No tasks found in tasks.json")?;
 
-        let docs_dir = format!("{}/docs", taskmaster_path);
+        let docs_dir = format!("{taskmaster_path}/docs");
         fs::create_dir_all(&docs_dir)
             .context("Failed to create docs directory")?;
 
@@ -172,16 +172,16 @@ impl DocsGenerator {
         for task in tasks {
             if let Some(task_id) = task.get("id").and_then(|id| id.as_u64()) {
                 if let Some(title) = task.get("title").and_then(|t| t.as_str()) {
-                    let task_dir = format!("{}/task-{}", docs_dir, task_id);
+                    let task_dir = format!("{docs_dir}/task-{task_id}");
                     fs::create_dir_all(&task_dir)
-                        .context(format!("Failed to create directory for task {}", task_id))?;
+                        .context(format!("Failed to create directory for task {task_id}"))?;
 
-                    let source_file = format!("{}/tasks/task_{:03}.txt", taskmaster_path, task_id);
-                    let dest_file = format!("{}/task.txt", task_dir);
+                    let source_file = format!("{taskmaster_path}/tasks/task_{task_id:03}.txt");
+                    let dest_file = format!("{task_dir}/task.txt");
 
                     if Path::new(&source_file).exists() {
                         fs::copy(&source_file, &dest_file)
-                            .context(format!("Failed to copy task file for task {}", task_id))?;
+                            .context(format!("Failed to copy task file for task {task_id}"))?;
                         info!("✓ Copied task file for task {}: {}", task_id, title);
                     } else {
                         info!("⚠ No task file found for task {} (expected: {})", task_id, source_file);

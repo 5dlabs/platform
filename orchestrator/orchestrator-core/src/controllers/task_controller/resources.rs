@@ -31,7 +31,7 @@ pub async fn reconcile_create_or_update(
     // Ensure PVC exists for code tasks (docs use emptyDir)
     if !task.is_docs() {
         let service_name = task.service_name();
-        let pvc_name = format!("workspace-{}", service_name);
+        let pvc_name = format!("workspace-{service_name}");
         ensure_pvc_exists(pvcs, &pvc_name, service_name).await?;
     }
 
@@ -63,7 +63,7 @@ fn generate_configmap_name(task: &TaskType) -> String {
     let context_version = task.context_version();
 
     if task.is_docs() {
-        format!("{}-docs-v{}-files", service_name, context_version)
+        format!("{service_name}-docs-v{context_version}-files")
     } else {
         format!("{service_name}-task{task_id}-v{context_version}-files")
     }
@@ -119,14 +119,14 @@ async fn create_job(
 
 /// Generate a deterministic job name for the task (based on resource name, not timestamp)
 fn generate_job_name(task: &TaskType) -> String {
-    let resource_name = task.name().replace('_', "-").replace('.', "-");
+    let resource_name = task.name().replace(['_', '.'], "-");
     match task {
         TaskType::Docs(_) => {
-            format!("docs-gen-{}", resource_name)
+            format!("docs-gen-{resource_name}")
         }
         TaskType::Code(_) => {
             let context_version = task.context_version();
-            format!("code-impl-{}-v{}", resource_name, context_version)
+            format!("code-impl-{resource_name}-v{context_version}")
         }
     }
 }
@@ -154,7 +154,7 @@ fn build_job_spec(task: &TaskType, job_name: &str, cm_name: &str, config: &Contr
     // Workspace volume (only for code tasks)
     if !task.is_docs() {
         let service_name = task.service_name();
-        let pvc_name = format!("workspace-{}", service_name);
+        let pvc_name = format!("workspace-{service_name}");
 
         volumes.push(json!({
             "name": "workspace",
@@ -188,6 +188,23 @@ volume_mounts.push(json!({
     "readOnly": true
 }));
 
+// Mount guidelines files directly to workspace for code tasks
+if !task.is_docs() {
+    volume_mounts.push(json!({
+        "name": "task-files",
+        "mountPath": "/workspace/coding-guidelines.md",
+        "subPath": "coding-guidelines.md",
+        "readOnly": true
+    }));
+    
+    volume_mounts.push(json!({
+        "name": "task-files",
+        "mountPath": "/workspace/github-guidelines.md",
+        "subPath": "github-guidelines.md",
+        "readOnly": true
+    }));
+}
+
 // Environment variables
     let mut env_vars = vec![
         json!({"name": "ANTHROPIC_API_KEY", "valueFrom": {"secretKeyRef": {"name": config.secrets.api_key_secret_name, "key": config.secrets.api_key_secret_key}}}),
@@ -208,6 +225,7 @@ volume_mounts.push(json!({
             env_vars.push(json!({"name": "TASK_ID", "value": cr.spec.task_id.to_string()}));
             env_vars.push(json!({"name": "SERVICE_NAME", "value": cr.spec.service}));
             env_vars.push(json!({"name": "PLATFORM_REPOSITORY_URL", "value": cr.spec.platform_repository_url}));
+            env_vars.push(json!({"name": "MCP_CLIENT_CONFIG", "value": "/.claude/client-config.json"}));
 
             if let Some(local_tools) = &cr.spec.local_tools {
                 env_vars.push(json!({"name": "LOCAL_TOOLS", "value": local_tools}));
@@ -216,6 +234,9 @@ volume_mounts.push(json!({
                 env_vars.push(json!({"name": "REMOTE_TOOLS", "value": remote_tools}));
             }
             env_vars.push(json!({"name": "TOOL_CONFIG", "value": cr.spec.tool_config}));
+            
+            // Add toolman server URL for MCP integration
+            env_vars.push(json!({"name": "TOOLMAN_SERVER_URL", "value": "http://toolman.mcp.svc.cluster.local:3000/mcp"}));
         }
     }
 
@@ -346,7 +367,7 @@ async fn cleanup_old_jobs(task: &TaskType, jobs: &Api<Job>) -> Result<()> {
         let current_version = task.context_version();
 
         let job_list = jobs
-            .list(&ListParams::default().labels(&format!("task-id={}", task_id)))
+            .list(&ListParams::default().labels(&format!("task-id={task_id}")))
             .await?;
 
         for job in job_list.items {
@@ -377,7 +398,7 @@ pub async fn cleanup_resources(
     configmaps: &Api<ConfigMap>,
 ) -> Result<Action> {
     let task_label = if let Some(task_id) = task.task_id() {
-        format!("task-id={}", task_id)
+        format!("task-id={task_id}")
     } else {
         format!("task-type=docs,github-user={}", task.github_user())
     };

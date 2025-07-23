@@ -3,6 +3,8 @@
 //!
 //! Usage: cargo run --bin test_templates
 
+#![allow(clippy::disallowed_macros)]
+
 use handlebars::Handlebars;
 use serde_json::json;
 use std::path::Path;
@@ -49,7 +51,7 @@ fn test_docs_templates(handlebars: &mut Handlebars, template_dir: &Path) -> Resu
         let template_path = template_dir.join(template_name);
 
         if template_path.exists() {
-            println!("  Testing {}...", template_name);
+            println!("  Testing {template_name}...");
 
             // Register template
             let template_content = std::fs::read_to_string(&template_path)?;
@@ -63,7 +65,7 @@ fn test_docs_templates(handlebars: &mut Handlebars, template_dir: &Path) -> Resu
             // Show first few lines of output for verification
             let lines: Vec<&str> = result.lines().take(3).collect();
             for line in lines {
-                println!("    │ {}", line);
+                println!("    │ {line}");
             }
 
             if result.lines().count() > 3 {
@@ -110,7 +112,7 @@ fn test_code_templates(handlebars: &mut Handlebars, template_dir: &Path) -> Resu
         let template_path = template_dir.join(template_name);
 
         if template_path.exists() {
-            println!("  Testing {}...", template_name);
+            println!("  Testing {template_name}...");
 
             // Register template
             let template_content = std::fs::read_to_string(&template_path)?;
@@ -124,7 +126,7 @@ fn test_code_templates(handlebars: &mut Handlebars, template_dir: &Path) -> Resu
             // Show first few lines of output for verification
             let lines: Vec<&str> = result.lines().take(3).collect();
             for line in lines {
-                println!("    │ {}", line);
+                println!("    │ {line}");
             }
 
             if result.lines().count() > 3 {

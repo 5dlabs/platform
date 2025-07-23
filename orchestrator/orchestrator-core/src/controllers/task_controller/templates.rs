@@ -19,7 +19,7 @@ fn load_template(relative_path: &str) -> Result<String> {
 
     fs::read_to_string(&full_path)
         .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(
-            format!("Failed to load template {} (key: {}): {}", relative_path, configmap_key, e)
+            format!("Failed to load template {relative_path} (key: {configmap_key}): {e}")
         ))
 }
 
@@ -51,7 +51,7 @@ pub fn generate_templates(
     let hook_scripts = generate_hook_scripts(task)?;
     for (filename, content) in hook_scripts {
         // Use hooks- prefix to comply with ConfigMap key constraints
-        templates.insert(format!("hooks-{}", filename), content);
+        templates.insert(format!("hooks-{filename}"), content);
     }
 
     Ok(templates)
@@ -178,6 +178,9 @@ fn generate_container_script(task: &TaskType) -> Result<String> {
         "service_name": task.service_name(),
         "task_id": task.task_id(),
         "platform_repository_url": task.platform_repository_url(),
+        "platform_branch": task.platform_branch(),
+        "overwrite_memory": task.overwrite_memory(),
+        "resume_session": task.resume_session(),
         "prompt_content": prompt_content  // Add the rendered prompt content
     });
 
@@ -361,11 +364,11 @@ fn generate_hook_scripts(task: &TaskType) -> Result<BTreeMap<String, String>> {
     for (hook_name, template_content) in hook_templates {
         handlebars
             .register_template_string(&hook_name, &template_content)
-            .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register hook template {}: {}", hook_name, e)))?;
+            .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register hook template {hook_name}: {e}")))?;
 
         let rendered = handlebars
             .render(&hook_name, &data)
-            .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render hook template {}: {}", hook_name, e)))?;
+            .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render hook template {hook_name}: {e}")))?;
 
         // Remove .hbs extension for the final filename
         let filename = hook_name.strip_suffix(".hbs").unwrap_or(&hook_name);
@@ -389,25 +392,23 @@ fn get_hook_templates(task: &TaskType) -> Result<Vec<(String, String)>> {
     // Read the ConfigMap directory and find files with the hook prefix
     match std::fs::read_dir(CLAUDE_TEMPLATES_PATH) {
         Ok(entries) => {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    if path.is_file() {
-                        if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
-                            // Check if this is a hook template for our task type
-                            if filename.starts_with(hooks_prefix) && filename.ends_with(".hbs") {
-                                // Extract just the hook filename (remove prefix and convert back)
-                                let hook_name = filename.strip_prefix(hooks_prefix)
-                                    .unwrap_or(filename);
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
+                        // Check if this is a hook template for our task type
+                        if filename.starts_with(hooks_prefix) && filename.ends_with(".hbs") {
+                            // Extract just the hook filename (remove prefix and convert back)
+                            let hook_name = filename.strip_prefix(hooks_prefix)
+                                .unwrap_or(filename);
 
-                                match fs::read_to_string(&path) {
-                                    Ok(content) => {
-                                        debug!("Loaded hook template: {} (from {})", hook_name, filename);
-                                        templates.push((hook_name.to_string(), content));
-                                    },
-                                    Err(e) => {
-                                        debug!("Failed to load hook template {}: {}", filename, e);
-                                    }
+                            match fs::read_to_string(&path) {
+                                Ok(content) => {
+                                    debug!("Loaded hook template: {} (from {})", hook_name, filename);
+                                    templates.push((hook_name.to_string(), content));
+                                },
+                                Err(e) => {
+                                    debug!("Failed to load hook template {}: {}", filename, e);
                                 }
                             }
                         }

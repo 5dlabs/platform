@@ -41,19 +41,5 @@
    This chart will be used to deploy Claude Code agents for task execution.
 {{- end }}
 
-{{- if not .Values.secrets.anthropicApiKey }}
-
-⚠️  WARNING: Anthropic API key is not set!
-   Set the API key using:
-   helm upgrade {{ .Release.Name }} {{ .Chart.Name }} --set secrets.anthropicApiKey="your-api-key-here"
-{{- end }}
-
-{{- if not .Values.secrets.githubToken }}
-
-📝 NOTE: GitHub token is not set in Helm values.
-   This is only needed if your Claude agents require GitHub access.
-   The token can be managed separately via the github-token secret in the orchestrator namespace.
-{{- end }}
-
 For more information about configuring the orchestrator, see the values.yaml file or visit:
 https://github.com/5dlabs/platform

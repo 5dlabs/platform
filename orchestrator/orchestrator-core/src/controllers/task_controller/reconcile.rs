@@ -162,11 +162,11 @@ async fn monitor_running_job(task: &TaskType, jobs: &Api<Job>, ctx: &Arc<Context
     let is_running = match task {
         TaskType::Docs(dr) => {
             dr.status.as_ref()
-                .map_or(false, |s| s.phase == "Running")
+                .is_some_and(|s| s.phase == "Running")
         }
         TaskType::Code(cr) => {
             cr.status.as_ref()
-                .map_or(false, |s| s.phase == "Running")
+                .is_some_and(|s| s.phase == "Running")
         }
     };
 

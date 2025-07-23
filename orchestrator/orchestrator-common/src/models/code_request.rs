@@ -22,8 +22,8 @@ pub struct CodeRequest {
     /// GitHub username for authentication
     pub github_user: String,
 
-    /// Working directory within target repository
-    pub working_directory: String,
+    /// Working directory within target repository (defaults to service name)
+    pub working_directory: Option<String>,
 
         /// Claude model to use (sonnet, opus)
     pub model: String,
