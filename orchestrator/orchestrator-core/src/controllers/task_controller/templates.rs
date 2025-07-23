@@ -63,9 +63,9 @@ fn generate_claude_memory(task: &TaskType) -> Result<String> {
     handlebars.set_strict_mode(false);
 
     let template_path = if task.is_docs() {
-        "docs/CLAUDE.md.hbs"
+        "docs/claude.md.hbs"
     } else {
-        "code/CLAUDE.md.hbs"
+        "code/claude.md.hbs"
     };
 
     let template = load_template(template_path)?;

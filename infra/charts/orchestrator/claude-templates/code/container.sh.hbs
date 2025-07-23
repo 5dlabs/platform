@@ -260,18 +260,18 @@ if [ -d "/config" ]; then
   for md_file in /config/*.md; do
     if [ -f "$md_file" ]; then
       basename_file=$(basename "$md_file")
-      if [ "$basename_file" = "CLAUDE.md" ]; then
-        # CLAUDE.md Memory Persistence Logic (controlled by overwriteMemory CRD field)
+      if [ "$basename_file" = "claude.md" ]; then
+        # claude.md -> CLAUDE.md Memory Persistence Logic (controlled by overwriteMemory CRD field)
         OVERWRITE_MEMORY="{{overwrite_memory}}"
 
         if [ "$OVERWRITE_MEMORY" = "true" ]; then
           # Overwrite mode: Always replace CLAUDE.md with fresh template
-          cp "$md_file" "$CLAUDE_WORK_DIR/"
+          cp "$md_file" "$CLAUDE_WORK_DIR/CLAUDE.md"
           echo "✓ Overwrote CLAUDE.md memory file (fresh start requested)"
         else
           # Preserve mode (default): Only copy if doesn't exist
           if [ ! -f "$CLAUDE_WORK_DIR/CLAUDE.md" ]; then
-            cp "$md_file" "$CLAUDE_WORK_DIR/"
+            cp "$md_file" "$CLAUDE_WORK_DIR/CLAUDE.md"
             echo "✓ Created initial CLAUDE.md memory file"
           else
             echo "✓ Preserved existing CLAUDE.md memory file (maintaining accumulated context)"

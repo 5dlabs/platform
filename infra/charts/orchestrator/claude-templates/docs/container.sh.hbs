@@ -329,7 +329,19 @@ if [ -d "/config" ]; then
   echo "Copying ConfigMap files to working directory..."
 
   # Copy markdown files (force overwrite any existing files)
-  cp -f /config/*.md "$CLAUDE_WORK_DIR/" 2>/dev/null && echo "✓ Copied markdown files (overwriting existing)" || echo "! No markdown files to copy"
+  for md_file in /config/*.md; do
+    if [ -f "$md_file" ]; then
+      basename_file=$(basename "$md_file")
+      if [ "$basename_file" = "claude.md" ]; then
+        # Rename claude.md to CLAUDE.md for consistency
+        cp -f "$md_file" "$CLAUDE_WORK_DIR/CLAUDE.md"
+        echo "✓ Copied claude.md as CLAUDE.md (overwriting existing)"
+      else
+        cp -f "$md_file" "$CLAUDE_WORK_DIR/"
+        echo "✓ Copied $basename_file (overwriting existing)"
+      fi
+    fi
+  done
 
   # Check that the settings are mounted correctly
   if [ -f "/etc/claude-code/managed-settings.json" ]; then
