@@ -110,14 +110,14 @@ else
 fi
 
 # Test platform repository access
-PLATFORM_URL="{{platform_repository_url}}"
-echo "Testing platform repository access..."
-if git ls-remote "$PLATFORM_URL" HEAD > /dev/null 2>&1; then
-  echo "✓ Platform repository access successful"
-  echo "  Repository: $PLATFORM_URL"
+DOCS_URL="{{platform_repository_url}}"
+echo "Testing docs repository access..."
+if git ls-remote "$DOCS_URL" HEAD > /dev/null 2>&1; then
+  echo "✓ Docs repository access successful"
+  echo "  Repository: $DOCS_URL"
 else
-  echo "❌ Platform repository access failed"
-  echo "  Repository: $PLATFORM_URL"
+  echo "❌ Docs repository access failed"
+  echo "  Repository: $DOCS_URL"
   echo ""
   echo "🚫 ABORTING: Cannot access platform repository via SSH"
   exit 1
@@ -129,44 +129,48 @@ echo "════════════════════════�
 echo "║                 DUAL REPOSITORY SETUP                        ║"
 echo "═══════════════════════════════════════════════════════════════"
 
-# Platform Repository Information (for task documentation)
-PLATFORM_URL="{{platform_repository_url}}"
-PLATFORM_BRANCH="{{platform_branch}}"
-PLATFORM_USER="{{github_user}}"
+# Docs Repository Information (for task documentation)
+DOCS_URL="{{platform_repository_url}}"
+DOCS_BRANCH="{{platform_branch}}"
+DOCS_USER="{{github_user}}"
 
-# Platform repository setup
-echo "Platform repo: $PLATFORM_URL"
-echo "Platform branch: $PLATFORM_BRANCH"
-echo "Platform user: $PLATFORM_USER"
+# Docs repository setup
+echo "Docs repo: $DOCS_URL"
+echo "Docs branch: $DOCS_BRANCH"
+echo "Docs user: $DOCS_USER"
 
 # Target Repository Information (for implementation)
 REPO_URL="{{repository_url}}"
 REPO_BRANCH="{{branch}}"
 GITHUB_USER="{{github_user}}"
 
+# Extract repository name from URL for directory naming
+REPO_NAME=$(basename "$REPO_URL" .git)
+echo "Repository name: $REPO_NAME"
+
 # Target repository setup
 echo "Target repo: $REPO_URL"
 echo "Target branch: $REPO_BRANCH"
 echo "Target user: $GITHUB_USER"
 
-# 1. Clone Platform Repository (for docs)
-# Handle existing platform repo
-if [ -d "platform-repo" ]; then
-    echo "Platform repository already exists, updating..."
-    cd platform-repo
+# 1. Clone Docs Repository (for task documentation)
+# Handle existing docs repo
+if [ -d "docs-repo" ]; then
+    echo "Docs repository already exists, updating..."
+    cd docs-repo
     git fetch origin
-    git checkout "$PLATFORM_BRANCH"
-    git reset --hard "origin/$PLATFORM_BRANCH"
+    git checkout "$DOCS_BRANCH"
+    git reset --hard "origin/$DOCS_BRANCH"
     cd /workspace
-    echo "✓ Platform repository updated successfully"
+    echo "✓ Docs repository updated successfully"
 else
-    echo "Cloning platform repository..."
-    if ! git clone "$PLATFORM_URL" platform-repo; then
-        echo "❌ Failed to clone platform repository: $PLATFORM_URL"
+    echo "Cloning docs repository..."
+    if ! git clone "$DOCS_URL" docs-repo; then
+        echo "❌ Failed to clone docs repository: $DOCS_URL"
         exit 1
     fi
-    cd platform-repo && git checkout "$PLATFORM_BRANCH" && cd /workspace
-    echo "✓ Platform repository cloned successfully"
+    cd docs-repo && git checkout "$DOCS_BRANCH" && cd /workspace
+    echo "✓ Docs repository cloned successfully"
 fi
 
 # 2. Copy Current Task Documentation (Clean Previous Task Content)
@@ -181,9 +185,9 @@ echo "✓ MCP client configuration will be copied from ConfigMap during file set
 echo "=== DESTINATION REPOSITORY SETUP ==="
 
 # Check if repository already exists (retry scenario)
-if [ -d "target-repo" ]; then
+if [ -d "$REPO_NAME" ]; then
     echo "Found existing target repository - attempting sophisticated branch management"
-    cd target-repo
+    cd "$REPO_NAME"
 
     # Ensure main branch is current
     echo "Updating main branch..."
@@ -206,12 +210,12 @@ if [ -d "target-repo" ]; then
 
             # Fallback: delete and fresh clone
             cd ..
-            rm -rf target-repo
-            if ! git clone "$REPO_URL" target-repo; then
+            rm -rf "$REPO_NAME"
+            if ! git clone "$REPO_URL" "$REPO_NAME"; then
                 echo "❌ Failed to clone target repository: $REPO_URL"
                 exit 1
             fi
-            cd target-repo
+            cd "$REPO_NAME"
             git checkout -b $FEATURE_BRANCH
             echo "✓ Created fresh feature branch after conflict resolution"
         fi
@@ -223,11 +227,11 @@ if [ -d "target-repo" ]; then
     fi
 else
     echo "=== CLONING FRESH TARGET REPOSITORY ==="
-    if ! git clone "$REPO_URL" target-repo; then
+    if ! git clone "$REPO_URL" "$REPO_NAME"; then
         echo "❌ Failed to clone target repository: $REPO_URL"
         exit 1
     fi
-    cd target-repo
+    cd "$REPO_NAME"
 
     # Ensure we're on main and create feature branch
     git checkout main 2>/dev/null || git checkout -b main origin/main
@@ -260,9 +264,9 @@ echo "=== CONFIGMAP FILE SETUP ==="
 
 # For implementation tasks, Claude works in the target repository service directory
 if [ "$WORK_DIR" = "." ] || [ -z "$WORK_DIR" ]; then
-  CLAUDE_WORK_DIR="/workspace/target-repo"
+  CLAUDE_WORK_DIR="/workspace/$REPO_NAME"
 else
-  CLAUDE_WORK_DIR="/workspace/target-repo/$WORK_DIR"
+  CLAUDE_WORK_DIR="/workspace/$REPO_NAME/$WORK_DIR"
 fi
 
 echo "Setting up files in Claude working directory: $CLAUDE_WORK_DIR"
@@ -400,10 +404,10 @@ mkdir -p "$CLAUDE_WORK_DIR/task"
 
 # Determine task directory path
 {{#if platform_project_directory}}
-TASK_DIR="/workspace/platform-repo/{{platform_project_directory}}/.taskmaster/docs/task-{{task_id}}"
+TASK_DIR="/workspace/docs-repo/{{platform_project_directory}}/.taskmaster/docs/task-{{task_id}}"
 {{else}}
 # Default to _projects/{service} if not specified
-TASK_DIR="/workspace/platform-repo/_projects/{{service_name}}/.taskmaster/docs/task-{{task_id}}"
+TASK_DIR="/workspace/docs-repo/_projects/{{service_name}}/.taskmaster/docs/task-{{task_id}}"
 {{/if}}
 
 if [ -d "$TASK_DIR" ]; then
@@ -414,9 +418,9 @@ if [ -d "$TASK_DIR" ]; then
     
     # Copy architecture.md from the root docs directory
     {{#if platform_project_directory}}
-    ARCH_FILE="/workspace/platform-repo/{{platform_project_directory}}/.taskmaster/docs/architecture.md"
+    ARCH_FILE="/workspace/docs-repo/{{platform_project_directory}}/.taskmaster/docs/architecture.md"
     {{else}}
-    ARCH_FILE="/workspace/platform-repo/_projects/{{service_name}}/.taskmaster/docs/architecture.md"
+    ARCH_FILE="/workspace/docs-repo/_projects/{{service_name}}/.taskmaster/docs/architecture.md"
     {{/if}}
     if [ -f "$ARCH_FILE" ]; then
         cp "$ARCH_FILE" "$CLAUDE_WORK_DIR/task/" 
@@ -426,6 +430,16 @@ if [ -d "$TASK_DIR" ]; then
     fi
 else
     echo "⚠️  Task {{task_id}} documentation directory not found at: $TASK_DIR"
+fi
+
+# Clean up docs repository to avoid Claude confusion
+echo "=== DOCS REPOSITORY CLEANUP ==="
+if [ -d "/workspace/docs-repo" ]; then
+    echo "Removing docs repository to prevent Claude confusion..."
+    rm -rf /workspace/docs-repo
+    echo "✓ Docs repository cleaned up successfully"
+else
+    echo "✓ No docs repository cleanup needed"
 fi
 
 echo '=== WORKSPACE VALIDATION ==='
