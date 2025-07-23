@@ -317,12 +317,25 @@ if [ -d "/config" ]; then
     echo "✓ Copied github-guidelines.md to working directory"
   fi
 
-  # Copy all hook scripts (now prefixed with hooks- to comply with ConfigMap key constraints)
+  # Copy all hook scripts (now prefixed with hooks- or code_hooks_ to comply with ConfigMap key constraints)
   echo "Copying hook scripts..."
+  
+  # Copy old-style hooks (hooks- prefix)
   for hook_file in /config/hooks-*.sh; do
     if [ -f "$hook_file" ]; then
       # Extract the hook name (remove hooks- prefix) and copy to workspace
       hook_name=$(basename "$hook_file" | sed 's/^hooks-//')
+      cp "$hook_file" "$CLAUDE_WORK_DIR/$hook_name"
+      chmod +x "$CLAUDE_WORK_DIR/$hook_name"
+      echo "✓ Copied hook: $hook_name"
+    fi
+  done
+  
+  # Copy new-style hooks (code_hooks_ prefix)
+  for hook_file in /config/code_hooks_*.sh; do
+    if [ -f "$hook_file" ]; then
+      # Extract the hook name (remove code_hooks_ prefix) and copy to workspace
+      hook_name=$(basename "$hook_file" | sed 's/^code_hooks_//')
       cp "$hook_file" "$CLAUDE_WORK_DIR/$hook_name"
       chmod +x "$CLAUDE_WORK_DIR/$hook_name"
       echo "✓ Copied hook: $hook_name"
