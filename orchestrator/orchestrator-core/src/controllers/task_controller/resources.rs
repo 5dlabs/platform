@@ -39,19 +39,24 @@ pub async fn reconcile_create_or_update(
     cleanup_old_jobs(&task, jobs).await?;
     cleanup_old_configmaps(&task, configmaps).await?;
 
-    // Create the main job first (so we can reference it in ConfigMap)
+    // Create ConfigMap FIRST (without owner reference) so Job can mount it
     let cm_name = generate_configmap_name(&task);
-    let job_ref = create_job(&task, jobs, &cm_name, config, ctx).await?;
-
-    // Create ConfigMap with Job as owner (for automatic cleanup on job deletion)
-    let configmap = create_configmap(&task, &cm_name, config, job_ref)?;
+    let configmap = create_configmap(&task, &cm_name, config, None)?;
 
     match configmaps.create(&PostParams::default(), &configmap).await {
-        Ok(_) => info!("Created ConfigMap: {} (owned by job)", cm_name),
+        Ok(_) => info!("Created ConfigMap: {}", cm_name),
         Err(kube::Error::Api(ae)) if ae.code == 409 => {
             info!("ConfigMap already exists: {}", cm_name);
         }
         Err(e) => return Err(e.into()),
+    }
+
+    // Create Job SECOND (now it can successfully mount the existing ConfigMap)
+    let job_ref = create_job(&task, jobs, &cm_name, config, ctx).await?;
+
+    // Update ConfigMap with Job as owner (for automatic cleanup on job deletion)
+    if let Some(owner_ref) = job_ref {
+        update_configmap_owner(&task, configmaps, &cm_name, owner_ref).await?;
     }
 
     Ok(Action::await_change())
@@ -447,6 +452,15 @@ async fn cleanup_old_configmaps(task: &TaskType, configmaps: &Api<ConfigMap>) ->
         }
     }
 
+    Ok(())
+}
+
+/// Update the owner reference of an existing ConfigMap
+async fn update_configmap_owner(_task: &TaskType, configmaps: &Api<ConfigMap>, cm_name: &str, owner_ref: OwnerReference) -> Result<()> {
+    let mut configmap = configmaps.get(cm_name).await?;
+    configmap.metadata.owner_references = Some(vec![owner_ref]);
+    configmaps.replace(cm_name, &PostParams::default(), &configmap).await?;
+    info!("Updated ConfigMap owner reference for: {}", cm_name);
     Ok(())
 }
 
