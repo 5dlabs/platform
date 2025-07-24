@@ -18,20 +18,14 @@ pub struct SecretEnvVar {
     pub secret_key: String,
 }
 
-/// Default function for tool_config field
-fn default_tool_config() -> String {
-    "default".to_string()
-}
+
 
 /// Default function for `context_version` field
 fn default_context_version() -> u32 {
     1
 }
 
-/// Default function for `prompt_mode` field
-fn default_prompt_mode() -> String {
-    "append".to_string()
-}
+
 
 /// Default function for `docs_branch` field
 fn default_docs_branch() -> String {
@@ -97,9 +91,7 @@ pub struct CodeRunSpec {
     #[serde(default, rename = "remoteTools")]
     pub remote_tools: Option<String>,
 
-    /// Tool configuration preset (default, minimal, advanced)
-    #[serde(default = "default_tool_config", rename = "toolConfig")]
-    pub tool_config: String,
+
 
     /// Context version for retry attempts (incremented on each retry)
     #[serde(default = "default_context_version", rename = "contextVersion")]
@@ -109,9 +101,7 @@ pub struct CodeRunSpec {
     #[serde(default, rename = "promptModification")]
     pub prompt_modification: Option<String>,
 
-    /// How to apply prompt modifications (append, replace)
-    #[serde(default = "default_prompt_mode", rename = "promptMode")]
-    pub prompt_mode: String,
+
 
     /// Docs branch to use (e.g., "main", "feature/branch")
     #[serde(default = "default_docs_branch", rename = "docsBranch")]

@@ -129,12 +129,7 @@ impl TaskType {
         }
     }
 
-    pub fn prompt_mode(&self) -> &str {
-        match self {
-            TaskType::Docs(_) => "direct", // Docs use direct mode
-            TaskType::Code(cr) => &cr.spec.prompt_mode,
-        }
-    }
+
 
     /// Get tool configuration for the task
     pub fn local_tools(&self) -> Option<&str> {
@@ -151,12 +146,7 @@ impl TaskType {
         }
     }
 
-    pub fn tool_config(&self) -> &str {
-        match self {
-            TaskType::Docs(_) => "default", // Docs use default config
-            TaskType::Code(cr) => &cr.spec.tool_config,
-        }
-    }
+
 
     /// Get docs repository info (only for CodeRun)
     pub fn docs_repository_url(&self) -> Option<&str> {

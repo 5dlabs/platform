@@ -73,9 +73,7 @@ pub enum TaskCommands {
         #[arg(long)]
         docs_project_directory: Option<String>,
 
-        /// Git branch to work on
-        #[arg(long, default_value = "main")]
-        branch: String,
+
 
         /// GitHub username for authentication
         #[arg(long)]
@@ -97,9 +95,33 @@ pub enum TaskCommands {
         #[arg(long)]
         remote_tools: Option<String>,
 
-        /// Tool configuration preset: 'default', 'minimal', 'advanced'
-        #[arg(long, default_value = "default")]
-        tool_config: String,
+        /// Context version for retry attempts (incremented on each retry)
+        #[arg(long, default_value = "1")]
+        context_version: u32,
+
+        /// Additional context for retry attempts
+        #[arg(long)]
+        prompt_modification: Option<String>,
+
+        /// Docs branch to use (e.g., "main", "feature/branch")
+        #[arg(long, default_value = "main")]
+        docs_branch: String,
+
+        /// Whether to continue a previous session
+        #[arg(long)]
+        continue_session: bool,
+
+        /// Whether to overwrite memory before starting
+        #[arg(long)]
+        overwrite_memory: bool,
+
+        /// Environment variables (format: KEY=value,KEY2=value2)
+        #[arg(long)]
+        env: Option<String>,
+
+        /// Environment variables from secrets (format: name:secretName:secretKey,...)
+        #[arg(long)]
+        env_from_secrets: Option<String>,
     },
 }
 

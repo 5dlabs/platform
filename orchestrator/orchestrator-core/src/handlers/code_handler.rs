@@ -30,15 +30,17 @@ pub async fn submit_code_task(
         github_user: request.github_user,
         local_tools: request.local_tools,
         remote_tools: request.remote_tools,
-        tool_config: request.tool_config,
-        context_version: 1,                // Start with version 1
-        prompt_modification: None,         // No modification on initial run
-        prompt_mode: "append".to_string(), // Default mode
-        docs_branch: "main".to_string(),   // Default docs branch
-        continue_session: false,           // Start fresh by default
-        overwrite_memory: false,           // Preserve memory by default
-        env: HashMap::new(),               // No custom env vars by default
-        env_from_secrets: Vec::new(),      // No secret env vars by default
+        context_version: request.context_version,
+        prompt_modification: request.prompt_modification,
+        docs_branch: request.docs_branch,
+        continue_session: request.continue_session,
+        overwrite_memory: request.overwrite_memory,
+        env: request.env,
+        env_from_secrets: request.env_from_secrets.into_iter().map(|s| crate::crds::coderun::SecretEnvVar {
+            name: s.name,
+            secret_name: s.secret_name,
+            secret_key: s.secret_key,
+        }).collect(),
     };
 
     let coderun = CodeRun {

@@ -210,74 +210,63 @@ fn handle_orchestrator_tools(
             };
 
             // Extract optional parameters with defaults
-            let working_directory = params_map.get("working_directory").and_then(|v| v.as_str());
-
-            let platform_repository_url = params_map
-                .get("platform_repository_url")
-                .and_then(|v| v.as_str());
-
             let repository_url = params_map.get("repository_url").and_then(|v| v.as_str());
 
-            let branch = params_map
-                .get("branch")
-                .and_then(|v| v.as_str())
-                .unwrap_or("main");
+            let docs_repository_url = params_map
+                .get("docs_repository_url")
+                .and_then(|v| v.as_str());
+
+            let docs_project_directory = params_map
+                .get("docs_project_directory")
+                .and_then(|v| v.as_str());
+
+            let working_directory = params_map.get("working_directory").and_then(|v| v.as_str());
 
             let model = params_map
                 .get("model")
                 .and_then(|v| v.as_str())
-                .unwrap_or("sonnet");
-
-            let agent = params_map
-                .get("agent")
-                .and_then(|v| v.as_str())
-                .unwrap_or("claude-agent-1");
-
-            let retry = params_map
-                .get("retry")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
+                .unwrap_or("claude-3-5-sonnet-20241022");
 
             let github_user = params_map.get("github_user").and_then(|v| v.as_str());
-
-            let prompt_modification = params_map
-                .get("prompt_modification")
-                .and_then(|v| v.as_str());
-
-            let prompt_mode = params_map
-                .get("prompt_mode")
-                .and_then(|v| v.as_str())
-                .unwrap_or("append");
 
             let local_tools = params_map.get("local_tools").and_then(|v| v.as_str());
 
             let remote_tools = params_map.get("remote_tools").and_then(|v| v.as_str());
 
-            let tool_config = params_map
-                .get("tool_config")
+            let context_version = params_map
+                .get("context_version")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(1) as u32;
+
+            let prompt_modification = params_map
+                .get("prompt_modification")
+                .and_then(|v| v.as_str());
+
+            let docs_branch = params_map
+                .get("docs_branch")
                 .and_then(|v| v.as_str())
-                .unwrap_or("default");
+                .unwrap_or("main");
+
+            let continue_session = params_map
+                .get("continue_session")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let overwrite_memory = params_map
+                .get("overwrite_memory")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let env = params_map.get("env").and_then(|v| v.as_object());
+
+            let env_from_secrets = params_map.get("env_from_secrets").and_then(|v| v.as_array());
 
             // Validate model parameter - allow any model that starts with "claude-"
             if !model.starts_with("claude-") {
                 return Some(Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name (e.g., 'claude-3-5-sonnet-20241022')", model)));
             }
 
-            // Validate tool_config parameter
-            if !["default", "minimal", "advanced"].contains(&tool_config) {
-                return Some(Err(anyhow!(
-                    "Invalid tool_config '{}'. Must be 'default', 'minimal', or 'advanced'",
-                    tool_config
-                )));
-            }
 
-            // Validate prompt_mode parameter
-            if !["append", "replace"].contains(&prompt_mode) {
-                return Some(Err(anyhow!(
-                    "Invalid prompt_mode '{}'. Must be 'append' or 'replace'",
-                    prompt_mode
-                )));
-            }
 
             // Validate service name (must be valid for PVC naming)
             if !service
@@ -287,52 +276,41 @@ fn handle_orchestrator_tools(
                 return Some(Err(anyhow!("Invalid service name '{}'. Must contain only lowercase letters, numbers, and hyphens", service)));
             }
 
-            // Build CLI arguments
-            let mut args = vec!["task", "submit"];
+            // Build CLI arguments using the new CLI interface
+            let mut args = vec!["task", "code"];
 
             // Add required parameters (task_id is positional, not a flag)
             let task_id_str = task_id.to_string();
             args.push(&task_id_str);
             args.extend(&["--service", service]);
 
-            // Add optional parameters
-            args.extend(&["--agent", agent]);
+            // Add model parameter
             args.extend(&["--model", model]);
-            args.extend(&["--branch", branch]);
+
+            // Add repository URL if specified
+            if let Some(repo) = repository_url {
+                args.extend(&["--repository-url", repo]);
+            }
+
+            // Add docs repository URL if specified
+            if let Some(docs_repo) = docs_repository_url {
+                args.extend(&["--docs-repository-url", docs_repo]);
+            }
+
+            // Add docs project directory if specified
+            if let Some(docs_proj_dir) = docs_project_directory {
+                args.extend(&["--docs-project-directory", docs_proj_dir]);
+            }
 
             // Add working directory if specified
             if let Some(wd) = working_directory {
                 args.extend(&["--working-directory", wd]);
             }
 
-            // Add repository URL if specified
-            if let Some(repo) = repository_url {
-                args.extend(&["--repo", repo]);
-            }
-
             // Add GitHub user if specified
             if let Some(user) = github_user {
                 args.extend(&["--github-user", user]);
             }
-
-            // TODO: Add platform repository URL support when CLI supports it
-            // This will require the CLI to accept a --platform-repo parameter
-            if platform_repository_url.is_some() {
-                // Debug output removed to satisfy clippy
-            }
-
-            // Add retry flag if true
-            if retry {
-                args.push("--retry");
-            }
-
-            // Add prompt modification if specified
-            if let Some(prompt_mod) = prompt_modification {
-                args.extend(&["--prompt-modification", prompt_mod]);
-            }
-
-            // Add prompt mode (always include since it has a default)
-            args.extend(&["--prompt-mode", prompt_mode]);
 
             // Add tool configuration parameters
             if let Some(local) = local_tools {
@@ -343,8 +321,62 @@ fn handle_orchestrator_tools(
                 args.extend(&["--remote-tools", remote]);
             }
 
-            // Add tool config (always include since it has a default)
-            args.extend(&["--tool-config", tool_config]);
+            // Add context version
+            let context_version_str = context_version.to_string();
+            args.extend(&["--context-version", &context_version_str]);
+
+            // Add prompt modification if specified
+            if let Some(prompt_mod) = prompt_modification {
+                args.extend(&["--prompt-modification", prompt_mod]);
+            }
+
+            // Add docs branch
+            args.extend(&["--docs-branch", docs_branch]);
+
+            // Add session flags
+            if continue_session {
+                args.push("--continue-session");
+            }
+
+            if overwrite_memory {
+                args.push("--overwrite-memory");
+            }
+
+            // Prepare environment variables string if specified
+            let mut env_string = String::new();
+            if let Some(env_obj) = env {
+                let mut env_pairs = Vec::new();
+                for (key, value) in env_obj {
+                    if let Some(val_str) = value.as_str() {
+                        env_pairs.push(format!("{}={}", key, val_str));
+                    }
+                }
+                if !env_pairs.is_empty() {
+                    env_string = env_pairs.join(",");
+                    args.extend(&["--env", &env_string]);
+                }
+            }
+
+            // Prepare environment variables from secrets string if specified
+            let mut secrets_string = String::new();
+            if let Some(env_secrets_arr) = env_from_secrets {
+                let mut secret_specs = Vec::new();
+                for secret in env_secrets_arr {
+                    if let Some(secret_obj) = secret.as_object() {
+                        if let (Some(name), Some(secret_name), Some(secret_key)) = (
+                            secret_obj.get("name").and_then(|v| v.as_str()),
+                            secret_obj.get("secretName").and_then(|v| v.as_str()),
+                            secret_obj.get("secretKey").and_then(|v| v.as_str()),
+                        ) {
+                            secret_specs.push(format!("{}:{}:{}", name, secret_name, secret_key));
+                        }
+                    }
+                }
+                if !secret_specs.is_empty() {
+                    secrets_string = secret_specs.join(",");
+                    args.extend(&["--env-from-secrets", &secrets_string]);
+                }
+            }
 
             // Debug output removed to satisfy clippy
 
@@ -357,13 +389,21 @@ fn handle_orchestrator_tools(
                     "parameters_used": {
                         "task_id": task_id,
                         "service": service,
-                        "working_directory": working_directory,
                         "repository_url": repository_url,
-                        "branch": branch,
+                        "docs_repository_url": docs_repository_url,
+                        "docs_project_directory": docs_project_directory,
+                        "working_directory": working_directory,
                         "model": model,
-                        "agent": agent,
-                        "retry": retry,
-                        "github_user": github_user
+                        "github_user": github_user,
+                        "local_tools": local_tools,
+                        "remote_tools": remote_tools,
+                        "context_version": context_version,
+                        "prompt_modification": prompt_modification,
+                        "docs_branch": docs_branch,
+                        "continue_session": continue_session,
+                        "overwrite_memory": overwrite_memory,
+                        "env": env,
+                        "env_from_secrets": env_from_secrets
                     }
                 }))),
                 Err(e) => Some(Err(anyhow!("Failed to execute submit task: {}", e))),

@@ -1,0 +1,11 @@
+apiVersion: orchestrator.platform/v1
+kind: DocsRun
+metadata:
+  name: test-docsrun-024
+  namespace: orchestrator
+spec:
+  repositoryUrl: "https://github.com/5dlabs/platform"
+  workingDirectory: "_projects/simple-api"
+  sourceBranch: "feature/example-project-and-cli"
+  model: "claude-3-5-sonnet-20241022"
+  githubUser: "pm0-5dlabs"

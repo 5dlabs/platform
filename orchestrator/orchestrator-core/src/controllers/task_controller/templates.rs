@@ -248,7 +248,6 @@ fn generate_mcp_tools_doc(task: &TaskType) -> Result<String> {
         .collect();
 
     let data = json!({
-        "toolConfig": task.tool_config(),
         "localTools": local_tools,
         "remoteTools": remote_tools,
         "service": task.service_name(),
@@ -348,7 +347,6 @@ fn build_settings_template_data(task: &TaskType, config: &ControllerConfig) -> s
         "service_name": task.service_name(),
         "model": task.model(),
         "github_user": task.github_user(),
-        "tool_config": task.tool_config(),
         "repository": {
             "url": task.repository_url(),
             "githubUser": task.github_user()
@@ -373,7 +371,6 @@ fn build_settings_template_data(task: &TaskType, config: &ControllerConfig) -> s
         let retry_data = json!({
             "context_version": task.context_version(),
             "prompt_modification": task.prompt_modification(),
-            "prompt_mode": task.prompt_mode(),
             "session_id": task.session_id()
         });
         data["retry"] = retry_data;

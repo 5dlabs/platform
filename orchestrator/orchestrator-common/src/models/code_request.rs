@@ -1,6 +1,23 @@
 //! Clean code task submission request structure
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+// Re-export SecretEnvVar from orchestrator-core crate to avoid duplication
+// For now, we'll define it locally until we can reorganize the type sharing
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SecretEnvVar {
+    /// Name of the environment variable
+    pub name: String,
+    /// Name of the secret
+    #[serde(rename = "secretName")]
+    pub secret_name: String,
+    /// Key within the secret
+    #[serde(rename = "secretKey")]
+    pub secret_key: String,
+}
+
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodeRequest {
@@ -19,17 +36,14 @@ pub struct CodeRequest {
     /// Project directory within docs repository (e.g. "_projects/simple-api")
     pub docs_project_directory: Option<String>,
 
-    /// Git branch to work on in target repository
-    pub branch: String,
-
-    /// GitHub username for authentication
-    pub github_user: String,
-
     /// Working directory within target repository (defaults to service name)
     pub working_directory: Option<String>,
 
     /// Claude model to use (sonnet, opus)
     pub model: String,
+
+    /// GitHub username for authentication
+    pub github_user: String,
 
     /// Local MCP tools/servers to enable (comma-separated)
     #[serde(default)]
@@ -39,12 +53,41 @@ pub struct CodeRequest {
     #[serde(default)]
     pub remote_tools: Option<String>,
 
-    /// Tool configuration preset (default, minimal, advanced)
-    #[serde(default = "default_tool_config")]
-    pub tool_config: String,
+    /// Context version for retry attempts (incremented on each retry)
+    #[serde(default = "default_context_version")]
+    pub context_version: u32,
+
+    /// Additional context for retry attempts
+    #[serde(default)]
+    pub prompt_modification: Option<String>,
+
+    /// Docs branch to use (e.g., "main", "feature/branch")
+    #[serde(default = "default_docs_branch")]
+    pub docs_branch: String,
+
+    /// Whether to continue a previous session (auto-continue on retries or user-requested)
+    #[serde(default)]
+    pub continue_session: bool,
+
+    /// Whether to overwrite memory before starting
+    #[serde(default)]
+    pub overwrite_memory: bool,
+
+    /// Environment variables to set in the container
+    #[serde(default)]
+    pub env: HashMap<String, String>,
+
+    /// Environment variables from secrets
+    #[serde(default)]
+    pub env_from_secrets: Vec<SecretEnvVar>,
 }
 
-/// Default tool configuration
-fn default_tool_config() -> String {
-    "default".to_string()
+/// Default context version
+fn default_context_version() -> u32 {
+    1
+}
+
+/// Default docs branch
+fn default_docs_branch() -> String {
+    "main".to_string()
 }

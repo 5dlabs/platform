@@ -286,7 +286,6 @@ fn build_job_spec(
             if let Some(remote_tools) = &cr.spec.remote_tools {
                 env_vars.push(json!({"name": "REMOTE_TOOLS", "value": remote_tools}));
             }
-            env_vars.push(json!({"name": "TOOL_CONFIG", "value": cr.spec.tool_config}));
 
             // Add toolman server URL for MCP integration
             env_vars.push(json!({"name": "TOOLMAN_SERVER_URL", "value": "http://toolman.mcp.svc.cluster.local:3000/mcp"}));

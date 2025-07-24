@@ -25,13 +25,18 @@ pub async fn handle_task_command(
             repository_url,
             docs_repository_url,
             docs_project_directory,
-            branch,
             github_user,
             working_directory,
             model,
             local_tools,
             remote_tools,
-            tool_config,
+            context_version,
+            prompt_modification,
+            docs_branch,
+            continue_session,
+            overwrite_memory,
+            env,
+            env_from_secrets,
         } => {
             handle_code_command(
                 &api_client,
@@ -41,13 +46,18 @@ pub async fn handle_task_command(
                 repository_url.as_deref(),
                 docs_repository_url.as_deref(),
                 docs_project_directory.as_deref(),
-                &branch,
                 github_user.as_deref(),
                 working_directory.as_deref(),
                 &model,
                 local_tools.as_deref(),
                 remote_tools.as_deref(),
-                &tool_config,
+                context_version,
+                prompt_modification.as_deref(),
+                &docs_branch,
+                continue_session,
+                overwrite_memory,
+                env.as_deref(),
+                env_from_secrets.as_deref(),
             )
             .await
         }
@@ -122,13 +132,18 @@ async fn handle_code_command(
     repository_url: Option<&str>,
     docs_repository_url: Option<&str>,
     docs_project_directory: Option<&str>,
-    branch: &str,
     github_user: Option<&str>,
     working_directory: Option<&str>,
     model: &str,
     local_tools: Option<&str>,
     remote_tools: Option<&str>,
-    tool_config: &str,
+    context_version: u32,
+    prompt_modification: Option<&str>,
+    docs_branch: &str,
+    continue_session: bool,
+    overwrite_memory: bool,
+    env: Option<&str>,
+    env_from_secrets: Option<&str>,
 ) -> Result<()> {
     output.info(&format!(
         "Submitting code task {task_id} for service '{service}'..."
@@ -158,6 +173,10 @@ async fn handle_code_command(
         None => get_working_directory()?,
     };
 
+    // Parse environment variables
+    let env_map = parse_env_vars(env)?;
+    let env_from_secrets_vec = parse_env_from_secrets(env_from_secrets)?;
+
     // Create code task request
     let request = CodeRequest {
         task_id,
@@ -165,19 +184,25 @@ async fn handle_code_command(
         repository_url: repo_url.clone(),
         docs_repository_url: docs_repo_url.clone(),
         docs_project_directory: docs_project_directory.map(|s| s.to_string()),
-        branch: branch.to_string(),
-        github_user: github_user_name.clone(),
         working_directory: Some(working_dir.clone()),
         model: model.to_string(),
+        github_user: github_user_name.clone(),
         local_tools: local_tools.map(|s| s.to_string()),
         remote_tools: remote_tools.map(|s| s.to_string()),
-        tool_config: tool_config.to_string(),
+        context_version,
+        prompt_modification: prompt_modification.map(|s| s.to_string()),
+        docs_branch: docs_branch.to_string(),
+        continue_session,
+        overwrite_memory,
+        env: env_map,
+        env_from_secrets: env_from_secrets_vec,
     };
 
     output.info(&format!("Target repository: {repo_url}"))?;
     output.info(&format!("Docs repository: {docs_repo_url}"))?;
-    output.info(&format!("Branch: {branch}"))?;
+    output.info(&format!("Docs branch: {docs_branch}"))?;
     output.info(&format!("Working directory: {working_dir}"))?;
+    output.info(&format!("Context version: {context_version}"))?;
     output.info(&format!("GitHub user: {github_user_name}"))?;
 
     match api_client.submit_code_task(&request).await {
@@ -272,4 +297,57 @@ fn get_github_user() -> Result<String> {
     }
 
     Ok(String::from_utf8(output.stdout)?.trim().to_string())
+}
+
+/// Parse environment variables from comma-separated key=value string
+fn parse_env_vars(env_str: Option<&str>) -> Result<std::collections::HashMap<String, String>> {
+    use std::collections::HashMap;
+
+    let mut env_map = HashMap::new();
+
+    if let Some(env_str) = env_str {
+        for pair in env_str.split(',') {
+            let pair = pair.trim();
+            if pair.is_empty() {
+                continue;
+            }
+
+            let mut parts = pair.splitn(2, '=');
+            let key = parts.next().ok_or_else(|| anyhow::anyhow!("Invalid env format: {}", pair))?;
+            let value = parts.next().ok_or_else(|| anyhow::anyhow!("Invalid env format: {}", pair))?;
+
+            env_map.insert(key.to_string(), value.to_string());
+        }
+    }
+
+    Ok(env_map)
+}
+
+/// Parse environment variables from secrets in format: name:secretName:secretKey,...
+fn parse_env_from_secrets(env_secrets_str: Option<&str>) -> Result<Vec<orchestrator_common::models::code_request::SecretEnvVar>> {
+    use orchestrator_common::models::code_request::SecretEnvVar;
+
+    let mut secrets = Vec::new();
+
+    if let Some(secrets_str) = env_secrets_str {
+        for secret_spec in secrets_str.split(',') {
+            let secret_spec = secret_spec.trim();
+            if secret_spec.is_empty() {
+                continue;
+            }
+
+            let parts: Vec<&str> = secret_spec.split(':').collect();
+            if parts.len() != 3 {
+                anyhow::bail!("Invalid secret env format: {}. Expected name:secretName:secretKey", secret_spec);
+            }
+
+            secrets.push(SecretEnvVar {
+                name: parts[0].to_string(),
+                secret_name: parts[1].to_string(),
+                secret_key: parts[2].to_string(),
+            });
+        }
+    }
+
+    Ok(secrets)
 }

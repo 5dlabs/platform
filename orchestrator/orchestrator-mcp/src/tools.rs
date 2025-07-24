@@ -59,66 +59,92 @@ fn get_submit_implementation_task_schema() -> Value {
                     "description": "REQUIRED: Target service name (creates workspace-{service} PVC)",
                     "pattern": "^[a-z0-9-]+$"
                 },
+                "repository_url": {
+                    "type": "string",
+                    "description": "Target project repository URL (where implementation work happens, auto-detected from .git/config if not specified)"
+                },
+                "docs_repository_url": {
+                    "type": "string",
+                    "description": "Documentation repository URL (where Task Master definitions come from, auto-detected from current git repo if not specified)"
+                },
+                "docs_project_directory": {
+                    "type": "string",
+                    "description": "Project directory within docs repository (e.g. '_projects/simple-api')"
+                },
                 "working_directory": {
                     "type": "string",
                     "description": "Working directory within target repository (defaults to service name)"
                 },
-                "platform_repository_url": {
-                    "type": "string",
-                    "description": "Platform repository URL for documentation access (auto-detected from current git repo if not specified)"
-                },
-                "repository_url": {
-                    "type": "string",
-                    "description": "Git repository URL (auto-detected from .git/config if not specified)"
-                },
-                "branch": {
-                    "type": "string",
-                    "description": "Git branch to work on (default: 'main')",
-                    "default": "main"
-                },
                 "model": {
                     "type": "string",
-                    "description": "Claude model to use (default: 'sonnet')",
-                    "enum": ["sonnet", "opus"],
-                    "default": "sonnet"
-                },
-                "agent": {
-                    "type": "string",
-                    "description": "Agent identifier (default: 'claude-agent-1')",
-                    "default": "claude-agent-1"
-                },
-                "retry": {
-                    "type": "boolean",
-                    "description": "Is this a retry of a previous attempt? (default: false)",
-                    "default": false
+                    "description": "Claude model to use (default: 'claude-3-5-sonnet-20241022')",
+                    "default": "claude-3-5-sonnet-20241022"
                 },
                 "github_user": {
                     "type": "string",
                     "description": "GitHub username for authentication (auto-detected if not specified)"
                 },
-                "prompt_modification": {
-                    "type": "string",
-                    "description": "Additional prompt instructions for retry attempts (used when retry=true)"
-                },
-                "prompt_mode": {
-                    "type": "string",
-                    "description": "How to apply prompt_modification: 'append' (add to existing prompt) or 'replace' (replace system prompt)",
-                    "enum": ["append", "replace"],
-                    "default": "append"
-                },
                 "local_tools": {
                     "type": "string",
-                    "description": "Comma-separated list of local Claude Code tools to enable (e.g., 'bash,edit,read')"
+                    "description": "Comma-separated list of local MCP tools/servers to enable (e.g., 'mcp-server-git,taskmaster')"
                 },
                 "remote_tools": {
                     "type": "string",
-                    "description": "Comma-separated list of remote MCP tools to enable (e.g., 'github_create_issue,rustdocs_query_rust_docs')"
+                    "description": "Comma-separated list of remote MCP tools/servers to enable (e.g., 'api-docs-tool')"
                 },
-                "tool_config": {
+                "context_version": {
+                    "type": "integer",
+                    "description": "Context version for retry attempts (incremented on each retry, default: 1)",
+                    "default": 1,
+                    "minimum": 1
+                },
+                "prompt_modification": {
                     "type": "string",
-                    "description": "Tool configuration preset: 'default', 'minimal', 'advanced'",
-                    "enum": ["default", "minimal", "advanced"],
-                    "default": "default"
+                    "description": "Additional context for retry attempts"
+                },
+                "docs_branch": {
+                    "type": "string",
+                    "description": "Docs branch to use (e.g., 'main', 'feature/branch', default: 'main')",
+                    "default": "main"
+                },
+                "continue_session": {
+                    "type": "boolean",
+                    "description": "Whether to continue a previous session (auto-continue on retries or user-requested, default: false)",
+                    "default": false
+                },
+                "overwrite_memory": {
+                    "type": "boolean",
+                    "description": "Whether to overwrite memory before starting (default: false)",
+                    "default": false
+                },
+                "env": {
+                    "type": "object",
+                    "description": "Environment variables to set in the container (key-value pairs)",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "env_from_secrets": {
+                    "type": "array",
+                    "description": "Environment variables from secrets",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "Name of the environment variable"
+                            },
+                            "secretName": {
+                                "type": "string",
+                                "description": "Name of the secret"
+                            },
+                            "secretKey": {
+                                "type": "string",
+                                "description": "Key within the secret"
+                            }
+                        },
+                        "required": ["name", "secretName", "secretKey"]
+                    }
                 }
             },
             "required": ["task_id", "service"]
