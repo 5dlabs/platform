@@ -12,7 +12,7 @@ pub fn get_all_tool_schemas() -> Value {
 
 fn get_init_docs_schema() -> Value {
     json!({
-        "name": "init_docs",
+        "name": "docs",
         "description": "Initialize documentation for Task Master tasks using Claude",
         "inputSchema": {
             "type": "object",
@@ -26,16 +26,6 @@ fn get_init_docs_schema() -> Value {
                 "working_directory": {
                     "type": "string",
                     "description": "Working directory containing .taskmaster folder (auto-detected from current directory if not specified). Use relative paths like '-projects/trader'."
-                },
-                "force": {
-                    "type": "boolean",
-                    "description": "Overwrite existing documentation (default: false)",
-                    "default": false
-                },
-                "task_id": {
-                    "type": "integer",
-                    "description": "Generate docs for specific task only (default: generates for all tasks)",
-                    "minimum": 0
                 }
             }
         }
@@ -44,7 +34,7 @@ fn get_init_docs_schema() -> Value {
 
 fn get_submit_implementation_task_schema() -> Value {
     json!({
-        "name": "submit_implementation_task",
+        "name": "task",
         "description": "Submit a Task Master task for implementation using Claude with persistent workspace",
         "inputSchema": {
             "type": "object",
@@ -139,7 +129,7 @@ fn get_submit_implementation_task_schema() -> Value {
                                 "description": "Name of the secret"
                             },
                             "secretKey": {
-                                "type": "string",
+                    "type": "string",
                                 "description": "Key within the secret"
                             }
                         },

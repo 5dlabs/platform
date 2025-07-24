@@ -44,7 +44,8 @@ struct RpcRequest {
 
 // Helper to run orchestrator CLI command and capture output.
 fn run_orchestrator_cli(args: &[&str]) -> Result<String> {
-    let mut cmd = Command::new("orchestrator");
+    // Use the local build in the same directory as this MCP binary
+    let mut cmd = Command::new("./orchestrator/target/release/orchestrator-cli");
     cmd.args(args);
     cmd.stderr(Stdio::piped());
     let output = cmd.output().context("Failed to execute orchestrator-cli")?;
@@ -130,7 +131,7 @@ fn handle_orchestrator_tools(
     params_map: &HashMap<String, Value>,
 ) -> Option<Result<Value>> {
     match method {
-        "init_docs" => {
+        "docs" => {
             // Initialize documentation for Task Master tasks
             // Debug output removed to satisfy clippy
 
@@ -155,7 +156,7 @@ fn handle_orchestrator_tools(
             }
 
             // Build CLI arguments
-            let mut args = vec!["task", "init-docs"];
+            let mut args = vec!["task", "docs"];
 
             // Add model
             args.extend(&["--model", model]);
@@ -165,16 +166,7 @@ fn handle_orchestrator_tools(
                 args.extend(&["--working-directory", wd]);
             }
 
-            // Add force flag if true
-            if force {
-                args.push("--force");
-            }
-
-            // Add task ID if specified
-            let task_id_str = task_id.map(|tid| tid.to_string());
-            if let Some(ref tid_str) = task_id_str {
-                args.extend(&["--task-id", tid_str]);
-            }
+            // Note: force and task_id flags are not supported by the docs command
 
             // Debug output removed to satisfy clippy
 
@@ -191,10 +183,10 @@ fn handle_orchestrator_tools(
                         "task_id": task_id
                     }
                 }))),
-                Err(e) => Some(Err(anyhow!("Failed to execute init-docs: {}", e))),
+                Err(e) => Some(Err(anyhow!("Failed to execute docs command: {}", e))),
             }
         }
-        "submit_implementation_task" => {
+        "task" => {
             // Submit a Task Master task for implementation
             // Debug output removed to satisfy clippy
 

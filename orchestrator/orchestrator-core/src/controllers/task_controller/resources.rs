@@ -92,9 +92,9 @@ fn create_configmap(
 
     let labels = create_task_labels(task);
     let mut metadata = ObjectMeta {
-        name: Some(name.to_string()),
-        labels: Some(labels),
-        ..Default::default()
+            name: Some(name.to_string()),
+            labels: Some(labels),
+            ..Default::default()
     };
 
     // Set owner reference if provided (for automatic cleanup)
@@ -228,25 +228,25 @@ fn build_job_spec(
         let ssh_volumes = generate_ssh_volumes(task);
         volumes.extend(ssh_volumes);
 
-        volume_mounts.push(json!({
-            "name": "ssh-key",
-            "mountPath": "/workspace/.ssh",
-            "readOnly": true
-        }));
-    }
-
-    // Mount settings.json directly to /etc/claude-code/managed-settings.json
-    volume_mounts.push(json!({
-        "name": "task-files",
-        "mountPath": "/etc/claude-code/managed-settings.json",
-        "subPath": "settings.json",
+            volume_mounts.push(json!({
+        "name": "ssh-key",
+        "mountPath": "/workspace/.ssh",
         "readOnly": true
     }));
+}
 
-    // Guidelines files will be copied from ConfigMap to working directory by container.sh
-    // No need to mount them separately since they need to be in the working directory
+// Mount settings.json directly to /etc/claude-code/managed-settings.json
+volume_mounts.push(json!({
+    "name": "task-files",
+    "mountPath": "/etc/claude-code/managed-settings.json",
+    "subPath": "settings.json",
+    "readOnly": true
+}));
 
-    // Environment variables
+// Guidelines files will be copied from ConfigMap to working directory by container.sh
+// No need to mount them separately since they need to be in the working directory
+
+// Environment variables
     let mut env_vars = vec![
         json!({"name": "ANTHROPIC_API_KEY", "valueFrom": {"secretKeyRef": {"name": config.secrets.api_key_secret_name, "key": config.secrets.api_key_secret_key}}}),
         json!({"name": "TASK_TYPE", "value": if task.is_docs() { "docs" } else { "code" }}),
@@ -306,8 +306,8 @@ fn build_job_spec(
                         }
                     }
                 }));
-            }
         }
+    }
     }
 
     // Job deadline from config
