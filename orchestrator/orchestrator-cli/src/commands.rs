@@ -18,7 +18,18 @@ pub async fn handle_task_command(
         crate::TaskCommands::Docs {
             working_directory,
             model,
-        } => handle_docs_command(&api_client, &output, working_directory.as_deref(), &model).await,
+            repository_url,
+            source_branch,
+            github_user,
+        } => handle_docs_command(
+            &api_client,
+            &output,
+            working_directory.as_deref(),
+            &model,
+            repository_url.as_deref(),
+            source_branch.as_deref(),
+            github_user.as_deref(),
+        ).await,
         crate::TaskCommands::Code {
             task_id,
             service,
@@ -70,23 +81,34 @@ async fn handle_docs_command(
     output: &OutputManager,
     working_directory: Option<&str>,
     model: &str,
+    repository_url: Option<&str>,
+    source_branch: Option<&str>,
+    github_user: Option<&str>,
 ) -> Result<()> {
     output.info("Initializing documentation generator...")?;
 
-    // Do local file preparation and get git info
-    let (repo_url, working_dir, source_branch, _generated_docs_branch) =
+    // Do local file preparation and get git info (used as fallbacks)
+    let (detected_repo_url, detected_working_dir, detected_source_branch, _generated_docs_branch) =
         DocsGenerator::prepare_for_submission(working_directory)?;
 
-    // Auto-detect GitHub user from git config (simplified for now)
-    let github_user = get_github_user().unwrap_or_else(|_| "claude-agent-1".to_string());
+    // Use provided parameters or fall back to auto-detected values
+    let final_repo_url = repository_url.unwrap_or(&detected_repo_url);
+    let final_working_dir = working_directory.unwrap_or(&detected_working_dir);
+    let final_source_branch = source_branch.unwrap_or(&detected_source_branch);
+
+    // Auto-detect GitHub user if not provided
+    let final_github_user = match github_user {
+        Some(user) => user.to_string(),
+        None => get_github_user().unwrap_or_else(|_| "claude-agent-1".to_string()),
+    };
 
     // Create documentation generation request
     let request = DocsRequest {
-        repository_url: repo_url.clone(),
-        working_directory: working_dir.clone(),
-        source_branch: source_branch.clone(),
+        repository_url: final_repo_url.to_string(),
+        working_directory: final_working_dir.to_string(),
+        source_branch: final_source_branch.to_string(),
         model: model.to_string(),
-        github_user,
+        github_user: final_github_user,
     };
 
     output.info("Submitting documentation generation job...")?;

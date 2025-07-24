@@ -50,6 +50,18 @@ pub enum TaskCommands {
         /// Claude model to use (full model name like 'claude-3-5-sonnet-20241022')
         #[arg(long, default_value = "claude-opus-4-20250514")]
         model: String,
+
+        /// Documentation repository URL
+        #[arg(long)]
+        repository_url: Option<String>,
+
+        /// Source branch to use
+        #[arg(long)]
+        source_branch: Option<String>,
+
+        /// GitHub username for authentication
+        #[arg(long)]
+        github_user: Option<String>,
     },
 
     /// Submit implementation task to orchestrator
