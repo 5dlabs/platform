@@ -59,7 +59,7 @@ spec:
                 description: "Project directory within docs repository (e.g. '_projects/simple-api')"
               docsBranch:
                 type: string
-                                description: "Git branch to work on in docs repository"
+                description: "Git branch to work on in docs repository"
               workingDirectory:
                 type: string
                 description: "Working directory within target repository (defaults to service name if not specified)"
