@@ -21,15 +21,18 @@ pub async fn handle_task_command(
             repository_url,
             source_branch,
             github_user,
-        } => handle_docs_command(
-            &api_client,
-            &output,
-            working_directory.as_deref(),
-            &model,
-            repository_url.as_deref(),
-            source_branch.as_deref(),
-            github_user.as_deref(),
-        ).await,
+        } => {
+            handle_docs_command(
+                &api_client,
+                &output,
+                working_directory.as_deref(),
+                &model,
+                repository_url.as_deref(),
+                source_branch.as_deref(),
+                github_user.as_deref(),
+            )
+            .await
+        }
         crate::TaskCommands::Code {
             task_id,
             service,
