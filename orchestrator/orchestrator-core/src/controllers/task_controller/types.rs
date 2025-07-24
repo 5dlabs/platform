@@ -183,6 +183,11 @@ impl TaskType {
         format!("github-ssh-{}", self.github_user())
     }
 
+    /// Get GitHub token secret name for this GitHub user
+    pub fn github_token_secret_name(&self) -> String {
+        format!("github-token-{}", self.github_user())
+    }
+
     /// Get docs branch (only for CodeRun)
     pub fn docs_branch(&self) -> &str {
         match self {

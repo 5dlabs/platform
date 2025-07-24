@@ -244,6 +244,17 @@ volume_mounts.push(json!({
         json!({"name": "BRANCH", "value": task.branch()}),
     ];
 
+    // Add GitHub token from secret for API operations (PR creation, etc.)
+    env_vars.push(json!({
+        "name": "GH_TOKEN",
+        "valueFrom": {
+            "secretKeyRef": {
+                "name": task.github_token_secret_name(),
+                "key": "token"
+            }
+        }
+    }));
+
     // Add task-specific environment variables
     match task {
         TaskType::Docs(dr) => {
