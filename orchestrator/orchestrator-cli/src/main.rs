@@ -73,8 +73,6 @@ pub enum TaskCommands {
         #[arg(long)]
         docs_project_directory: Option<String>,
 
-
-
         /// GitHub username for authentication
         #[arg(long)]
         github_user: Option<String>,

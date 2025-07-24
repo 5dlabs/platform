@@ -36,11 +36,15 @@ pub async fn submit_code_task(
         continue_session: request.continue_session,
         overwrite_memory: request.overwrite_memory,
         env: request.env,
-        env_from_secrets: request.env_from_secrets.into_iter().map(|s| crate::crds::coderun::SecretEnvVar {
-            name: s.name,
-            secret_name: s.secret_name,
-            secret_key: s.secret_key,
-        }).collect(),
+        env_from_secrets: request
+            .env_from_secrets
+            .into_iter()
+            .map(|s| crate::crds::coderun::SecretEnvVar {
+                name: s.name,
+                secret_name: s.secret_name,
+                secret_key: s.secret_key,
+            })
+            .collect(),
     };
 
     let coderun = CodeRun {

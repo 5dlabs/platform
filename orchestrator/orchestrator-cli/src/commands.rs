@@ -313,8 +313,12 @@ fn parse_env_vars(env_str: Option<&str>) -> Result<std::collections::HashMap<Str
             }
 
             let mut parts = pair.splitn(2, '=');
-            let key = parts.next().ok_or_else(|| anyhow::anyhow!("Invalid env format: {}", pair))?;
-            let value = parts.next().ok_or_else(|| anyhow::anyhow!("Invalid env format: {}", pair))?;
+            let key = parts
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("Invalid env format: {}", pair))?;
+            let value = parts
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("Invalid env format: {}", pair))?;
 
             env_map.insert(key.to_string(), value.to_string());
         }
@@ -324,7 +328,9 @@ fn parse_env_vars(env_str: Option<&str>) -> Result<std::collections::HashMap<Str
 }
 
 /// Parse environment variables from secrets in format: name:secretName:secretKey,...
-fn parse_env_from_secrets(env_secrets_str: Option<&str>) -> Result<Vec<orchestrator_common::models::code_request::SecretEnvVar>> {
+fn parse_env_from_secrets(
+    env_secrets_str: Option<&str>,
+) -> Result<Vec<orchestrator_common::models::code_request::SecretEnvVar>> {
     use orchestrator_common::models::code_request::SecretEnvVar;
 
     let mut secrets = Vec::new();
@@ -338,7 +344,10 @@ fn parse_env_from_secrets(env_secrets_str: Option<&str>) -> Result<Vec<orchestra
 
             let parts: Vec<&str> = secret_spec.split(':').collect();
             if parts.len() != 3 {
-                anyhow::bail!("Invalid secret env format: {}. Expected name:secretName:secretKey", secret_spec);
+                anyhow::bail!(
+                    "Invalid secret env format: {}. Expected name:secretName:secretKey",
+                    secret_spec
+                );
             }
 
             secrets.push(SecretEnvVar {

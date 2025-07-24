@@ -19,13 +19,24 @@ fn get_init_docs_schema() -> Value {
             "properties": {
                 "model": {
                     "type": "string",
-                    "description": "Claude model to use ('sonnet' or 'opus', default: 'opus')",
-                    "enum": ["sonnet", "opus"],
-                    "default": "opus"
+                    "description": "Claude model to use (default: 'claude-3-5-sonnet-20241022')",
+                    "default": "claude-3-5-sonnet-20241022"
                 },
                 "working_directory": {
                     "type": "string",
-                    "description": "Working directory containing .taskmaster folder (auto-detected from current directory if not specified). Use relative paths like '-projects/trader'."
+                    "description": "Working directory containing .taskmaster folder (auto-detected from current directory if not specified). Use relative paths like '_projects/simple-api'."
+                },
+                "repository_url": {
+                    "type": "string",
+                    "description": "Documentation repository URL (auto-detected from current git repo if not specified)"
+                },
+                "source_branch": {
+                    "type": "string",
+                    "description": "Source branch to use (auto-detected from current git branch if not specified)"
+                },
+                "github_user": {
+                    "type": "string",
+                    "description": "GitHub username for authentication (auto-detected from git config if not specified)"
                 }
             }
         }

@@ -316,30 +316,30 @@ if [ -d "/config" ]; then
   echo "Copying ConfigMap files to working directory..."
 
   # CLAUDE.md Memory Persistence Logic (controlled by overwriteMemory CRD field)
-  OVERWRITE_MEMORY="{{overwrite_memory}}"
+        OVERWRITE_MEMORY="{{overwrite_memory}}"
 
   # Handle CLAUDE.md based on overwriteMemory setting
-  if [ "$OVERWRITE_MEMORY" = "true" ]; then
-    # Overwrite mode: Always replace CLAUDE.md with fresh template
+        if [ "$OVERWRITE_MEMORY" = "true" ]; then
+          # Overwrite mode: Always replace CLAUDE.md with fresh template
     cp "/config/CLAUDE.md" "$CLAUDE_WORK_DIR/CLAUDE.md"
     cp "/config/CLAUDE.md" "/workspace/CLAUDE.md"
-    echo "✓ Overwrote CLAUDE.md memory file (fresh start requested)"
-    echo "✓ Copied CLAUDE.md to workspace root for easy access"
-  else
-    # Preserve mode (default): Only copy if doesn't exist
-    if [ ! -f "$CLAUDE_WORK_DIR/CLAUDE.md" ]; then
+          echo "✓ Overwrote CLAUDE.md memory file (fresh start requested)"
+          echo "✓ Copied CLAUDE.md to workspace root for easy access"
+        else
+          # Preserve mode (default): Only copy if doesn't exist
+          if [ ! -f "$CLAUDE_WORK_DIR/CLAUDE.md" ]; then
       # Initial creation - copy from ConfigMap
       cp "/config/CLAUDE.md" "$CLAUDE_WORK_DIR/CLAUDE.md"
       cp "/config/CLAUDE.md" "/workspace/CLAUDE.md"
-      echo "✓ Created initial CLAUDE.md memory file"
-      echo "✓ Copied CLAUDE.md to workspace root for easy access"
-    else
-      echo "✓ Preserved existing CLAUDE.md memory file (maintaining accumulated context)"
-      # Still copy to workspace root for consistency
-      cp "$CLAUDE_WORK_DIR/CLAUDE.md" "/workspace/CLAUDE.md"
-      echo "✓ Synced CLAUDE.md to workspace root"
-    fi
-  fi
+            echo "✓ Created initial CLAUDE.md memory file"
+            echo "✓ Copied CLAUDE.md to workspace root for easy access"
+          else
+            echo "✓ Preserved existing CLAUDE.md memory file (maintaining accumulated context)"
+            # Still copy to workspace root for consistency
+            cp "$CLAUDE_WORK_DIR/CLAUDE.md" "/workspace/CLAUDE.md"
+            echo "✓ Synced CLAUDE.md to workspace root"
+          fi
+        fi
 
   # Copy all other markdown files (excluding CLAUDE.md)
   for md_file in /config/*.md; do

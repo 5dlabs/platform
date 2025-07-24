@@ -207,38 +207,38 @@ data:
       otlpEndpoint: "otel-collector-opentelemetry-collector.telemetry.svc.cluster.local:4317"
       otlpProtocol: "grpc"  # grpc or http
       otlpInsecure: true
-
+      
       # Service identification
       serviceName: "claude-code"
       serviceVersion: "1.0.0"
       serviceNamespace: "{{ .Release.Namespace }}"
-
+      
       # Team/Organization attributes
       teamName: "platform"
       department: "engineering"
       environment: "development"
       costCenter: ""
-
+      
       # Developer/Agent identification
       githubUser: ""  # Will be set via environment or deployment
       workingService: ""  # The service/project being worked on
-
+      
       # Export intervals (milliseconds)
       metricsExportInterval: "60000"  # 1 minute
       metricsExportTimeout: "30000"   # 30 seconds
       logsExportInterval: "5000"      # 5 seconds
       logsExportTimeout: "30000"      # 30 seconds
-
+      
       # Cardinality control
       includeSessionId: true
       includeAccountUuid: true
       includeVersion: false
-
+      
       # Additional OTEL configuration
       logLevel: "info"
       # Optional: Enable user prompt logging (privacy consideration)
       logUserPrompts: false
-
+      
       # Optional: Custom resource attributes (comma-separated key=value pairs)
       customAttributes: ""
 

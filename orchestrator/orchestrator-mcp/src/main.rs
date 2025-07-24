@@ -139,16 +139,15 @@ fn handle_orchestrator_tools(
             let model = params_map
                 .get("model")
                 .and_then(|v| v.as_str())
-                .unwrap_or("opus");
+                .unwrap_or("claude-3-5-sonnet-20241022");
 
             let working_directory = params_map.get("working_directory").and_then(|v| v.as_str());
 
-            let force = params_map
-                .get("force")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
+            let repository_url = params_map.get("repository_url").and_then(|v| v.as_str());
 
-            let task_id = params_map.get("task_id").and_then(|v| v.as_u64());
+            let source_branch = params_map.get("source_branch").and_then(|v| v.as_str());
+
+            let github_user = params_map.get("github_user").and_then(|v| v.as_str());
 
             // Validate model parameter - allow any model that starts with "claude-"
             if !model.starts_with("claude-") {
@@ -166,7 +165,20 @@ fn handle_orchestrator_tools(
                 args.extend(&["--working-directory", wd]);
             }
 
-            // Note: force and task_id flags are not supported by the docs command
+            // Add repository URL if specified
+            if let Some(repo) = repository_url {
+                args.extend(&["--repository-url", repo]);
+            }
+
+            // Add source branch if specified
+            if let Some(branch) = source_branch {
+                args.extend(&["--source-branch", branch]);
+            }
+
+            // Add GitHub user if specified
+            if let Some(user) = github_user {
+                args.extend(&["--github-user", user]);
+            }
 
             // Debug output removed to satisfy clippy
 
@@ -179,8 +191,9 @@ fn handle_orchestrator_tools(
                     "parameters_used": {
                         "model": model,
                         "working_directory": working_directory,
-                        "force": force,
-                        "task_id": task_id
+                        "repository_url": repository_url,
+                        "source_branch": source_branch,
+                        "github_user": github_user
                     }
                 }))),
                 Err(e) => Some(Err(anyhow!("Failed to execute docs command: {}", e))),
@@ -251,14 +264,14 @@ fn handle_orchestrator_tools(
 
             let env = params_map.get("env").and_then(|v| v.as_object());
 
-            let env_from_secrets = params_map.get("env_from_secrets").and_then(|v| v.as_array());
+            let env_from_secrets = params_map
+                .get("env_from_secrets")
+                .and_then(|v| v.as_array());
 
             // Validate model parameter - allow any model that starts with "claude-"
             if !model.starts_with("claude-") {
                 return Some(Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name (e.g., 'claude-3-5-sonnet-20241022')", model)));
             }
-
-
 
             // Validate service name (must be valid for PVC naming)
             if !service
@@ -335,12 +348,13 @@ fn handle_orchestrator_tools(
             }
 
             // Prepare environment variables string if specified
+            #[allow(unused_assignments)]
             let mut env_string = String::new();
             if let Some(env_obj) = env {
                 let mut env_pairs = Vec::new();
                 for (key, value) in env_obj {
                     if let Some(val_str) = value.as_str() {
-                        env_pairs.push(format!("{}={}", key, val_str));
+                        env_pairs.push(format!("{key}={val_str}"));
                     }
                 }
                 if !env_pairs.is_empty() {
@@ -350,6 +364,7 @@ fn handle_orchestrator_tools(
             }
 
             // Prepare environment variables from secrets string if specified
+            #[allow(unused_assignments)]
             let mut secrets_string = String::new();
             if let Some(env_secrets_arr) = env_from_secrets {
                 let mut secret_specs = Vec::new();
@@ -360,7 +375,7 @@ fn handle_orchestrator_tools(
                             secret_obj.get("secretName").and_then(|v| v.as_str()),
                             secret_obj.get("secretKey").and_then(|v| v.as_str()),
                         ) {
-                            secret_specs.push(format!("{}:{}:{}", name, secret_name, secret_key));
+                            secret_specs.push(format!("{name}:{secret_name}:{secret_key}"));
                         }
                     }
                 }

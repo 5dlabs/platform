@@ -17,8 +17,6 @@ pub struct SecretEnvVar {
     pub secret_key: String,
 }
 
-
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodeRequest {
     /// Task ID to implement

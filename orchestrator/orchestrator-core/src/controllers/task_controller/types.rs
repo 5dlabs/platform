@@ -136,8 +136,6 @@ impl TaskType {
         }
     }
 
-
-
     /// Get tool configuration for the task
     pub fn local_tools(&self) -> Option<&str> {
         match self {
@@ -152,8 +150,6 @@ impl TaskType {
             TaskType::Code(cr) => cr.spec.remote_tools.as_deref(),
         }
     }
-
-
 
     /// Get docs repository info (only for CodeRun)
     pub fn docs_repository_url(&self) -> Option<&str> {

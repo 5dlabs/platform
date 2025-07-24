@@ -92,9 +92,9 @@ fn create_configmap(
 
     let labels = create_task_labels(task);
     let mut metadata = ObjectMeta {
-            name: Some(name.to_string()),
-            labels: Some(labels),
-            ..Default::default()
+        name: Some(name.to_string()),
+        labels: Some(labels),
+        ..Default::default()
     };
 
     // Set owner reference if provided (for automatic cleanup)
@@ -228,25 +228,25 @@ fn build_job_spec(
         let ssh_volumes = generate_ssh_volumes(task);
         volumes.extend(ssh_volumes);
 
-            volume_mounts.push(json!({
-        "name": "ssh-key",
-        "mountPath": "/workspace/.ssh",
+        volume_mounts.push(json!({
+            "name": "ssh-key",
+            "mountPath": "/workspace/.ssh",
+            "readOnly": true
+        }));
+    }
+
+    // Mount settings.json directly to /etc/claude-code/managed-settings.json
+    volume_mounts.push(json!({
+        "name": "task-files",
+        "mountPath": "/etc/claude-code/managed-settings.json",
+        "subPath": "settings.json",
         "readOnly": true
     }));
-}
 
-// Mount settings.json directly to /etc/claude-code/managed-settings.json
-volume_mounts.push(json!({
-    "name": "task-files",
-    "mountPath": "/etc/claude-code/managed-settings.json",
-    "subPath": "settings.json",
-    "readOnly": true
-}));
+    // Guidelines files will be copied from ConfigMap to working directory by container.sh
+    // No need to mount them separately since they need to be in the working directory
 
-// Guidelines files will be copied from ConfigMap to working directory by container.sh
-// No need to mount them separately since they need to be in the working directory
-
-// Environment variables
+    // Environment variables
     let mut env_vars = vec![
         json!({"name": "ANTHROPIC_API_KEY", "valueFrom": {"secretKeyRef": {"name": config.secrets.api_key_secret_name, "key": config.secrets.api_key_secret_key}}}),
         json!({"name": "TASK_TYPE", "value": if task.is_docs() { "docs" } else { "code" }}),
@@ -306,8 +306,8 @@ volume_mounts.push(json!({
                         }
                     }
                 }));
+            }
         }
-    }
     }
 
     // Job deadline from config
@@ -383,7 +383,10 @@ fn create_task_labels(task: &TaskType) -> BTreeMap<String, String> {
         }
         .to_string(),
     );
-    labels.insert("github-user".to_string(), task.github_user().to_string());
+    labels.insert(
+        "github-user".to_string(),
+        sanitize_label_value(task.github_user()),
+    );
     labels.insert(
         "context-version".to_string(),
         task.context_version().to_string(),
@@ -403,6 +406,38 @@ fn create_task_labels(task: &TaskType) -> BTreeMap<String, String> {
     }
 
     labels
+}
+
+/// Sanitize a string value for use as a Kubernetes label value
+/// Kubernetes labels must be an empty string or consist of alphanumeric characters, '-', '_' or '.',
+/// and must start and end with an alphanumeric character
+fn sanitize_label_value(input: &str) -> String {
+    if input.is_empty() {
+        return String::new();
+    }
+
+    // Replace spaces with hyphens, convert to lowercase
+    let mut sanitized = input.to_lowercase().replace([' ', '_'], "-"); // Normalize spaces and underscores to hyphens
+
+    // Remove any characters that aren't alphanumeric, hyphens, underscores, or dots
+    sanitized.retain(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.');
+
+    // Ensure it starts with an alphanumeric character
+    while !sanitized.is_empty() && !sanitized.chars().next().unwrap().is_alphanumeric() {
+        sanitized.remove(0);
+    }
+
+    // Ensure it ends with an alphanumeric character
+    while !sanitized.is_empty() && !sanitized.chars().last().unwrap().is_alphanumeric() {
+        sanitized.pop();
+    }
+
+    // If we ended up with an empty string, provide a fallback
+    if sanitized.is_empty() {
+        "unknown".to_string()
+    } else {
+        sanitized
+    }
 }
 
 /// Ensure PVC exists for the given service

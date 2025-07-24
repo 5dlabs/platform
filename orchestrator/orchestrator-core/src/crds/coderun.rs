@@ -18,14 +18,10 @@ pub struct SecretEnvVar {
     pub secret_key: String,
 }
 
-
-
 /// Default function for `context_version` field
 fn default_context_version() -> u32 {
     1
 }
-
-
 
 /// Default function for `docs_branch` field
 fn default_docs_branch() -> String {
@@ -91,8 +87,6 @@ pub struct CodeRunSpec {
     #[serde(default, rename = "remoteTools")]
     pub remote_tools: Option<String>,
 
-
-
     /// Context version for retry attempts (incremented on each retry)
     #[serde(default = "default_context_version", rename = "contextVersion")]
     pub context_version: u32,
@@ -100,8 +94,6 @@ pub struct CodeRunSpec {
     /// Additional context for retry attempts
     #[serde(default, rename = "promptModification")]
     pub prompt_modification: Option<String>,
-
-
 
     /// Docs branch to use (e.g., "main", "feature/branch")
     #[serde(default = "default_docs_branch", rename = "docsBranch")]
