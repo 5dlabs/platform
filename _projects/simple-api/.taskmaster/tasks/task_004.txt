@@ -1,0 +1,16 @@
+# Task ID: 4
+# Title: Develop User Management Endpoints with Mock Data
+# Status: pending
+# Dependencies: 3
+# Priority: high
+# Description: Implement GET `/api/users` and POST `/api/users` endpoints using in-memory mock data and input validation.
+# Details:
+- Create a mock users array in `/src/data/users.js`.
+- GET `/api/users` returns all users as JSON.
+- POST `/api/users` accepts `{ name, email }`, validates input (required, email format), generates unique ID and ISO `createdAt`.
+- Use a validation library like `validator@13` for email validation.
+- Return appropriate HTTP status codes (200, 201, 400).
+- Structure responses per API spec.
+
+# Test Strategy:
+Test GET returns array of users. Test POST with valid and invalid payloads, checking for correct status codes and error messages.
