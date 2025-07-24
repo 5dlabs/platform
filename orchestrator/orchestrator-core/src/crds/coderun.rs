@@ -24,8 +24,8 @@ fn default_docs_branch() -> String {
     "main".to_string()
 }
 
-/// Default function for `resume_session` field
-fn default_resume_session() -> bool {
+/// Default function for `continue_session` field
+fn default_continue_session() -> bool {
     false
 }
 
@@ -106,9 +106,9 @@ pub struct CodeRunSpec {
     #[serde(default = "default_docs_branch", rename = "docsBranch")]
     pub docs_branch: String,
 
-    /// Whether to resume a previous session
-    #[serde(default = "default_resume_session", rename = "resumeSession")]
-    pub resume_session: bool,
+    /// Whether to continue a previous session (auto-continue on retries or user-requested)
+    #[serde(default = "default_continue_session", rename = "continueSession")]
+    pub continue_session: bool,
 
     /// Whether to overwrite memory before starting
     #[serde(default = "default_overwrite_memory", rename = "overwriteMemory")]

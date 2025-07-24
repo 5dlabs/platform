@@ -149,7 +149,11 @@ fn generate_container_script(task: &TaskType) -> Result<String> {
         "docs_branch": task.docs_branch(),
         "docs_project_directory": task.docs_project_directory(),
         "overwrite_memory": task.overwrite_memory(),
-        "resume_session": task.resume_session()
+        "continue_session": task.continue_session(),
+        "user_requested": match task {
+            crate::controllers::task_controller::types::TaskType::Code(cr) => cr.spec.continue_session,
+            _ => false
+        }
     });
 
     handlebars

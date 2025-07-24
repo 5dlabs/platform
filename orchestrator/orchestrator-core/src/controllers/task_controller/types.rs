@@ -191,12 +191,15 @@ impl TaskType {
         }
     }
 
-    /// Get resume session flag (only for CodeRun)
+    /// Get continue session flag - true for retries or user-requested continuation
     #[allow(dead_code)]
-    pub fn resume_session(&self) -> bool {
+    pub fn continue_session(&self) -> bool {
         match self {
-            TaskType::Docs(_) => false, // Docs don't resume sessions
-            TaskType::Code(cr) => cr.spec.resume_session,
+            TaskType::Docs(_) => false, // Docs don't continue sessions
+            TaskType::Code(cr) => {
+                // Continue if it's a retry attempt OR user explicitly requested it
+                self.retry_count() > 0 || cr.spec.continue_session
+            }
         }
     }
 

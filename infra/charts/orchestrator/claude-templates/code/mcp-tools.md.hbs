@@ -2,241 +2,57 @@
 
 Based on your current configuration (**{{toolConfig}}**), you have access to the following tools:
 
-## Local Tools (Always Available)
+## File System & Navigation Tools
+- **list_directory**: Explore project structure and file organization
+- **read_file**: Examine source code, configurations, and documentation
+- **edit_file**: Make precise, targeted changes to existing files
+- **write_file**: Create new files when needed
+- **search_files**: Find files by name or pattern
+- **delete_file**: Remove unnecessary or outdated files
 
-{{#if localTools}}
-{{#each localTools}}
-### 🔧 {{this}}
+## Code Analysis & Search Tools
+- **codebase_search**: Semantic search through code by meaning and context
+- **grep_search**: Fast exact text and regex pattern matching
+- **file_search**: Fuzzy filename matching for quick file location
 
-**Type:** Local MCP Tool
-**Availability:** Always available (no network required)
-**Risk Level:** Varies by tool
+## Terminal & Process Tools
+- **run_terminal_cmd**: Execute shell commands, run builds, tests, and deployments
+- **Capability**: Full command-line access for development workflows
+- **Use Case**: Build systems, testing, package management, and tool execution
 
-{{#if (eq this "read_file")}}
-**Description:** Read file contents with optional line-range support
-**Usage Guidelines:**
-- Always read before editing to understand context
-- Use line ranges for large files to avoid overwhelming output
-- Essential for understanding code structure before modifications
-- Safe to use frequently for exploration
+## Web Research Tools (if available)
+- **brave_web_search**: Search the web for current information and best practices
+- **Capability**: Access real-time information beyond AI training cutoff
+- **Use Case**: Research latest library versions, security updates, and emerging patterns
 
-**Examples:**
-- Reading configuration files: `read_file package.json`
-- Understanding existing code before changes
-- Checking file structure and imports
-{{/if}}
+## GitHub Integration Tools (if available)
+- **github_create_pull_request**: Submit code changes for review
+- **github_list_pull_requests**: Review existing PRs and their status
+- **Capability**: Full GitHub workflow integration
+- **Use Case**: Automated PR creation, status tracking, and team collaboration
 
-{{#if (eq this "edit_file")}}
-**Description:** Edit files with precise diff-based changes
-**Usage Guidelines:**
-- Always include sufficient context around changes
-- Use for targeted modifications, not wholesale rewrites
-- Verify changes with read_file afterward
-- Provide clear, specific instructions for edits
+## Kubernetes Tools (if available)
+- **kubernetes_listResources**: Query cluster state and resources
+- **kubernetes_describeResource**: Get detailed resource information
+- **Capability**: Direct cluster introspection and management
+- **Use Case**: Deploy, monitor, and troubleshoot containerized applications
 
-**Examples:**
-- Adding new functions to existing modules
-- Updating configuration files
-- Making targeted bug fixes
-{{/if}}
-
-{{#if (eq this "run_terminal_cmd")}}
-**Description:** Execute shell commands in the workspace
-**Usage Guidelines:**
-- **HIGH RISK** - Use sparingly and with extreme caution
-- Always explain what command does before running
-- Prefer specific tools over generic shell commands
-- Never run commands that could damage the system
-- Use for: installing dependencies, running tests, building code
-
-**Examples:**
-- Installing dependencies: `npm install`, `pip install`
-- Running tests: `npm test`, `pytest`, `cargo test`
-- Building projects: `npm run build`, `cargo build`
-{{/if}}
-
-{{#if (eq this "write_file")}}
-**Description:** Create new files with specified content
-**Usage Guidelines:**
-- Use for creating new files, not modifying existing ones
-- Prefer edit_file for modifications to existing files
-- Good for generating new modules, configs, or documentation
-
-**Examples:**
-- Creating new source files
-- Generating configuration files
-- Writing documentation or README files
-{{/if}}
-
-{{#if (eq this "list_directory")}}
-**Description:** List contents of directories
-**Usage Guidelines:**
-- Use to understand project structure
-- Helpful for exploring unfamiliar codebases
-- Safe to use frequently for navigation
-
-**Examples:**
-- Exploring project structure: `list_directory src/`
-- Finding configuration files
-- Understanding directory organization
-{{/if}}
-
-{{#if (eq this "codebase_search")}}
-**Description:** Semantic search across the codebase
-**Usage Guidelines:**
-- Excellent for understanding unfamiliar codebases
-- Use for finding patterns and similar implementations
-- Prefer over grep for conceptual searches
-- Great for locating specific functionality
-
-**Examples:**
-- Finding authentication implementations
-- Locating error handling patterns
-- Understanding how features are implemented
-{{/if}}
+## Memory & State Tools (if available)
+- **memory_create/update/delete**: Manage persistent information across conversations
+- **Capability**: Store and retrieve context that persists between sessions
+- **Use Case**: Remember project preferences, previous decisions, and learned patterns
 
 ---
-{{/each}}
-{{else}}
-*No local tools configured.*
-{{/if}}
 
-## Remote Tools (Network Required)
+## Tool Usage Guidelines
 
-{{#if remoteTools}}
-{{#each remoteTools}}
-### 🌐 {{this}}
+### Risk Assessment
+- **Low Risk**: `read_file`, `list_directory`, `search_files` - Safe exploration tools
+- **Medium Risk**: `edit_file`, `write_file` - Modify local files with backup capability
+- **High Risk**: `run_terminal_cmd`, `delete_file` - Irreversible system operations
+- **Remote Risk**: Web search, API calls - External dependencies and rate limits
 
-**Type:** Remote MCP Tool
-**Availability:** Requires network connectivity
-**Risk Level:** Low to Medium
-
-{{#if (contains this "brave_web_search")}}
-**Description:** Search the web using Brave Search API
-**Usage Guidelines:**
-- Use for finding current best practices and documentation
-- Helpful for debugging error messages and issues
-- Good for checking library compatibility and updates
-- Essential for staying current with rapidly evolving technologies
-
-**When to Use:**
-- Researching unfamiliar libraries or frameworks
-- Finding solutions to specific error messages
-- Checking latest documentation and API changes
-- Verifying current best practices
-{{/if}}
-
-{{#if (contains this "memory_")}}
-**Description:** Memory management and persistence
-**Usage Guidelines:**
-- Use for storing and retrieving session information
-- Helpful for maintaining context across interactions
-- Good for remembering user preferences and decisions
-
-**When to Use:**
-- Storing important project decisions
-- Remembering user preferences
-- Maintaining context between sessions
-{{/if}}
-
-{{#if (contains this "kubernetes_")}}
-**Description:** Kubernetes cluster management and operations
-**Usage Guidelines:**
-- Use for deploying and managing Kubernetes resources
-- Helpful for troubleshooting cluster issues
-- Essential for container orchestration tasks
-
-**When to Use:**
-- Deploying applications to Kubernetes
-- Troubleshooting pod or service issues
-- Managing cluster resources
-{{/if}}
-
-{{#if (contains this "github_")}}
-**Description:** GitHub repository and collaboration tools
-**Usage Guidelines:**
-- Use for creating issues, pull requests, and managing repos
-- Helpful for automating GitHub workflows
-- Good for project management and collaboration
-
-**When to Use:**
-- Creating GitHub issues for bugs or features
-- Managing pull requests and code reviews
-- Automating repository management tasks
-{{/if}}
-
-{{#if (contains this "solana_")}}
-**Description:** Solana blockchain development tools
-**Usage Guidelines:**
-- Use for Solana-specific development tasks
-- Helpful for blockchain operations and queries
-- Essential for Web3 development on Solana
-
-**When to Use:**
-- Building Solana programs and dApps
-- Querying blockchain data
-- Managing Solana development workflows
-{{/if}}
-
-{{#if (contains this "rustdocs_")}}
-**Description:** Rust documentation and API reference
-**Usage Guidelines:**
-- Use for Rust-specific documentation queries
-- Helpful for understanding Rust APIs and patterns
-- Essential for Rust development tasks
-
-**When to Use:**
-- Learning Rust APIs and standard library
-- Finding Rust-specific patterns and examples
-- Understanding Rust language features
-{{/if}}
-
-{{#if (contains this "terraform_")}}
-**Description:** Terraform infrastructure management
-**Usage Guidelines:**
-- Use for infrastructure as code operations
-- Helpful for managing cloud resources
-- Essential for DevOps and infrastructure tasks
-
-**When to Use:**
-- Planning and applying infrastructure changes
-- Managing cloud resources with Terraform
-- Infrastructure automation and deployment
-{{/if}}
-
----
-{{/each}}
-{{else}}
-*No remote tools configured.*
-{{/if}}
-
-## Tool Selection Strategy
-
-{{#if (eq toolConfig "minimal")}}
-### Minimal Configuration Strategy
-- Focus on core file operations (read_file, edit_file)
-- Use run_terminal_cmd only when absolutely necessary
-- Rely on built-in capabilities and simple approaches
-- Prioritize direct, straightforward implementations
-{{/if}}
-
-{{#if (eq toolConfig "default")}}
-### Default Configuration Strategy
-- Balance between local and remote capabilities
-- Use semantic search (codebase_search) for code understanding
-- Leverage web search for current best practices when available
-- Consider remote tools for enhanced capabilities
-{{/if}}
-
-{{#if (eq toolConfig "advanced")}}
-### Advanced Configuration Strategy
-- Full access to local and remote tool ecosystem
-- Leverage specialized tools for domain-specific tasks
-- Use remote APIs for real-time data and current information
-- Balance efficiency with comprehensive tooling
-{{/if}}
-
-## Best Practices
+### Best Practices
 
 1. **Start with Low-Risk Tools**: Always begin with `read_file` and `list_directory`
 2. **Understand Before Acting**: Read existing code before making any changes
@@ -250,8 +66,8 @@ Based on your current configuration (**{{toolConfig}}**), you have access to the
 ### Understanding Unfamiliar Code
 1. `list_directory` → Explore project structure
 2. `read_file` → Examine key files (package.json, README, main modules)
-{{#if (contains localTools "codebase_search")}}3. `codebase_search` → Find relevant patterns and implementations{{/if}}
-{{#if (contains remoteTools "brave_web_search")}}4. `brave_web_search` → Research unfamiliar patterns or libraries{{/if}}
+3. `codebase_search` → Find relevant patterns and implementations
+4. `brave_web_search` → Research unfamiliar patterns or libraries
 
 ### Making Code Changes
 1. `read_file` → Understand current implementation
@@ -260,14 +76,14 @@ Based on your current configuration (**{{toolConfig}}**), you have access to the
 4. `run_terminal_cmd` → Test, build, or validate changes (if needed)
 
 ### Research & Documentation
-{{#if (contains remoteTools "brave_web_search")}}1. `brave_web_search` → Find current best practices and documentation{{/if}}
-{{#if (contains localTools "codebase_search")}}2. `codebase_search` → Find existing patterns in the project{{/if}}
+1. `brave_web_search` → Find current best practices and documentation
+2. `codebase_search` → Find existing patterns in the project
 3. `read_file` → Study specific implementation details
 4. `write_file` → Document findings and decisions
 
 ### Deployment & Infrastructure
-{{#if (contains remoteTools "kubernetes_")}}1. `kubernetes_listResources` → Check current cluster state{{/if}}
-{{#if (contains remoteTools "terraform_")}}2. `terraform_searchModules` → Find appropriate infrastructure modules{{/if}}
-{{#if (contains remoteTools "github_")}}3. `github_create_pull_request` → Submit changes for review{{/if}}
+1. `kubernetes_listResources` → Check current cluster state
+2. `terraform_searchModules` → Find appropriate infrastructure modules
+3. `github_create_pull_request` → Submit changes for review
 
 Remember: **Always explain your tool choices** and **verify the results** of any changes you make. The goal is reliable, well-tested implementations that follow project standards.

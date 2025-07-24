@@ -610,16 +610,10 @@ if [ -n "$MODEL" ]; then
     echo "Using specified model: $MODEL"
 fi
 
-# Add retry flag if this is a retry attempt
-{{#if is_retry}}
+# Add continue flag if this is a retry attempt or user requested continuation
+{{#if continue_session}}
 CLAUDE_CMD="$CLAUDE_CMD --continue"
-echo 'Adding --continue flag for attempt {{attempts}}'
-{{/if}}
-
-# Add resume flag if resuming a previous session
-{{#if resume_session}}
-CLAUDE_CMD="$CLAUDE_CMD --resume"
-echo 'Adding --resume flag to continue previous session'
+echo 'Adding --continue flag (attempt {{attempts}}{{#if user_requested}} - user requested{{/if}})'
 {{/if}}
 
 echo "════════════════════════════════════════════════════════════════"

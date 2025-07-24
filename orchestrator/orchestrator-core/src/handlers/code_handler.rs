@@ -36,7 +36,7 @@ pub async fn submit_code_task(
         prompt_modification: None, // No modification on initial run
         prompt_mode: "append".to_string(), // Default mode
         docs_branch: "main".to_string(), // Default docs branch
-        resume_session: false, // Start fresh by default
+        continue_session: false, // Start fresh by default
         overwrite_memory: false, // Preserve memory by default
     };
 
