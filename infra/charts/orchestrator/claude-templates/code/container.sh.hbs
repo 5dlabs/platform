@@ -84,6 +84,16 @@ else
   exit 1
 fi
 
+# Configure GitHub CLI for SSH operations
+echo "=== GITHUB CLI CONFIGURATION ==="
+if command -v gh >/dev/null 2>&1; then
+  echo "Configuring GitHub CLI to use SSH for git operations..."
+  gh config set git_protocol ssh --host github.com
+  echo "✓ GitHub CLI configured to use SSH protocol for github.com"
+else
+  echo "⚠️ GitHub CLI not available - will use pure git commands"
+fi
+
 # Configure git user after successful SSH setup
 git config --global --add safe.directory /workspace
 echo "✓ Added /workspace to safe directories"
@@ -355,8 +365,11 @@ if [ -d "/config" ]; then
       echo ""
       echo "🔧 SETTINGS CONFIGURATION DEBUG:"
       echo "═══════════════════════════════════════════════════════════════"
-      echo "📋 Current Claude Code Settings:"
-      jq . /etc/claude-code/managed-settings.json | head -20
+      echo "📋 FULL Enterprise Managed Settings:"
+      jq . /etc/claude-code/managed-settings.json
+      echo ""
+      echo "🔍 Searching for other settings files that might override:"
+      find /workspace -name "*settings*.json" -type f 2>/dev/null || echo "   No other settings files found on PVC"
       echo ""
       echo "🔑 API Key Status:"
       if [ -n "$ANTHROPIC_API_KEY" ]; then
@@ -412,6 +425,34 @@ if [ -d "/config" ]; then
     echo "✓ Copied client-config.json to .claude/client-config.json"
   else
     echo "⚠️  client-config.json template not found"
+  fi
+
+    # Enterprise managed settings are directly mounted from ConfigMap
+  echo "=== ENTERPRISE MANAGED SETTINGS ==="
+  echo "✓ Settings mounted directly from ConfigMap at: /etc/claude-code/managed-settings.json"
+  echo "✓ No copying needed - mount automatically reflects latest ConfigMap changes"
+
+  # Clean up any old persistent settings that might interfere
+  if [ -f "$CLAUDE_WORK_DIR/etc/claude-code/managed-settings.json" ]; then
+    echo "⚠️  Found old persistent settings on PVC, removing to prevent conflicts..."
+    rm -f "$CLAUDE_WORK_DIR/etc/claude-code/managed-settings.json"
+    echo "✓ Removed old persistent settings file"
+  fi
+
+  # Also check for any other settings files that might interfere
+  echo "🔍 Checking for any conflicting settings files on PVC..."
+  find /workspace -name "*settings*.json" -type f 2>/dev/null | while read -r settings_file; do
+    echo "   Found settings file: $settings_file"
+  done
+
+  # Verify the mounted settings
+  if [ -f "/etc/claude-code/managed-settings.json" ]; then
+    echo "✓ Enterprise managed settings verified. Current mounted settings:"
+    jq . "/etc/claude-code/managed-settings.json"
+  else
+    echo "❌ ERROR: Enterprise managed settings not found at mount point!"
+    echo "   Expected: /etc/claude-code/managed-settings.json (mounted from ConfigMap)"
+    exit 1
   fi
 
   echo "✓ ConfigMap files copied to $CLAUDE_WORK_DIR"

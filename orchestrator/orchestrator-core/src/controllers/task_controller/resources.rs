@@ -3,7 +3,7 @@ use k8s_openapi::api::{
     batch::v1::Job,
     core::v1::{ConfigMap, PersistentVolumeClaim},
 };
-use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
+use k8s_openapi::apimachinery::pkg::apis::meta::v1::{ObjectMeta, OwnerReference};
 use kube::api::{Api, DeleteParams, ListParams, PostParams};
 use kube::runtime::controller::Action;
 use serde_json::json;
@@ -35,23 +35,24 @@ pub async fn reconcile_create_or_update(
         ensure_pvc_exists(pvcs, &pvc_name, service_name, config).await?;
     }
 
-    // Create ConfigMap with all templates
+    // Clean up older versions for retries
+    cleanup_old_jobs(&task, jobs).await?;
+    cleanup_old_configmaps(&task, configmaps).await?;
+
+    // Create the main job first (so we can reference it in ConfigMap)
     let cm_name = generate_configmap_name(&task);
-    let configmap = create_configmap(&task, &cm_name, config)?;
+    let job_ref = create_job(&task, jobs, &cm_name, config, ctx).await?;
+
+    // Create ConfigMap with Job as owner (for automatic cleanup on job deletion)
+    let configmap = create_configmap(&task, &cm_name, config, job_ref)?;
 
     match configmaps.create(&PostParams::default(), &configmap).await {
-        Ok(_) => info!("Created ConfigMap: {}", cm_name),
+        Ok(_) => info!("Created ConfigMap: {} (owned by job)", cm_name),
         Err(kube::Error::Api(ae)) if ae.code == 409 => {
             info!("ConfigMap already exists: {}", cm_name);
         }
         Err(e) => return Err(e.into()),
     }
-
-    // Clean up older job versions for retries
-    cleanup_old_jobs(&task, jobs).await?;
-
-    // Create the main job
-    create_job(&task, jobs, &cm_name, config, ctx).await?;
 
     Ok(Action::await_change())
 }
@@ -70,7 +71,7 @@ fn generate_configmap_name(task: &TaskType) -> String {
 }
 
 /// Create ConfigMap with all template files
-fn create_configmap(task: &TaskType, name: &str, config: &ControllerConfig) -> Result<ConfigMap> {
+fn create_configmap(task: &TaskType, name: &str, config: &ControllerConfig, owner_ref: Option<OwnerReference>) -> Result<ConfigMap> {
     let mut data = BTreeMap::new();
 
     // Generate all templates for this task
@@ -80,13 +81,19 @@ fn create_configmap(task: &TaskType, name: &str, config: &ControllerConfig) -> R
     }
 
     let labels = create_task_labels(task);
+    let mut metadata = ObjectMeta {
+        name: Some(name.to_string()),
+        labels: Some(labels),
+        ..Default::default()
+    };
+
+    // Set owner reference if provided (for automatic cleanup)
+    if let Some(owner) = owner_ref {
+        metadata.owner_references = Some(vec![owner]);
+    }
 
     Ok(ConfigMap {
-        metadata: ObjectMeta {
-            name: Some(name.to_string()),
-            labels: Some(labels),
-            ..Default::default()
-        },
+        metadata,
         data: Some(data),
         ..Default::default()
     })
@@ -99,22 +106,52 @@ async fn create_job(
     cm_name: &str,
     config: &ControllerConfig,
     ctx: &Arc<super::types::Context>,
-) -> Result<()> {
+) -> Result<Option<OwnerReference>> {
     let job_name = generate_job_name(task);
     let job = build_job_spec(task, &job_name, cm_name, config)?;
 
     match jobs.create(&PostParams::default(), &job).await {
-        Ok(_) => {
+        Ok(created_job) => {
             info!("Created job: {}", job_name);
             update_job_started(task, ctx, &job_name, cm_name).await?;
+
+            // Return owner reference for the created job
+            if let (Some(uid), Some(name)) = (created_job.metadata.uid, created_job.metadata.name) {
+                Ok(Some(OwnerReference {
+                    api_version: "batch/v1".to_string(),
+                    kind: "Job".to_string(),
+                    name,
+                    uid,
+                    controller: Some(true),
+                    block_owner_deletion: Some(true),
+                }))
+            } else {
+                Ok(None)
+            }
         }
         Err(kube::Error::Api(ae)) if ae.code == 409 => {
             info!("Job already exists: {}", job_name);
+            // Try to get existing job for owner reference
+            match jobs.get(&job_name).await {
+                Ok(existing_job) => {
+                    if let (Some(uid), Some(name)) = (existing_job.metadata.uid, existing_job.metadata.name) {
+                        Ok(Some(OwnerReference {
+                            api_version: "batch/v1".to_string(),
+                            kind: "Job".to_string(),
+                            name,
+                            uid,
+                            controller: Some(true),
+                            block_owner_deletion: Some(true),
+                        }))
+                    } else {
+                        Ok(None)
+                    }
+                }
+                Err(_) => Ok(None),
+            }
         }
-        Err(e) => return Err(e.into()),
+        Err(e) => Err(e.into()),
     }
-
-    Ok(())
 }
 
 /// Generate a deterministic job name for the task (based on resource name, not timestamp)
@@ -290,6 +327,7 @@ fn create_task_labels(task: &TaskType) -> BTreeMap<String, String> {
     labels.insert("app".to_string(), "orchestrator".to_string());
     labels.insert("component".to_string(), if task.is_docs() { "docs-generator" } else { "code-runner" }.to_string());
     labels.insert("github-user".to_string(), task.github_user().to_string());
+    labels.insert("context-version".to_string(), task.context_version().to_string());
 
     match task {
         TaskType::Docs(_) => {
@@ -373,6 +411,36 @@ async fn cleanup_old_jobs(task: &TaskType, jobs: &Api<Job>) -> Result<()> {
                     if let Some(job_name) = &job.metadata.name {
                         jobs.delete(job_name, &DeleteParams::background()).await?;
                         info!("Deleted older job version: {}", job_name);
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Clean up older configmap versions for retry attempts
+async fn cleanup_old_configmaps(task: &TaskType, configmaps: &Api<ConfigMap>) -> Result<()> {
+    if let Some(task_id) = task.task_id() {
+        let current_version = task.context_version();
+
+        let cm_list = configmaps
+            .list(&ListParams::default().labels(&format!("task-id={task_id}")))
+            .await?;
+
+        for cm in cm_list.items {
+            if let Some(version) = cm
+                .metadata
+                .labels
+                .as_ref()
+                .and_then(|l| l.get("context-version"))
+                .and_then(|v| v.parse::<u32>().ok())
+            {
+                if version < current_version {
+                    if let Some(cm_name) = &cm.metadata.name {
+                        configmaps.delete(cm_name, &DeleteParams::default()).await?;
+                        info!("Deleted older configmap version: {}", cm_name);
                     }
                 }
             }
