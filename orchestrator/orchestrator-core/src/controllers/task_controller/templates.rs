@@ -47,8 +47,12 @@ pub fn generate_templates(
         generate_claude_settings(task, config)?,
     );
 
-    // Generate MCP config (code tasks only)
-    if !task.is_docs() {
+    // Generate task-specific templates
+    if task.is_docs() {
+        // Generate docs prompt
+        templates.insert("prompt.md".to_string(), generate_docs_prompt(task)?);
+    } else {
+        // Generate code-specific templates
         templates.insert("mcp.json".to_string(), generate_mcp_config(task, config)?);
         templates.insert(
             "client-config.json".to_string(),
@@ -337,6 +341,36 @@ fn generate_github_guidelines(task: &TaskType) -> Result<String> {
     handlebars.render("github_guidelines", &data).map_err(|e| {
         crate::controllers::task_controller::types::Error::ConfigError(format!(
             "Failed to render GitHub guidelines template: {e}"
+        ))
+    })
+}
+
+/// Generate docs prompt for documentation generation tasks
+fn generate_docs_prompt(task: &TaskType) -> Result<String> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false);
+
+    let template = load_template("docs/prompt.hbs")?;
+
+    handlebars
+        .register_template_string("docs_prompt", &template)
+        .map_err(|e| {
+            crate::controllers::task_controller::types::Error::ConfigError(format!(
+                "Failed to register docs prompt template: {e}"
+            ))
+        })?;
+
+    let data = json!({
+        "task_id": task.task_id(),
+        "service_name": task.service_name(),
+        "github_user": task.github_user(),
+        "working_directory": task.working_directory(),
+        "repository_url": task.repository_url()
+    });
+
+    handlebars.render("docs_prompt", &data).map_err(|e| {
+        crate::controllers::task_controller::types::Error::ConfigError(format!(
+            "Failed to render docs prompt template: {e}"
         ))
     })
 }

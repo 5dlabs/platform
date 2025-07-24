@@ -572,10 +572,13 @@ echo "=========================="
 # CLAUDE.md = Project memory (automatically loaded by Claude)
 # Prompt = Task-specific instruction from template
 
-# Load the prompt template content
-PROMPT="{{prompt_content}}"
-
-# Starting Claude Code with prompt
-echo "Starting Claude Code..."
-
-exec $CLAUDE_CMD "$PROMPT"
+# Check if prompt file exists
+if [ -f "prompt.md" ]; then
+    echo "Starting Claude Code with prompt from prompt.md..."
+    exec $CLAUDE_CMD "$(cat prompt.md)"
+else
+    echo "❌ ERROR: No prompt.md found"
+    echo "The docs generation requires prompt.md to be provided"
+    echo "Check controller template generation"
+    exit 1
+fi
