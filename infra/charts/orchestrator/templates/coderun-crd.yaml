@@ -59,10 +59,7 @@ spec:
                 description: "Project directory within docs repository (e.g. '_projects/simple-api')"
               docsBranch:
                 type: string
-                description: "Git branch to work on in docs repository"
-              branch:
-                type: string
-                description: "Git branch to work on in target repository"
+                                description: "Git branch to work on in docs repository"
               workingDirectory:
                 type: string
                 description: "Working directory within target repository (defaults to service name if not specified)"
@@ -97,10 +94,10 @@ spec:
                 type: string
                 default: "main"
                 description: "Platform branch to use (e.g., 'main', 'feature/branch')"
-              resumeSession:
+              continueSession:
                 type: boolean
                 default: false
-                description: "Whether to resume a previous session"
+                description: "Whether to continue a previous session"
               overwriteMemory:
                 type: boolean
                 default: false

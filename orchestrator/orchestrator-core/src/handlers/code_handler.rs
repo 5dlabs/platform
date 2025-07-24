@@ -25,7 +25,6 @@ pub async fn submit_code_task(
         repository_url: request.repository_url,
         docs_repository_url: request.docs_repository_url,
         docs_project_directory: request.docs_project_directory,
-        branch: request.branch,
         working_directory: request.working_directory,
         model: request.model,
         github_user: request.github_user,

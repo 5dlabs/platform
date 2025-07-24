@@ -99,7 +99,6 @@ fn generate_claude_memory(task: &TaskType) -> Result<String> {
     let data = json!({
         "repository": json!({
             "url": task.repository_url(),
-            "branch": task.branch(),
             "githubUser": task.github_user()
         }),
         "working_directory": task.working_directory(),
@@ -169,8 +168,6 @@ fn generate_container_script(task: &TaskType) -> Result<String> {
 
     let data = json!({
         "repository_url": task.repository_url(),
-        "source_branch": task.branch(),
-        "branch": task.branch(),
         "github_user": task.github_user(),
         "working_directory": task.working_directory(),
         "model": task.model(),
@@ -334,8 +331,7 @@ fn generate_github_guidelines(task: &TaskType) -> Result<String> {
     let data = json!({
         "task_id": task.task_id(),
         "service_name": task.service_name(),
-        "github_user": task.github_user(),
-        "branch": task.branch()
+        "github_user": task.github_user()
     });
 
     handlebars.render("github_guidelines", &data).map_err(|e| {
@@ -355,7 +351,6 @@ fn build_settings_template_data(task: &TaskType, config: &ControllerConfig) -> s
         "tool_config": task.tool_config(),
         "repository": {
             "url": task.repository_url(),
-            "branch": task.branch(),
             "githubUser": task.github_user()
         },
         "working_directory": task.working_directory(),
@@ -429,7 +424,6 @@ fn generate_hook_scripts(task: &TaskType) -> Result<BTreeMap<String, String>> {
         "service_name": task.service_name(),
         "repository": json!({
             "url": task.repository_url(),
-            "branch": task.branch(),
             "githubUser": task.github_user()
         }),
         "working_directory": task.working_directory(),

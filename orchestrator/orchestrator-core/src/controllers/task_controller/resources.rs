@@ -254,7 +254,6 @@ fn build_job_spec(
         json!({"name": "GITHUB_USER", "value": task.github_user()}),
         json!({"name": "REPOSITORY_URL", "value": task.repository_url()}),
         json!({"name": "WORKING_DIRECTORY", "value": task.working_directory()}),
-        json!({"name": "BRANCH", "value": task.branch()}),
     ];
 
     // Add GitHub token from secret for API operations (PR creation, etc.)

@@ -100,12 +100,7 @@ impl TaskType {
         }
     }
 
-    pub fn branch(&self) -> &str {
-        match self {
-            TaskType::Docs(dr) => &dr.spec.source_branch,
-            TaskType::Code(cr) => &cr.spec.branch,
-        }
-    }
+
 
     /// Get retry/versioning information for `CodeRun` (docs don't have retries)
     pub fn context_version(&self) -> u32 {

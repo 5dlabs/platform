@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-simple
+  namespace: orchestrator
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  containers:
+  - name: debug
+    image: busybox
+    command: ["/bin/sh", "-c"]
+    args:
+    - |
+      echo "=== DEBUG POD: Checking Claude.md on PVC ==="
+
+      # Check if Claude.md exists
+      if [ -f "/workspace/CLAUDE.md" ]; then
+        echo "✓ Found CLAUDE.md on PVC"
+        echo "Current content:"
+        cat /workspace/CLAUDE.md
+      else
+        echo "⚠️ CLAUDE.md not found on PVC"
+      fi
+
+      # Sleep to keep container running for manual access
+      sleep 3600
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      seccompProfile:
+        type: RuntimeDefault
+    volumeMounts:
+    - name: workspace
+      mountPath: /workspace
+  volumes:
+  - name: workspace
+    persistentVolumeClaim:
+      claimName: workspace-simple-api
+  restartPolicy: Never

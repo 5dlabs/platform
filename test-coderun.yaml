@@ -5,10 +5,9 @@ metadata:
   namespace: orchestrator
 spec:
   # Test repository and task
-  repositoryUrl: "git@github.com:5dlabs/orchestrator-code-test.git"
-  branch: "feature/test-updated-templates"
+    repositoryUrl: "git@github.com:5dlabs/orchestrator-code-test.git"
   githubUser: "pm0-5dlabs"
-  taskId: 2
+  taskId: 4
 
   # Service configuration
   service: "simple-api"
@@ -27,7 +26,7 @@ spec:
 
   # Template testing flags
   overwriteMemory: false
-  resumeSession: false
+  continueSession: false
 
   # Test our updated templates:
   # - CLAUDE.md with @ pointers

@@ -64,9 +64,6 @@ pub struct CodeRunSpec {
     #[serde(default, rename = "docsProjectDirectory")]
     pub docs_project_directory: Option<String>,
 
-    /// Git branch to work on in target repository
-    pub branch: String,
-
     /// Working directory within target repository (defaults to service name)
     #[serde(default, rename = "workingDirectory")]
     pub working_directory: Option<String>,

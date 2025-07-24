@@ -164,7 +164,6 @@ echo "Docs user: $DOCS_USER"
 
 # Target Repository Information (for implementation)
 REPO_URL="{{repository_url}}"
-REPO_BRANCH="{{branch}}"
 GITHUB_USER="{{github_user}}"
 
 # Use consistent target-repo directory name
@@ -172,7 +171,6 @@ REPO_NAME="target-repo"
 
 # Target repository setup
 echo "Target repo: $REPO_URL"
-echo "Target branch: $REPO_BRANCH"
 echo "Target user: $GITHUB_USER"
 
 # 1. Clone Docs Repository (for task documentation)
@@ -323,36 +321,38 @@ cd "$CLAUDE_WORK_DIR"
 if [ -d "/config" ]; then
   echo "Copying ConfigMap files to working directory..."
 
-  # Copy markdown files (CLAUDE.md memory persistence logic)
+  # CLAUDE.md Memory Persistence Logic (controlled by overwriteMemory CRD field)
+  OVERWRITE_MEMORY="{{overwrite_memory}}"
+
+  # Handle CLAUDE.md based on overwriteMemory setting
+  if [ "$OVERWRITE_MEMORY" = "true" ]; then
+    # Overwrite mode: Always replace CLAUDE.md with fresh template
+    cp "/config/CLAUDE.md" "$CLAUDE_WORK_DIR/CLAUDE.md"
+    cp "/config/CLAUDE.md" "/workspace/CLAUDE.md"
+    echo "✓ Overwrote CLAUDE.md memory file (fresh start requested)"
+    echo "✓ Copied CLAUDE.md to workspace root for easy access"
+  else
+    # Preserve mode (default): Only copy if doesn't exist
+    if [ ! -f "$CLAUDE_WORK_DIR/CLAUDE.md" ]; then
+      # Initial creation - copy from ConfigMap
+      cp "/config/CLAUDE.md" "$CLAUDE_WORK_DIR/CLAUDE.md"
+      cp "/config/CLAUDE.md" "/workspace/CLAUDE.md"
+      echo "✓ Created initial CLAUDE.md memory file"
+      echo "✓ Copied CLAUDE.md to workspace root for easy access"
+    else
+      echo "✓ Preserved existing CLAUDE.md memory file (maintaining accumulated context)"
+      # Still copy to workspace root for consistency
+      cp "$CLAUDE_WORK_DIR/CLAUDE.md" "/workspace/CLAUDE.md"
+      echo "✓ Synced CLAUDE.md to workspace root"
+    fi
+  fi
+
+  # Copy all other markdown files (excluding CLAUDE.md)
   for md_file in /config/*.md; do
     if [ -f "$md_file" ]; then
       basename_file=$(basename "$md_file")
-      if [ "$basename_file" = "claude.md" ]; then
-        # claude.md -> CLAUDE.md Memory Persistence Logic (controlled by overwriteMemory CRD field)
-        OVERWRITE_MEMORY="{{overwrite_memory}}"
-
-        if [ "$OVERWRITE_MEMORY" = "true" ]; then
-          # Overwrite mode: Always replace CLAUDE.md with fresh template
-          cp "$md_file" "$CLAUDE_WORK_DIR/CLAUDE.md"
-          cp "$md_file" "/workspace/CLAUDE.md"
-          echo "✓ Overwrote CLAUDE.md memory file (fresh start requested)"
-          echo "✓ Copied CLAUDE.md to workspace root for easy access"
-        else
-          # Preserve mode (default): Only copy if doesn't exist
-          if [ ! -f "$CLAUDE_WORK_DIR/CLAUDE.md" ]; then
-            cp "$md_file" "$CLAUDE_WORK_DIR/CLAUDE.md"
-            cp "$md_file" "/workspace/CLAUDE.md"
-            echo "✓ Created initial CLAUDE.md memory file"
-            echo "✓ Copied CLAUDE.md to workspace root for easy access"
-          else
-            echo "✓ Preserved existing CLAUDE.md memory file (maintaining accumulated context)"
-            # Still copy to workspace root for consistency
-            cp "$CLAUDE_WORK_DIR/CLAUDE.md" "/workspace/CLAUDE.md"
-            echo "✓ Synced CLAUDE.md to workspace root"
-          fi
-        fi
-      else
-        # Copy all other markdown files
+      # Skip CLAUDE.md since we handled it above
+      if [ "$basename_file" != "CLAUDE.md" ]; then
         cp "$md_file" "$CLAUDE_WORK_DIR/"
         echo "✓ Updated $basename_file"
       fi
@@ -660,7 +660,6 @@ You have a DANGEROUS tendency to declare task completion before actually verifyi
 - **Service**: {{service}}
 - **Task ID**: {{task_id}}
 - **Repository**: {{repository_url}}
-- **Branch**: {{branch}}
 - **Working Directory**: {{working_directory}}
 
 ## ⚠️ EXECUTION REQUIREMENTS
@@ -691,7 +690,7 @@ if [ -f "$CLAUDE_WORK_DIR/task/prompt.md" ]; then
     echo "=== END DEBUG PROMPTS ==="
     echo ""
 
-    echo "startingTask: $TASK"
+    echo "startingTask:{{task_id}}"
     echo ""
 
     # Use main prompt with appended system prompt
