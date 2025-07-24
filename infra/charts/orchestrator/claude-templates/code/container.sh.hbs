@@ -214,41 +214,36 @@ if [ -d "$REPO_NAME" ]; then
     echo "   This indicates workspace persistence is working correctly"
     cd "$REPO_NAME"
 
-    # Ensure main branch is current
-    echo "Updating main branch..."
-    git checkout main 2>/dev/null || git checkout -b main origin/main
-    git pull origin main
+    # Sync with latest main to prevent conflicts
+    echo "🔄 Syncing with latest main to prevent conflicts..."
+    git fetch origin main
 
     # Create or checkout feature branch
     FEATURE_BRANCH="feature/task-{{task_id}}-implementation"
+    BRANCH_EXISTS="false"
+
     if git show-ref --verify --quiet refs/heads/$FEATURE_BRANCH; then
-        # Feature branch exists - checkout and try to merge main
-        echo "Feature branch exists, checking out and merging main..."
+        BRANCH_EXISTS="true"
+        echo "Feature branch '$FEATURE_BRANCH' exists, checking out..."
         git checkout $FEATURE_BRANCH
 
-        # Attempt to merge main into feature branch
-        if git merge main --no-edit; then
-            echo "✓ Successfully merged main into feature branch"
+        echo "📥 Merging latest main into $FEATURE_BRANCH..."
+        if git merge origin/main --no-edit; then
+            echo "✓ Successfully merged latest main into feature branch"
         else
-            echo "⚠️  Merge conflicts detected during main integration"
-            echo "🔄 TARGET REPOSITORY: CLONE FORCED - conflict resolution fallback"
-            echo "   Deleting existing directory and performing fresh clone to resolve conflicts..."
-
-            # Fallback: delete and fresh clone
-            cd ..
-            rm -rf "$REPO_NAME"
-            if ! git clone "$REPO_URL" "$REPO_NAME"; then
-                echo "❌ Failed to clone target repository: $REPO_URL"
-                exit 1
-            fi
-            cd "$REPO_NAME"
-            git checkout -b $FEATURE_BRANCH
-            echo "✓ Created fresh feature branch after conflict resolution (forced fresh clone)"
+            echo "⚠️ MERGE CONFLICT: Cannot auto-merge main into $FEATURE_BRANCH"
+            echo "❗ Manual conflict resolution required by Claude agent"
+            echo ""
+            echo "📋 Conflict files:"
+            git status --porcelain | grep "^UU\|^AA\|^DD" || echo "   (Use 'git status' to see details)"
+            echo ""
+            echo "🔧 Claude will need to resolve conflicts manually before proceeding"
+            # Don't exit - let Claude handle the conflicts
         fi
     else
-        # Create new feature branch from main
-        echo "Creating new feature branch from main..."
-        git checkout -b $FEATURE_BRANCH
+        # Create new feature branch from latest main
+        echo "Creating new feature branch '$FEATURE_BRANCH' from latest main..."
+        git checkout -b $FEATURE_BRANCH origin/main
         echo "✓ Created feature branch: $FEATURE_BRANCH"
     fi
 else
@@ -262,10 +257,9 @@ else
     cd "$REPO_NAME"
     echo "✓ Target repository cloned successfully (fresh clone)"
 
-    # Ensure we're on main and create feature branch
-    git checkout main 2>/dev/null || git checkout -b main origin/main
+    # Create feature branch from latest main
     FEATURE_BRANCH="feature/task-{{task_id}}-implementation"
-    git checkout -b $FEATURE_BRANCH
+    git checkout -b $FEATURE_BRANCH origin/main
     echo "✓ Created initial feature branch: $FEATURE_BRANCH"
 fi
 

@@ -15,7 +15,7 @@
 
 ### Your Current Context
 - **Repository**: {{repository_url}}
-- **Feature Branch**: {{branch}}
+- **Feature Branch**: feature/task-{{task_id}}-implementation
 - **Target Branch**: main (never push directly to this)
 - **Authentication**: SSH (pre-configured)
 
@@ -25,7 +25,7 @@
 # After making changes, always commit and push to feature branch:
 git add .
 git commit -m "feat: implement [specific change made]"
-git push origin {{branch}}
+git push origin feature/task-{{task_id}}-implementation
 ```
 
 ### **When to Commit & Push:**
@@ -45,6 +45,56 @@ fix: resolve database connection timeout
 refactor: extract validation logic to helpers
 test: add unit tests for payment processing
 ```
+
+## 🔄 **Merge Conflict Prevention & Resolution**
+
+### **Prevention (Automated in Container Script):**
+The container automatically syncs with main before you start work:
+```bash
+# This happens automatically for you:
+git fetch origin main
+git merge origin/main --no-edit  # Auto-merge if possible
+```
+
+### **⚠️ Manual Resolution Required (If Auto-Merge Fails):**
+
+**If you see merge conflict warnings during startup or at any time:**
+
+1. **Check conflict status:**
+   ```bash
+   git status
+   # Look for "Unmerged paths" or files marked with "UU", "AA", or "DD"
+   ```
+
+2. **Identify conflicted files:**
+   ```bash
+   # Files with merge conflicts will show:
+   # - <<<<<<< HEAD (your changes)
+   # - ======= (separator)
+   # - >>>>>>> origin/main (main branch changes)
+   ```
+
+3. **Resolve conflicts manually:**
+   - Edit each conflicted file
+   - Remove conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`)
+   - Keep the correct combination of changes
+   - Save the file
+
+4. **Complete the merge:**
+   ```bash
+   git add .                           # Stage resolved files
+   git commit -m "Resolve merge conflicts with main"
+   git push origin feature/task-{{task_id}}-implementation          # Push resolution
+   ```
+
+### **Best Practices:**
+- ✅ **Always resolve conflicts immediately** - Don't ignore them
+- ✅ **Test after resolving** - Ensure your changes still work
+- ✅ **Ask for clarification** if unsure which changes to keep
+- ✅ **Sync frequently** - Smaller conflicts are easier to resolve
+
+### **If Stuck on Conflicts:**
+Comment in your PR: "Need help resolving merge conflicts in [file names]" and describe what you're unsure about.
 
 ## **🚨 PULL REQUEST SUBMISSION - MANDATORY FOR TASK COMPLETION 🚨**
 
@@ -75,7 +125,7 @@ gh pr create --title "feat: [brief summary of implementation]" \
 ```
 
 ### **✅ PR Requirements:**
-- Create PR from your feature branch ({{branch}}) to main
+- Create PR from your feature branch (feature/task-{{task_id}}-implementation) to main
 - Use descriptive title starting with feat:, fix:, etc.
 - Include comprehensive PR description with all sections above
 - **CRITICAL**: You MUST run the `gh pr create` command - just pushing is not enough
@@ -83,7 +133,7 @@ gh pr create --title "feat: [brief summary of implementation]" \
 ### **❌ NEVER Push to Main:**
 - ❌ **DO NOT** push directly to main branch
 - ❌ **DO NOT** merge your own PR
-- ✅ **ONLY** work on feature branch {{branch}}
+- ✅ **ONLY** work on feature branch feature/task-{{task_id}}-implementation
 
 ## Authentication
 
@@ -104,7 +154,7 @@ git add .
 git commit -m "feat: describe your change"
 
 # Push to feature branch (SSH automatic)
-git push origin {{branch}}
+git push origin feature/task-{{task_id}}-implementation
 
 # Create pull request (when implementation complete)
 gh pr create --title "feat: [summary]" --body "[detailed description]"
@@ -138,7 +188,7 @@ git log --oneline -10
 
 1. ✅ Implementation meets all acceptance criteria
 2. ✅ Final commit with all changes: `git add . && git commit -m "..."`
-3. ✅ Push to feature branch: `git push origin {{branch}}`
+3. ✅ Push to feature branch: `git push origin feature/task-{{task_id}}-implementation`
 4. 🚨 **MANDATORY**: Create pull request: `gh pr create --title "..." --body "..."`
 5. ❌ **NEVER** push to main branch
 
@@ -170,4 +220,4 @@ Brief description of what was implemented and why.
 
 ---
 
-**Remember: Your feature branch ({{branch}}) is your workspace. Keep it updated with regular commits, then submit a comprehensive PR when implementation is complete!**
+**Remember: Your feature branch (feature/task-{{task_id}}-implementation) is your workspace. Keep it updated with regular commits, then submit a comprehensive PR when implementation is complete!**

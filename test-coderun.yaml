@@ -7,7 +7,7 @@ spec:
   # Test repository and task
   repositoryUrl: "git@github.com:5dlabs/orchestrator-code-test.git"
   githubUser: "pm0-5dlabs"
-  taskId: 5
+  taskId: 6
 
   # Service configuration
   service: "simple-api"
@@ -24,28 +24,18 @@ spec:
   # Tool configuration - test the basic setup
   toolConfig: "default"
 
-  # Template testing flags - CONTINUE SESSION TEST
+  # Template testing flags - TEST ENV VARS & SECRETS
   overwriteMemory: false
-  continueSession: true
-  contextVersion: 2
+  continueSession: false
+  contextVersion: 1
 
-  # NEW FEATURE: Environment Variables & Secrets
+  # NEW FEATURE: Environment Variables & Secrets (TEST)
   env:
-    NODE_ENV: "development"
-    API_BASE_URL: "https://api.example.com"
-    DEBUG_LEVEL: "verbose"
-    CUSTOM_FEATURE_FLAG: "true"
-
+    TEST_MODE: "development"
   envFromSecrets:
-    - name: "DATABASE_PASSWORD"
-      secretName: "db-credentials"
-      secretKey: "password"
-    - name: "API_SECRET_KEY"
-      secretName: "api-secrets"
-      secretKey: "secret"
-    - name: "REDIS_PASSWORD"
-      secretName: "redis-creds"
-      secretKey: "redis-pass"
+    - name: "SECRET_PASSWORD"
+      secretName: "test-secrets"
+      secretKey: "test-password"
 
   # Test our updated templates:
   # - CLAUDE.md with @ pointers
