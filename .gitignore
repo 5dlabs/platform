@@ -30,6 +30,10 @@ node_modules/
 kubeconfig*
 *.kubeconfig
 
+# Test and Debug Files
+test-*.yaml
+debug-*.yaml
+
 # Helm Files
 *.tgz
 charts/*.tgz
