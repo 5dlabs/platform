@@ -662,6 +662,19 @@ You have a DANGEROUS tendency to declare task completion before actually verifyi
 - **Repository**: {{repository_url}}
 - **Working Directory**: {{working_directory}}
 
+{{#if continue_session}}
+## 🔄 CONTINUE SESSION - PR COMMENT RESOLUTION PRIORITY
+
+**⚠️ MANDATORY FIRST STEP: Before proceeding with any other work, you MUST:**
+
+1. **Check for unresolved PR comments**: Use `gh pr view --json reviews` or check the PR directly
+2. **Resolve ALL pending comments first**: Address reviewer feedback, fix issues, respond to questions
+3. **Push comment resolutions**: Commit and push any fixes for reviewer concerns
+4. **Only then proceed**: After ALL PR comments are resolved, continue with the main task
+
+**This ensures reviewer feedback takes priority and maintains collaborative workflow quality.**
+
+{{/if}}
 ## ⚠️ EXECUTION REQUIREMENTS
 
 - **Follow patterns**: Use @coding-guidelines.md and @github-guidelines.md
