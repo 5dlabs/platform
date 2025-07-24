@@ -6,7 +6,7 @@ use k8s_openapi::api::{
     core::v1::{ConfigMap, PersistentVolumeClaim},
 };
 use kube::{
-    api::{Api, Patch, PatchParams},
+    api::Api,
     runtime::{
         controller::{Action, Controller},
         finalizer::{finalizer, Event as FinalizerEvent},
@@ -14,7 +14,6 @@ use kube::{
     },
     Client,
 };
-use serde_json::json;
 use std::sync::Arc;
 use tokio::time::Duration;
 use tracing::{error, info, warn};
@@ -149,9 +148,7 @@ async fn reconcile_common(
             finalizer(&coderuns, finalizer_name, cr.clone(), |event| async {
                 match event {
                     FinalizerEvent::Apply(cr) => {
-                        // Handle continue session logic
-                        let updated_cr = handle_continue_session(cr, &coderuns).await?;
-                        let task = TaskType::Code(updated_cr);
+                        let task = TaskType::Code(cr);
                         reconcile_create_or_update(
                             task,
                             &jobs,
@@ -203,58 +200,6 @@ async fn monitor_running_job(task: &TaskType, jobs: &Api<Job>, ctx: &Arc<Context
     }
 
     Ok(())
-}
-
-/// Handle continue session logic by incrementing contextVersion when needed
-async fn handle_continue_session(
-    cr: Arc<CodeRun>,
-    coderuns: &Api<CodeRun>,
-) -> Result<Arc<CodeRun>> {
-    // Check if continue session is requested and we haven't incremented version yet
-    if cr.spec.continue_session {
-        // Get current retry count to determine if this is the first continue request
-        let current_retry_count = cr.status.as_ref().map_or(0, |s| s.retry_count.unwrap_or(0));
-
-        // Only increment context version if this is the first continue request
-        // (retry_count = 0 means this is not a retry from failure, but a user-requested continue)
-        if current_retry_count == 0 {
-            info!(
-                "Continue session requested for CodeRun: {}, incrementing contextVersion from {} to {}",
-                cr.metadata.name.as_ref().unwrap_or(&"unknown".to_string()),
-                cr.spec.context_version,
-                cr.spec.context_version + 1
-            );
-
-            // Patch the spec to increment contextVersion
-            let patch = json!({
-                "spec": {
-                    "contextVersion": cr.spec.context_version + 1
-                }
-            });
-
-            let patch_params = PatchParams::default();
-            let name = cr
-                .metadata
-                .name
-                .as_ref()
-                .ok_or_else(|| Error::ConfigError("CodeRun missing name".to_string()))?;
-
-            let patched_cr = coderuns
-                .patch(name, &patch_params, &Patch::Merge(&patch))
-                .await
-                .map_err(Error::KubeError)?;
-
-            info!(
-                "Successfully incremented contextVersion for CodeRun: {} to v{}",
-                name, patched_cr.spec.context_version
-            );
-
-            return Ok(Arc::new(patched_cr));
-        }
-    }
-
-    // No changes needed, return original
-    Ok(cr)
 }
 
 /// Error policy for DocsRun controller
