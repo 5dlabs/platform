@@ -173,6 +173,7 @@ fn generate_container_script(task: &TaskType) -> Result<String> {
         "model": task.model(),
         "service_name": task.service_name(),
         "task_id": task.task_id(),
+        "source_branch": task.source_branch(),
         "docs_repository_url": task.docs_repository_url(),
         "docs_branch": task.docs_branch(),
         "docs_project_directory": task.docs_project_directory(),

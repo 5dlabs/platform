@@ -79,6 +79,13 @@ impl TaskType {
         }
     }
 
+    pub fn source_branch(&self) -> Option<&str> {
+        match self {
+            TaskType::Docs(dr) => Some(&dr.spec.source_branch),
+            TaskType::Code(_) => None, // CodeRun uses platform_branch instead
+        }
+    }
+
     /// Get working directory (defaults to service name if not specified)
     pub fn working_directory(&self) -> &str {
         match self {
