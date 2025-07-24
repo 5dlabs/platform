@@ -100,8 +100,6 @@ impl TaskType {
         }
     }
 
-
-
     /// Get retry/versioning information for `CodeRun` (docs don't have retries)
     pub fn context_version(&self) -> u32 {
         match self {

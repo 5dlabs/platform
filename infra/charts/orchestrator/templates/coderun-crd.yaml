@@ -40,7 +40,7 @@ spec:
         properties:
           spec:
             type: object
-            required: ["taskId", "service", "repositoryUrl", "docsRepositoryUrl", "branch", "workingDirectory", "model", "githubUser"]
+            required: ["taskId", "service", "repositoryUrl", "docsRepositoryUrl", "workingDirectory", "model", "githubUser"]
             properties:
               taskId:
                 type: integer
