@@ -290,6 +290,24 @@ fn build_job_spec(
 
             // Add toolman server URL for MCP integration
             env_vars.push(json!({"name": "TOOLMAN_SERVER_URL", "value": "http://toolman.mcp.svc.cluster.local:3000/mcp"}));
+
+            // Add custom environment variables
+            for (name, value) in &cr.spec.env {
+                env_vars.push(json!({"name": name, "value": value}));
+            }
+
+            // Add environment variables from secrets
+            for secret_env in &cr.spec.env_from_secrets {
+                env_vars.push(json!({
+                    "name": secret_env.name,
+                    "valueFrom": {
+                        "secretKeyRef": {
+                            "name": secret_env.secret_name,
+                            "key": secret_env.secret_key
+                        }
+                    }
+                }));
+            }
         }
     }
 

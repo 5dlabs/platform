@@ -3,6 +3,20 @@
 use kube::CustomResource;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+/// Reference to a secret for environment variable
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+pub struct SecretEnvVar {
+    /// Name of the environment variable
+    pub name: String,
+    /// Name of the secret
+    #[serde(rename = "secretName")]
+    pub secret_name: String,
+    /// Key within the secret
+    #[serde(rename = "secretKey")]
+    pub secret_key: String,
+}
 
 /// Default function for tool_config field
 fn default_tool_config() -> String {
@@ -110,6 +124,14 @@ pub struct CodeRunSpec {
     /// Whether to overwrite memory before starting
     #[serde(default = "default_overwrite_memory", rename = "overwriteMemory")]
     pub overwrite_memory: bool,
+
+    /// Environment variables to set in the container
+    #[serde(default)]
+    pub env: HashMap<String, String>,
+
+    /// Environment variables from secrets
+    #[serde(default, rename = "envFromSecrets")]
+    pub env_from_secrets: Vec<SecretEnvVar>,
 }
 
 /// Status of the CodeRun

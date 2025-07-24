@@ -24,9 +24,28 @@ spec:
   # Tool configuration - test the basic setup
   toolConfig: "default"
 
-  # Template testing flags
+  # Template testing flags - CONTINUE SESSION TEST
   overwriteMemory: false
   continueSession: true
+  contextVersion: 2
+
+  # NEW FEATURE: Environment Variables & Secrets
+  env:
+    NODE_ENV: "development"
+    API_BASE_URL: "https://api.example.com"
+    DEBUG_LEVEL: "verbose"
+    CUSTOM_FEATURE_FLAG: "true"
+
+  envFromSecrets:
+    - name: "DATABASE_PASSWORD"
+      secretName: "db-credentials"
+      secretKey: "password"
+    - name: "API_SECRET_KEY"
+      secretName: "api-secrets"
+      secretKey: "secret"
+    - name: "REDIS_PASSWORD"
+      secretName: "redis-creds"
+      secretKey: "redis-pass"
 
   # Test our updated templates:
   # - CLAUDE.md with @ pointers
@@ -42,3 +61,5 @@ spec:
   # 5. SSH authentication setup
   # 6. Progress commit requirements
   # 7. PR submission workflow
+  # 8. CONTINUE SESSION with enhanced Task 5 requirements
+  # 9. NEW: Custom environment variables and secret references

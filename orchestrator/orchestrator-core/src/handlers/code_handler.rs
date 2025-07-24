@@ -37,6 +37,8 @@ pub async fn submit_code_task(
         docs_branch: "main".to_string(),   // Default docs branch
         continue_session: false,           // Start fresh by default
         overwrite_memory: false,           // Preserve memory by default
+        env: HashMap::new(),               // No custom env vars by default
+        env_from_secrets: Vec::new(),      // No secret env vars by default
     };
 
     let coderun = CodeRun {
