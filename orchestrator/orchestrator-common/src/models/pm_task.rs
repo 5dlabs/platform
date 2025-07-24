@@ -44,7 +44,10 @@ pub struct PmTaskRequest {
     pub prompt_modification: Option<String>,
 
     // How to apply prompt_modification: 'append' or 'replace'
-    #[serde(default = "default_prompt_mode", skip_serializing_if = "is_default_prompt_mode")]
+    #[serde(
+        default = "default_prompt_mode",
+        skip_serializing_if = "is_default_prompt_mode"
+    )]
     pub prompt_mode: String,
 
     // Local Claude Code tools to enable
@@ -56,7 +59,10 @@ pub struct PmTaskRequest {
     pub remote_tools: Vec<String>,
 
     // Tool configuration preset
-    #[serde(default = "default_tool_config", skip_serializing_if = "is_default_tool_config")]
+    #[serde(
+        default = "default_tool_config",
+        skip_serializing_if = "is_default_tool_config"
+    )]
     pub tool_config: String,
 }
 

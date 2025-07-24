@@ -89,7 +89,7 @@ impl TaskType {
                     Some(wd) if !wd.is_empty() => wd,
                     _ => &cr.spec.service,
                 }
-            },
+            }
         }
     }
 

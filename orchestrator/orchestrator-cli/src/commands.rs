@@ -18,14 +18,7 @@ pub async fn handle_task_command(
         crate::TaskCommands::Docs {
             working_directory,
             model,
-        } => {
-            handle_docs_command(
-                &api_client,
-                &output,
-                working_directory.as_deref(),
-                &model,
-            ).await
-        }
+        } => handle_docs_command(&api_client, &output, working_directory.as_deref(), &model).await,
         crate::TaskCommands::Code {
             task_id,
             service,
@@ -55,7 +48,8 @@ pub async fn handle_task_command(
                 local_tools.as_deref(),
                 remote_tools.as_deref(),
                 &tool_config,
-            ).await
+            )
+            .await
         }
     }
 }
@@ -108,7 +102,9 @@ async fn handle_docs_command(
             }
         }
         Err(e) => {
-            output.error(&format!("Failed to submit documentation generation job: {e}"))?;
+            output.error(&format!(
+                "Failed to submit documentation generation job: {e}"
+            ))?;
             return Err(e);
         }
     }
@@ -134,7 +130,9 @@ async fn handle_code_command(
     remote_tools: Option<&str>,
     tool_config: &str,
 ) -> Result<()> {
-    output.info(&format!("Submitting code task {task_id} for service '{service}'..."))?;
+    output.info(&format!(
+        "Submitting code task {task_id} for service '{service}'..."
+    ))?;
 
     // Auto-detect target repository URL if not provided
     let repo_url = match repository_url {
@@ -267,9 +265,7 @@ fn get_working_directory() -> Result<String> {
 fn get_github_user() -> Result<String> {
     use std::process::Command;
 
-    let output = Command::new("git")
-        .args(["config", "user.name"])
-        .output()?;
+    let output = Command::new("git").args(["config", "user.name"]).output()?;
 
     if !output.status.success() {
         anyhow::bail!("Failed to get git user.name");

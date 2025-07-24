@@ -20,33 +20,38 @@ use tracing::{error, info, warn};
 
 use super::resources::{cleanup_resources, reconcile_create_or_update};
 use super::status::monitor_job_status;
-use super::types::{Context, Error, Result, TaskType, DOCS_FINALIZER_NAME, CODE_FINALIZER_NAME};
+use super::types::{Context, Error, Result, TaskType, CODE_FINALIZER_NAME, DOCS_FINALIZER_NAME};
 
 /// Run the task controller for both DocsRun and CodeRun resources
 pub async fn run_task_controller(client: Client, namespace: String) -> Result<()> {
     info!("Starting task controller in namespace: {}", namespace);
 
     // Load controller configuration from ConfigMap
-    let config = match ControllerConfig::from_configmap(&client, &namespace, "task-controller-config").await {
-        Ok(cfg) => {
-            info!("Loaded controller configuration from ConfigMap");
-            // Validate configuration has required fields
-            if let Err(validation_error) = cfg.validate() {
-                return Err(Error::ConfigError(validation_error.to_string()));
+    let config =
+        match ControllerConfig::from_configmap(&client, &namespace, "task-controller-config").await
+        {
+            Ok(cfg) => {
+                info!("Loaded controller configuration from ConfigMap");
+                // Validate configuration has required fields
+                if let Err(validation_error) = cfg.validate() {
+                    return Err(Error::ConfigError(validation_error.to_string()));
+                }
+                cfg
             }
-            cfg
-        }
-        Err(e) => {
-            warn!("Failed to load configuration from ConfigMap, using defaults: {}", e);
-            let default_config = ControllerConfig::default();
-            // Validate default configuration - this should fail if image config is missing
-            if let Err(validation_error) = default_config.validate() {
-                error!("Default configuration is invalid: {}", validation_error);
-                return Err(Error::ConfigError(validation_error.to_string()));
+            Err(e) => {
+                warn!(
+                    "Failed to load configuration from ConfigMap, using defaults: {}",
+                    e
+                );
+                let default_config = ControllerConfig::default();
+                // Validate default configuration - this should fail if image config is missing
+                if let Err(validation_error) = default_config.validate() {
+                    error!("Default configuration is invalid: {}", validation_error);
+                    return Err(Error::ConfigError(validation_error.to_string()));
+                }
+                default_config
             }
-            default_config
-        }
-    };
+        };
 
     let context = Arc::new(Context {
         client: client.clone(),
@@ -92,12 +97,20 @@ async fn reconcile_code(cr: Arc<CodeRun>, ctx: Arc<Context>) -> Result<Action> {
 }
 
 /// Common reconciliation logic for both DocsRun and CodeRun
-async fn reconcile_common(task: TaskType, ctx: Arc<Context>, finalizer_name: &str) -> Result<Action> {
+async fn reconcile_common(
+    task: TaskType,
+    ctx: Arc<Context>,
+    finalizer_name: &str,
+) -> Result<Action> {
     let namespace = &ctx.namespace;
     let client = &ctx.client;
     let name = task.name();
 
-    info!("Reconciling {}: {}", if task.is_docs() { "DocsRun" } else { "CodeRun" }, name);
+    info!(
+        "Reconciling {}: {}",
+        if task.is_docs() { "DocsRun" } else { "CodeRun" },
+        name
+    );
 
     // Create APIs
     let jobs: Api<Job> = Api::namespaced(client.clone(), namespace);
@@ -112,14 +125,23 @@ async fn reconcile_common(task: TaskType, ctx: Arc<Context>, finalizer_name: &st
                 match event {
                     FinalizerEvent::Apply(dr) => {
                         let task = TaskType::Docs(dr);
-                        reconcile_create_or_update(task, &jobs, &configmaps, &pvcs, &ctx.config, &ctx).await
+                        reconcile_create_or_update(
+                            task,
+                            &jobs,
+                            &configmaps,
+                            &pvcs,
+                            &ctx.config,
+                            &ctx,
+                        )
+                        .await
                     }
                     FinalizerEvent::Cleanup(dr) => {
                         let task = TaskType::Docs(dr);
                         cleanup_resources(task, &jobs, &configmaps).await
                     }
                 }
-            }).await
+            })
+            .await
         }
         TaskType::Code(cr) => {
             let coderuns: Api<CodeRun> = Api::namespaced(client.clone(), namespace);
@@ -127,14 +149,23 @@ async fn reconcile_common(task: TaskType, ctx: Arc<Context>, finalizer_name: &st
                 match event {
                     FinalizerEvent::Apply(cr) => {
                         let task = TaskType::Code(cr);
-                        reconcile_create_or_update(task, &jobs, &configmaps, &pvcs, &ctx.config, &ctx).await
+                        reconcile_create_or_update(
+                            task,
+                            &jobs,
+                            &configmaps,
+                            &pvcs,
+                            &ctx.config,
+                            &ctx,
+                        )
+                        .await
                     }
                     FinalizerEvent::Cleanup(cr) => {
                         let task = TaskType::Code(cr);
                         cleanup_resources(task, &jobs, &configmaps).await
                     }
                 }
-            }).await
+            })
+            .await
         }
     };
 
@@ -160,14 +191,8 @@ async fn reconcile_common(task: TaskType, ctx: Arc<Context>, finalizer_name: &st
 /// Monitor running job status for both task types
 async fn monitor_running_job(task: &TaskType, jobs: &Api<Job>, ctx: &Arc<Context>) -> Result<()> {
     let is_running = match task {
-        TaskType::Docs(dr) => {
-            dr.status.as_ref()
-                .is_some_and(|s| s.phase == "Running")
-        }
-        TaskType::Code(cr) => {
-            cr.status.as_ref()
-                .is_some_and(|s| s.phase == "Running")
-        }
+        TaskType::Docs(dr) => dr.status.as_ref().is_some_and(|s| s.phase == "Running"),
+        TaskType::Code(cr) => cr.status.as_ref().is_some_and(|s| s.phase == "Running"),
     };
 
     if is_running {

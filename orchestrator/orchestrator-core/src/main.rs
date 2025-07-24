@@ -11,11 +11,7 @@ use axum::{
 use kube::Client;
 use orchestrator_core::{
     controllers::run_task_controller,
-    handlers::{
-        code_handler::submit_code_task,
-        common::AppState,
-        docs_handler::generate_docs,
-    },
+    handlers::{code_handler::submit_code_task, common::AppState, docs_handler::generate_docs},
 };
 use serde_json::{json, Value};
 use tokio::signal;
@@ -25,21 +21,21 @@ use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 async fn create_app_state() -> Result<AppState> {
-        // Initialize Kubernetes client
-        let k8s_client = Client::try_default()
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to create K8s client: {}", e))?;
+    // Initialize Kubernetes client
+    let k8s_client = Client::try_default()
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to create K8s client: {}", e))?;
 
-        // Get namespace from environment or use default
-        let namespace =
-            std::env::var("KUBERNETES_NAMESPACE").unwrap_or_else(|_| "orchestrator".to_string());
+    // Get namespace from environment or use default
+    let namespace =
+        std::env::var("KUBERNETES_NAMESPACE").unwrap_or_else(|_| "orchestrator".to_string());
 
-        info!("Initialized orchestrator for namespace: {}", namespace);
+    info!("Initialized orchestrator for namespace: {}", namespace);
 
     Ok(AppState {
         k8s_client,
         namespace,
-        })
+    })
 }
 
 /// Health check endpoint
@@ -152,4 +148,3 @@ async fn shutdown_signal() {
 
     info!("Shutdown signal received, starting graceful shutdown");
 }
-

@@ -126,8 +126,9 @@ fn default_workspace_size() -> String {
 impl ControllerConfig {
     /// Validate that configuration has required fields
     pub fn validate(&self) -> Result<(), anyhow::Error> {
-        if self.agent.image.repository == "MISSING_IMAGE_CONFIG" ||
-           self.agent.image.tag == "MISSING_IMAGE_CONFIG" {
+        if self.agent.image.repository == "MISSING_IMAGE_CONFIG"
+            || self.agent.image.tag == "MISSING_IMAGE_CONFIG"
+        {
             return Err(anyhow::anyhow!(
                 "Agent image configuration is missing! This indicates the controller ConfigMap was not loaded properly. \
                 Please ensure the 'agent.image.repository' and 'agent.image.tag' are set in the Helm values."

@@ -2,10 +2,10 @@ use k8s_openapi::api::batch::v1::Job;
 use kube::api::{Api, Patch, PatchParams};
 use serde_json::json;
 use std::sync::Arc;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
-use crate::crds::{CodeRun, DocsRun, CodeRunCondition, DocsRunCondition};
 use super::types::{Context, Result, TaskType};
+use crate::crds::{CodeRun, CodeRunCondition, DocsRun, DocsRunCondition};
 
 /// Monitor Job status and update CRD accordingly
 pub async fn monitor_job_status(
@@ -27,7 +27,12 @@ pub async fn monitor_job_status(
                 info!("Job {} not found yet for task {}", job_name, task.name());
             }
             Err(e) => {
-                warn!("Failed to get job {} for task {}: {}", job_name, task.name(), e);
+                warn!(
+                    "Failed to get job {} for task {}: {}",
+                    job_name,
+                    task.name(),
+                    e
+                );
             }
         }
     }
@@ -38,12 +43,8 @@ pub async fn monitor_job_status(
 /// Get the current job name for a task
 fn get_current_job_name(task: &TaskType) -> Option<String> {
     match task {
-        TaskType::Docs(dr) => {
-            dr.status.as_ref().and_then(|s| s.job_name.clone())
-        }
-        TaskType::Code(cr) => {
-            cr.status.as_ref().and_then(|s| s.job_name.clone())
-        }
+        TaskType::Docs(dr) => dr.status.as_ref().and_then(|s| s.job_name.clone()),
+        TaskType::Code(cr) => cr.status.as_ref().and_then(|s| s.job_name.clone()),
     }
 }
 
@@ -55,7 +56,11 @@ fn analyze_job_status(job: &Job) -> (String, String, Option<String>) {
             if let Some(conditions) = &status.conditions {
                 for condition in conditions {
                     if condition.type_ == "Complete" && condition.status == "True" {
-                        return ("Succeeded".to_string(), "Job completed successfully".to_string(), None);
+                        return (
+                            "Succeeded".to_string(),
+                            "Job completed successfully".to_string(),
+                            None,
+                        );
                     } else if condition.type_ == "Failed" && condition.status == "True" {
                         let message = condition.message.as_deref().unwrap_or("Job failed");
                         return ("Failed".to_string(), message.to_string(), None);
@@ -80,7 +85,11 @@ fn analyze_job_status(job: &Job) -> (String, String, Option<String>) {
     }
 
     // Default to pending if we can't determine status
-    ("Pending".to_string(), "Job status unknown".to_string(), None)
+    (
+        "Pending".to_string(),
+        "Job status unknown".to_string(),
+        None,
+    )
 }
 
 /// Update the task CRD status
@@ -156,28 +165,34 @@ async fn update_task_status(
 
 /// Build conditions for DocsRun status
 fn build_docs_conditions(phase: &str, message: &str, timestamp: &str) -> Vec<DocsRunCondition> {
-    vec![
-        DocsRunCondition {
-            condition_type: "Ready".to_string(),
-            status: if phase == "Succeeded" { "True" } else { "False" }.to_string(),
-            last_transition_time: Some(timestamp.to_string()),
-            reason: Some(phase.to_string()),
-            message: Some(message.to_string()),
+    vec![DocsRunCondition {
+        condition_type: "Ready".to_string(),
+        status: if phase == "Succeeded" {
+            "True"
+        } else {
+            "False"
         }
-    ]
+        .to_string(),
+        last_transition_time: Some(timestamp.to_string()),
+        reason: Some(phase.to_string()),
+        message: Some(message.to_string()),
+    }]
 }
 
 /// Build conditions for CodeRun status
 fn build_code_conditions(phase: &str, message: &str, timestamp: &str) -> Vec<CodeRunCondition> {
-    vec![
-        CodeRunCondition {
-            condition_type: "Ready".to_string(),
-            status: if phase == "Succeeded" { "True" } else { "False" }.to_string(),
-            last_transition_time: Some(timestamp.to_string()),
-            reason: Some(phase.to_string()),
-            message: Some(message.to_string()),
+    vec![CodeRunCondition {
+        condition_type: "Ready".to_string(),
+        status: if phase == "Succeeded" {
+            "True"
+        } else {
+            "False"
         }
-    ]
+        .to_string(),
+        last_transition_time: Some(timestamp.to_string()),
+        reason: Some(phase.to_string()),
+        message: Some(message.to_string()),
+    }]
 }
 
 /// Update task status when job starts (called from reconcile logic)
@@ -208,7 +223,9 @@ pub async fn update_job_started(
             });
 
             let patch = Patch::Merge(&status_patch);
-            docs_api.patch_status(&name, &PatchParams::default(), &patch).await?;
+            docs_api
+                .patch_status(&name, &PatchParams::default(), &patch)
+                .await?;
         }
         TaskType::Code(_) => {
             let code_api: Api<CodeRun> = Api::namespaced(client.clone(), namespace);
@@ -225,7 +242,9 @@ pub async fn update_job_started(
             });
 
             let patch = Patch::Merge(&status_patch);
-            code_api.patch_status(&name, &PatchParams::default(), &patch).await?;
+            code_api
+                .patch_status(&name, &PatchParams::default(), &patch)
+                .await?;
         }
     }
 

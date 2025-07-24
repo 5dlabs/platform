@@ -1,5 +1,5 @@
-use serde_json::json;
 use super::types::TaskType;
+use serde_json::json;
 
 /// Generate SSH key volume configuration if needed
 pub fn generate_ssh_volumes(task: &TaskType) -> Vec<serde_json::Value> {

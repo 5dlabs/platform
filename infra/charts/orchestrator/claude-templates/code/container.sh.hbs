@@ -90,6 +90,15 @@ if command -v gh >/dev/null 2>&1; then
   echo "Configuring GitHub CLI to use SSH for git operations..."
   gh config set git_protocol ssh --host github.com
   echo "✓ GitHub CLI configured to use SSH protocol for github.com"
+
+  # Authenticate with GitHub using the provided PAT
+  if [ -n "$GH_TOKEN" ]; then
+    echo "Authenticating GitHub CLI with provided token..."
+    echo "$GH_TOKEN" | gh auth login --with-token
+    echo "✓ GitHub CLI authenticated successfully"
+  else
+    echo "⚠️ No GitHub token (GH_TOKEN) provided - API operations may fail"
+  fi
 else
   echo "⚠️ GitHub CLI not available - will use pure git commands"
 fi
@@ -657,7 +666,7 @@ You have a DANGEROUS tendency to declare task completion before actually verifyi
 ## ⚠️ EXECUTION REQUIREMENTS
 
 - **Follow patterns**: Use @coding-guidelines.md and @github-guidelines.md
-- **GitHub workflow**: Read @github-guidelines.md for commit standards and **ensure you submit a pull request automatically when implementation is complete**
+- **GitHub workflow**: Read @github-guidelines.md for commit standards and **🚨 MANDATORY: CREATE A PULL REQUEST USING `gh pr create` - THE TASK IS NOT COMPLETE WITHOUT THIS STEP 🚨**
 - **Verify continuously**: Run tests and checks after each significant change
 - **Commit incrementally**: Don'\''t save all changes for the end
 - **Test thoroughly**: Validate against acceptance criteria before completion
@@ -680,6 +689,9 @@ if [ -f "$CLAUDE_WORK_DIR/task/prompt.md" ]; then
     echo "$SYSTEM_PROMPT"
     echo ""
     echo "=== END DEBUG PROMPTS ==="
+    echo ""
+
+    echo "startingTask: $TASK"
     echo ""
 
     # Use main prompt with appended system prompt

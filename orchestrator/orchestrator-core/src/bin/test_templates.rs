@@ -28,7 +28,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn test_docs_templates(handlebars: &mut Handlebars, template_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn test_docs_templates(
+    handlebars: &mut Handlebars,
+    template_dir: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("📄 Testing Docs Templates:");
 
     // Mock DocsRunSpec data
@@ -44,7 +47,7 @@ fn test_docs_templates(handlebars: &mut Handlebars, template_dir: &Path) -> Resu
     let docs_templates = [
         "docs/claude.md.hbs",
         "docs/settings.json.hbs",
-        "docs/container.sh.hbs"
+        "docs/container.sh.hbs",
     ];
 
     for template_name in &docs_templates {
@@ -80,7 +83,10 @@ fn test_docs_templates(handlebars: &mut Handlebars, template_dir: &Path) -> Resu
     Ok(())
 }
 
-fn test_code_templates(handlebars: &mut Handlebars, template_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn test_code_templates(
+    handlebars: &mut Handlebars,
+    template_dir: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("💻 Testing Code Templates:");
 
     // Mock CodeRunSpec data
@@ -105,7 +111,7 @@ fn test_code_templates(handlebars: &mut Handlebars, template_dir: &Path) -> Resu
     let code_templates = [
         "code/claude.md.hbs",
         "code/settings.json.hbs",
-        "code/container.sh.hbs"
+        "code/container.sh.hbs",
     ];
 
     for template_name in &code_templates {

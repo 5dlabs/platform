@@ -46,17 +46,39 @@ refactor: extract validation logic to helpers
 test: add unit tests for payment processing
 ```
 
-## **PULL REQUEST SUBMISSION - REQUIRED WHEN COMPLETE**
+## **🚨 PULL REQUEST SUBMISSION - MANDATORY FOR TASK COMPLETION 🚨**
+
+**THE TASK IS NOT COMPLETE UNTIL YOU CREATE A PULL REQUEST. NO EXCEPTIONS.**
 
 When you have completed implementation and met all acceptance criteria:
 
-### **✅ DO Submit a Pull Request:**
+### **✅ MANDATORY: Submit a Pull Request Using GitHub CLI:**
+```bash
+# This command is REQUIRED - the task is not done without it
+gh pr create --title "feat: [brief summary of implementation]" \
+             --body "## Implementation Summary
+[Brief description of what was implemented]
+
+## Changes Made
+- [List key changes]
+- [New features added]
+- [Bug fixes implemented]
+
+## Testing Performed
+- [Tests written/updated]
+- [Manual testing completed]
+- [Verification steps]
+
+## Notes
+- [Any important technical decisions]
+- [Performance/security considerations]"
+```
+
+### **✅ PR Requirements:**
 - Create PR from your feature branch ({{branch}}) to main
-- Write comprehensive PR description explaining:
-  - What was implemented
-  - Key changes made
-  - Testing performed
-  - Any important notes for reviewers
+- Use descriptive title starting with feat:, fix:, etc.
+- Include comprehensive PR description with all sections above
+- **CRITICAL**: You MUST run the `gh pr create` command - just pushing is not enough
 
 ### **❌ NEVER Push to Main:**
 - ❌ **DO NOT** push directly to main branch
@@ -110,14 +132,17 @@ git log --oneline -10
 3. **Clear commit messages** document your implementation decisions
 4. **PR submission** provides proper code review process
 
-## **Implementation Complete = Submit Pull Request**
+## **🚨 TASK COMPLETION CHECKLIST - ALL STEPS MANDATORY 🚨**
 
-When you've completed the implementation and met all acceptance criteria:
+**A task is ONLY complete when ALL these steps are done:**
 
-1. ✅ Make final commit with all changes
-2. ✅ Push to feature branch: `git push origin {{branch}}`
-3. ✅ Submit pull request with detailed description
-4. ❌ **DO NOT** push to main branch
+1. ✅ Implementation meets all acceptance criteria
+2. ✅ Final commit with all changes: `git add . && git commit -m "..."`
+3. ✅ Push to feature branch: `git push origin {{branch}}`
+4. 🚨 **MANDATORY**: Create pull request: `gh pr create --title "..." --body "..."`
+5. ❌ **NEVER** push to main branch
+
+**WITHOUT STEP 4, THE TASK IS INCOMPLETE - NO EXCEPTIONS**
 
 ### **PR Description Template:**
 ```markdown

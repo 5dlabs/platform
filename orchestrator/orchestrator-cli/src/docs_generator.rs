@@ -1,11 +1,11 @@
 //! Minimal documentation generator for preparing local files before submission
 
 use anyhow::{Context, Result};
+use serde_json::Value;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
 use tracing::info;
-use serde_json::Value;
 
 /// Simple docs generator that handles local file preparation
 pub struct DocsGenerator;
@@ -51,7 +51,9 @@ impl DocsGenerator {
             .context("Failed to get git remote URL")?;
 
         if !output.status.success() {
-            anyhow::bail!("Failed to detect git repository URL. Please specify with --repository-url");
+            anyhow::bail!(
+                "Failed to detect git repository URL. Please specify with --repository-url"
+            );
         }
 
         Ok(String::from_utf8(output.stdout)?.trim().to_string())
@@ -120,7 +122,11 @@ impl DocsGenerator {
                 .context("Failed to add .taskmaster files")?;
 
             Command::new("git")
-                .args(["commit", "-m", "chore: auto-commit .taskmaster directory for documentation generation"])
+                .args([
+                    "commit",
+                    "-m",
+                    "chore: auto-commit .taskmaster directory for documentation generation",
+                ])
                 .status()
                 .context("Failed to commit .taskmaster files")?;
 
@@ -152,11 +158,9 @@ impl DocsGenerator {
             anyhow::bail!("No tasks.json found at {}", tasks_json_path);
         }
 
-        let content = fs::read_to_string(&tasks_json_path)
-            .context("Failed to read tasks.json")?;
+        let content = fs::read_to_string(&tasks_json_path).context("Failed to read tasks.json")?;
 
-        let json: Value = serde_json::from_str(&content)
-            .context("Failed to parse tasks.json")?;
+        let json: Value = serde_json::from_str(&content).context("Failed to parse tasks.json")?;
 
         let tasks = json
             .get("master")
@@ -165,8 +169,7 @@ impl DocsGenerator {
             .context("No tasks found in tasks.json")?;
 
         let docs_dir = format!("{taskmaster_path}/docs");
-        fs::create_dir_all(&docs_dir)
-            .context("Failed to create docs directory")?;
+        fs::create_dir_all(&docs_dir).context("Failed to create docs directory")?;
 
         let mut created_count = 0;
         for task in tasks {
@@ -184,7 +187,10 @@ impl DocsGenerator {
                             .context(format!("Failed to copy task file for task {task_id}"))?;
                         info!("✓ Copied task file for task {}: {}", task_id, title);
                     } else {
-                        info!("⚠ No task file found for task {} (expected: {})", task_id, source_file);
+                        info!(
+                            "⚠ No task file found for task {} (expected: {})",
+                            task_id, source_file
+                        );
                     }
 
                     created_count += 1;
@@ -192,7 +198,10 @@ impl DocsGenerator {
             }
         }
 
-        info!("✓ Created documentation structure for {} tasks", created_count);
+        info!(
+            "✓ Created documentation structure for {} tasks",
+            created_count
+        );
         Ok(())
     }
 }

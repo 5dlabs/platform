@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use tracing::info;
 
-use super::auth::{generate_ssh_volumes};
+use super::auth::generate_ssh_volumes;
 use super::status::update_job_started;
 use super::templates::generate_templates;
 use super::types::{Result, TaskType};
@@ -76,7 +76,12 @@ fn generate_configmap_name(task: &TaskType) -> String {
 }
 
 /// Create ConfigMap with all template files
-fn create_configmap(task: &TaskType, name: &str, config: &ControllerConfig, owner_ref: Option<OwnerReference>) -> Result<ConfigMap> {
+fn create_configmap(
+    task: &TaskType,
+    name: &str,
+    config: &ControllerConfig,
+    owner_ref: Option<OwnerReference>,
+) -> Result<ConfigMap> {
     let mut data = BTreeMap::new();
 
     // Generate all templates for this task
@@ -139,7 +144,9 @@ async fn create_job(
             // Try to get existing job for owner reference
             match jobs.get(&job_name).await {
                 Ok(existing_job) => {
-                    if let (Some(uid), Some(name)) = (existing_job.metadata.uid, existing_job.metadata.name) {
+                    if let (Some(uid), Some(name)) =
+                        (existing_job.metadata.uid, existing_job.metadata.name)
+                    {
                         Ok(Some(OwnerReference {
                             api_version: "batch/v1".to_string(),
                             kind: "Job".to_string(),
@@ -167,14 +174,20 @@ fn generate_job_name(task: &TaskType) -> String {
             format!("docs-gen-{resource_name}")
         }
         TaskType::Code(_) => {
+            let task_id = task.task_id().unwrap_or(0);
             let context_version = task.context_version();
-            format!("code-impl-{resource_name}-v{context_version}")
+            format!("code-impl-{resource_name}-task{task_id}-v{context_version}")
         }
     }
 }
 
 /// Build the complete Job specification
-fn build_job_spec(task: &TaskType, job_name: &str, cm_name: &str, config: &ControllerConfig) -> Result<Job> {
+fn build_job_spec(
+    task: &TaskType,
+    job_name: &str,
+    cm_name: &str,
+    config: &ControllerConfig,
+) -> Result<Job> {
     let labels = create_task_labels(task);
 
     // Build volumes based on task type
@@ -215,25 +228,25 @@ fn build_job_spec(task: &TaskType, job_name: &str, cm_name: &str, config: &Contr
         let ssh_volumes = generate_ssh_volumes(task);
         volumes.extend(ssh_volumes);
 
-            volume_mounts.push(json!({
-        "name": "ssh-key",
-        "mountPath": "/workspace/.ssh",
+        volume_mounts.push(json!({
+            "name": "ssh-key",
+            "mountPath": "/workspace/.ssh",
+            "readOnly": true
+        }));
+    }
+
+    // Mount settings.json directly to /etc/claude-code/managed-settings.json
+    volume_mounts.push(json!({
+        "name": "task-files",
+        "mountPath": "/etc/claude-code/managed-settings.json",
+        "subPath": "settings.json",
         "readOnly": true
     }));
-}
 
-// Mount settings.json directly to /etc/claude-code/managed-settings.json
-volume_mounts.push(json!({
-    "name": "task-files",
-    "mountPath": "/etc/claude-code/managed-settings.json",
-    "subPath": "settings.json",
-    "readOnly": true
-}));
+    // Guidelines files will be copied from ConfigMap to working directory by container.sh
+    // No need to mount them separately since they need to be in the working directory
 
-// Guidelines files will be copied from ConfigMap to working directory by container.sh
-// No need to mount them separately since they need to be in the working directory
-
-// Environment variables
+    // Environment variables
     let mut env_vars = vec![
         json!({"name": "ANTHROPIC_API_KEY", "valueFrom": {"secretKeyRef": {"name": config.secrets.api_key_secret_name, "key": config.secrets.api_key_secret_key}}}),
         json!({"name": "TASK_TYPE", "value": if task.is_docs() { "docs" } else { "code" }}),
@@ -263,8 +276,10 @@ volume_mounts.push(json!({
         TaskType::Code(cr) => {
             env_vars.push(json!({"name": "TASK_ID", "value": cr.spec.task_id.to_string()}));
             env_vars.push(json!({"name": "SERVICE_NAME", "value": cr.spec.service}));
-            env_vars.push(json!({"name": "DOCS_REPOSITORY_URL", "value": cr.spec.docs_repository_url}));
-            env_vars.push(json!({"name": "MCP_CLIENT_CONFIG", "value": "/.claude/client-config.json"}));
+            env_vars
+                .push(json!({"name": "DOCS_REPOSITORY_URL", "value": cr.spec.docs_repository_url}));
+            env_vars
+                .push(json!({"name": "MCP_CLIENT_CONFIG", "value": "/.claude/client-config.json"}));
 
             if let Some(local_tools) = &cr.spec.local_tools {
                 env_vars.push(json!({"name": "LOCAL_TOOLS", "value": local_tools}));
@@ -279,12 +294,14 @@ volume_mounts.push(json!({
         }
     }
 
-
     // Job deadline from config
     let job_deadline = config.job.active_deadline_seconds;
 
     // Agent image from config
-    let agent_image = format!("{}:{}", config.agent.image.repository, config.agent.image.tag);
+    let agent_image = format!(
+        "{}:{}",
+        config.agent.image.repository, config.agent.image.tag
+    );
 
     let job_spec = json!({
         "apiVersion": "batch/v1",
@@ -341,9 +358,20 @@ fn create_task_labels(task: &TaskType) -> BTreeMap<String, String> {
     let mut labels = BTreeMap::new();
 
     labels.insert("app".to_string(), "orchestrator".to_string());
-    labels.insert("component".to_string(), if task.is_docs() { "docs-generator" } else { "code-runner" }.to_string());
+    labels.insert(
+        "component".to_string(),
+        if task.is_docs() {
+            "docs-generator"
+        } else {
+            "code-runner"
+        }
+        .to_string(),
+    );
     labels.insert("github-user".to_string(), task.github_user().to_string());
-    labels.insert("context-version".to_string(), task.context_version().to_string());
+    labels.insert(
+        "context-version".to_string(),
+        task.context_version().to_string(),
+    );
 
     match task {
         TaskType::Docs(_) => {
@@ -362,7 +390,12 @@ fn create_task_labels(task: &TaskType) -> BTreeMap<String, String> {
 }
 
 /// Ensure PVC exists for the given service
-async fn ensure_pvc_exists(pvcs: &Api<PersistentVolumeClaim>, pvc_name: &str, service_name: &str, config: &ControllerConfig) -> Result<()> {
+async fn ensure_pvc_exists(
+    pvcs: &Api<PersistentVolumeClaim>,
+    pvc_name: &str,
+    service_name: &str,
+    config: &ControllerConfig,
+) -> Result<()> {
     match pvcs.get(pvc_name).await {
         Ok(_) => {
             info!("PVC already exists: {}", pvc_name);
@@ -467,10 +500,17 @@ async fn cleanup_old_configmaps(task: &TaskType, configmaps: &Api<ConfigMap>) ->
 }
 
 /// Update the owner reference of an existing ConfigMap
-async fn update_configmap_owner(_task: &TaskType, configmaps: &Api<ConfigMap>, cm_name: &str, owner_ref: OwnerReference) -> Result<()> {
+async fn update_configmap_owner(
+    _task: &TaskType,
+    configmaps: &Api<ConfigMap>,
+    cm_name: &str,
+    owner_ref: OwnerReference,
+) -> Result<()> {
     let mut configmap = configmaps.get(cm_name).await?;
     configmap.metadata.owner_references = Some(vec![owner_ref]);
-    configmaps.replace(cm_name, &PostParams::default(), &configmap).await?;
+    configmaps
+        .replace(cm_name, &PostParams::default(), &configmap)
+        .await?;
     info!("Updated ConfigMap owner reference for: {}", cm_name);
     Ok(())
 }
@@ -490,7 +530,9 @@ pub async fn cleanup_resources(
     info!("Cleaning up resources for task: {}", task.name());
 
     // Delete all jobs for this task
-    let job_list = jobs.list(&ListParams::default().labels(&task_label)).await?;
+    let job_list = jobs
+        .list(&ListParams::default().labels(&task_label))
+        .await?;
     for job in job_list.items {
         if let Some(name) = &job.metadata.name {
             jobs.delete(name, &DeleteParams::background()).await?;
@@ -499,7 +541,9 @@ pub async fn cleanup_resources(
     }
 
     // Delete all configmaps for this task
-    let cm_list = configmaps.list(&ListParams::default().labels(&task_label)).await?;
+    let cm_list = configmaps
+        .list(&ListParams::default().labels(&task_label))
+        .await?;
     for cm in cm_list.items {
         if let Some(name) = &cm.metadata.name {
             configmaps.delete(name, &DeleteParams::default()).await?;

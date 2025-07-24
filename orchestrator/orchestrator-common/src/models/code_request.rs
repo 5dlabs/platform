@@ -28,7 +28,7 @@ pub struct CodeRequest {
     /// Working directory within target repository (defaults to service name)
     pub working_directory: Option<String>,
 
-        /// Claude model to use (sonnet, opus)
+    /// Claude model to use (sonnet, opus)
     pub model: String,
 
     /// Local MCP tools/servers to enable (comma-separated)

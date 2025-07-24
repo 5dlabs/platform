@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use tracing::{error, info};
 
 use crate::crds::{DocsRun, DocsRunSpec, DocsRunStatus};
-use crate::handlers::common::{AppError, AppState, ApiResponse};
+use crate::handlers::common::{ApiResponse, AppError, AppState};
 use orchestrator_common::models::DocsRequest;
 
 /// Generate documentation for Task Master tasks

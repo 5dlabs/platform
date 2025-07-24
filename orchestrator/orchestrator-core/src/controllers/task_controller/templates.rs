@@ -1,7 +1,7 @@
-use handlebars::Handlebars;
-use serde_json::json;
 use super::config::ControllerConfig;
 use super::types::{Result, TaskType};
+use handlebars::Handlebars;
+use serde_json::json;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
@@ -15,12 +15,17 @@ fn load_template(relative_path: &str) -> Result<String> {
     // Convert path separators to underscores for ConfigMap key lookup
     let configmap_key = relative_path.replace('/', "_");
     let full_path = Path::new(CLAUDE_TEMPLATES_PATH).join(&configmap_key);
-    debug!("Loading template from: {} (key: {})", full_path.display(), configmap_key);
+    debug!(
+        "Loading template from: {} (key: {})",
+        full_path.display(),
+        configmap_key
+    );
 
-    fs::read_to_string(&full_path)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(
-            format!("Failed to load template {relative_path} (key: {configmap_key}): {e}")
+    fs::read_to_string(&full_path).map_err(|e| {
+        crate::controllers::task_controller::types::Error::ConfigError(format!(
+            "Failed to load template {relative_path} (key: {configmap_key}): {e}"
         ))
+    })
 }
 
 /// Generate all template files for a task
@@ -37,14 +42,26 @@ pub fn generate_templates(
     templates.insert("CLAUDE.md".to_string(), generate_claude_memory(task)?);
 
     // Generate Claude settings
-    templates.insert("settings.json".to_string(), generate_claude_settings(task, config)?);
+    templates.insert(
+        "settings.json".to_string(),
+        generate_claude_settings(task, config)?,
+    );
 
     // Generate MCP config (code tasks only)
     if !task.is_docs() {
         templates.insert("mcp.json".to_string(), generate_mcp_config(task, config)?);
-        templates.insert("client-config.json".to_string(), generate_client_config(task, config)?);
-        templates.insert("coding-guidelines.md".to_string(), generate_coding_guidelines(task)?);
-        templates.insert("github-guidelines.md".to_string(), generate_github_guidelines(task)?);
+        templates.insert(
+            "client-config.json".to_string(),
+            generate_client_config(task, config)?,
+        );
+        templates.insert(
+            "coding-guidelines.md".to_string(),
+            generate_coding_guidelines(task)?,
+        );
+        templates.insert(
+            "github-guidelines.md".to_string(),
+            generate_github_guidelines(task)?,
+        );
         templates.insert("mcp-tools.md".to_string(), generate_mcp_tools_doc(task)?);
     }
 
@@ -73,7 +90,11 @@ fn generate_claude_memory(task: &TaskType) -> Result<String> {
 
     handlebars
         .register_template_string("claude_memory", template)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register CLAUDE.md template: {e}")))?;
+        .map_err(|e| {
+            crate::controllers::task_controller::types::Error::ConfigError(format!(
+                "Failed to register CLAUDE.md template: {e}"
+            ))
+        })?;
 
     let data = json!({
         "repository": json!({
@@ -86,9 +107,11 @@ fn generate_claude_memory(task: &TaskType) -> Result<String> {
         "docs_repository_url": task.docs_repository_url()
     });
 
-    handlebars
-        .render("claude_memory", &data)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render CLAUDE.md template: {e}")))
+    handlebars.render("claude_memory", &data).map_err(|e| {
+        crate::controllers::task_controller::types::Error::ConfigError(format!(
+            "Failed to render CLAUDE.md template: {e}"
+        ))
+    })
 }
 
 /// Generate Claude Code settings.json for tool permissions
@@ -106,16 +129,20 @@ fn generate_claude_settings(task: &TaskType, config: &ControllerConfig) -> Resul
 
     handlebars
         .register_template_string("settings", template)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register settings template: {e}")))?;
+        .map_err(|e| {
+            crate::controllers::task_controller::types::Error::ConfigError(format!(
+                "Failed to register settings template: {e}"
+            ))
+        })?;
 
     let data = build_settings_template_data(task, config);
 
-    handlebars
-        .render("settings", &data)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render settings template: {e}")))
+    handlebars.render("settings", &data).map_err(|e| {
+        crate::controllers::task_controller::types::Error::ConfigError(format!(
+            "Failed to render settings template: {e}"
+        ))
+    })
 }
-
-
 
 /// Generate container startup script from template
 fn generate_container_script(task: &TaskType) -> Result<String> {
@@ -132,7 +159,11 @@ fn generate_container_script(task: &TaskType) -> Result<String> {
 
     handlebars
         .register_template_string("container_script", template)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register container script template: {e}")))?;
+        .map_err(|e| {
+            crate::controllers::task_controller::types::Error::ConfigError(format!(
+                "Failed to register container script template: {e}"
+            ))
+        })?;
 
     // Prompt content is now embedded inline in container script - no template needed
 
@@ -156,9 +187,11 @@ fn generate_container_script(task: &TaskType) -> Result<String> {
         }
     });
 
-    handlebars
-        .render("container_script", &data)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render container script template: {e}")))
+    handlebars.render("container_script", &data).map_err(|e| {
+        crate::controllers::task_controller::types::Error::ConfigError(format!(
+            "Failed to render container script template: {e}"
+        ))
+    })
 }
 
 /// Generate MCP configuration for implementation tasks
@@ -170,13 +203,19 @@ fn generate_mcp_config(task: &TaskType, config: &ControllerConfig) -> Result<Str
 
     handlebars
         .register_template_string("mcp", &template)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register MCP template: {e}")))?;
+        .map_err(|e| {
+            crate::controllers::task_controller::types::Error::ConfigError(format!(
+                "Failed to register MCP template: {e}"
+            ))
+        })?;
 
     let data = build_settings_template_data(task, config);
 
-    handlebars
-        .render("mcp", &data)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render MCP template: {e}")))
+    handlebars.render("mcp", &data).map_err(|e| {
+        crate::controllers::task_controller::types::Error::ConfigError(format!(
+            "Failed to render MCP template: {e}"
+        ))
+    })
 }
 
 /// Generate MCP tools documentation based on task configuration
@@ -188,17 +227,23 @@ fn generate_mcp_tools_doc(task: &TaskType) -> Result<String> {
 
     handlebars
         .register_template_string("mcp_tools", template)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register MCP tools template: {e}")))?;
+        .map_err(|e| {
+            crate::controllers::task_controller::types::Error::ConfigError(format!(
+                "Failed to register MCP tools template: {e}"
+            ))
+        })?;
 
     // Parse comma-separated tool strings into arrays
-    let local_tools: Vec<String> = task.local_tools()
+    let local_tools: Vec<String> = task
+        .local_tools()
         .unwrap_or_default()
         .split(',')
         .filter(|s| !s.trim().is_empty())
         .map(|s| s.trim().to_string())
         .collect();
 
-    let remote_tools: Vec<String> = task.remote_tools()
+    let remote_tools: Vec<String> = task
+        .remote_tools()
         .unwrap_or_default()
         .split(',')
         .filter(|s| !s.trim().is_empty())
@@ -213,9 +258,11 @@ fn generate_mcp_tools_doc(task: &TaskType) -> Result<String> {
         "task_id": task.task_id()
     });
 
-    handlebars
-        .render("mcp_tools", &data)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render MCP tools template: {e}")))
+    handlebars.render("mcp_tools", &data).map_err(|e| {
+        crate::controllers::task_controller::types::Error::ConfigError(format!(
+            "Failed to render MCP tools template: {e}"
+        ))
+    })
 }
 
 /// Generate client configuration for dynamic tool selection
@@ -227,13 +274,19 @@ fn generate_client_config(task: &TaskType, config: &ControllerConfig) -> Result<
 
     handlebars
         .register_template_string("client_config", &template)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register client config template: {e}")))?;
+        .map_err(|e| {
+            crate::controllers::task_controller::types::Error::ConfigError(format!(
+                "Failed to register client config template: {e}"
+            ))
+        })?;
 
     let data = build_settings_template_data(task, config);
 
-    handlebars
-        .render("client_config", &data)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render client config template: {e}")))
+    handlebars.render("client_config", &data).map_err(|e| {
+        crate::controllers::task_controller::types::Error::ConfigError(format!(
+            "Failed to render client config template: {e}"
+        ))
+    })
 }
 
 /// Generate coding guidelines for implementation tasks
@@ -245,16 +298,22 @@ fn generate_coding_guidelines(task: &TaskType) -> Result<String> {
 
     handlebars
         .register_template_string("coding_guidelines", &template)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register coding guidelines template: {e}")))?;
+        .map_err(|e| {
+            crate::controllers::task_controller::types::Error::ConfigError(format!(
+                "Failed to register coding guidelines template: {e}"
+            ))
+        })?;
 
     let data = json!({
         "task_id": task.task_id(),
         "service_name": task.service_name()
     });
 
-    handlebars
-        .render("coding_guidelines", &data)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render coding guidelines template: {e}")))
+    handlebars.render("coding_guidelines", &data).map_err(|e| {
+        crate::controllers::task_controller::types::Error::ConfigError(format!(
+            "Failed to render coding guidelines template: {e}"
+        ))
+    })
 }
 
 /// Generate GitHub guidelines for implementation tasks
@@ -266,7 +325,11 @@ fn generate_github_guidelines(task: &TaskType) -> Result<String> {
 
     handlebars
         .register_template_string("github_guidelines", &template)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register GitHub guidelines template: {e}")))?;
+        .map_err(|e| {
+            crate::controllers::task_controller::types::Error::ConfigError(format!(
+                "Failed to register GitHub guidelines template: {e}"
+            ))
+        })?;
 
     let data = json!({
         "task_id": task.task_id(),
@@ -275,9 +338,11 @@ fn generate_github_guidelines(task: &TaskType) -> Result<String> {
         "branch": task.branch()
     });
 
-    handlebars
-        .render("github_guidelines", &data)
-        .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render GitHub guidelines template: {e}")))
+    handlebars.render("github_guidelines", &data).map_err(|e| {
+        crate::controllers::task_controller::types::Error::ConfigError(format!(
+            "Failed to render GitHub guidelines template: {e}"
+        ))
+    })
 }
 
 /// Build template data for settings/MCP/client config templates
@@ -336,11 +401,13 @@ fn build_settings_template_data(task: &TaskType, config: &ControllerConfig) -> s
 
 /// Parse tool configuration into local and remote tool lists
 fn parse_tool_configuration(task: &TaskType) -> (Vec<String>, Vec<String>) {
-    let local_tools = task.local_tools()
+    let local_tools = task
+        .local_tools()
         .map(|tools| tools.split(',').map(|s| s.trim().to_string()).collect())
         .unwrap_or_default();
 
-    let remote_tools = task.remote_tools()
+    let remote_tools = task
+        .remote_tools()
         .map(|tools| tools.split(',').map(|s| s.trim().to_string()).collect())
         .unwrap_or_default();
 
@@ -375,11 +442,17 @@ fn generate_hook_scripts(task: &TaskType) -> Result<BTreeMap<String, String>> {
     for (hook_name, template_content) in hook_templates {
         handlebars
             .register_template_string(&hook_name, &template_content)
-            .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to register hook template {hook_name}: {e}")))?;
+            .map_err(|e| {
+                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                    "Failed to register hook template {hook_name}: {e}"
+                ))
+            })?;
 
-        let rendered = handlebars
-            .render(&hook_name, &data)
-            .map_err(|e| crate::controllers::task_controller::types::Error::ConfigError(format!("Failed to render hook template {hook_name}: {e}")))?;
+        let rendered = handlebars.render(&hook_name, &data).map_err(|e| {
+            crate::controllers::task_controller::types::Error::ConfigError(format!(
+                "Failed to render hook template {hook_name}: {e}"
+            ))
+        })?;
 
         // Remove .hbs extension for the final filename
         let filename = hook_name.strip_suffix(".hbs").unwrap_or(&hook_name);
@@ -410,14 +483,16 @@ fn get_hook_templates(task: &TaskType) -> Result<Vec<(String, String)>> {
                         // Check if this is a hook template for our task type
                         if filename.starts_with(hooks_prefix) && filename.ends_with(".hbs") {
                             // Extract just the hook filename (remove prefix and convert back)
-                            let hook_name = filename.strip_prefix(hooks_prefix)
-                                .unwrap_or(filename);
+                            let hook_name = filename.strip_prefix(hooks_prefix).unwrap_or(filename);
 
                             match fs::read_to_string(&path) {
                                 Ok(content) => {
-                                    debug!("Loaded hook template: {} (from {})", hook_name, filename);
+                                    debug!(
+                                        "Loaded hook template: {} (from {})",
+                                        hook_name, filename
+                                    );
                                     templates.push((hook_name.to_string(), content));
-                                },
+                                }
                                 Err(e) => {
                                     debug!("Failed to load hook template {}: {}", filename, e);
                                 }
@@ -426,9 +501,12 @@ fn get_hook_templates(task: &TaskType) -> Result<Vec<(String, String)>> {
                     }
                 }
             }
-        },
+        }
         Err(e) => {
-            debug!("Templates directory {} not found or not accessible: {}", CLAUDE_TEMPLATES_PATH, e);
+            debug!(
+                "Templates directory {} not found or not accessible: {}",
+                CLAUDE_TEMPLATES_PATH, e
+            );
             // Don't fail - hooks are optional
         }
     }
