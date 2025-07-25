@@ -135,11 +135,11 @@ fn handle_orchestrator_tools(
             // Initialize documentation for Task Master tasks
             // Debug output removed to satisfy clippy
 
-            // Extract parameters with defaults
+            // Extract parameters with docs-specific default
             let model = params_map
                 .get("model")
                 .and_then(|v| v.as_str())
-                .unwrap_or("claude-3-5-sonnet-20241022");
+                .unwrap_or("claude-opus-4-20250514");
 
             let working_directory = params_map.get("working_directory").and_then(|v| v.as_str());
 
@@ -151,7 +151,7 @@ fn handle_orchestrator_tools(
 
             // Validate model parameter - allow any model that starts with "claude-"
             if !model.starts_with("claude-") {
-                return Some(Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name (e.g., 'claude-3-5-sonnet-20241022')", model)));
+                return Some(Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name (e.g., 'claude-opus-4-20250514')", model)));
             }
 
             // Build CLI arguments
@@ -230,10 +230,11 @@ fn handle_orchestrator_tools(
 
             let working_directory = params_map.get("working_directory").and_then(|v| v.as_str());
 
+            // Extract parameters with task-specific default
             let model = params_map
                 .get("model")
                 .and_then(|v| v.as_str())
-                .unwrap_or("claude-3-5-sonnet-20241022");
+                .unwrap_or("claude-sonnet-4-20250514");
 
             let github_user = params_map.get("github_user").and_then(|v| v.as_str());
 
@@ -274,7 +275,7 @@ fn handle_orchestrator_tools(
 
             // Validate model parameter - allow any model that starts with "claude-"
             if !model.starts_with("claude-") {
-                return Some(Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name (e.g., 'claude-3-5-sonnet-20241022')", model)));
+                return Some(Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name (e.g., 'claude-sonnet-4-20250514')", model)));
             }
 
             // Validate service name (must be valid for PVC naming)

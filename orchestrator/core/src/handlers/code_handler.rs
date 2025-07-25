@@ -26,7 +26,7 @@ pub async fn submit_code_task(
         docs_repository_url: request.docs_repository_url,
         docs_project_directory: request.docs_project_directory,
         working_directory: request.working_directory,
-        model: request.model,
+        model: request.model.unwrap_or_else(|| "claude-sonnet-4-20250514".to_string()),
         github_user: request.github_user,
         local_tools: request.local_tools,
         remote_tools: request.remote_tools,

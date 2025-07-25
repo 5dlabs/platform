@@ -21,7 +21,6 @@ pub struct PmTaskRequest {
     pub agent_name: String,
 
     // Claude model selection (sonnet, opus)
-    #[serde(default = "default_model")]
     pub model: String,
 
     // Markdown files as structured payloads
@@ -113,9 +112,7 @@ fn default_branch() -> String {
     "main".to_string()
 }
 
-fn default_model() -> String {
-    "sonnet".to_string()
-}
+
 
 fn default_prompt_mode() -> String {
     "append".to_string()
@@ -155,7 +152,6 @@ pub struct DocsGenerationRequest {
     pub agent_name: String,
 
     /// Claude model selection (sonnet, opus)
-    #[serde(default = "default_model")]
     pub model: String,
 
     /// GitHub user for authentication

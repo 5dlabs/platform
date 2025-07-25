@@ -47,9 +47,9 @@ pub enum TaskCommands {
         #[arg(long, short = 'w')]
         working_directory: Option<String>,
 
-        /// Claude model to use (full model name like 'claude-3-5-sonnet-20241022')
-        #[arg(long, default_value = "claude-opus-4-20250514")]
-        model: String,
+        /// Claude model to use (full model name like 'claude-opus-4-20250514')
+        #[arg(long)]
+        model: Option<String>,
 
         /// Documentation repository URL
         #[arg(long)]
@@ -93,9 +93,9 @@ pub enum TaskCommands {
         #[arg(long, short = 'w')]
         working_directory: Option<String>,
 
-        /// Claude model to use (full model name like 'claude-3-5-sonnet-20241022')
-        #[arg(long, default_value = "claude-3-5-sonnet-20241022")]
-        model: String,
+        /// Claude model to use (full model name like 'claude-sonnet-4-20250514')
+        #[arg(long)]
+        model: Option<String>,
 
         /// Local MCP tools to enable (comma-separated)
         #[arg(long)]

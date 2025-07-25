@@ -37,8 +37,8 @@ pub struct CodeRequest {
     /// Working directory within target repository (defaults to service name)
     pub working_directory: Option<String>,
 
-    /// Claude model to use (sonnet, opus)
-    pub model: String,
+    /// Claude model to use (sonnet, opus) - optional, defaults handled by MCP tools
+    pub model: Option<String>,
 
     /// GitHub username for authentication
     pub github_user: String,
