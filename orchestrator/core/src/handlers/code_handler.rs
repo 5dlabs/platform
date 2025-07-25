@@ -8,7 +8,7 @@ use tracing::{error, info};
 
 use crate::crds::{CodeRun, CodeRunSpec, CodeRunStatus};
 use crate::handlers::common::{ApiResponse, AppState};
-use orchestrator_common::models::CodeRequest;
+use common::models::CodeRequest;
 
 pub async fn submit_code_task(
     State(state): State<AppState>,

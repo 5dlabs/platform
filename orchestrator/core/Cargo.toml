@@ -1,9 +1,13 @@
 [package]
-name = "orchestrator-core"
+name = "core"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+
+[[bin]]
+name = "orchestrator-core"
+path = "src/main.rs"
 
 [dependencies]
 # Web framework
@@ -55,7 +59,7 @@ handlebars = { workspace = true }
 tempfile = "3.8"
 
 # Internal dependencies
-orchestrator-common = { path = "../orchestrator-common" }
+common = { path = "../common" }
 
 [dev-dependencies]
 tokio-test = "0.4"

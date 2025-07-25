@@ -1,10 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
-    "orchestrator-core",
-    "orchestrator-cli",
-    "orchestrator-common",
-    "orchestrator-mcp"
+    "core",
+    "cli",
+    "common",
+    "mcp"
 ]
 
 [workspace.package]

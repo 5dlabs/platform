@@ -1,7 +1,7 @@
 //! HTTP API client for orchestrator TaskRun submissions
 
 use anyhow::{Context, Result};
-use orchestrator_common::models::{CodeRequest, DocsRequest};
+use common::models::{CodeRequest, DocsRequest};
 use reqwest::{Client, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

@@ -9,7 +9,7 @@ use axum::{
     Router,
 };
 use kube::Client;
-use orchestrator_core::{
+use core::{
     controllers::run_task_controller,
     handlers::{code_handler::submit_code_task, common::AppState, docs_handler::generate_docs},
 };

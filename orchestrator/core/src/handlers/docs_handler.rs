@@ -11,7 +11,7 @@ use tracing::{error, info};
 
 use crate::crds::{DocsRun, DocsRunSpec, DocsRunStatus};
 use crate::handlers::common::{ApiResponse, AppError, AppState};
-use orchestrator_common::models::DocsRequest;
+use common::models::DocsRequest;
 
 /// Generate documentation for Task Master tasks
 pub async fn generate_docs(

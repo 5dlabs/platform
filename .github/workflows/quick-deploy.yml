@@ -6,7 +6,7 @@ name: Quick Deploy (Test Only)
 
 on:
   push:
-    branches: [ 'feature/example-project-and-cli' ]
+    branches: [ 'feature/*' ]
 
 env:
   REGISTRY: ghcr.io
@@ -147,7 +147,7 @@ jobs:
 
                     # Build with detailed output
           echo "⏱️ Starting build..."
-          cargo build --release --package orchestrator-core
+          cargo build --release --package core
 
           # Show final sccache stats
           echo "📊 Final sccache stats:"

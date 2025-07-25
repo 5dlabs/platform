@@ -1,5 +1,5 @@
 use anyhow::Result;
-use orchestrator_common::models::{CodeRequest, DocsRequest};
+use common::models::{CodeRequest, DocsRequest};
 
 use crate::api::ApiClient;
 use crate::docs_generator::DocsGenerator;
@@ -356,7 +356,7 @@ fn parse_env_vars(env_str: Option<&str>) -> Result<std::collections::HashMap<Str
 fn parse_env_from_secrets(
     env_secrets_str: Option<&str>,
 ) -> Result<Vec<orchestrator_common::models::code_request::SecretEnvVar>> {
-    use orchestrator_common::models::code_request::SecretEnvVar;
+    use common::models::code_request::SecretEnvVar;
 
     let mut secrets = Vec::new();
 

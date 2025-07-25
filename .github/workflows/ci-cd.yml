@@ -523,14 +523,14 @@ jobs:
         working-directory: ./orchestrator
         run: |
           echo "🔨 Building orchestrator-core for container..."
-          cargo build --release --package orchestrator-core
+          cargo build --release --package core
           cp target/release/orchestrator-core orchestrator
 
           echo "🔨 Building orchestrator-mcp for release..."
-          cargo build --release --package orchestrator-mcp
+          cargo build --release --package mcp
 
           echo "🔨 Building orchestrator-cli for release..."
-          cargo build --release --package orchestrator-cli
+          cargo build --release --package cli
 
       - name: Prepare release artifacts
         working-directory: ./orchestrator
