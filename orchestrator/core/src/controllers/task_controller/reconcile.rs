@@ -16,7 +16,7 @@ use kube::{
 };
 use std::sync::Arc;
 use tokio::time::Duration;
-use tracing::{error, info, warn, debug};
+use tracing::error;
 
 use super::resources::{cleanup_resources, reconcile_create_or_update};
 use super::status::monitor_job_status;

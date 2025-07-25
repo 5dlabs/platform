@@ -5,14 +5,9 @@ metadata:
   labels:
     {{- include "orchestrator.labels" . | nindent 4 }}
 data:
-  # Kubernetes configuration
   KUBERNETES_NAMESPACE: {{ .Values.config.kubernetesNamespace | quote }}
-
-  # Server configuration
   SERVER_HOST: {{ .Values.config.serverHost | quote }}
   SERVER_PORT: {{ .Values.config.serverPort | quote }}
-
-  # Logging configuration
   RUST_LOG: {{ .Values.config.rustLog | quote }}
-
-  # Anthropic API configuration
+  DEFAULT_DOCS_MODEL: {{ .Values.models.defaultDocsModel | quote }}
+  DEFAULT_CODE_MODEL: {{ .Values.models.defaultCodeModel | quote }}

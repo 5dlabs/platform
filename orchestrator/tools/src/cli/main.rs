@@ -65,7 +65,7 @@ pub enum TaskCommands {
         #[arg(long, short = 'w')]
         working_directory: Option<String>,
 
-        /// Claude model to use (full model name like 'claude-opus-4-20250514')
+        /// Claude model to use (required) - e.g., 'claude-opus-4-20250514' or 'claude-sonnet-4-20250514'
         #[arg(long)]
         model: Option<String>,
 
@@ -111,7 +111,7 @@ pub enum TaskCommands {
         #[arg(long, short = 'w')]
         working_directory: Option<String>,
 
-        /// Claude model to use (full model name like 'claude-sonnet-4-20250514')
+        /// Claude model to use (required) - e.g., 'claude-opus-4-20250514' or 'claude-sonnet-4-20250514'
         #[arg(long)]
         model: Option<String>,
 

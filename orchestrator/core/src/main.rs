@@ -78,7 +78,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "orchestrator=debug,tower_http=debug,axum=debug".into()),
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();

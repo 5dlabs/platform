@@ -157,7 +157,12 @@ fn handle_orchestrator_tools(
             let model = params_map
                 .get("model")
                 .and_then(|v| v.as_str())
-                .unwrap_or("claude-opus-4-20250514");
+                .filter(|s| !s.is_empty());
+
+            let model = match model {
+                Some(m) => m,
+                None => return Some(Err(anyhow!("Model parameter is required. Please specify a model like 'claude-opus-4-20250514' or 'claude-sonnet-4-20250514'"))),
+            };
 
             let working_directory = params_map.get("working_directory").and_then(|v| v.as_str());
 
@@ -252,7 +257,12 @@ fn handle_orchestrator_tools(
             let model = params_map
                 .get("model")
                 .and_then(|v| v.as_str())
-                .unwrap_or("claude-sonnet-4-20250514");
+                .filter(|s| !s.is_empty());
+
+            let model = match model {
+                Some(m) => m,
+                None => return Some(Err(anyhow!("Model parameter is required. Please specify a model like 'claude-opus-4-20250514' or 'claude-sonnet-4-20250514'"))),
+            };
 
             let github_user = params_map.get("github_user").and_then(|v| v.as_str());
 

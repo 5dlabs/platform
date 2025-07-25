@@ -19,8 +19,7 @@ fn get_init_docs_schema() -> Value {
             "properties": {
                 "model": {
                     "type": "string",
-                    "description": "Claude model to use (default: 'claude-opus-4-20250514')",
-                    "default": "claude-opus-4-20250514"
+                    "description": "Claude model to use (required) - e.g., 'claude-opus-4-20250514'",
                 },
                 "working_directory": {
                     "type": "string",
@@ -78,8 +77,7 @@ fn get_submit_implementation_task_schema() -> Value {
                 },
                 "model": {
                     "type": "string",
-                    "description": "Claude model to use (default: 'claude-sonnet-4-20250514')",
-                    "default": "claude-sonnet-4-20250514"
+                    "description": "Claude model to use (required) - e.g., 'claude-sonnet-4-20250514'",
                 },
                 "github_user": {
                     "type": "string",
