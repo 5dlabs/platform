@@ -1,13 +1,22 @@
 [package]
-name = "cli"
+name = "tools"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+repository.workspace = true
+description = "5D Labs platform tools: CLI and MCP server for AI development workflows"
+homepage = "https://github.com/5dlabs/platform"
 
+# CLI binary
 [[bin]]
-name = "orchestrator-cli"
-path = "src/main.rs"
+name = "5d-cli"
+path = "src/cli/main.rs"
+
+# MCP server binary
+[[bin]]
+name = "5d-mcp"
+path = "src/mcp/main.rs"
 
 [dependencies]
 # CLI

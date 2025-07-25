@@ -67,3 +67,6 @@ orchestrator/target/
 
 # Agent files
 agent_*.md
+
+# cargo-dist research
+.repos/

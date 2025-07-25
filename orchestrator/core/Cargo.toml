@@ -4,10 +4,17 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+repository.workspace = true
+description = "5D Labs platform orchestrator core API server (for Kubernetes deployment)"
+homepage = "https://github.com/5dlabs/platform"
 
 [[bin]]
 name = "orchestrator-core"
 path = "src/main.rs"
+
+[package.metadata.dist]
+# Don't distribute this package - it's for Docker deployment, not end users
+dist = false
 
 [dependencies]
 # Web framework
