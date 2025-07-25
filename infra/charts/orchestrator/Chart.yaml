@@ -1,6 +1,6 @@
 apiVersion: v2
 name: orchestrator
-description: A Helm chart for the Platform Orchestrator - manages Claude Code agents via TaskRun CRD
+description: A Helm chart for the Platform Orchestrator - manages Claude Code agents via TaskRun CRDs
 type: application
 version: 0.2.1
 appVersion: "latest"
