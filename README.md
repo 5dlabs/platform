@@ -67,6 +67,25 @@ chmod +x setup-agent-secrets.sh
 - Agent workspace management and isolation
 - MCP tools that connect to your deployment
 
+### Optional: Remote Cluster Access with TwinGate
+
+To access your Kubernetes cluster from anywhere (not just local network), install TwinGate connector:
+
+```bash
+# Add TwinGate Helm repository
+helm repo add twingate https://twingate.github.io/helm-charts
+helm repo update
+
+# Install TwinGate connector (replace tokens with your actual values)
+helm upgrade --install twingate-weightless-hummingbird twingate/connector \
+  -n default \
+  --set connector.network="maroonsnake" \
+  --set connector.accessToken="your-access-token" \
+  --set connector.refreshToken="your-refresh-token"
+```
+
+**Important**: After installation, add your Kubernetes service CIDR as resources in TwinGate admin panel. This enables the MCP tools to reach the orchestrator service using internal Kubernetes service URLs (e.g., `http://orchestrator.orchestrator.svc.cluster.local`) from anywhere.
+
 ### Install CLI Tools
 
 For the MCP tools and CLI utilities, you can install pre-built binaries:
