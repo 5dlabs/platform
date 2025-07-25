@@ -28,6 +28,15 @@ The 5D Labs Platform is evolving to become the premier AI-driven development pla
 - Self-healing deployment capabilities
 - Automated PR approval workflow (human-gated merging)
 
+### Sequential Task Dependencies
+**Dependency-aware task execution and orchestration**
+- Task dependency management with configurable prerequisites
+- Automatic task triggering when dependencies are merged to main
+- Integration with GitHub monitoring service for PR merge events
+- Dependency graph visualization and management
+- Failure propagation and recovery strategies for dependent tasks
+- Support for complex dependency chains across multiple services
+
 ### Multi-CLI Integration
 **Support for diverse AI development tools**
 - **Grok CLI** - X.AI's development assistant integration
@@ -121,12 +130,7 @@ The 5D Labs Platform is evolving to become the premier AI-driven development pla
 - Technical debt forecasting
 - Performance bottleneck identification
 
-### Cross-Platform Integration
-**Seamless development across environments**
-- Cloud provider integrations (AWS, GCP, Azure)
-- On-premises deployment support
-- Hybrid cloud workflows
-- Multi-environment testing and validation
+
 
 ---
 
