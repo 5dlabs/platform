@@ -77,6 +77,7 @@ jobs:
       # (PRs run on the *source* but secrets are usually on the *target* -- that's *good*
       # but also really annoying to build CI around when it needs secrets to work right.)
       - id: plan
+        working-directory: orchestrator
         run: |
           dist ${{ (!github.event.pull_request && format('host --steps=create --tag={0}', github.ref_name)) || 'plan' }} --output-format=json > plan-dist-manifest.json
           echo "dist ran successfully"
@@ -140,6 +141,7 @@ jobs:
         run: |
           ${{ matrix.packages_install }}
       - name: Build artifacts
+        working-directory: orchestrator
         run: |
           # Actually do builds and make zips and whatnot
           dist build ${{ needs.plan.outputs.tag-flag }} --print=linkage --output-format=json ${{ matrix.dist_args }} > dist-manifest.json
@@ -150,6 +152,7 @@ jobs:
         # to "real" actions without writing to env-vars, and writing to env-vars has
         # inconsistent syntax between shell and powershell.
         shell: bash
+        working-directory: orchestrator
         run: |
           # Parse out what we just built and upload it to scratch storage
           echo "paths<<EOF" >> "$GITHUB_OUTPUT"
@@ -193,6 +196,7 @@ jobs:
           merge-multiple: true
       - id: cargo-dist
         shell: bash
+        working-directory: orchestrator
         run: |
           dist build ${{ needs.plan.outputs.tag-flag }} --output-format=json "--artifacts=global" > dist-manifest.json
           echo "dist ran successfully"
@@ -242,6 +246,7 @@ jobs:
           merge-multiple: true
       - id: host
         shell: bash
+        working-directory: orchestrator
         run: |
           dist host ${{ needs.plan.outputs.tag-flag }} --steps=upload --steps=release --output-format=json > dist-manifest.json
           echo "artifacts uploaded and released successfully"
