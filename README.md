@@ -22,8 +22,8 @@ Both operations run as Kubernetes jobs and automatically submit results via GitH
 This is an integrated platform with a clear data flow:
 
 **Component Architecture:**
-- **MCP Server (`5d-mcp`)**: Handles MCP protocol calls from Cursor/Claude
-- **CLI (`5d-cli`)**: Makes REST API calls to the orchestrator service
+- **MCP Server (`fdl-mcp`)**: Handles MCP protocol calls from Cursor/Claude
+- **CLI (`fdl`)**: Makes REST API calls to the orchestrator service
 - **Orchestrator Service**: Kubernetes REST API that creates CodeRun/DocsRun CRDs
 - **Kubernetes Controller**: Reconciles CRDs into Jobs with Claude agents
 
