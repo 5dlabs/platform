@@ -169,6 +169,7 @@ Deploys an autonomous Claude agent to implement a specific task from your Task M
 task({
   task_id: 5,
   service: "api-server",
+  model: "claude-sonnet-4-20250514",
   repository_url: "https://github.com/myorg/my-api",
   github_user: "myusername",
   working_directory: "_projects/my-api"
@@ -178,6 +179,7 @@ task({
 task({
   task_id: 5,
   service: "api-server",
+  model: "claude-sonnet-4-20250514",
   repository_url: "https://github.com/myorg/my-api",
   github_user: "myusername",
   working_directory: "_projects/my-api",
