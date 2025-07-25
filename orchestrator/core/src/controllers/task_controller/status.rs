@@ -24,7 +24,8 @@ pub async fn monitor_job_status(
 
                 // Schedule cleanup if job is complete and cleanup is enabled
                 if ctx.config.cleanup.enabled && (phase == "Succeeded" || phase == "Failed") {
-                    schedule_job_cleanup(task, ctx, &job_name, &phase).await?;
+                    info!("DEBUG: Would schedule cleanup for job {} (phase: {}) - DISABLED FOR TESTING", job_name, phase);
+                    // TEMPORARILY DISABLED: schedule_job_cleanup(task, ctx, &job_name, &phase).await?;
                 }
             }
             Err(kube::Error::Api(ae)) if ae.code == 404 => {

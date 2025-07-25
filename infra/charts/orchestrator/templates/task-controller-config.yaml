@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Values.config.controllerConfigMap }}
+  name: {{ include "orchestrator.fullname" . }}-task-controller-config
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "orchestrator.labels" . | nindent 4 }}
