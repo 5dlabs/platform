@@ -20,6 +20,25 @@ The Orchestrator is a Rust-based service that:
 
 ## Installation
 
+### Using the Helm Repository (Recommended)
+
+Add the 5dlabs Helm repository to install the orchestrator chart:
+
+```bash
+# Add the Helm repository
+helm repo add 5dlabs https://5dlabs.github.io/platform
+helm repo update
+
+# Install the orchestrator chart
+helm install orchestrator 5dlabs/orchestrator --namespace orchestrator --create-namespace
+```
+
+**Note**: CRDs are not included in the Helm chart and must be installed separately (see Step 1 below).
+
+### Manual Installation from Source
+
+If you prefer to install from the source repository:
+
 ### Step 1: Install Custom Resource Definitions (CRDs)
 
 **⚠️ Important**: CRDs must be installed before the Helm chart.
