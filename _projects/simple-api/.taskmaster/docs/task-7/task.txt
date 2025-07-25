@@ -1,0 +1,13 @@
+# Task ID: 7
+# Title: Configure package.json Scripts and Documentation
+# Status: pending
+# Dependencies: 1
+# Priority: medium
+# Description: Set up npm scripts for starting and developing the server, and provide basic API documentation.
+# Details:
+- In `package.json`, add scripts: `start` (node src/index.js), `dev` (nodemon src/index.js).
+- Document all endpoints, request/response formats, and error codes in README.md.
+- List environment variables and setup steps.
+
+# Test Strategy:
+Run scripts to ensure they work. Review README for completeness and clarity.
