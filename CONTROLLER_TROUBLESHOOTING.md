@@ -13,39 +13,31 @@
 - ❌ Hard to delete DocsRuns (stuck finalizers)
 - ❌ No error messages in controller logs
 
+## ⚠️ CRITICAL UPDATE: Phase 1 Testing Results
+
+**HYPOTHESIS DISPROVEN**: Disabling cleanup logic did NOT resolve the issue.
+
+### New Evidence (After Disabling Cleanup):
+- ❌ **Still no Job creation** despite cleanup being disabled
+- ❌ **NO RECONCILIATION LOGS** visible in controller output
+- ✅ **ConfigMap still created** (proves controller ran at least once)
+- ✅ **Finalizer still added** (proves controller interaction)
+
+### **New Critical Finding**: SILENT RECONCILIATION
+The controller is running reconciliation **silently** - no logs appear for the actual reconciliation process, only health checks. This suggests:
+
+1. **Silent panic/error** during reconciliation that's being swallowed
+2. **Log level filtering** preventing reconciliation logs from appearing
+3. **Background spawning** still hiding logs despite cleanup being disabled
+4. **Different error path** that doesn't produce visible logs
+
 ## Changes Made Today vs. Yesterday
 
-### 1. **Controller-Based Cleanup Logic** (HIGH SUSPICION)
+### 1. **Controller-Based Cleanup Logic** ❌ **NOT THE CAUSE**
 
-**What changed**: Added event-driven cleanup with background spawned tasks
+**Status**: ✅ **RULED OUT** - Disabling cleanup logic did not resolve the issue
 
-```rust
-// NEW: Added cleanup configuration
-pub struct CleanupConfig {
-    pub enabled: bool,
-    pub completed_job_delay_minutes: u64,
-    pub failed_job_delay_minutes: u64,
-    pub delete_configmap: bool,
-}
-
-// NEW: Background cleanup spawning in status.rs
-pub fn schedule_job_cleanup(/* ... */) -> Result<()> {
-    tokio::spawn(async move {
-        // Background cleanup logic
-    });
-    Ok(())
-}
-
-// NEW: Cleanup called during reconciliation
-monitor_job_status(/* ... */).await?;
-```
-
-**Risk Analysis**:
-- ⚠️ **Background spawn might be blocking reconciliation**
-- ⚠️ **Cleanup logic errors not visible in main thread logs**
-- ⚠️ **Finalizer management might be interfering with normal flow**
-
-### 2. **Configuration Loading Method** (MEDIUM SUSPICION)
+### 2. **Configuration Loading Method** (NOW HIGH SUSPICION)
 
 **What changed**: Switched from async API calls to sync file reading
 
@@ -57,37 +49,26 @@ ControllerConfig::from_configmap(client, &namespace, "config-name").await?
 ControllerConfig::from_mounted_file("/config/config.yaml")
 ```
 
-**Risk Analysis**:
-- ⚠️ **File permission issues**
-- ⚠️ **Sync vs async context problems**
-- ⚠️ **Different error handling paths**
+**New Risk Analysis**:
+- ⚠️ **Silent panic in config loading** not visible in logs
+- ⚠️ **Sync vs async context problems** causing deadlock
+- ⚠️ **Missing await or blocking** causing reconciliation to hang
+- ⚠️ **Error handling differences** swallowing critical errors
 
-### 3. **Serde Configuration** (LOW SUSPICION - FIXED)
+### 3. **Missing Debug Logging** (NEW SUSPICION)
 
-**What changed**: Added `#[serde(default)]` and `Default` trait for `CleanupConfig`
+**What's missing**: Our detailed debug logging from `reconcile.rs` is NOT appearing:
 
 ```rust
-// FIXED: This was causing panics, now resolved
-pub struct ControllerConfig {
-    #[serde(default)] // ADDED
-    pub cleanup: CleanupConfig,
-}
-
-impl Default for CleanupConfig { /* ADDED */ }
+// EXPECTED but NOT SEEN in logs:
+debug!("About to load controller configuration from mounted file...");
+info!("✅ Successfully loaded controller configuration from mounted file");
 ```
 
-**Status**: ✅ **RESOLVED** - This was causing the "resource name may not be empty" error
-
-### 4. **ConfigMap Template References** (LOW SUSPICION - FIXED)
-
-**What changed**: Fixed empty ConfigMap name references in Helm templates
-
-```yaml
-# FIXED: Was causing installation failures
-name: {{ include "orchestrator.fullname" . }}-task-controller-config
-```
-
-**Status**: ✅ **RESOLVED** - Controller now starts properly
+**Risk Analysis**:
+- ⚠️ **Log level configuration** preventing debug output
+- ⚠️ **Early panic** before debug logs are reached
+- ⚠️ **Reconciliation not triggering** due to controller setup issue
 
 ## Evidence Analysis
 
@@ -99,107 +80,73 @@ name: {{ include "orchestrator.fullname" . }}-task-controller-config
    INFO kube_runtime::controller: press ctrl+c to shut down gracefully (x2)
    ```
 
-2. **Resource Processing**: ConfigMap creation proves controller is processing DocsRuns
-   ```
-   configmap/docs-generator-docs-v1-files created (5 files, comprehensive content)
-   ```
-
+2. **Resource Processing**: ConfigMap creation proves controller ran at least once
 3. **Finalizer Management**: DocsRun has finalizer indicating controller interaction
-   ```yaml
-   finalizers:
-   - docsruns.orchestrator.io/finalizer
-   ```
 
-### What's Missing ❌
+### What's Broken ❌
 
-1. **Job Creation**: No Kubernetes Jobs created despite ConfigMap preparation
-2. **Creation Logs**: No logs indicating job creation attempts
-3. **Error Logs**: No visible errors in controller logs
-4. **Status Updates**: DocsRun status field remains empty
+1. **Reconciliation Logging**: NO logs for actual reconciliation attempts
+2. **Job Creation**: ConfigMap created but Job creation step never reached
+3. **Status Updates**: DocsRun status field remains empty
+4. **Events**: No Kubernetes events generated
 
-### Critical Observations
+### **NEW Critical Observation**: The controller is reconciling **invisibly**
 
-1. **Silent Failure**: Controller processes up to ConfigMap creation, then stops
-2. **Background Tasks**: Cleanup logic spawns background tasks that might hide errors
-3. **Log Visibility**: Background spawned tasks don't show logs in main controller thread
-4. **Finalizer Stuck**: Difficult to delete DocsRuns suggests cleanup logic issues
+- Evidence controller ran: ConfigMap + Finalizer ✅
+- Visible reconciliation logs: None ❌
+- This suggests a **silent failure** in the reconciliation path
 
-## Hypothesis: Background Cleanup Interference
+## Updated Hypothesis: Configuration Loading Issue
 
-**Primary Theory**: The new cleanup logic is interfering with normal reconciliation flow.
+**New Primary Theory**: The sync file-based configuration loading is causing a silent panic or hang.
 
 ### Supporting Evidence:
 - ConfigMap created (early reconciliation step) ✅
-- Job creation missing (later reconciliation step) ❌
-- Background `tokio::spawn` in reconciliation path
-- Finalizer management complexity
+- Configuration loading happens early in reconciliation ⚠️
+- No reconciliation logs appear (suggests early failure) ❌
+- Debug logging we added around config loading is missing ❌
 
 ### Potential Issues:
-1. **Panic in background task** preventing job creation
-2. **Resource contention** between main thread and cleanup thread
-3. **Error swallowing** in spawned cleanup tasks
-4. **Finalizer logic** blocking normal flow
+1. **Sync file I/O blocking** the async reconciliation context
+2. **Permission/access issue** on `/config/config.yaml` causing panic
+3. **Serde deserialization panic** despite our `#[serde(default)]` fix
+4. **Missing await** in async context when calling sync function
 
-## Code Path Analysis
+## **URGENT Action Plan**
 
-### Normal Flow (Expected):
-```
-DocsRun Created → Reconcile → Create ConfigMap → Create Job → Update Status → Add Finalizer
-```
+### **Phase 2**: Add Aggressive Reconciliation Logging
+1. Add `error!()` logs around EVERY step of reconciliation
+2. Add logging immediately before and after config loading
+3. Use `tracing::error!` that should always be visible
+4. Test with simple config loading vs. complex validation
 
-### Current Flow (Observed):
-```
-DocsRun Created → Reconcile → Create ConfigMap → ??? → Add Finalizer → STOP
-```
+### **Phase 3**: Test Config Loading in Isolation
+1. Temporarily remove config loading to test basic reconciliation
+2. Add config loading back step by step
+3. Test sync vs async config loading methods
 
-### Suspected Issue Location:
-The gap between "Create ConfigMap" and "Create Job" - likely in the resource creation logic where cleanup scheduling happens.
+### **Phase 4**: Emergency Fallback
+1. Revert to old async `from_configmap` method temporarily
+2. Confirm job creation works with old config loading
+3. Debug the file-based loading separately
 
-## Testing Strategy
+## Files to Examine URGENTLY
 
-### 1. **Isolate Cleanup Logic**
-- Temporarily disable cleanup entirely
-- Test if Jobs are created without cleanup interference
+### Primary Suspects (UPDATED):
+- **`orchestrator/core/src/controllers/task_controller/reconcile.rs`** - Missing debug logs
+- **`orchestrator/core/src/controllers/task_controller/config.rs`** - Sync file loading
+- **`orchestrator/core/src/controllers/task_controller/resources.rs`** - Job creation path
 
-### 2. **Add Targeted Logging**
-- Add logs immediately before job creation
-- Add logs in cleanup spawning logic
-- Use `tracing::error!` for all potential failure points
+### Log Configuration:
+- **RUST_LOG environment variable** - May be filtering reconciliation logs
+- **Tracing configuration** - May need more aggressive log levels
 
-### 3. **Check Resource Creation Path**
-- Examine `reconcile_create_or_update` function
-- Look for cleanup calls that might be blocking
-- Verify job creation code path is reached
+## Next Steps (UPDATED)
 
-### 4. **Test Without Background Spawning**
-- Replace `tokio::spawn` with direct cleanup calls
-- See if removing async spawning resolves the issue
-
-## Action Plan
-
-1. **Immediate**: Disable cleanup logic to test core functionality
-2. **Debug**: Add comprehensive logging around job creation
-3. **Isolate**: Test each component change individually
-4. **Verify**: Confirm job creation works without cleanup
-
-## Files to Examine
-
-### Primary Suspects:
-- `orchestrator/core/src/controllers/task_controller/status.rs` - Cleanup logic
-- `orchestrator/core/src/controllers/task_controller/resources.rs` - Job creation
-- `orchestrator/core/src/controllers/task_controller/reconcile.rs` - Main flow
-
-### Configuration:
-- `orchestrator/core/src/controllers/task_controller/config.rs` - Config loading
-- `infra/charts/orchestrator/templates/task-controller-config.yaml` - Config source
-
-## Next Steps
-
-**Phase 1**: Disable cleanup and test
-**Phase 2**: Add comprehensive logging
-**Phase 3**: Test each change in isolation
-**Phase 4**: Identify root cause and implement proper fix
+**Phase 2**: Add error-level logging around every reconciliation step ⏰ **IMMEDIATE**
+**Phase 3**: Test config loading in isolation
+**Phase 4**: Consider emergency revert to async config loading if file-based approach is fundamentally broken
 
 ---
 
-*This analysis suggests the background cleanup logic is the most likely culprit, followed by configuration loading changes.*
+*Updated hypothesis: The sync file-based configuration loading is causing silent failures in the async reconciliation context.*
