@@ -58,6 +58,24 @@ chmod +x setup-agent-secrets.sh
 - Agent workspace management and isolation
 - MCP tools that connect to your deployment
 
+### Install CLI Tools
+
+For the MCP tools and CLI utilities, you can install pre-built binaries:
+
+```bash
+# One-liner installer (Linux/macOS)
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/5dlabs/platform/releases/download/v0.0.2/fivedlabs-tools-installer.sh | sh
+
+# Verify installation
+fivedlabs-tools --help          # CLI tool (5d-cli)
+fivedlabs-tools --mcp --help    # MCP server (5d-mcp)
+```
+
+**What you get:**
+- `fivedlabs-tools` binary with both CLI and MCP server functionality
+- Multi-platform support (Linux x64/ARM64, macOS Intel/Apple Silicon, Windows x64)
+- Automatic installation to system PATH
+
 ### Building from Source (Development)
 
 ```bash
