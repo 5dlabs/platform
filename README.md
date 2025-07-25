@@ -100,6 +100,21 @@ task({
 - Review Task Master project structure in `.taskmaster/` directory
 - Verify repository access and GitHub authentication setup
 
+## License
+
+This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). This means:
+
+- ✅ You can use, modify, and distribute this software freely
+- ✅ You can use it for commercial purposes
+- ⚠️ If you deploy a modified version on a network server, you must provide source code access to users
+- ⚠️ Any derivative works must also be licensed under AGPL-3.0
+
+The AGPL license is specifically designed for server-side software to ensure that improvements to the codebase remain open source, even when deployed as a service. This protects the open source nature of the project while allowing commercial use.
+
+**Source Code Access**: Since this platform operates as a network service, users interacting with it have the right to access the source code under AGPL-3.0. The complete source code is available at this repository, ensuring full compliance with AGPL-3.0's network clause.
+
+For more details, see the [LICENSE](LICENSE) file.
+
 ---
 
 *The platform runs on Kubernetes and automatically manages Claude agent deployments, workspace isolation, and GitHub integration. All you need to do is call the MCP tools and review the resulting PRs.*

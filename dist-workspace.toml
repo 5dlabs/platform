@@ -1,5 +1,5 @@
 [workspace]
-members = ["cargo:tools"]
+members = ["cargo:orchestrator/tools"]
 
 # Config for 'dist'
 [dist]

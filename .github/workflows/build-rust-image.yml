@@ -2,10 +2,8 @@ name: Build Rust Builder Image
 
 on:
   push:
-    branches: [ 'main', 'feature/example-project-and-cli' ]
     tags: [ 'rust-builder-v*' ]
     paths:
-      - 'infra/images/rust-builder/**'
       - '.github/workflows/build-rust-image.yml'
   workflow_dispatch:
     inputs:
