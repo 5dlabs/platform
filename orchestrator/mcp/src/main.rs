@@ -244,7 +244,8 @@ fn handle_orchestrator_tools(
             let context_version = params_map
                 .get("context_version")
                 .and_then(serde_json::Value::as_u64)
-                .unwrap_or(1) as u32;
+                .and_then(|v| u32::try_from(v).ok())
+                .unwrap_or(1);
 
             let prompt_modification = params_map
                 .get("prompt_modification")

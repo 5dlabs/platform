@@ -3,7 +3,7 @@ use serde_json::json;
 
 /// Generate SSH key volume configuration if needed
 pub fn generate_ssh_volumes(task: &TaskType) -> Vec<serde_json::Value> {
-    if !task.uses_ssh() {
+    if !TaskType::uses_ssh() {
         return vec![];
     }
 

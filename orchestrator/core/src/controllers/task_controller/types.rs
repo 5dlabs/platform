@@ -160,7 +160,7 @@ impl TaskType {
     }
 
     /// Always use SSH authentication (we're SSH-only now)
-    pub fn uses_ssh(&self) -> bool {
+    pub fn uses_ssh() -> bool {
         true
     }
 

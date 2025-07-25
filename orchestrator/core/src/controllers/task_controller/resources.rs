@@ -224,7 +224,7 @@ fn build_job_spec(
     }
 
     // SSH volumes if needed
-    if task.uses_ssh() {
+    if TaskType::uses_ssh() {
         let ssh_volumes = generate_ssh_volumes(task);
         volumes.extend(ssh_volumes);
 

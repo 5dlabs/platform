@@ -2,7 +2,6 @@
 
 #![allow(clippy::disallowed_macros)]
 
-use anyhow::Result;
 use colored::Colorize;
 
 /// Simple output manager for consistent formatting
@@ -13,24 +12,15 @@ impl OutputManager {
         Self
     }
 
-    pub fn info(&self, message: &str) -> Result<()> {
+    pub fn info(&self, message: &str) {
         println!("{} {}", "INFO:".blue().bold(), message);
-        Ok(())
     }
 
-    pub fn success(&self, message: &str) -> Result<()> {
+    pub fn success(&self, message: &str) {
         println!("{} {}", "✓".green().bold(), message);
-        Ok(())
     }
 
-    #[allow(dead_code)]
-    pub fn warning(&self, message: &str) -> Result<()> {
-        println!("{} {}", "⚠".yellow().bold(), message);
-        Ok(())
-    }
-
-    pub fn error(&self, message: &str) -> Result<()> {
+    pub fn error(&self, message: &str) {
         eprintln!("{} {}", "✗".red().bold(), message);
-        Ok(())
     }
 }

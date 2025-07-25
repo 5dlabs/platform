@@ -88,7 +88,7 @@ async fn handle_docs_command(
     source_branch: Option<&str>,
     github_user: Option<&str>,
 ) -> Result<()> {
-    output.info("Initializing documentation generator...")?;
+    output.info("Initializing documentation generator...");
 
     // Do local file preparation and get git info (used as fallbacks)
     let (detected_repo_url, detected_working_dir, detected_source_branch, _generated_docs_branch) =
@@ -114,32 +114,32 @@ async fn handle_docs_command(
         github_user: final_github_user,
     };
 
-    output.info("Submitting documentation generation job...")?;
+    output.info("Submitting documentation generation job...");
 
     match api_client.submit_docs_generation(&request).await {
         Ok(response) => {
             if response.success {
-                output.success(&response.message)?;
+                output.success(&response.message);
 
                 if let Some(data) = response.data {
                     if let Some(taskrun_name) = data.get("taskrun_name").and_then(|n| n.as_str()) {
-                        output.info(&format!("TaskRun name: {taskrun_name}"))?;
+                        output.info(&format!("TaskRun name: {taskrun_name}"));
                     }
                     if let Some(namespace) = data.get("namespace").and_then(|n| n.as_str()) {
-                        output.info(&format!("Namespace: {namespace}"))?;
-                        output.info("You can monitor the job with:")?;
-                        output.info(&format!("  kubectl -n {namespace} get taskrun"))?;
+                        output.info(&format!("Namespace: {namespace}"));
+                        output.info("You can monitor the job with:");
+                        output.info(&format!("  kubectl -n {namespace} get taskrun"));
                     }
                 }
             } else {
-                output.error(&response.message)?;
+                output.error(&response.message);
                 anyhow::bail!(response.message);
             }
         }
         Err(e) => {
             output.error(&format!(
                 "Failed to submit documentation generation job: {e}"
-            ))?;
+            ));
             return Err(e);
         }
     }
@@ -172,7 +172,7 @@ async fn handle_code_command(
 ) -> Result<()> {
     output.info(&format!(
         "Submitting code task {task_id} for service '{service}'..."
-    ))?;
+    ));
 
     // Auto-detect target repository URL if not provided
     let repo_url = match repository_url {
@@ -223,35 +223,35 @@ async fn handle_code_command(
         env_from_secrets: env_from_secrets_vec,
     };
 
-    output.info(&format!("Target repository: {repo_url}"))?;
-    output.info(&format!("Docs repository: {docs_repo_url}"))?;
-    output.info(&format!("Docs branch: {docs_branch}"))?;
-    output.info(&format!("Working directory: {working_dir}"))?;
-    output.info(&format!("Context version: {context_version}"))?;
-    output.info(&format!("GitHub user: {github_user_name}"))?;
+    output.info(&format!("Target repository: {repo_url}"));
+    output.info(&format!("Docs repository: {docs_repo_url}"));
+    output.info(&format!("Docs branch: {docs_branch}"));
+    output.info(&format!("Working directory: {working_dir}"));
+    output.info(&format!("Context version: {context_version}"));
+    output.info(&format!("GitHub user: {github_user_name}"));
 
     match api_client.submit_code_task(&request).await {
         Ok(response) => {
             if response.success {
-                output.success(&response.message)?;
+                output.success(&response.message);
 
                 if let Some(data) = response.data {
                     if let Some(coderun_name) = data.get("coderun_name").and_then(|n| n.as_str()) {
-                        output.info(&format!("CodeRun name: {coderun_name}"))?;
+                        output.info(&format!("CodeRun name: {coderun_name}"));
                     }
                     if let Some(namespace) = data.get("namespace").and_then(|n| n.as_str()) {
-                        output.info(&format!("Namespace: {namespace}"))?;
-                        output.info("You can monitor the job with:")?;
-                        output.info(&format!("  kubectl -n {namespace} get coderun"))?;
+                        output.info(&format!("Namespace: {namespace}"));
+                        output.info("You can monitor the job with:");
+                        output.info(&format!("  kubectl -n {namespace} get coderun"));
                     }
                 }
             } else {
-                output.error(&response.message)?;
+                output.error(&response.message);
                 anyhow::bail!(response.message);
             }
         }
         Err(e) => {
-            output.error(&format!("Failed to submit code task: {e}"))?;
+            output.error(&format!("Failed to submit code task: {e}"));
             return Err(e);
         }
     }
@@ -269,21 +269,6 @@ fn get_git_remote_url() -> Result<String> {
 
     if !output.status.success() {
         anyhow::bail!("Failed to get git remote URL");
-    }
-
-    Ok(String::from_utf8(output.stdout)?.trim().to_string())
-}
-
-#[allow(dead_code)]
-fn get_current_branch() -> Result<String> {
-    use std::process::Command;
-
-    let output = Command::new("git")
-        .args(["rev-parse", "--abbrev-ref", "HEAD"])
-        .output()?;
-
-    if !output.status.success() {
-        return Ok("main".to_string());
     }
 
     Ok(String::from_utf8(output.stdout)?.trim().to_string())
