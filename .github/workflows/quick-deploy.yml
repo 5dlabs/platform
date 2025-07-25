@@ -1,12 +1,24 @@
 name: Quick Deploy (Test Only)
 
-# TEMPORARY: Quick deployment for testing changes
+# Quick deployment for testing changes
 # Skips all tests and linting for rapid iteration
-# Will be removed once feature is stable
+# Can be triggered manually with branch selection
 
 on:
   push:
     branches: [ 'feature/*' ]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy from'
+        required: true
+        default: 'main'
+        type: string
+      skip_tests:
+        description: 'Skip all tests and linting'
+        required: false
+        default: true
+        type: boolean
 
 env:
   REGISTRY: ghcr.io
@@ -21,6 +33,8 @@ jobs:
       short-sha: ${{ steps.version.outputs.short-sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || github.ref }}
 
       - name: Generate quick version
         id: version
@@ -45,6 +59,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || github.ref }}
 
       - name: Setup optimized Rust environment
         run: |
@@ -201,6 +217,8 @@ jobs:
     runs-on: [self-hosted, k8s-runner]
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || github.ref }}
 
       - name: Setup tools
         run: |

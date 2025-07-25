@@ -16,6 +16,7 @@
 name: Release
 permissions:
   "contents": "write"
+  "packages": "write"
 
 # This task will run whenever you push a git tag that looks like a version
 # like "1.0.0", "v0.1.0-prerelease.1", "my-app/0.1.0", "releases/v1.0.0", etc.
@@ -208,14 +209,107 @@ jobs:
           path: |
             ${{ steps.cargo-dist.outputs.paths }}
             ${{ env.BUILD_MANIFEST_NAME }}
+
+  # Build Docker images using the release binaries
+  build-docker-images:
+    needs:
+      - plan
+      - build-local-artifacts
+      - build-global-artifacts
+    # Only build Docker images when we're actually publishing (not PRs)
+    if: ${{ needs.plan.outputs.publishing == 'true' }}
+    runs-on: ubuntu-22.04
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_BASE: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Get all the built artifacts
+      - name: Fetch artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: artifacts-*
+          path: target/distrib/
+          merge-multiple: true
+
+      # Build orchestrator-core for the Docker image
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: orchestrator -> target
+          shared-key: "rust-cache-release"
+
+      - name: Build orchestrator-core for Docker
+        working-directory: ./orchestrator
+        run: |
+          echo "🔨 Building orchestrator-core for Docker image..."
+          cargo build --release --package core
+          cp target/release/orchestrator-core orchestrator
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION="${{ needs.plan.outputs.tag }}"
+          # Remove 'v' prefix if present
+          VERSION=${VERSION#v}
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Docker image version: ${VERSION}"
+
+      - name: Build and push Orchestrator image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./orchestrator
+          file: ./orchestrator/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Generate Docker image summary
+        run: |
+          echo "## 🐳 Docker Images Built" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 **Available Images**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:latest" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 **Usage**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "# Pull and run the orchestrator" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "# Or use in Helm chart" >> $GITHUB_STEP_SUMMARY
+          echo "helm upgrade orchestrator 5dlabs/orchestrator --set image.tag=${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
   # Determines if we should publish/announce
   host:
     needs:
       - plan
       - build-local-artifacts
       - build-global-artifacts
-    # Only run if we're "publishing", and only if local and global didn't fail (skipped is fine)
-    if: ${{ always() && needs.plan.outputs.publishing == 'true' && (needs.build-global-artifacts.result == 'skipped' || needs.build-global-artifacts.result == 'success') && (needs.build-local-artifacts.result == 'skipped' || needs.build-local-artifacts.result == 'success') }}
+      - build-docker-images
+    # Only run if we're "publishing", and only if all builds didn't fail (skipped is fine)
+    if: ${{ always() && needs.plan.outputs.publishing == 'true' && (needs.build-global-artifacts.result == 'skipped' || needs.build-global-artifacts.result == 'success') && (needs.build-local-artifacts.result == 'skipped' || needs.build-local-artifacts.result == 'success') && (needs.build-docker-images.result == 'skipped' || needs.build-docker-images.result == 'success') }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: "ubuntu-22.04"
@@ -268,9 +362,27 @@ jobs:
           ANNOUNCEMENT_TITLE: "${{ fromJson(steps.host.outputs.manifest).announcement_title }}"
           ANNOUNCEMENT_BODY: "${{ fromJson(steps.host.outputs.manifest).announcement_github_body }}"
           RELEASE_COMMIT: "${{ github.sha }}"
+          VERSION: "${{ needs.plan.outputs.tag }}"
         run: |
           # Write and read notes from a file to avoid quoting breaking things
           echo "$ANNOUNCEMENT_BODY" > $RUNNER_TEMP/notes.txt
+
+          # Add Docker image information to release notes
+          echo "" >> $RUNNER_TEMP/notes.txt
+          echo "## 🐳 Docker Images" >> $RUNNER_TEMP/notes.txt
+          echo "" >> $RUNNER_TEMP/notes.txt
+          echo "This release includes Docker images for the orchestrator service:" >> $RUNNER_TEMP/notes.txt
+          echo "" >> $RUNNER_TEMP/notes.txt
+          echo '```bash' >> $RUNNER_TEMP/notes.txt
+          echo "# Pull the latest orchestrator image" >> $RUNNER_TEMP/notes.txt
+          VERSION_CLEAN=${VERSION#v}
+          echo "docker pull ghcr.io/${{ github.repository }}/orchestrator:${VERSION_CLEAN}" >> $RUNNER_TEMP/notes.txt
+          echo "" >> $RUNNER_TEMP/notes.txt
+          echo "# Use in Helm deployments" >> $RUNNER_TEMP/notes.txt
+          echo "helm upgrade orchestrator 5dlabs/orchestrator \\" >> $RUNNER_TEMP/notes.txt
+          echo "  --set image.repository=ghcr.io/${{ github.repository }}/orchestrator \\" >> $RUNNER_TEMP/notes.txt
+          echo "  --set image.tag=${VERSION_CLEAN}" >> $RUNNER_TEMP/notes.txt
+          echo '```' >> $RUNNER_TEMP/notes.txt
 
           gh release create "${{ needs.plan.outputs.tag }}" --target "$RELEASE_COMMIT" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITLE" --notes-file "$RUNNER_TEMP/notes.txt" artifacts/*
 
