@@ -90,9 +90,9 @@ jobs:
 
           # Generate or update index.yaml
           if [[ -f index.yaml ]]; then
-            helm repo index charts --url https://5dlabs.github.io/platform --merge index.yaml
+            helm repo index charts --url https://5dlabs.github.io/platform/charts --merge index.yaml
           else
-            helm repo index charts --url https://5dlabs.github.io/platform
+            helm repo index charts --url https://5dlabs.github.io/platform/charts
           fi
 
           # Move index.yaml to root for GitHub Pages
