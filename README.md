@@ -19,12 +19,21 @@ Both operations run as Kubernetes jobs and automatically submit results via GitH
 
 ## Installation
 
-This is an integrated platform that consists of:
-- **Orchestrator**: Kubernetes service that manages Claude agents
-- **MCP Tools**: CLI interface for docs/task commands
-- **Agent Management**: Automated deployment and workspace isolation
+This is an integrated platform with a clear data flow:
 
-All components work together - the MCP tools communicate with the orchestrator service to deploy and manage Claude agents.
+**Component Architecture:**
+- **MCP Server (`5d-mcp`)**: Handles MCP protocol calls from Cursor/Claude
+- **CLI (`5d-cli`)**: Makes REST API calls to the orchestrator service
+- **Orchestrator Service**: Kubernetes REST API that creates CodeRun/DocsRun CRDs
+- **Kubernetes Controller**: Reconciles CRDs into Jobs with Claude agents
+
+**Data Flow:**
+1. Cursor calls `docs()` or `task()` via MCP protocol
+2. MCP server receives call and internally executes CLI
+3. CLI makes HTTP requests to orchestrator REST API (`/pm/tasks`)
+4. Orchestrator creates CodeRun/DocsRun custom resources
+5. Kubernetes controller deploys Claude agents as Jobs
+6. Agents complete work and submit GitHub PRs
 
 ### Deploy the Complete Platform
 
