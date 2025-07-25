@@ -112,8 +112,6 @@ fn default_branch() -> String {
     "main".to_string()
 }
 
-
-
 fn default_prompt_mode() -> String {
     "append".to_string()
 }

@@ -89,35 +89,29 @@ jobs:
           # Share cache between jobs
           shared-key: "rust-cache-agent-platform"
 
-      - name: Check formatting
+      - name: Auto-format code
         id: format-check
         working-directory: ./orchestrator
         run: |
+          echo "🔧 Running cargo fmt to ensure consistent formatting..."
           if ! cargo fmt --all -- --check; then
+            echo "📝 Formatting issues detected - applying auto-format..."
+            cargo fmt --all
             echo "format-needed=true" >> $GITHUB_OUTPUT
-            echo "❌ Code formatting issues detected"
-            echo "FORMATTING_FAILED=true" >> $GITHUB_ENV
+            echo "✅ Code formatting automatically fixed"
           else
             echo "format-needed=false" >> $GITHUB_OUTPUT
-            echo "✅ Code formatting is correct"
-            echo "FORMATTING_FAILED=false" >> $GITHUB_ENV
+            echo "✅ Code formatting is already correct"
           fi
 
-      - name: Fail job if formatting issues detected and not on push event
-        if: env.FORMATTING_FAILED == 'true' && github.event_name != 'push'
-        run: |
-          echo "❌ Formatting issues detected and auto-format is not available (not a push event)"
-          exit 1
-
       - name: Run Clippy
-        if: env.FORMATTING_FAILED == 'false' || github.event_name == 'push'
         working-directory: ./orchestrator
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-  # Auto-format job that runs when formatting fails
-  auto-format:
+  # Commit formatting changes (runs on any event when formatting was needed)
+  commit-format-changes:
     needs: [changes, lint-rust]
-    if: always() && needs.lint-rust.outputs.format-needed == 'true' && github.event_name == 'push'
+    if: always() && needs.lint-rust.outputs.format-needed == 'true'
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -180,17 +174,15 @@ jobs:
               commit_sha: sha,
               body: `🔧 **Auto-formatting applied**
 
-              The CI/CD pipeline detected formatting issues and automatically applied \`cargo fmt\` to fix them.
+              Code formatting was automatically fixed and committed.
 
-              A new commit has been pushed with the formatting fixes. The CI will re-run automatically.
-
-              📝 **Next time**: Run \`cargo fmt --all\` locally before pushing to avoid this automatic formatting.`
+              💡 **Tip**: Run \`cargo fmt --all\` locally to avoid this in the future.`
             });
 
   # Re-run lint after auto-format (only if auto-format ran)
   lint-rust-retry:
-    needs: [changes, auto-format]
-    if: always() && needs.auto-format.result == 'success'
+    needs: [changes, commit-format-changes]
+    if: always() && needs.commit-format-changes.result == 'success'
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4

@@ -35,7 +35,10 @@ pub async fn generate_docs(
         repository_url: request.repository_url.clone(),
         working_directory: request.working_directory.clone(),
         source_branch: request.source_branch.clone(),
-        model: request.model.clone().unwrap_or_else(|| "claude-opus-4-20250514".to_string()),
+        model: request
+            .model
+            .clone()
+            .unwrap_or_else(|| "claude-opus-4-20250514".to_string()),
         github_user: request.github_user.clone(),
     };
 
