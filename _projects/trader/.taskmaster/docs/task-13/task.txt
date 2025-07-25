@@ -1,0 +1,162 @@
+# Task ID: 13
+# Title: Implement Paper Trader Binary with CLI Interface
+# Status: pending
+# Dependencies: 9, 10, 11, 12
+# Priority: high
+# Description: Create the main paper trader binary with command-line interface for configuration and operation
+# Details:
+1. Implement CLI interface using clap:
+   - Support for configuration file path
+   - Initial SOL/USDC allocation options
+   - MEV protection parameters
+   - Slippage tolerance settings
+
+2. Create configuration system:
+   - Load settings from YAML/TOML file
+   - Override with command-line arguments
+   - Validate configuration values
+
+3. Implement main application flow:
+   - Initialize all components (database connections, clients, etc.)
+   - Start monitoring and background services
+   - Launch TUI for interactive use
+
+Example implementation:
+```rust
+use clap::{App, Arg, SubCommand};
+
+#[derive(Debug, Deserialize)]
+pub struct Config {
+    pub initial_allocation: HashMap<String, Decimal>,
+    pub mev_protection: MevProtectionConfig,
+    pub slippage_tolerance: Decimal,
+    pub database: DatabaseConfig,
+    pub jupiter: JupiterConfig,
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // Parse command-line arguments
+    let matches = App::new("Solana Paper Trader")
+        .version("1.0")
+        .author("Your Name")
+        .about("Paper trading for Solana with MEV simulation")
+        .arg(Arg::with_name("config")
+            .short("c")
+            .long("config")
+            .value_name("FILE")
+            .help("Sets a custom config file")
+            .takes_value(true))
+        .arg(Arg::with_name("sol")
+            .long("sol")
+            .value_name("AMOUNT")
+            .help("Initial SOL allocation")
+            .takes_value(true))
+        .arg(Arg::with_name("usdc")
+            .long("usdc")
+            .value_name("AMOUNT")
+            .help("Initial USDC allocation")
+            .takes_value(true))
+        .arg(Arg::with_name("slippage")
+            .long("slippage")
+            .value_name("PERCENT")
+            .help("Slippage tolerance (0.5-2%)")
+            .takes_value(true))
+        .get_matches();
+    
+    // Load configuration
+    let config_path = matches.value_of("config").unwrap_or("config.yaml");
+    let mut config: Config = load_config(config_path)?;
+    
+    // Override with command-line arguments
+    if let Some(sol) = matches.value_of("sol") {
+        let amount = sol.parse::<Decimal>()?;
+        config.initial_allocation.insert("SOL".to_string(), amount);
+    }
+    
+    if let Some(usdc) = matches.value_of("usdc") {
+        let amount = usdc.parse::<Decimal>()?;
+        config.initial_allocation.insert("USDC".to_string(), amount);
+    }
+    
+    if let Some(slippage) = matches.value_of("slippage") {
+        config.slippage_tolerance = slippage.parse::<Decimal>()?;
+        // Validate slippage is within 0.5-2% range
+        if config.slippage_tolerance < Decimal::new(5, 3) || config.slippage_tolerance > Decimal::new(2, 2) {
+            return Err(Error::InvalidConfig("Slippage must be between 0.5% and 2%".into()));
+        }
+    }
+    
+    // Initialize components
+    let quest_db = Arc::new(QuestDbClient::new(&config.database.quest_db_url)?); 
+    let postgres = Arc::new(PostgresClient::new(&config.database.postgres_url).await?);
+    let redis = create_redis_pool(&config.database.redis_url).await?;
+    
+    let price_cache = Arc::new(PriceCache::new(redis.clone(), Duration::from_secs(1)));
+    price_cache.start_price_updater(vec!["SOL".to_string(), "USDC".to_string(), "BONK".to_string(), "JitoSOL".to_string(), "RAY".to_string()]).await;
+    
+    let jupiter_client = Arc::new(JupiterClient::new(
+        &config.jupiter.self_hosted_url,
+        &config.jupiter.public_url,
+    ).await?);
+    
+    let mev_simulator = Arc::new(Mutex::new(MevSimulator::new()));
+    
+    // Create virtual portfolio with initial allocation
+    let portfolio = Arc::new(RwLock::new(VirtualPortfolio::new(config.initial_allocation)));
+    
+    // Create paper trade executor
+    let trade_executor = Arc::new(PaperTradeExecutor::new(
+        portfolio.clone(),
+        price_cache.clone(),
+        mev_simulator.clone(),
+        jupiter_client.clone(),
+        quest_db.clone(),
+        SlippageConfig::Fixed(config.slippage_tolerance),
+    ));
+    
+    // Create order monitor and start monitoring
+    let order_monitor = Arc::new(OrderMonitor::new(
+        portfolio.clone(),
+        price_cache.clone(),
+        trade_executor.clone(),
+    ));
+    let _monitor_handle = order_monitor.start_monitoring().await;
+    
+    // Create event stream for TUI updates
+    let event_stream = Arc::new(EventStream::new(redis.clone(), "trading_events", 10000));
+    
+    // Create and run TUI
+    let mut tui = TradingTui::new(
+        portfolio.clone(),
+        event_stream.clone(),
+        trade_executor.clone(),
+        order_monitor.clone(),
+    )?;
+    
+    tui.run().await
+}
+```
+
+# Test Strategy:
+Create unit tests for configuration loading and validation. Test CLI argument parsing with various combinations. Create integration tests for the full application initialization flow. Test error handling for invalid configurations. Verify that all components are properly initialized and connected. Test the application with mock services to verify end-to-end functionality.
+
+# Subtasks:
+## 1. Implement CLI interface with clap [pending]
+### Dependencies: None
+### Description: Create a command-line interface using the clap crate that handles all configuration options, validates user input, and provides helpful error messages and documentation.
+### Details:
+Implement a CLI interface that: 1) Defines all command-line arguments and options (trading mode, configuration file path, verbosity, etc.), 2) Provides help text and documentation for each option, 3) Implements argument validation logic, 4) Handles version information and other metadata, 5) Organizes commands into logical subcommands if needed.
+
+## 2. Develop configuration system [pending]
+### Dependencies: 13.1
+### Description: Create a flexible configuration system that can load settings from files and command-line arguments, with proper precedence rules and validation.
+### Details:
+Implement a configuration system that: 1) Defines a central Configuration struct to hold all application settings, 2) Loads configuration from TOML/YAML files, 3) Merges command-line arguments with file-based configuration, 4) Implements validation logic for the complete configuration, 5) Provides sensible defaults for optional settings, 6) Includes serialization/deserialization support.
+
+## 3. Implement main application flow [pending]
+### Dependencies: 13.2
+### Description: Create the main application entry point that initializes all components, manages the application lifecycle, and handles graceful shutdown.
+### Details:
+Implement the main application flow that: 1) Parses command-line arguments and loads configuration, 2) Sets up logging based on verbosity settings, 3) Initializes all required services in the correct order (market data, strategy engine, execution engine, etc.), 4) Implements proper error handling throughout the initialization process, 5) Sets up signal handlers for graceful shutdown, 6) Manages the main application loop, 7) Ensures proper cleanup of resources on exit.
+

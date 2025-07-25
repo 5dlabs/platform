@@ -1,0 +1,183 @@
+# Task ID: 12
+# Title: Implement QuestDB Integration for Trade Data and Metrics
+# Status: pending
+# Dependencies: 2, 9
+# Priority: medium
+# Description: Create a system for recording trade data, performance metrics, and latency measurements in QuestDB with 100ms batch writes
+# Details:
+1. Implement QuestDB client with batch writing:
+   - Create connection pool for QuestDB
+   - Implement batch writer with 100ms intervals
+   - Configure 30-day retention policy
+
+2. Define time-series tables:
+   - Trades table for complete trade history
+   - Performance metrics table for latency and execution statistics
+   - MEV metrics table for tracking protection effectiveness
+
+3. Implement query interfaces:
+   - Methods to retrieve historical trades with filtering
+   - Performance analysis queries for strategy validation
+   - Latency statistics for system monitoring
+
+Example implementation:
+```rust
+pub struct QuestDbClient {
+    pool: Pool<QuestDbConnectionManager>,
+    batch_writer: Arc<BatchWriter>,
+}
+
+pub struct BatchWriter {
+    queue: Mutex<Vec<BatchItem>>,
+    pool: Pool<QuestDbConnectionManager>,
+}
+
+pub enum BatchItem {
+    Trade(Trade),
+    LatencyMetric(LatencyMetric),
+    MevMetric(MevMetric),
+}
+
+impl QuestDbClient {
+    pub fn new(connection_string: &str) -> Result<Self> {
+        let manager = QuestDbConnectionManager::new(connection_string)?;
+        let pool = Pool::builder()
+            .max_size(5)
+            .build(manager)?;
+        
+        // Initialize tables if they don't exist
+        let conn = pool.get()?;
+        conn.execute("
+            CREATE TABLE IF NOT EXISTS trades (
+                timestamp TIMESTAMP,
+                action SYMBOL,
+                base_token SYMBOL,
+                quote_token SYMBOL,
+                base_amount DOUBLE,
+                quote_amount DOUBLE,
+                executed_price DOUBLE,
+                transaction_fee LONG,
+                priority_fee LONG,
+                expected_slippage DOUBLE,
+                actual_slippage DOUBLE,
+                mev_status SYMBOL,
+                transfer_fees DOUBLE
+            ) TIMESTAMP(timestamp) PARTITION BY DAY WITH MAXUNCOMMITTEDROWS=10000;
+        ", &[])?;
+        
+        // Create similar tables for metrics
+        // ...
+        
+        // Create batch writer and start background task
+        let batch_writer = Arc::new(BatchWriter::new(pool.clone()));
+        batch_writer.start_background_task();
+        
+        Ok(Self {
+            pool,
+            batch_writer,
+        })
+    }
+    
+    pub fn record_trade(&self, trade: Trade) -> Result<()> {
+        self.batch_writer.add(BatchItem::Trade(trade))
+    }
+    
+    pub fn record_latency_metric(&self, metric: LatencyMetric) -> Result<()> {
+        self.batch_writer.add(BatchItem::LatencyMetric(metric))
+    }
+    
+    pub async fn get_trades(&self, filter: TradeFilter) -> Result<Vec<Trade>> {
+        // Query implementation
+        // ...
+    }
+}
+
+impl BatchWriter {
+    pub fn new(pool: Pool<QuestDbConnectionManager>) -> Self {
+        Self {
+            queue: Mutex::new(Vec::new()),
+            pool,
+        }
+    }
+    
+    pub fn add(&self, item: BatchItem) -> Result<()> {
+        let mut queue = self.queue.lock().unwrap();
+        queue.push(item);
+        Ok(())
+    }
+    
+    pub fn start_background_task(&self) -> JoinHandle<()> {
+        let writer = self.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_millis(100)); // 100ms as specified
+            
+            loop {
+                interval.tick().await;
+                writer.flush().await.unwrap_or_else(|e| {
+                    eprintln!("Error flushing batch: {}", e);
+                });
+            }
+        })
+    }
+    
+    async fn flush(&self) -> Result<()> {
+        let items = {
+            let mut queue = self.queue.lock().unwrap();
+            if queue.is_empty() {
+                return Ok(());
+            }
+            std::mem::take(&mut *queue)
+        };
+        
+        // Group items by type
+        let mut trades = Vec::new();
+        let mut latency_metrics = Vec::new();
+        let mut mev_metrics = Vec::new();
+        
+        for item in items {
+            match item {
+                BatchItem::Trade(trade) => trades.push(trade),
+                BatchItem::LatencyMetric(metric) => latency_metrics.push(metric),
+                BatchItem::MevMetric(metric) => mev_metrics.push(metric),
+            }
+        }
+        
+        // Get connection from pool
+        let conn = self.pool.get().await?;
+        
+        // Batch insert trades
+        if !trades.is_empty() {
+            // Prepare batch insert
+            // ...
+        }
+        
+        // Batch insert other metrics
+        // ...
+        
+        Ok(())
+    }
+}
+```
+
+# Test Strategy:
+Create unit tests for batch writing with various data volumes. Test 100ms batch interval timing. Verify correct table creation and schema. Test query interfaces with different filter parameters. Benchmark write performance under load to ensure it meets requirements. Test 30-day retention policy implementation. Verify that all fields from the Enhanced Trade Model are correctly stored and retrievable.
+
+# Subtasks:
+## 1. Implement QuestDB client with connection pooling [pending]
+### Dependencies: None
+### Description: Develop a robust QuestDB client with connection pooling and efficient batch writing capabilities to handle high-frequency data ingestion
+### Details:
+Create a client wrapper for QuestDB that implements connection pooling to efficiently manage database connections. Implement batch writing capabilities that can buffer data and write in 100ms intervals. Include error handling, retry logic, and connection recovery mechanisms. Ensure the client can handle high throughput of trading data without performance degradation.
+
+## 2. Define time-series table schemas [pending]
+### Dependencies: 12.1
+### Description: Design and implement time-series table definitions for trades, performance metrics, and MEV data
+### Details:
+Create optimized table schemas for different data types: 1) Trades table with timestamp, price, volume, and trade direction, 2) Performance metrics table with latency measurements, execution times, and system resource utilization, 3) MEV data table with opportunity identification, profit calculations, and execution results. Ensure proper partitioning, indexing, and designated timestamp columns for optimal time-series performance.
+
+## 3. Develop query interfaces for analysis [pending]
+### Dependencies: 12.2
+### Description: Implement query interfaces for historical analysis and real-time performance monitoring
+### Details:
+Create a set of query interfaces that provide: 1) Historical analysis capabilities with time-range filtering, aggregations, and statistical functions, 2) Performance monitoring dashboards with real-time metrics and alerting thresholds, 3) MEV analysis tools to evaluate strategy effectiveness. Include documentation on query patterns and optimization techniques. Implement caching for frequently accessed queries to improve performance.
+

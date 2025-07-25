@@ -1,0 +1,79 @@
+# Task ID: 4
+# Title: Develop Jupiter Failover Client
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Create a client that can seamlessly switch between self-hosted and public Jupiter instances for trade routing
+# Details:
+1. Implement a Jupiter V6 API client with support for both self-hosted and public endpoints:
+   - Use lite-api.jup.ag domain as specified for public endpoint
+   - Configure timeout of 200ms for self-hosted instance
+
+2. Add failover logic:
+   - Start with self-hosted instance for low latency
+   - Automatically switch to public instance on timeout or error
+   - Implement health check to detect when self-hosted is available again
+
+3. Implement quote and swap functionality:
+   - Support for all MVP tokens (SOL, USDC, BONK, JitoSOL, RAY)
+   - Handle Token-2022 extension fees
+   - Support for MEV protection parameters
+
+Example implementation:
+```rust
+pub struct JupiterClient {
+    self_hosted_client: HttpClient,
+    public_client: HttpClient,
+    self_hosted_health: Arc<AtomicBool>,
+}
+
+impl JupiterClient {
+    pub async fn get_quote(&self, input_token: &str, output_token: &str, amount: u64) -> Result<Quote> {
+        if self.self_hosted_health.load(Ordering::Relaxed) {
+            match timeout(Duration::from_millis(200), self.self_hosted_client.get_quote(input_token, output_token, amount)).await {
+                Ok(Ok(quote)) => return Ok(quote),
+                _ => {
+                    // Mark self-hosted as unhealthy and fall back to public
+                    self.self_hosted_health.store(false, Ordering::Relaxed);
+                    spawn(self.check_self_hosted_health());
+                }
+            }
+        }
+        
+        // Fallback to public Jupiter API
+        self.public_client.get_quote(input_token, output_token, amount).await
+    }
+    
+    async fn check_self_hosted_health(&self) {
+        // Periodically check if self-hosted is back online
+        tokio::time::sleep(Duration::from_secs(30)).await;
+        match timeout(Duration::from_millis(200), self.self_hosted_client.health_check()).await {
+            Ok(Ok(_)) => self.self_hosted_health.store(true, Ordering::Relaxed),
+            _ => spawn(self.check_self_hosted_health()),
+        }
+    }
+}
+```
+
+# Test Strategy:
+Create unit tests with mocked HTTP responses. Implement integration tests against both self-hosted and public Jupiter instances. Test failover scenarios by simulating timeouts and errors. Verify correct handling of Token-2022 extension fees. Benchmark latency differences between self-hosted and public endpoints. Test with all MVP tokens to ensure compatibility.
+
+# Subtasks:
+## 1. Implement Core Jupiter V6 API Client [pending]
+### Dependencies: None
+### Description: Create a base client that can interact with Jupiter V6 API endpoints, supporting both self-hosted and public instances.
+### Details:
+Develop a TypeScript client that can: 1) Connect to Jupiter V6 API endpoints, 2) Support configuration for both self-hosted and public Jupiter instances, 3) Implement proper request/response handling with appropriate error management, 4) Include TypeScript interfaces for all API responses, 5) Support authentication if required for self-hosted instances.
+
+## 2. Implement Failover Logic and Health Checking [pending]
+### Dependencies: 4.1
+### Description: Build the failover mechanism that monitors endpoint health and automatically switches between instances when failures are detected.
+### Details:
+Create a failover system that: 1) Implements health checking for all configured endpoints, 2) Detects timeouts, errors, and other failure conditions, 3) Automatically switches to backup endpoints when primary fails, 4) Includes a recovery mechanism to periodically test failed endpoints, 5) Provides configurable timeout thresholds and retry logic.
+
+## 3. Implement Quote and Swap Functionality [pending]
+### Dependencies: 4.1, 4.2
+### Description: Build the quote and swap functionality supporting all MVP tokens and Token-2022 extension fees.
+### Details:
+Develop the core trading functionality that: 1) Implements quote retrieval for token pairs, 2) Supports swap execution with proper transaction building, 3) Handles all MVP tokens including SOL and SPL tokens, 4) Properly accounts for Token-2022 extension fees in quotes and transactions, 5) Includes proper error handling and validation for all swap operations.
+

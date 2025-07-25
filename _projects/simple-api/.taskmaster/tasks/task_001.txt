@@ -1,0 +1,16 @@
+# Task ID: 1
+# Title: Initialize Project and Environment Configuration
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Set up the project repository, initialize npm, configure environment variables, and establish the base project structure.
+# Details:
+- Run `npm init -y` to initialize the project.
+- Install core dependencies: `express@5`, `dotenv@16`, and `nodemon@3` as a dev dependency for hot-reloading.
+- Create a `.env` file for environment variables (e.g., PORT).
+- Set up a clean directory structure: `/src`, `/src/routes`, `/src/controllers`, `/src/middleware`, `/src/utils`.
+- Add a README.md with setup instructions.
+- Use latest Node.js LTS (18+).
+
+# Test Strategy:
+Verify that running `npm start` and `npm run dev` starts the server and loads environment variables correctly.

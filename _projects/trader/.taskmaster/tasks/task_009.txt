@@ -1,0 +1,245 @@
+# Task ID: 9
+# Title: Implement Paper Trade Executor with Configurable Models
+# Status: pending
+# Dependencies: 4, 7, 8
+# Priority: high
+# Description: Create a paper trade execution system with configurable slippage models and MEV simulation that processes external trade requests
+# Details:
+1. Implement paper trade execution flow:
+   - Accept external TradeRequest objects via gRPC
+   - Validate TradeRequest format (not business logic)
+   - Get current prices from Redis cache
+   - Apply slippage model to determine execution price
+   - Apply MEV simulation if applicable
+   - Update virtual portfolio
+   - Record trade in QuestDB
+   - Return detailed TradeResult with execution metrics
+
+2. Create configurable slippage models:
+   - Fixed slippage model (0.5-2% configurable) for MVP
+   - Support for future dynamic slippage using real pool states
+
+3. Integrate with other components:
+   - Use Jupiter client for price discovery
+   - Use Redis for price caching
+   - Use MEV simulator for realistic execution
+   - Implement comprehensive logging for audit trails
+
+Example implementation:
+```rust
+pub struct PaperTradeExecutor {
+    portfolio: Arc<RwLock<VirtualPortfolio>>,
+    price_cache: Arc<PriceCache>,
+    mev_simulator: Arc<Mutex<MevSimulator>>,
+    jupiter_client: Arc<JupiterClient>,
+    quest_db: Arc<QuestDbClient>,
+    slippage_config: SlippageConfig,
+    logger: Logger,
+}
+
+pub enum SlippageConfig {
+    Fixed(Decimal),  // Fixed percentage (0.5-2%)
+    Dynamic,         // For future implementation
+}
+
+impl PaperTradeExecutor {
+    pub async fn execute_trade_request(&self, request: TradeRequest) -> Result<TradeResult> {
+        // Log incoming trade request
+        self.logger.info(format!("Received trade request: {:?}", request));
+        
+        // Validate trade request format
+        self.validate_trade_request(&request)?;
+        
+        // Get current prices from cache or Jupiter
+        let base_price = self.get_token_price(&request.base_token).await?;
+        let quote_price = self.get_token_price(&request.quote_token).await?;
+        
+        self.logger.debug(format!("Current prices - base: {}, quote: {}", base_price, quote_price));
+        
+        // Calculate expected execution price
+        let expected_price = match request.action {
+            TradeAction::Buy => quote_price / base_price,
+            TradeAction::Sell => base_price / quote_price,
+            TradeAction::Swap => {
+                // Get route from Jupiter for more accurate pricing
+                self.jupiter_client.get_price(
+                    &request.base_token,
+                    &request.quote_token,
+                    request.amount,
+                ).await?
+            }
+        };
+        
+        self.logger.debug(format!("Expected price: {}", expected_price));
+        
+        // Apply slippage model
+        let slippage = match self.slippage_config {
+            SlippageConfig::Fixed(pct) => pct,
+            SlippageConfig::Dynamic => {
+                // For future implementation
+                Decimal::new(5, 3) // Default 0.5%
+            }
+        };
+        
+        let slippage_factor = match request.action {
+            TradeAction::Buy => Decimal::ONE + slippage,
+            TradeAction::Sell => Decimal::ONE - slippage,
+            TradeAction::Swap => {
+                if request.is_base_input {
+                    Decimal::ONE - slippage
+                } else {
+                    Decimal::ONE + slippage
+                }
+            }
+        };
+        
+        let execution_price = expected_price * slippage_factor;
+        
+        self.logger.debug(format!("Applied slippage: {}%, execution price: {}", slippage * Decimal::from(100), execution_price));
+        
+        // Apply MEV simulation if enabled
+        let (final_price, mev_status) = if request.simulate_mev {
+            let trade_size_usd = if request.is_base_input {
+                request.amount * base_price
+            } else {
+                request.amount
+            };
+            
+            self.logger.debug(format!("Simulating MEV for trade size: {} USD", trade_size_usd));
+            
+            let mev_assessment = self.mev_simulator.lock().await.simulate_mev(
+                &request.base_token,
+                trade_size_usd,
+            );
+            
+            if mev_assessment.is_attacked && request.priority_fee < mev_assessment.recommended_fee {
+                // Apply MEV impact to price
+                let impact_factor = Decimal::new(mev_assessment.estimated_loss_bps as i64, 4);
+                let mev_price = match request.action {
+                    TradeAction::Buy => execution_price * (Decimal::ONE + impact_factor),
+                    TradeAction::Sell => execution_price * (Decimal::ONE - impact_factor),
+                    TradeAction::Swap => {
+                        if request.is_base_input {
+                            execution_price * (Decimal::ONE - impact_factor)
+                        } else {
+                            execution_price * (Decimal::ONE + impact_factor)
+                        }
+                    }
+                };
+                self.logger.warn(format!("MEV attack simulated - impact: {}%, final price: {}", impact_factor * Decimal::from(100), mev_price));
+                (mev_price, MevStatus::AtRisk)
+            } else {
+                self.logger.info("MEV simulation: Trade protected or no attack detected");
+                (execution_price, MevStatus::Protected)
+            }
+        } else {
+            self.logger.debug("MEV simulation disabled for this request");
+            (execution_price, MevStatus::Unknown)
+        };
+        
+        // Create trade record
+        let trade = Trade {
+            timestamp: Utc::now(),
+            action: request.action,
+            base_token: TokenInfo { symbol: request.base_token.clone(), /* other fields */ },
+            quote_token: TokenInfo { symbol: request.quote_token.clone(), /* other fields */ },
+            base_amount: request.amount,
+            quote_amount: request.amount * final_price,
+            executed_price: final_price,
+            transaction_fee: 5000, // Simulated transaction fee
+            priority_fee: request.priority_fee,
+            expected_slippage: slippage,
+            actual_slippage: (final_price - expected_price) / expected_price,
+            mev_status,
+            transfer_fees: None, // To be implemented for Token-2022
+            request_id: request.request_id, // Track originating request
+            execution_time_ms: 0, // Will be filled in later
+        };
+        
+        // Update portfolio
+        let portfolio_update_start = Instant::now();
+        self.portfolio.write().await.execute_trade(trade.clone()).await?;
+        let portfolio_update_time = portfolio_update_start.elapsed().as_millis();
+        
+        self.logger.info(format!("Portfolio updated in {}ms", portfolio_update_time));
+        
+        // Record trade in QuestDB
+        self.quest_db.record_trade(&trade).await?;
+        
+        // Create detailed trade result
+        let trade_result = TradeResult {
+            trade,
+            portfolio_state: self.portfolio.read().await.get_summary(),
+            execution_metrics: ExecutionMetrics {
+                expected_price,
+                execution_price: final_price,
+                price_impact_bps: ((final_price - expected_price) / expected_price * Decimal::from(10000)).round().to_i64().unwrap_or(0),
+                execution_time_ms: portfolio_update_time as u64,
+                mev_simulation_applied: request.simulate_mev,
+            },
+        };
+        
+        self.logger.info(format!("Trade execution completed: {:?}", trade_result));
+        
+        Ok(trade_result)
+    }
+    
+    fn validate_trade_request(&self, request: &TradeRequest) -> Result<()> {
+        // Validate request format, not business logic
+        if request.amount <= Decimal::ZERO {
+            return Err(anyhow!("Trade amount must be positive"));
+        }
+        
+        if request.base_token.is_empty() || request.quote_token.is_empty() {
+            return Err(anyhow!("Token symbols cannot be empty"));
+        }
+        
+        if request.priority_fee < 0 {
+            return Err(anyhow!("Priority fee cannot be negative"));
+        }
+        
+        Ok(())
+    }
+}
+```
+
+# Test Strategy:
+Create unit tests for the trade executor with different slippage configurations. Test MEV simulation integration with various attack scenarios. Verify correct price calculation with fixed slippage model. Test integration with virtual portfolio and QuestDB. Create end-to-end tests that simulate complete trade flows. Verify that trade records contain all required fields from the Enhanced Trade Model. Test validation of TradeRequest objects with both valid and invalid inputs. Verify that the interface matches the live trader for seamless switching. Test comprehensive logging for audit trails.
+
+# Subtasks:
+## 1. Implement core paper trade execution flow [pending]
+### Dependencies: None
+### Description: Create the main execution pipeline that processes external trade requests, validates them, executes the trade, and updates the portfolio accordingly.
+### Details:
+Implement the PaperTradeExecutor class with methods to handle the full trade lifecycle: 1) Parse and validate TradeRequest objects, 2) Calculate pre-trade portfolio state, 3) Determine execution price based on current market data, 4) Apply transaction fees, 5) Update portfolio balances atomically, 6) Return TradeResult with execution details and metrics, and 7) Implement comprehensive logging for audit trails. Ensure thread-safety for concurrent trade executions.
+
+## 2. Develop configurable slippage model system [pending]
+### Dependencies: 9.1
+### Description: Create a flexible slippage modeling framework with both fixed percentage and dynamic market-based options.
+### Details:
+Design a SlippageModel interface and implement multiple strategies: 1) FixedSlippageModel with configurable percentage, 2) DynamicSlippageModel that scales with trade size relative to liquidity, and 3) CompositeSlippageModel that can combine multiple models. Include configuration options to select and parameterize models at runtime. Integrate slippage calculation into the core execution flow.
+
+## 3. Integrate MEV simulation for price impact [pending]
+### Dependencies: 9.1, 9.2
+### Description: Connect to the MEV simulator to apply realistic price impact to paper trades based on current market conditions.
+### Details:
+Implement MEV simulation integration that: 1) Queries the MEV simulator with trade parameters, 2) Processes simulation results to extract price impact, 3) Applies the calculated impact to execution price, and 4) Handles fallback logic when simulation fails. Include configuration options to enable/disable MEV simulation and adjust impact parameters. Document the simulation model and assumptions.
+
+## 4. Build trade recording and metrics collection system [pending]
+### Dependencies: 9.1
+### Description: Create a comprehensive system to record trade details and collect performance metrics for analysis.
+### Details:
+Implement a TradeRecorder that: 1) Captures detailed trade information including timestamps, prices, slippage, fees, and portfolio state before/after, 2) Stores trade history in a thread-safe manner, 3) Calculates performance metrics like execution time, price deviation, and slippage statistics, 4) Provides query methods to retrieve and analyze historical trades, and 5) Includes export functionality for external analysis. Ensure minimal performance impact on the trade execution flow.
+
+## 5. Implement TradeRequest validation system [pending]
+### Dependencies: 9.1
+### Description: Create a validation system for incoming TradeRequest objects to ensure they meet format requirements.
+### Details:
+Implement a validation system that: 1) Checks TradeRequest objects for required fields, 2) Validates data types and value ranges, 3) Ensures token symbols are valid, 4) Verifies amount is positive, 5) Checks that priority fee is non-negative, and 6) Returns appropriate error messages for invalid requests. Focus on format validation rather than business logic validation.
+
+## 6. Implement comprehensive logging system [pending]
+### Dependencies: 9.1
+### Description: Create a detailed logging system for audit trails of trade execution.
+### Details:
+Implement a logging system that: 1) Records all incoming trade requests, 2) Logs key execution steps with appropriate log levels, 3) Captures execution metrics and outcomes, 4) Includes request IDs for traceability, 5) Logs errors and warnings with context, and 6) Configurable verbosity levels for different environments. Ensure logs contain sufficient detail for troubleshooting and auditing.
+

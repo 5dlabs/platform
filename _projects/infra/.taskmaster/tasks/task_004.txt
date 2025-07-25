@@ -1,0 +1,128 @@
+# Task ID: 4
+# Title: Implement Cilium CNI with eBPF Acceleration
+# Status: pending
+# Dependencies: 3
+# Priority: high
+# Description: Deploy Cilium CNI with eBPF optimizations, configure XDP programs for Solana traffic prioritization, and implement application-level rate limiting for DDoS protection.
+# Details:
+1. Install Cilium with Helm chart, enabling eBPF optimizations
+2. Configure Cilium to replace kube-proxy for reduced latency
+3. Disable BPF masquerade for Talos compatibility
+4. Develop and deploy XDP programs for Solana traffic prioritization
+5. Implement application-level rate limiting for DDoS protection
+6. Configure Hubble for network observability
+7. Apply network policies for security
+
+Example Cilium Helm values:
+```yaml
+cilium:
+  kubeProxyReplacement: "strict"
+  bpf:
+    masquerade: false
+  loadBalancer:
+    acceleration: "native"
+  hubble:
+    enabled: true
+    metrics:
+      enabled:
+        - "drop"
+        - "tcp"
+        - "flow"
+        - "icmp"
+        - "http"
+  nodePort:
+    enabled: true
+  hostServices:
+    enabled: true
+  externalIPs:
+    enabled: true
+  hostPort:
+    enabled: true
+  ipam:
+    mode: "kubernetes"
+  ebpf:
+    hostRouting: true
+```
+
+XDP program for Solana traffic prioritization:
+```c
+#include <linux/bpf.h>
+#include <linux/if_ether.h>
+#include <linux/ip.h>
+#include <linux/udp.h>
+
+SEC("xdp")
+int solana_traffic_prio(struct xdp_md *ctx) {
+    void *data_end = (void *)(long)ctx->data_end;
+    void *data = (void *)(long)ctx->data;
+    struct ethhdr *eth = data;
+    
+    if (data + sizeof(*eth) > data_end)
+        return XDP_PASS;
+        
+    if (eth->h_proto != htons(ETH_P_IP))
+        return XDP_PASS;
+        
+    struct iphdr *iph = data + sizeof(*eth);
+    if ((void*)iph + sizeof(*iph) > data_end)
+        return XDP_PASS;
+        
+    if (iph->protocol != IPPROTO_UDP)
+        return XDP_PASS;
+        
+    struct udphdr *udph = (void*)iph + sizeof(*iph);
+    if ((void*)udph + sizeof(*udph) > data_end)
+        return XDP_PASS;
+        
+    // Solana gossip port is 8000-8002
+    if (ntohs(udph->dest) >= 8000 && ntohs(udph->dest) <= 8002) {
+        // Set priority by modifying packet
+        // This is simplified - actual implementation would use BPF maps
+        return XDP_PASS;
+    }
+    
+    return XDP_PASS;
+}
+```
+
+# Test Strategy:
+1. Verify Cilium pods are running correctly
+2. Test UDP performance for gossip traffic with iperf3
+3. Validate XDP program loading with `bpftool prog show`
+4. Benchmark network latency and throughput with and without XDP
+5. Test SR-IOV functionality if available
+6. Verify DDoS protection with simulated attack traffic
+7. Check Hubble observability for network traffic visualization
+8. Validate that kube-proxy replacement is working correctly
+
+# Subtasks:
+## 1. Install Cilium CNI with eBPF Optimizations [pending]
+### Dependencies: None
+### Description: Deploy Cilium as the Kubernetes CNI using Helm, enabling eBPF optimizations and configuring it to replace kube-proxy for improved performance and reduced latency.
+### Details:
+Add the Cilium Helm repository, update it, and install Cilium with Helm using values that enable eBPF features and strict kube-proxy replacement. Ensure Talos compatibility by disabling BPF masquerade.
+
+## 2. Configure Hubble and Network Observability [pending]
+### Dependencies: 4.1
+### Description: Enable and configure Hubble for real-time network observability and monitoring within the Cilium deployment.
+### Details:
+Set Hubble to enabled in the Helm values, configure metrics collection, and ensure the Hubble UI is accessible for network flow visualization.
+
+## 3. Develop and Deploy XDP Programs for Solana Traffic Prioritization [pending]
+### Dependencies: 4.1
+### Description: Create and deploy custom XDP (eXpress Data Path) eBPF programs to prioritize Solana gossip traffic (UDP ports 8000-8002) at the kernel level.
+### Details:
+Write and compile the XDP program, load it onto relevant network interfaces, and integrate with Cilium if necessary to ensure Solana traffic is prioritized.
+
+## 4. Implement Application-Level Rate Limiting for DDoS Protection [pending]
+### Dependencies: 4.1, 4.3
+### Description: Deploy application-level rate limiting mechanisms to protect Solana validator workloads from DDoS attacks.
+### Details:
+Configure Cilium or integrate with external tools to enforce rate limits on incoming traffic, focusing on Solana-related endpoints.
+
+## 5. Apply Network Policies for Security Hardening [pending]
+### Dependencies: 4.1, 4.2, 4.4
+### Description: Define and enforce Kubernetes network policies using Cilium to restrict traffic to and from Solana validator pods, enhancing security.
+### Details:
+Write and apply Cilium network policies that allow only necessary ingress and egress traffic, following least privilege principles.
+

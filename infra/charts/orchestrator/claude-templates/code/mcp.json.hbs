@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    {{!-- Disable remote tools for testing to prevent web search --}}
+    {{#if (and local_tools (ne tool_config "minimal"))}}
+    {{!-- Only enable local toolman if needed --}}
+    {{/if}}
+    {{#if (eq tool_config "advanced")}}
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "env": {}
+    }
+    {{/if}}
+  }
+}

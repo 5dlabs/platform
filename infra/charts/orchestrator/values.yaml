@@ -10,6 +10,20 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"
 
+# Agent/Task Runner image configuration (used by controller to create Jobs)
+agent:
+  image:
+    repository: ghcr.io/5dlabs/platform/claude-code
+    tag: "1.0.56"
+    pullPolicy: Always
+
+# Storage configuration for workspace PVCs
+storage:
+  # Storage class name (e.g., "local-path" for local development, leave empty for default)
+  storageClassName: "local-path"
+  # Size of workspace PVCs
+  workspaceSize: "10Gi"
+
 imagePullSecrets:
   - name: ghcr-secret
 
@@ -51,7 +65,7 @@ service:
   name: http
 
 ingress:
-  enabled: true
+  enabled: false
   className: "nginx"
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
@@ -97,10 +111,10 @@ config:
 
   # Logging
   rustLog: "orchestrator=debug,tower_http=debug,axum=debug,kube=info"
-  
-  # TaskRun Controller configuration
+
+  # Task Controller configuration
   controllerEnabled: true
-  controllerConfigMap: "taskrun-controller-config"
+  controllerConfigMap: "task-controller-config"
 
 # Secret configuration for API keys
 secrets:
@@ -116,12 +130,12 @@ rbac:
   # Use Role/RoleBinding (true) or ClusterRole/ClusterRoleBinding (false)
   namespaced: true
   rules:
-    # TaskRun CRD management
-    - apiGroups: ["orchestrator.io"]
-      resources: ["taskruns"]
+    # CodeRun and DocsRun CRD management
+    - apiGroups: ["orchestrator.platform"]
+      resources: ["coderuns", "docsruns"]
       verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
-    - apiGroups: ["orchestrator.io"]
-      resources: ["taskruns/status"]
+    - apiGroups: ["orchestrator.platform"]
+      resources: ["coderuns/status", "docsruns/status"]
       verbs: ["get", "update", "patch"]
     # Job management in orchestrator namespace
     - apiGroups: ["batch"]

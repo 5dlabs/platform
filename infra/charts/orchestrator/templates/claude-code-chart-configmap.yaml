@@ -196,8 +196,7 @@ data:
 
     # Secret configuration for API keys
     secrets:
-      # REQUIRED: Set your Anthropic API key
-      anthropicApiKey: ""
+      # API keys are set manually - not managed by Helm templates
       # GitHub token for CLI access
       githubToken: ""
 

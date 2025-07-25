@@ -1,0 +1,65 @@
+{
+  "id": 1,
+  "title": "Build Custom Talos OS Image with Solana Optimizations",
+  "description": "Create a custom Talos OS build with kernel optimizations specifically for Solana validator performance, including huge pages allocation, NUMA optimizations, and io_uring support.",
+  "details": "1. Fork the Talos OS repository and set up build environment\n2. Configure kernel with the following optimizations:\n   - Static huge pages allocation (100GB at boot time)\n   - NUMA optimizations for AMD EPYC processors\n   - io_uring support for future Firedancer compatibility\n   - SR-IOV enablement for network acceleration\n3. Implement custom kernel module for runtime optimizations\n4. Add gcompat layer for glibc compatibility\n5. Integrate performance monitoring extensions\n6. Configure kernel parameters in machine config:\n   ```yaml\n   machine:\n     type: worker\n     install:\n       disk: /dev/nvme0n1\n       image: ghcr.io/our-org/installer:custom-solana-v1.10.3\n       extensions:\n         - image: ghcr.io/our-org/solana-optimizer:latest\n     kernel:\n       modules:\n         - tcp_bbr\n         - sch_fq\n     sysctls:\n       vm.max_map_count: 1048576\n       vm.dirty_ratio: 50\n       net.core.rmem_max: 268435456\n       net.ipv4.tcp_congestion_control: bbr\n   ```\n7. Build and publish custom Talos installer image\n8. Document build process and configuration options",
+  "testStrategy": "1. Benchmark custom vs stock kernel performance using sysbench and fio\n2. Verify huge pages allocation at boot time\n3. Test NUMA node affinity with numactl\n4. Validate io_uring performance with io_uring-test\n5. Confirm SR-IOV functionality with network tests\n6. Verify gcompat compatibility by running glibc-dependent applications\n7. Compare performance metrics against baseline systemd deployments",
+  "priority": "high",
+  "dependencies": [],
+  "status": "pending",
+  "subtasks": [
+    {
+      "id": 1,
+      "title": "Fork Talos OS Repository and Set Up Build Environment",
+      "description": "Fork the official Talos OS repository and prepare a local development environment capable of building custom Talos images.",
+      "dependencies": [],
+      "details": "Clone the Talos repository, install required build tools (Docker, buildx), and verify the ability to build Talos components locally. Set up a local Docker registry for image testing and pushing custom builds.",
+      "status": "pending",
+      "testStrategy": "Run 'make talosctl' and 'make initramfs kernel' to ensure the build environment is functional. Build and push a test installer image to the local registry to confirm setup.[2]"
+    },
+    {
+      "id": 2,
+      "title": "Configure Kernel with Solana-Specific Optimizations",
+      "description": "Modify the Talos kernel configuration to enable static huge pages allocation, NUMA optimizations for AMD EPYC, io_uring support, and SR-IOV networking.",
+      "dependencies": [
+        "1.1"
+      ],
+      "details": "Edit kernel config files to statically allocate 100GB huge pages at boot, enable NUMA features, activate io_uring, and ensure SR-IOV modules are included. Validate compatibility with AMD EPYC processors and Solana validator requirements.",
+      "status": "pending",
+      "testStrategy": "Boot a test image and verify huge pages allocation, NUMA node visibility, io_uring support, and SR-IOV device enumeration using kernel logs and system tools."
+    },
+    {
+      "id": 3,
+      "title": "Implement Custom Kernel Module and Runtime Optimizations",
+      "description": "Develop and integrate a custom kernel module to provide additional runtime optimizations for Solana workloads.",
+      "dependencies": [
+        "1.2"
+      ],
+      "details": "Write a kernel module to tune runtime parameters (e.g., memory management, CPU affinity) and load it during system boot. Ensure module is compatible with Talos OS's immutable design and API-driven management.",
+      "status": "pending",
+      "testStrategy": "Load the module on a running Talos instance, verify its operation via logs and sysfs/procfs, and confirm that runtime optimizations are applied as intended."
+    },
+    {
+      "id": 4,
+      "title": "Integrate gcompat Layer and Performance Monitoring Extensions",
+      "description": "Add the gcompat compatibility layer for glibc support and integrate performance monitoring tools/extensions into the custom Talos build.",
+      "dependencies": [
+        "1.3"
+      ],
+      "details": "Package and include gcompat in the Talos image to enable glibc-dependent binaries. Integrate monitoring agents or extensions required for Solana validator performance tracking, ensuring they are managed via Talos APIs.",
+      "status": "pending",
+      "testStrategy": "Deploy the image, run glibc-dependent test binaries, and verify monitoring data collection and reporting through the configured extensions."
+    },
+    {
+      "id": 5,
+      "title": "Build, Publish, and Document Custom Talos Installer Image",
+      "description": "Build the final custom Talos installer image, publish it to a container registry, and document the build process and configuration options.",
+      "dependencies": [
+        "1.4"
+      ],
+      "details": "Use the Talos build system to create the installer image with all customizations. Push the image to the designated registry and write comprehensive documentation covering build steps, kernel parameters, and usage instructions.",
+      "status": "pending",
+      "testStrategy": "Download and install the published image on test hardware, verify all customizations are present, and review documentation for completeness and accuracy."
+    }
+  ]
+}

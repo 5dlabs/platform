@@ -1,0 +1,157 @@
+# Task ID: 7
+# Title: Implement Comprehensive Monitoring and Observability
+# Status: pending
+# Dependencies: 5, 6
+# Priority: medium
+# Description: Deploy monitoring and logging stack using Helm charts: kube-prometheus-stack for metrics/alerting, Grafana Loki for logs, Hubble for network observability, with custom Helm charts for Solana-specific monitoring.
+# Details:
+1. Deploy kube-prometheus-stack Helm chart:
+```yaml
+# values-prometheus-stack.yaml
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    resources:
+      requests:
+        cpu: 2
+        memory: 8Gi
+      limits:
+        cpu: 4
+        memory: 16Gi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-ssd
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 500Gi
+    serviceMonitorSelectorNilUsesHelmValues: false
+    ruleSelector: {}
+
+grafana:
+  adminPassword: "secure-password"
+  persistence:
+    enabled: true
+    storageClassName: local-ssd
+    size: 10Gi
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
+
+alertmanager:
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-ssd
+          resources:
+            requests:
+              storage: 10Gi
+```
+
+2. Deploy Grafana Loki stack:
+```yaml
+# values-loki.yaml
+loki:
+  persistence:
+    enabled: true
+    storageClassName: local-ssd
+    size: 100Gi
+  config:
+    table_manager:
+      retention_deletes_enabled: true
+      retention_period: 720h
+
+promtail:
+  config:
+    clients:
+      - url: http://loki:3100/loki/api/v1/push
+```
+
+3. Custom Helm chart for Solana monitoring:
+```yaml
+# solana-monitoring/Chart.yaml
+apiVersion: v2
+name: solana-monitoring
+version: 1.0.0
+dependencies:
+  - name: kube-prometheus-stack
+    version: "45.0.0"
+    repository: https://prometheus-community.github.io/helm-charts
+```
+
+4. Environment-specific values:
+```yaml
+# values-prod.yaml
+solanaExporter:
+  replicas: 2
+  resources:
+    requests:
+      cpu: 1
+      memory: 2Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+```
+
+5. PrometheusRule CRDs for alerts:
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: solana-alerts
+spec:
+  groups:
+    - name: solana.rules
+      rules:
+        - alert: SlotProcessingRateLow
+          expr: rate(solana_slot_processed[5m]) < 1
+```
+
+6. Implement upgrade and rollback procedures using Helm
+7. Configure secret management via Helm secrets plugin
+
+# Test Strategy:
+1. Verify Helm chart deployments with `helm test`
+2. Validate ServiceMonitor discovery and metrics collection
+3. Test PrometheusRule CRDs trigger alerts correctly
+4. Verify Loki log aggregation and retention policies
+5. Test Helm upgrade/rollback procedures
+6. Validate environment-specific configurations
+7. Check HPA functionality for Grafana
+8. Verify secret management integration
+
+# Subtasks:
+## 1. Deploy kube-prometheus-stack via Helm [pending]
+### Dependencies: None
+### Description: Install and configure kube-prometheus-stack Helm chart with custom values for Prometheus, Grafana, and AlertManager. Enable ServiceMonitor and PrometheusRule CRDs for automatic discovery.
+### Details:
+Deploy using Helm with environment-specific values files. Configure Prometheus retention, resources, and storage. Enable CRD-based service discovery and ensure AlertManager is properly configured for external integrations.
+
+## 2. Deploy Grafana Loki Stack for Log Aggregation [pending]
+### Dependencies: 7.1
+### Description: Install Grafana Loki and Promtail using official Helm charts. Configure log retention policies and storage settings. Ensure Promtail DaemonSet collects logs from all nodes.
+### Details:
+Deploy Loki with persistent storage and retention policies. Configure Promtail as DaemonSet to collect container logs. Integrate Loki as a data source in Grafana for log visualization alongside metrics.
+
+## 3. Create Custom Helm Chart for Solana Monitoring [pending]
+### Dependencies: 7.1, 7.2
+### Description: Develop a custom Helm chart that packages Solana validator metrics exporter, custom Grafana dashboards as ConfigMaps, and Solana-specific PrometheusRule CRDs.
+### Details:
+Create Helm chart structure with templates for Solana exporter deployment, ServiceMonitor for metric discovery, ConfigMaps for dashboard JSONs, and PrometheusRule resources for Solana-specific alerts.
+
+## 4. Implement Environment Management and Secret Handling [pending]
+### Dependencies: 7.1, 7.2, 7.3
+### Description: Create environment-specific values files for dev, staging, and prod. Configure Helm secrets plugin for secure management of passwords and API keys. Set up HPA for Grafana.
+### Details:
+Structure values files for different environments with appropriate resource allocations. Implement helm-secrets for managing sensitive data. Configure HPA for Grafana based on CPU/memory metrics.
+
+## 5. Deploy Hubble and Configure Upgrade Procedures [pending]
+### Dependencies: 7.1, 7.2, 7.3, 7.4
+### Description: Deploy Hubble for network observability via Helm. Document and test upgrade procedures for all monitoring components including rollback capabilities.
+### Details:
+Install Hubble using Cilium's Helm chart options. Create runbooks for upgrading monitoring stack components. Test rollback procedures and ensure monitoring continuity during upgrades.
+

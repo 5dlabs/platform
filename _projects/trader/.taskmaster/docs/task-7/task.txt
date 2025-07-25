@@ -1,0 +1,115 @@
+# Task ID: 7
+# Title: Develop Virtual Portfolio for Paper Trading
+# Status: pending
+# Dependencies: 1, 2, 5
+# Priority: high
+# Description: Create a virtual portfolio system that tracks simulated balances, positions, and P&L for paper trading
+# Details:
+1. Implement virtual wallet functionality:
+   - Support for SOL, USDC, BONK, JitoSOL, and RAY tokens
+   - Track balances with precision matching on-chain representation
+   - Support for Token-2022 extension fees
+
+2. Create position tracking system:
+   - Track entry price, current value, and unrealized P&L
+   - Calculate cost basis with fees included
+   - Update positions based on simulated trades
+
+3. Implement P&L calculation:
+   - Real-time P&L updates using Redis-cached prices
+   - Support for both realized and unrealized P&L
+   - Track performance metrics including MEV impact
+
+Example implementation:
+```rust
+pub struct VirtualPortfolio {
+    balances: HashMap<String, Decimal>,
+    positions: HashMap<String, Position>,
+    trade_history: Vec<Trade>,
+    price_cache: Arc<PriceCache>,
+}
+
+pub struct Position {
+    token: String,
+    amount: Decimal,
+    cost_basis: Decimal,
+    entry_timestamp: DateTime<Utc>,
+}
+
+impl VirtualPortfolio {
+    pub async fn execute_trade(&mut self, trade: Trade) -> Result<()> {
+        // Update balances based on trade
+        match trade.action {
+            TradeAction::Buy => {
+                // Deduct quote token (e.g., USDC)
+                self.update_balance(&trade.quote_token.symbol, -trade.quote_amount)?;
+                // Add base token (e.g., SOL)
+                self.update_balance(&trade.base_token.symbol, trade.base_amount)?;
+                // Update position
+                self.update_position(&trade.base_token.symbol, trade.base_amount, trade.executed_price, trade.timestamp)?;
+            },
+            TradeAction::Sell => {
+                // Similar logic for sell
+            },
+            TradeAction::Swap => {
+                // Similar logic for swap
+            },
+        }
+        
+        // Record trade in history
+        self.trade_history.push(trade);
+        Ok(())
+    }
+    
+    pub async fn calculate_pnl(&self) -> Result<PortfolioPnL> {
+        let mut realized_pnl = Decimal::ZERO;
+        let mut unrealized_pnl = Decimal::ZERO;
+        
+        // Calculate realized P&L from trade history
+        // ...
+        
+        // Calculate unrealized P&L from current positions
+        for (token, position) in &self.positions {
+            let current_price = self.price_cache.get_price(token).await?;
+            let position_value = position.amount * current_price;
+            let cost_basis_value = position.amount * position.cost_basis;
+            unrealized_pnl += position_value - cost_basis_value;
+        }
+        
+        Ok(PortfolioPnL {
+            realized: realized_pnl,
+            unrealized: unrealized_pnl,
+            total: realized_pnl + unrealized_pnl,
+        })
+    }
+}
+```
+
+# Test Strategy:
+Create unit tests for all portfolio operations including buys, sells, and swaps. Test P&L calculation with various price scenarios. Verify correct handling of Token-2022 extension fees. Create integration tests that simulate a series of trades and verify portfolio state. Test with all MVP tokens to ensure compatibility. Verify that position updates correctly reflect trade execution.
+
+# Subtasks:
+## 1. Implement Virtual Wallet Functionality [pending]
+### Dependencies: None
+### Description: Create a virtual wallet system that supports all MVP tokens and properly handles Token-2022 extension fees.
+### Details:
+Develop a wallet structure that tracks balances for all supported tokens with proper decimal precision. Implement support for Token-2022 extensions including transfer fee handling, royalty payments, and other token-specific features. Ensure thread-safe operations for concurrent access. Include methods for deposit, withdrawal, and balance inquiry with proper validation.
+
+## 2. Build Position Tracking System [pending]
+### Dependencies: 7.1
+### Description: Develop a system to track trading positions with accurate entry price and cost basis calculation.
+### Details:
+Create data structures to store position information including token, quantity, entry price, timestamp, and transaction history. Implement weighted average calculation for cost basis when multiple buys occur. Handle partial sells correctly by maintaining accurate cost basis for remaining position. Support position grouping by token and provide position summary statistics.
+
+## 3. Implement P&L Calculation System [pending]
+### Dependencies: 7.2
+### Description: Create a profit and loss calculation system with real-time updates using cached price data.
+### Details:
+Develop algorithms to calculate unrealized P&L based on current market prices and position cost basis. Implement realized P&L tracking for closed positions. Create a caching system for token prices to minimize API calls while maintaining accuracy. Include both absolute and percentage P&L calculations. Ensure calculations handle different token decimal precisions correctly.
+
+## 4. Develop Trade Execution Simulation [pending]
+### Dependencies: 7.1, 7.2, 7.3
+### Description: Build a realistic trade execution simulator that accounts for fees, slippage, and market conditions.
+### Details:
+Implement trade execution logic that simulates market, limit, and stop orders. Calculate and apply realistic trading fees based on the exchange model. Simulate slippage based on order size and market liquidity. Update wallet balances, positions, and P&L calculations after each simulated trade. Provide detailed transaction records including all fees and actual execution prices.
+

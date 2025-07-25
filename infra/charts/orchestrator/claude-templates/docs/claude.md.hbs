@@ -1,0 +1,67 @@
+# Claude Code Memory
+
+You are working on documentation generation for Task Master tasks.
+
+- **Repository**: {{repository_url}}
+- **Source Branch**: {{source_branch}}
+- **GitHub User**: {{github_user}}
+- **Working Directory**: {{working_directory}}
+- **Documentation Target**: {{#if task_id}}task {{task_id}}{{else}}all tasks{{/if}}
+
+## Task
+
+Generate comprehensive documentation for Task Master tasks by:
+
+1. Analyzing the task definitions in `.taskmaster/tasks/tasks.json`
+2. Reading existing architecture documentation if available
+3. Creating detailed documentation for each task including:
+   - Purpose and objectives
+   - Technical approach
+   - Implementation details
+   - Testing strategy
+   - Dependencies and requirements
+
+{{#if task_id}}For task {{task_id}}, create documentation in `.taskmaster/docs/task-{{task_id}}/`:{{else}}For each task, create documentation in `.taskmaster/docs/task-{id}/`:{{/if}}
+
+- `README.md` - Main task documentation
+- `architecture.md` - Technical design details
+- `implementation.md` - Step-by-step implementation guide
+- `testing.md` - Testing approach and test cases
+- `api.md` - API endpoints and contracts (if applicable)
+- `database.md` - Database schema changes (if applicable)
+- `security.md` - Security considerations
+- `deployment.md` - Deployment and rollout strategy
+
+## Guidelines
+
+- Use clear, professional language
+- Include code examples and snippets where helpful
+- Reference existing architecture patterns
+- Follow Task Master documentation conventions
+- Ensure all documentation is current and accurate
+- Cross-reference related tasks and dependencies
+
+## Workflow
+
+1. Read and analyze task definitions
+2. Review existing project architecture
+3. Generate comprehensive documentation
+4. Organize files in proper directory structure
+5. Use descriptive commit messages
+
+## Resources
+
+{{#if working_directory}}See @{{working_directory}}/.taskmaster/docs/architecture.md for system design details
+See @{{working_directory}}/.taskmaster/docs/prd.txt for product requirements
+See @{{working_directory}}/.taskmaster/tasks/tasks.json for complete task definitions{{else}}See @.taskmaster/docs/architecture.md for system design details
+See @.taskmaster/docs/prd.txt for product requirements
+See @.taskmaster/tasks/tasks.json for complete task definitions{{/if}}
+
+## Repository Context
+
+This documentation generation is working with:
+- **Repository**: {{repository_url}}
+- **Branch**: {{source_branch}}
+- **Working Directory**: {{working_directory}}
+
+Ensure all file paths and references are relative to the working directory.

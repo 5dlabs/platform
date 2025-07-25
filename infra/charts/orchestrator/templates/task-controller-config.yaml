@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.config.controllerConfigMap }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "orchestrator.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    # Task Controller Configuration
+    # Simplified configuration for CodeRun and DocsRun controllers
+
+    # Job configuration
+    job:
+      activeDeadlineSeconds: 3600  # 1 hour timeout
+
+    # Claude agent configuration
+    agent:
+      image:
+        repository: {{ .Values.agent.image.repository | quote }}
+        tag: {{ .Values.agent.image.tag | quote }}
+      imagePullSecrets:
+        {{- range .Values.imagePullSecrets }}
+        - {{ .name | quote }}
+        {{- end }}
+
+    # Secrets configuration
+    secrets:
+      apiKeySecretName: "claude-api-key"
+      apiKeySecretKey: "api-key"
+
+    # Tool permissions configuration (used in templates)
+    permissions:
+      agentToolsOverride: false
+      allow:
+        - "Bash"
+        - "Read"
+        - "Write"
+        - "Edit"
+        - "MultiEdit"
+        - "Glob"
+        - "Grep"
+        - "LS"
+        - "TodoRead"
+        - "TodoWrite"
+        - "WebFetch"
+        - "WebSearch"
+        - "NotebookRead"
+        - "NotebookEdit"
+        - "Task"
+        - "ExitPlanMode"
+      deny: []
+
+    # Telemetry configuration (used in templates)
+    telemetry:
+      enabled: true
+      otlpEndpoint: "otel-collector-opentelemetry-collector.telemetry.svc.cluster.local:4317"
+      otlpProtocol: "grpc"
+      logsEndpoint: "otel-collector-opentelemetry-collector.telemetry.svc.cluster.local:4317"
+      logsProtocol: "grpc"
+
+    # Storage configuration
+    storage:
+      {{- if .Values.storage.storageClassName }}
+      storageClassName: {{ .Values.storage.storageClassName | quote }}
+      {{- end }}
+      workspaceSize: {{ .Values.storage.workspaceSize | default "10Gi" | quote }}

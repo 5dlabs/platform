@@ -1,0 +1,73 @@
+# Default values for debugger
+replicaCount: 1
+
+image:
+  repository: ubuntu
+  pullPolicy: IfNotPresent
+  tag: "24.04"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Shared workspace PVC configuration
+persistence:
+  enabled: true
+  existingClaim: "shared-workspace"
+  mountPath: "/workspace"
+
+# Additional tools to install on startup
+debugTools:
+  - curl
+  - wget
+  - vim
+  - nano
+  - jq
+  - yq
+  - tree
+  - htop
+  - ncdu
+  - ripgrep
+  - fd-find
+  - bat
+  - httpie
+  - dnsutils
+  - iputils-ping
+  - net-tools
+  - traceroute
+  - tcpdump
+  - nmap
+  - strace
+  - ltrace

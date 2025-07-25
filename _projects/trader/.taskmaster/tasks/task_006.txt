@@ -1,0 +1,100 @@
+# Task ID: 6
+# Title: Implement Circuit Breaker for Latency-Based Trading Pause
+# Status: pending
+# Dependencies: 1, 3
+# Priority: high
+# Description: Create a circuit breaker system that automatically pauses trading when node latency exceeds 200ms P99 threshold
+# Details:
+1. Implement the Circuit Breaker pattern with three states:
+   - Open: Trading is paused due to high latency or errors
+   - Closed: Normal operation, trading allowed
+   - Half-open: Testing if system has recovered
+
+2. Create latency monitoring system:
+   - Track rolling window of latency measurements
+   - Calculate P99 latency in real-time
+   - Trigger circuit breaker when P99 exceeds 200ms
+
+3. Implement recovery mechanism:
+   - Use exponential backoff for retry attempts
+   - Transition to half-open state after timeout
+   - Return to closed state after successful health checks
+
+Example implementation:
+```rust
+pub struct CircuitBreaker {
+    state: RwLock<CircuitBreakerState>,
+    failure_count: AtomicUsize,
+    failure_threshold: usize,
+    recovery_timeout: Duration,
+    last_failure: AtomicU64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CircuitBreakerState {
+    Open,
+    Closed,
+    HalfOpen,
+}
+
+impl CircuitBreaker {
+    pub async fn record_success(&self) {
+        self.failure_count.store(0, Ordering::Relaxed);
+        if *self.state.read().await == CircuitBreakerState::HalfOpen {
+            *self.state.write().await = CircuitBreakerState::Closed;
+        }
+    }
+    
+    pub async fn record_failure(&self) {
+        let count = self.failure_count.fetch_add(1, Ordering::Relaxed) + 1;
+        self.last_failure.store(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(), Ordering::Relaxed);
+        
+        if count >= self.failure_threshold && *self.state.read().await == CircuitBreakerState::Closed {
+            *self.state.write().await = CircuitBreakerState::Open;
+        }
+    }
+    
+    pub async fn is_closed(&self) -> bool {
+        let state = *self.state.read().await;
+        match state {
+            CircuitBreakerState::Closed => true,
+            CircuitBreakerState::Open => {
+                // Check if recovery timeout has elapsed
+                let last_failure = self.last_failure.load(Ordering::Relaxed);
+                let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+                if now - last_failure > self.recovery_timeout.as_secs() {
+                    // Transition to half-open state
+                    *self.state.write().await = CircuitBreakerState::HalfOpen;
+                    true
+                } else {
+                    false
+                }
+            },
+            CircuitBreakerState::HalfOpen => true,
+        }
+    }
+}
+```
+
+# Test Strategy:
+Create unit tests for all circuit breaker states and transitions. Test P99 latency calculation with various sample distributions. Implement integration tests that simulate latency spikes and verify circuit breaker behavior. Test recovery mechanism with different timeout values. Verify that trading is properly paused when circuit breaker opens.
+
+# Subtasks:
+## 1. Implement Core Circuit Breaker State Machine [pending]
+### Dependencies: None
+### Description: Create the foundation of the circuit breaker pattern with proper state management for Open/Closed/Half-open states
+### Details:
+Implement a thread-safe state machine that manages transitions between Open (circuit is broken, requests fail fast), Closed (normal operation), and Half-open (testing if system has recovered) states. Include configurable thresholds for failure rates that trigger state transitions. Ensure proper synchronization mechanisms to handle concurrent access. Implement event listeners for state changes to enable logging and monitoring. Include unit tests that verify correct state transitions under various conditions.
+
+## 2. Develop Latency Monitoring System [pending]
+### Dependencies: 6.1
+### Description: Create a system to track request latencies using a rolling window approach and calculate P99 statistics
+### Details:
+Implement a rolling window data structure to store recent request latencies. Design an efficient algorithm to calculate P99 (99th percentile) latency metrics in real-time without significant performance impact. Include configurable window sizes and sampling rates. Ensure thread-safety for concurrent updates to the statistics. Add mechanisms to detect latency spikes and trigger circuit breaker state changes when latency exceeds thresholds. Create comprehensive tests that verify statistical accuracy under load.
+
+## 3. Implement Recovery Mechanism [pending]
+### Dependencies: 6.1, 6.2
+### Description: Build a recovery system with exponential backoff and health check integration
+### Details:
+Develop an exponential backoff algorithm that gradually increases retry intervals after failures. Integrate with the circuit breaker to transition from Open to Half-open states at appropriate intervals. Implement health check probes that can test system readiness before allowing full traffic. Create a configurable recovery policy that can be tuned for different services. Ensure the recovery mechanism properly interacts with the latency monitoring system to prevent premature recovery when performance issues persist. Include comprehensive testing for various failure scenarios and recovery patterns.
+

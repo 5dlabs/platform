@@ -1,0 +1,86 @@
+# Task ID: 3
+# Title: Deploy Talos OS Kubernetes Cluster
+# Status: pending
+# Dependencies: 1, 2
+# Priority: high
+# Description: Deploy the custom Talos OS image to control plane and worker nodes, bootstrap the Kubernetes cluster, and apply performance-optimized configurations for Solana validator workloads.
+# Details:
+1. Generate Talos machine configurations for control plane and worker nodes
+2. Apply NUMA and huge pages configuration to worker node
+3. Bootstrap Kubernetes control plane across 3 nodes
+4. Join Solana validator node as worker
+5. Configure storage mounts and permissions
+6. Apply performance-optimized Kubernetes settings
+7. Verify cluster stability and node communication
+
+Example Talos configuration for worker node:
+```yaml
+machine:
+  type: worker
+  install:
+    disk: /dev/nvme0n1
+    image: ghcr.io/our-org/installer:custom-solana-v1.10.3
+  kubelet:
+    extraArgs:
+      system-reserved: memory=8Gi
+      kube-reserved: memory=8Gi
+      eviction-hard: memory.available<16Gi
+      cpu-manager-policy: static
+      topology-manager-policy: best-effort
+  kernel:
+    modules:
+      - tcp_bbr
+      - sch_fq
+  sysctls:
+    vm.max_map_count: 1048576
+    vm.dirty_ratio: 50
+    net.core.rmem_max: 268435456
+    net.ipv4.tcp_congestion_control: bbr
+  files:
+    - content: |
+        GRUB_CMDLINE_LINUX="default_hugepagesz=1G hugepagesz=1G hugepages=100 iommu=pt intel_iommu=on"
+      path: /etc/default/grub.d/99-solana.cfg
+      mode: 0644
+```
+
+# Test Strategy:
+1. Verify all nodes join the cluster successfully
+2. Validate control plane health with `talosctl health`
+3. Check Kubernetes API server responsiveness
+4. Verify huge pages allocation on worker node
+5. Test NUMA configuration with `numactl --hardware`
+6. Validate storage mounts and permissions
+7. Run a test pod to verify scheduling and resource allocation
+8. Test cluster failover by taking down one control plane node
+
+# Subtasks:
+## 1. Provision Talos OS on Control Plane and Worker Nodes [pending]
+### Dependencies: None
+### Description: Boot all control plane and worker nodes using the custom Talos OS image, ensuring each node is accessible and ready for configuration.
+### Details:
+Download the appropriate Talos OS ISO or image for your hardware, boot each node from the image, and verify network connectivity to all nodes before proceeding with configuration.[3]
+
+## 2. Generate and Apply Talos Machine Configurations [pending]
+### Dependencies: 3.1
+### Description: Create tailored Talos machine configuration files for control plane and worker nodes, including NUMA and huge pages settings for worker nodes, and apply them to the respective nodes.
+### Details:
+Use the Talos configuration generator to produce YAML configs for each node type. Incorporate performance optimizations (NUMA, huge pages, kernel modules, sysctls) for Solana validator workloads in worker node configs. Apply configurations using talosctl.[1][3]
+
+## 3. Bootstrap Kubernetes Control Plane [pending]
+### Dependencies: 3.2
+### Description: Initialize the Kubernetes cluster by bootstrapping the control plane across three nodes, forming the etcd cluster and starting core Kubernetes components.
+### Details:
+Use talosctl to bootstrap the cluster on one control plane node. Ensure etcd and Kubernetes API server are running and healthy across all control plane nodes.[2][4]
+
+## 4. Join Worker Nodes and Solana Validator Node to Cluster [pending]
+### Dependencies: 3.3
+### Description: Add all worker nodes, including the node designated for Solana validator workloads, to the Kubernetes cluster.
+### Details:
+Approve worker nodes to join the cluster using talosctl. Ensure the Solana validator node is recognized as a worker and receives the correct performance-optimized configuration.[2][4]
+
+## 5. Apply Storage, Permissions, and Performance-Optimized Kubernetes Settings [pending]
+### Dependencies: 3.4
+### Description: Configure storage mounts, set appropriate permissions, and apply additional Kubernetes-level performance optimizations for Solana validator workloads.
+### Details:
+Mount required storage volumes, set filesystem permissions, and apply Kubernetes settings such as resource reservations, eviction policies, and node labels/taints for workload isolation.
+

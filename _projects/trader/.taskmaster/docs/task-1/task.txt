@@ -1,0 +1,76 @@
+# Task ID: 1
+# Title: Implement Common Libraries for Trade Models and MEV Structures
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Create shared Rust crates that define common data structures and functionality for both paper and live trading modes
+# Details:
+Develop the following Rust crates:
+1. `trading-models`: Define structs for Enhanced Trade Model, MEV Risk Model, and Circuit Breaker Model as specified in the PRD
+2. `solana-integration`: Create wrappers for gRPC connections to Solana nodes with health monitoring
+3. `jupiter-client`: Implement a client that can switch between self-hosted and public Jupiter instances
+
+Example for Enhanced Trade Model implementation:
+```rust
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Trade {
+    pub timestamp: DateTime<Utc>,
+    pub action: TradeAction,
+    pub base_token: TokenInfo,
+    pub quote_token: TokenInfo,
+    pub base_amount: Decimal,
+    pub quote_amount: Decimal,
+    pub executed_price: Decimal,
+    pub transaction_fee: u64,
+    pub priority_fee: u64,
+    pub expected_slippage: Decimal,
+    pub actual_slippage: Decimal,
+    pub mev_status: MevStatus,
+    pub transfer_fees: Option<Decimal>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TradeAction {
+    Buy,
+    Sell,
+    Swap,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MevStatus {
+    Protected,
+    AtRisk,
+    Unknown,
+}
+```
+
+Implement circuit breaker logic with configurable thresholds (default 200ms P99 latency).
+
+# Test Strategy:
+Create comprehensive unit tests for all data structures and functions. Test serialization/deserialization with sample data. Implement property-based testing for MEV risk calculations. Verify circuit breaker behavior with simulated latency spikes. Ensure all models match the specifications in the PRD.
+
+# Subtasks:
+## 1. Implement Enhanced Trade Model [pending]
+### Dependencies: None
+### Description: Create a comprehensive Trade Model struct with all required fields for trading operations, including serialization/deserialization capabilities.
+### Details:
+Implement a Rust struct for Trade Model that includes: trade ID, asset pair, entry/exit prices, position size, direction (long/short), timestamps, execution venue, fees, slippage metrics, and trade status. Add proper serialization/deserialization using serde. Include methods for calculating P&L, duration, and other trade metrics. Ensure the model works with both historical and live data formats. Write comprehensive unit tests covering edge cases.
+
+## 2. Develop MEV Risk Model [pending]
+### Dependencies: 1.1
+### Description: Create a model to calculate MEV (Miner Extractable Value) risk probabilities for trades based on various market conditions.
+### Details:
+Implement a MEV Risk Model that calculates probability of sandwich attacks and other MEV risks. Include configurable risk thresholds and scoring mechanisms. Create methods to estimate potential value extraction based on trade size, market depth, and historical MEV data. Implement integration with the Trade Model to flag high-risk trades. Add functionality to suggest trade modifications to reduce MEV risk. Develop comprehensive test suite with simulated MEV scenarios.
+
+## 3. Build Circuit Breaker Model [pending]
+### Dependencies: 1.1
+### Description: Implement a configurable circuit breaker system to halt trading based on various risk thresholds and market conditions.
+### Details:
+Create a Circuit Breaker Model with configurable thresholds for various risk metrics including: drawdown percentage, consecutive loss count, volatility spikes, and unusual price movements. Implement different circuit breaker levels (warning, soft stop, hard stop). Add time-based cooldown periods for breaker resets. Include override capabilities for manual intervention. Develop integration with the Trade Model to prevent new trades when breakers are triggered. Create comprehensive logging and notification system for breaker events. Write tests covering various threshold scenarios.
+
+## 4. Implement Solana and Jupiter Integration Clients [pending]
+### Dependencies: 1.1, 1.2, 1.3
+### Description: Develop client libraries for Solana blockchain and Jupiter DEX integration with proper error handling and health monitoring.
+### Details:
+Create Rust clients for Solana blockchain and Jupiter DEX integration. Implement proper error handling with custom error types and recovery strategies. Add health monitoring capabilities including connection status, latency tracking, and rate limit awareness. Develop retry mechanisms with exponential backoff. Create transaction signing and verification utilities. Implement methods to fetch market data, submit orders, and check order status. Add proper logging and telemetry. Ensure compatibility with the Trade Model, MEV Risk Model, and Circuit Breaker Model. Write integration tests with mock servers.
+

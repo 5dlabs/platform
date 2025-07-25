@@ -15,6 +15,7 @@ node_modules/
 # Editor directories and files
 .idea
 .vscode
+.cursor
 *.suo
 *.ntvs*
 *.njsproj
@@ -29,6 +30,10 @@ node_modules/
 # Kubernetes Files
 kubeconfig*
 *.kubeconfig
+
+# Test and Debug Files
+test-*.yaml
+debug-*.yaml
 
 # Helm Files
 *.tgz
@@ -50,7 +55,15 @@ Chart.lock
 *.old
 
 # Taskmaster directory (local task management)
-.taskmaster/
+# .taskmaster/
 
 # Claude configuration file
 CLAUDE.md
+orchestrator/target/
+
+# Task files
+# tasks.json
+# tasks/
+
+# Agent files
+agent_*.md

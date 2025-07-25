@@ -1,0 +1,535 @@
+# High-Performance Solana Node Infrastructure - Product Requirements Document
+
+## Overview
+
+This project implements a production-grade Solana validator node on bare metal infrastructure using Talos OS, optimized for maximum performance and reliability. The system leverages Cherry Servers hardware in EU-East-1, custom kernel optimizations, Cilium CNI with eBPF acceleration, and includes a self-hosted Jupiter swap API instance with automatic failover capabilities. The infrastructure is designed to achieve performance comparable to systemd-based deployments while maintaining the operational benefits of containerization and immutable infrastructure.
+
+### Key Value Propositions
+- **Near bare-metal performance** in containerized environment through kernel and eBPF optimizations
+- **Immutable infrastructure** using Talos OS for enhanced security and predictability
+- **Single-region cost efficiency** with vertical scaling approach (65% cost savings vs multi-region)
+- **Future-proof architecture** supporting both Agave and future Firedancer validators
+- **Automated operations** with dynamic memory management and self-healing capabilities
+
+### Target Deployment
+- Single region deployment (EU-East-1) with in-region high availability
+- Production Solana mainnet validator (non-voting initially)
+- Self-hosted Jupiter API for internal use
+- 99.9% uptime target excluding planned maintenance
+
+## Core Features
+
+### 1. Custom Talos OS Build
+
+**Kernel Optimizations**
+- Custom kernel build with Solana-specific configurations
+- Static huge pages allocation (100GB at boot time)
+- NUMA optimizations for AMD EPYC processors
+- io_uring support for future Firedancer compatibility
+- SR-IOV enablement for network acceleration
+
+**Talos Extensions**
+- Custom kernel module for runtime optimizations
+- gcompat layer for glibc compatibility
+- Performance monitoring extensions
+- Automated system tuning based on workload
+
+### 2. High-Performance Infrastructure
+
+**Hardware Configuration**
+- AMD EPYC 9454P or 9654 processors (64 cores/128 threads)
+- 1.5TB DDR5 ECC memory with huge pages
+- Separate NVMe Gen5 storage:
+  - 15TB for ledger (ext4)
+  - 6TB for accounts (ext4)
+  - 2TB for snapshots (btrfs)
+- 25Gbps networking with SR-IOV support
+
+**Network Optimization**
+- Cilium CNI with eBPF acceleration
+- XDP programs for Solana traffic prioritization
+- kube-proxy replacement for reduced latency
+- Application-level rate limiting for DDoS protection
+
+### 3. Solana Validator Deployment
+
+**Agave Configuration**
+- Version v1.18.x stable with migration path to v2.x
+- NUMA pinning for optimal memory access
+- Dynamic cache sizing based on memory pressure
+- Yellowstone gRPC plugin for streaming updates
+- MEV protection through priority fee optimization
+
+**Performance Tuning**
+- Accounts DB cache: 150GB
+- Accounts index memory: 75GB
+- Custom startup parameters for stability
+- Automated performance monitoring and adjustment
+
+### 4. Jupiter API Self-Hosting
+
+**High Availability Setup**
+- 2 Jupiter API instances with anti-affinity
+- Local failover to public API if needed
+- Session affinity for consistent routing
+- Health monitoring with automatic recovery
+
+**Integration Features**
+- Direct connection to local Solana validator
+- Yellowstone gRPC endpoint integration
+- Market cache updates every 30 minutes
+- Sub-200ms quote response times
+
+### 5. Monitoring and Observability
+
+**Comprehensive Metrics**
+- Prometheus for metrics collection
+- Grafana dashboards for visualization
+- Hubble integration for network observability
+- Custom alerts for performance degradation
+
+**Key Metrics Tracked**
+- Slot processing rate and variance
+- Memory pressure and cache efficiency
+- Network performance (gossip UDP traffic)
+- Storage IOPS and latency
+- Circuit breaker states
+
+### 6. Automated Operations
+
+**Dynamic Resource Management**
+- Memory pressure-based huge page adjustment
+- Automated cache resizing
+- Circuit breakers for degraded performance
+- Self-healing through Kubernetes operators
+
+**Backup and Recovery**
+- Automated snapshot backups every 6 hours
+- In-region object storage for disaster recovery
+- Quick recovery procedures (<30 minutes RTO)
+- Continuous ledger pruning for space management
+
+## Technical Architecture
+
+### System Components
+
+**Infrastructure Layer**
+```
+cherry_servers/
+├── bare_metal/
+│   ├── control_plane_nodes (3x)
+│   └── solana_validator_node (1x)
+├── storage/
+│   ├── nvme_accounts (6TB)
+│   ├── nvme_ledger (15TB)
+│   └── nvme_snapshots (2TB)
+└── networking/
+    ├── 25gbps_primary
+    └── ddos_protection
+```
+
+**Talos OS Layer**
+```
+talos/
+├── kernel/
+│   ├── custom_config
+│   ├── huge_pages
+│   └── performance_patches
+├── extensions/
+│   ├── solana_optimizer
+│   └── monitoring_tools
+└── machine_config/
+    ├── sysctls
+    ├── kernel_args
+    └── network_config
+```
+
+**Kubernetes Layer**
+```
+kubernetes/
+├── system/
+│   ├── cilium_cni
+│   ├── storage_classes
+│   └── node_labels
+├── solana/
+│   ├── validator_statefulset
+│   ├── config_maps
+│   └── monitoring_sidecar
+└── jupiter/
+    ├── api_deployment
+    ├── failover_config
+    └── health_checks
+```
+
+### Configuration Models
+
+**Talos Machine Configuration**
+```yaml
+machine:
+  type: controlplane/worker
+  install:
+    disk: /dev/nvme0n1
+    image: ghcr.io/our-org/installer:custom-solana-v1.10.3
+    extensions:
+      - image: ghcr.io/our-org/solana-optimizer:latest
+  kernel:
+    modules:
+      - tcp_bbr
+      - sch_fq
+  sysctls:
+    vm.max_map_count: 1048576
+    vm.dirty_ratio: 50
+    net.core.rmem_max: 268435456
+    net.ipv4.tcp_congestion_control: bbr
+```
+
+**Solana Validator Configuration**
+```yaml
+validator:
+  version: v1.18.23
+  resources:
+    cpu: 64 cores reserved, 96 burst
+    memory: 1.5Ti reserved, 1.8Ti limit
+    hugepages: 100Gi
+  cache:
+    accounts_db: 150GB
+    accounts_index: 75GB
+  features:
+    voting: false
+    rpc_transaction_history: true
+    yellowstone_grpc: true
+```
+
+**Performance Targets**
+```yaml
+targets:
+  slot_processing:
+    rate: >2.5 slots/second
+    variance: <5%
+  transaction_processing:
+    tps: >45,000
+    confirmation: <500ms
+  network:
+    gossip_packet_loss: <0.01%
+    latency_p99: <0.5ms
+  memory:
+    pressure_threshold: <15
+    cache_hit_rate: >90%
+```
+
+## Development Roadmap
+
+### Phase 0: Preparation and Custom Build (Week 0-1)
+
+**Infrastructure Planning**
+- [ ] Finalize hardware specifications with Cherry Servers
+- [ ] Set up development environment and CI/CD pipeline
+- [ ] Create Git repository structure and documentation
+
+**Custom Kernel Build**
+- [ ] Configure kernel with Solana optimizations
+- [ ] Build custom kernel module for runtime tuning
+- [ ] Create Talos custom image with extensions
+- [ ] Benchmark custom vs stock kernel performance
+- [ ] Test gcompat compatibility layer
+
+**Deliverables:**
+- Custom Talos installer image
+- Kernel module package
+- Performance benchmark results
+- Build automation scripts
+
+### Phase 1: Infrastructure Setup (Week 1-2)
+
+**Cherry Servers Provisioning**
+- [ ] Configure Cherry Servers account and API access
+- [ ] Develop Terraform modules for infrastructure
+- [ ] Provision control plane nodes (3x)
+- [ ] Provision Solana validator node with storage
+- [ ] Configure network with jumbo frames and SR-IOV
+
+**Base Infrastructure Validation**
+- [ ] Test network connectivity and bandwidth
+- [ ] Verify storage performance meets specifications
+- [ ] Validate IPMI/remote management access
+- [ ] Configure DDoS protection settings
+
+**Deliverables:**
+- Terraform infrastructure code
+- Network configuration documentation
+- Storage performance benchmarks
+- Access credentials and runbooks
+
+### Phase 2: Talos OS Deployment (Week 2-3)
+
+**Control Plane Setup**
+- [ ] Deploy custom Talos image to control plane nodes
+- [ ] Bootstrap Kubernetes control plane
+- [ ] Apply performance-optimized configurations
+- [ ] Verify kernel parameters and modules
+- [ ] Test cluster stability and failover
+
+**Worker Node Configuration**
+- [ ] Deploy Talos to Solana validator node
+- [ ] Apply NUMA and huge pages configuration
+- [ ] Configure storage mounts and permissions
+- [ ] Validate performance optimizations
+- [ ] Test node joining and communication
+
+**Deliverables:**
+- Configured Talos cluster
+- Performance validation reports
+- Operational procedures
+- Troubleshooting guide
+
+### Phase 3: Cilium CNI Implementation (Week 3-4)
+
+**Cilium Deployment**
+- [ ] Install Cilium with eBPF optimizations
+- [ ] Configure XDP programs for Solana traffic
+- [ ] Disable BPF masquerade (Talos compatibility)
+- [ ] Implement application-level rate limiting
+- [ ] Configure Hubble for observability
+
+**Network Performance Testing**
+- [ ] Validate UDP performance for gossip traffic
+- [ ] Test SR-IOV functionality if available
+- [ ] Benchmark network latency and throughput
+- [ ] Verify DDoS protection integration
+- [ ] Load test with simulated traffic
+
+**Deliverables:**
+- Cilium configuration manifests
+- XDP program binaries
+- Network performance benchmarks
+- Security policy definitions
+
+### Phase 4: Solana Node Deployment (Week 4-5)
+
+**Container Image Build**
+- [ ] Build Agave v1.18.x container image
+- [ ] Include Yellowstone gRPC plugin
+- [ ] Optimize image for size and startup time
+- [ ] Create image registry and push process
+- [ ] Document build procedures
+
+**Validator Deployment**
+- [ ] Deploy Solana StatefulSet with Helm
+- [ ] Configure persistent volumes for storage
+- [ ] Apply NUMA pinning and resource limits
+- [ ] Set up memory optimizer sidecar
+- [ ] Configure Yellowstone gRPC
+
+**Initial Sync**
+- [ ] Download latest mainnet snapshot
+- [ ] Restore snapshot to validator
+- [ ] Monitor initial sync progress
+- [ ] Validate slot processing rate
+- [ ] Verify no excessive lag
+
+**Deliverables:**
+- Solana Helm chart
+- Container images
+- Sync verification logs
+- Performance baselines
+
+### Phase 5: Parallel v2.x Testing (Week 4-6)
+
+**Test Environment Setup**
+- [ ] Deploy non-voting v2.x test node
+- [ ] Configure identical hardware allocation
+- [ ] Set up parallel monitoring
+- [ ] Create comparison dashboards
+
+**Stability Testing**
+- [ ] Run 48-hour stability test
+- [ ] Monitor slot time variance
+- [ ] Compare memory usage patterns
+- [ ] Document performance differences
+- [ ] Create migration decision matrix
+
+**Deliverables:**
+- Version comparison report
+- Stability test results
+- Migration plan if viable
+- Risk assessment
+
+### Phase 6: Jupiter Integration (Week 5-6)
+
+**Jupiter API Deployment**
+- [ ] Build Jupiter swap API container
+- [ ] Deploy with HA configuration (2 replicas)
+- [ ] Configure connection to local validator
+- [ ] Set up Yellowstone gRPC integration
+- [ ] Implement health monitoring
+
+**Failover Configuration**
+- [ ] Configure local health checks
+- [ ] Implement failover to public API
+- [ ] Test failover scenarios
+- [ ] Validate quote response times
+- [ ] Document failover procedures
+
+**Deliverables:**
+- Jupiter Helm chart
+- Failover configuration
+- Performance benchmarks
+- Integration tests
+
+### Phase 7: Monitoring and Optimization (Week 6-7)
+
+**Monitoring Stack Setup**
+- [ ] Deploy Prometheus with retention policies
+- [ ] Configure Grafana with custom dashboards
+- [ ] Set up alert rules and notifications
+- [ ] Implement log aggregation
+- [ ] Create runbook integration
+
+**Performance Optimization**
+- [ ] Analyze initial performance metrics
+- [ ] Fine-tune memory allocations
+- [ ] Optimize cache configurations
+- [ ] Adjust network parameters
+- [ ] Document optimization changes
+
+**Deliverables:**
+- Monitoring dashboards
+- Alert configurations
+- Performance tuning guide
+- Baseline metrics report
+
+### Phase 8: Production Readiness (Week 7-8)
+
+**Security Hardening**
+- [ ] Security audit of configurations
+- [ ] Implement network policies
+- [ ] Configure secrets management
+- [ ] Set up audit logging
+- [ ] Document security procedures
+
+**Operational Procedures**
+- [ ] Create comprehensive runbooks
+- [ ] Document recovery procedures
+- [ ] Set up backup automation
+- [ ] Test disaster recovery
+- [ ] Train operations team
+
+**Deliverables:**
+- Security audit report
+- Operational runbooks
+- DR test results
+- Training materials
+
+### Phase 9: Go-Live and Stabilization (Week 8-9)
+
+**Production Deployment**
+- [ ] Final pre-production checks
+- [ ] Migrate to production configuration
+- [ ] Enable 24/7 monitoring
+- [ ] Activate on-call rotation
+- [ ] Document lessons learned
+
+**Post-Launch Optimization**
+- [ ] Monitor for stability issues
+- [ ] Fine-tune based on production load
+- [ ] Address any performance gaps
+- [ ] Plan for future enhancements
+- [ ] Create post-mortem report
+
+**Deliverables:**
+- Production deployment report
+- Stability metrics
+- Optimization recommendations
+- Future roadmap
+
+## Success Metrics
+
+### Infrastructure Performance
+- **CPU Utilization**: <70% under normal load
+- **Memory Usage**: <85% with efficient cache usage
+- **Storage IOPS**: >500K for accounts, >300K for ledger
+- **Network Latency**: <0.5ms P99 intra-cluster
+
+### Solana Validator Performance
+- **Slot Processing**: >2.5 slots/second consistently
+- **Slot Variance**: <5% standard deviation
+- **Transaction Processing**: >45,000 TPS capability
+- **RPC Response Times**: <10ms for common queries
+
+### System Reliability
+- **Uptime**: 99.9% excluding planned maintenance
+- **Recovery Time**: <30 minutes for node failure
+- **Backup Success**: 100% automated snapshot completion
+- **Failover Success**: >95% automatic Jupiter failover
+
+### Operational Efficiency
+- **Deployment Time**: <2 hours for full stack
+- **Update Time**: <30 minutes for Solana version
+- **Alert Response**: <5 minutes acknowledgment
+- **Cost Efficiency**: 65% savings vs multi-region
+
+## Risk Assessment and Mitigation
+
+### Technical Risks
+
+**Hardware Failure**
+- *Risk*: Single validator node failure impacts service
+- *Mitigation*: 30-minute recovery procedure, standby configuration ready, continuous backups
+
+**Software Compatibility**
+- *Risk*: Talos/Cilium/Solana incompatibilities
+- *Mitigation*: Extensive testing in dev environment, gradual rollout, rollback procedures
+
+**Performance Degradation**
+- *Risk*: Unexpected bottlenecks under load
+- *Mitigation*: Comprehensive monitoring, circuit breakers, automatic resource adjustment
+
+### Operational Risks
+
+**Skill Requirements**
+- *Risk*: Complex stack requires specialized knowledge
+- *Mitigation*: Detailed documentation, runbooks, team training, vendor support
+
+**Network Attacks**
+- *Risk*: DDoS or targeted attacks on validator
+- *Mitigation*: Cherry Servers DDoS protection, application rate limiting, security monitoring
+
+### Business Risks
+
+**Cost Overruns**
+- *Risk*: Infrastructure costs exceed budget
+- *Mitigation*: Single-region design, vertical scaling, usage monitoring, cost alerts
+
+## Dependencies and Constraints
+
+### External Dependencies
+- Cherry Servers infrastructure availability
+- Solana network stability and protocol changes
+- Jupiter API availability for failover
+- Upstream Talos OS and Cilium releases
+
+### Technical Constraints
+- Single region deployment (EU-East-1)
+- Non-voting validator initially
+- Fixed hardware specifications
+- 16-week implementation timeline
+
+### Resource Requirements
+- DevOps team with Kubernetes expertise
+- Blockchain engineer familiar with Solana
+- Network engineer for eBPF/XDP programming
+- 24/7 operations support post-launch
+
+## Appendix
+
+### Reference Documentation
+- [High-Performance Solana Node on Talos OS - Architecture & Project Plan](./solana-talos-architecture.md)
+- [Talos OS Documentation](https://www.talos.dev/v1.10/)
+- [Cilium eBPF Documentation](https://docs.cilium.io/en/stable/)
+- [Solana Validator Requirements](https://docs.anza.xyz/operations/requirements)
+
+### Configuration Templates
+All configuration templates, Terraform modules, Helm charts, and deployment scripts will be maintained in the project Git repository with appropriate documentation.
+
+### Performance Benchmarks
+Detailed performance benchmarks and testing procedures are documented in the architecture plan and will be updated with actual production metrics post-deployment.

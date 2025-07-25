@@ -1,0 +1,166 @@
+# Task ID: 21
+# Title: Implement Live Trader Binary with Command-Line Interface
+# Status: pending
+# Dependencies: 13, 16, 17, 18
+# Priority: high
+# Description: Create the main live trader binary that provides a command-line interface for real trading operations, sharing the same interface as the paper trader but executing real transactions.
+# Details:
+1. Implement CLI interface using clap:
+   - Create a command-line interface similar to the paper trader but with live trading specific options
+   - Implement subcommands for different trading operations (buy, sell, swap, monitor)
+   - Add options for wallet configuration and key management
+   - Include risk management parameter configuration
+   - Implement trading mode selection (paper vs live) with appropriate warnings for live mode
+   - Add emergency stop functionality via CLI flags
+
+2. Implement configuration system:
+   - Create a configuration file loader supporting YAML/TOML formats
+   - Implement secure handling of API keys and wallet information
+   - Add validation for all configuration parameters with safety checks
+   - Support environment variable overrides for sensitive information
+   - Implement configuration migration and validation
+
+3. Integrate with live trading components:
+   - Connect to the Enhanced Wallet Manager for secure key handling
+   - Integrate with Live Trade Executor for real transaction execution
+   - Implement Risk Management System integration with pre-trade validation
+   - Add circuit breaker monitoring and status reporting
+   - Connect to monitoring tools for real-time performance tracking
+
+4. Implement safety features:
+   - Add confirmation prompts for live trading operations
+   - Implement dry-run mode that shows transaction details without execution
+   - Create comprehensive logging for audit trails with sensitive data redaction
+   - Add graceful shutdown with position reporting
+   - Implement emergency stop functionality that can be triggered during operation
+
+5. Create user feedback systems:
+   - Real-time status updates during trade execution
+   - Clear error messages with troubleshooting guidance
+   - Position and P&L reporting after operations
+   - System health indicators and warnings
+
+6. Example CLI implementation:
+```rust
+use clap::{App, Arg, SubCommand};
+use trading_models::config::LiveTraderConfig;
+use wallet_manager::EnhancedWalletManager;
+use live_trade_executor::LiveTradeExecutor;
+use risk_management::RiskManager;
+
+fn main() {
+    // Parse command line arguments
+    let matches = App::new("Solana Trading Bot - Live Trader")
+        .version("1.0")
+        .author("Trading Team")
+        .about("Live trading bot for Solana with Jupiter integration")
+        .arg(
+            Arg::with_name("config")
+                .short("c")
+                .long("config")
+                .value_name("FILE")
+                .help("Sets a custom config file")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("wallet")
+                .short("w")
+                .long("wallet")
+                .value_name("WALLET_PATH")
+                .help("Path to encrypted wallet file")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("mode")
+                .short("m")
+                .long("mode")
+                .value_name("MODE")
+                .help("Trading mode: live or paper")
+                .takes_value(true)
+                .default_value("paper"),
+        )
+        .arg(
+            Arg::with_name("emergency-stop")
+                .long("emergency-stop")
+                .help("Trigger emergency stop for all trading operations"),
+        )
+        .subcommand(
+            SubCommand::with_name("buy")
+                .about("Buy a token")
+                .arg(Arg::with_name("token").required(true))
+                .arg(Arg::with_name("amount").required(true)),
+        )
+        // Additional subcommands and arguments...
+        .get_matches();
+
+    // Load configuration
+    let config_path = matches.value_of("config").unwrap_or("config.yaml");
+    let config = LiveTraderConfig::from_file(config_path)
+        .expect("Failed to load configuration");
+    
+    // Initialize components
+    let wallet_manager = EnhancedWalletManager::new(
+        matches.value_of("wallet").unwrap(),
+        // Additional parameters...
+    );
+    
+    let risk_manager = RiskManager::new(&config.risk_parameters);
+    let trade_executor = LiveTradeExecutor::new(
+        wallet_manager,
+        risk_manager,
+        // Additional parameters...
+    );
+    
+    // Handle emergency stop if requested
+    if matches.is_present("emergency-stop") {
+        println!("EMERGENCY STOP TRIGGERED");
+        trade_executor.emergency_stop();
+        return;
+    }
+    
+    // Process commands
+    if let Some(matches) = matches.subcommand_matches("buy") {
+        // Implement buy command
+        // ...
+    }
+    
+    // Additional command handling...
+}
+```
+
+# Test Strategy:
+1. Unit testing:
+   - Create comprehensive tests for CLI argument parsing with various combinations
+   - Test configuration loading and validation with valid and invalid configurations
+   - Verify secure handling of sensitive information
+   - Test integration with mock versions of all components
+   - Verify error handling and user feedback for various failure scenarios
+
+2. Integration testing:
+   - Test full application initialization flow with all components
+   - Verify proper integration with wallet manager, trade executor, and risk management
+   - Test configuration file loading and validation
+   - Verify circuit breaker integration and status reporting
+   - Test emergency stop functionality and graceful shutdown
+
+3. Safety testing:
+   - Verify that confirmation prompts work correctly for live trading
+   - Test dry-run mode to ensure it doesn't execute actual transactions
+   - Verify that sensitive information is properly redacted in logs
+   - Test that emergency stop immediately halts all trading operations
+   - Verify that position reporting works correctly during shutdown
+
+4. End-to-end testing:
+   - Create test scenarios for common trading operations
+   - Verify correct execution of trades with minimal test amounts
+   - Test error handling and recovery for various failure conditions
+   - Verify audit trail completeness for all operations
+   - Test performance under sustained operation
+
+5. Security testing:
+   - Conduct security review of wallet key handling
+   - Verify that sensitive configuration is properly secured
+   - Test for information leakage in logs and error messages
+   - Verify that emergency stop cannot be bypassed
+   - Test for proper handling of invalid or malicious input

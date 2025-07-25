@@ -1,0 +1,80 @@
+# Task ID: 2
+# Title: Set Up Database Infrastructure
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Configure and initialize QuestDB, PostgreSQL, and Redis with appropriate schemas and connection pools
+# Details:
+1. Set up QuestDB for time-series trade data with 100ms batch writes:
+   - Configure retention policy for 30-day full resolution data
+   - Create tables for trade execution metrics and performance data
+   - Implement batch writer with 100ms intervals
+
+2. Configure PostgreSQL for configuration and token metadata:
+   - Create schemas for token information including Token-2022 extension data
+   - Set up tables for system configuration and health tracking
+   - Implement connection pooling with proper error handling
+
+3. Set up Redis for price caching and event streaming:
+   - Configure Redis with appropriate memory limits
+   - Implement key structure for price data with 1-2 second TTL
+   - Set up Redis Streams for event propagation with 10,000 entry limit
+
+Example Redis price cache implementation:
+```rust
+pub async fn cache_price(redis: &mut Connection, token: &str, price: Decimal, ttl_secs: u64) -> Result<()> {
+    let key = format!("price:{}", token);
+    let _: () = redis.set_ex(&key, price.to_string(), ttl_secs).await?;
+    Ok(())
+}
+
+pub async fn get_cached_price(redis: &mut Connection, token: &str) -> Result<Option<Decimal>> {
+    let key = format!("price:{}", token);
+    let price: Option<String> = redis.get(&key).await?;
+    price.map(|p| p.parse::<Decimal>()).transpose().map_err(Into::into)
+}
+```
+
+# Test Strategy:
+Create integration tests for each database system. Verify QuestDB can handle 100ms batch writes under load. Test PostgreSQL schema with sample token data including Token-2022 extension fields. Benchmark Redis price cache to confirm <1ms read times. Verify Redis Streams can handle 10Hz update frequency with proper trimming at 10,000 entries.
+
+# Subtasks:
+## 1. QuestDB Configuration for Time-Series Data [pending]
+### Dependencies: None
+### Description: Set up and configure QuestDB for efficient time-series data storage with appropriate retention policies and batch writing capabilities.
+### Details:
+1. Install QuestDB on the target environment
+2. Configure data retention policies based on data importance and age
+3. Implement batch writing mechanisms to optimize write performance
+4. Set up appropriate partitioning for time-series data
+5. Configure memory allocation and disk space requirements
+6. Implement backup and recovery procedures
+7. Test write and query performance under expected load
+
+## 2. PostgreSQL Setup for Configuration and Token Metadata [pending]
+### Dependencies: None
+### Description: Configure PostgreSQL database for storing configuration data and token metadata, including Token-2022 extension data.
+### Details:
+1. Install PostgreSQL and required extensions
+2. Design schema for configuration data storage
+3. Create tables for token metadata with appropriate indexes
+4. Implement Token-2022 extension and related data structures
+5. Configure connection pooling for optimal performance
+6. Set up user roles and access permissions
+7. Implement backup and disaster recovery procedures
+8. Test database performance with expected data volumes
+
+## 3. Redis Configuration for Price Caching and Event Streaming [pending]
+### Dependencies: 2.1, 2.2
+### Description: Set up Redis for price data caching and event streaming with appropriate memory limits and key structures.
+### Details:
+1. Install Redis and configure for high availability
+2. Design key structures for efficient price data caching
+3. Implement appropriate TTL (Time To Live) for cached data
+4. Configure memory limits to prevent out-of-memory issues
+5. Set up Redis Streams for event processing
+6. Implement pub/sub mechanisms for real-time updates
+7. Configure persistence options for critical data
+8. Test Redis performance under expected load conditions
+9. Implement monitoring and alerting for Redis health
+

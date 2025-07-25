@@ -1,0 +1,149 @@
+# Task ID: 19
+# Title: Implement Database Trait Abstractions for Modular Data Access
+# Status: pending
+# Dependencies: 2
+# Priority: medium
+# Description: Create database trait abstractions that provide clean interfaces for data access across different storage systems (PostgreSQL, QuestDB, Redis), enabling modular data access and easier testing with mock implementations.
+# Details:
+1. Design and implement core database trait abstractions:
+   - `TradeStore` trait:
+     ```rust
+     pub trait TradeStore: Send + Sync + 'static {
+         async fn save_trade(&self, trade: &Trade) -> Result<(), DbError>;
+         async fn get_trades_by_token(&self, token: &Pubkey, limit: usize) -> Result<Vec<Trade>, DbError>;
+         async fn get_trades_in_timerange(&self, start: DateTime<Utc>, end: DateTime<Utc>) -> Result<Vec<Trade>, DbError>;
+         async fn batch_save_trades(&self, trades: &[Trade]) -> Result<(), DbError>;
+     }
+     ```
+   
+   - `MetricsStore` trait:
+     ```rust
+     pub trait MetricsStore: Send + Sync + 'static {
+         async fn record_latency(&self, operation: &str, latency_ms: f64) -> Result<(), DbError>;
+         async fn record_slippage(&self, token: &Pubkey, slippage_bps: i32) -> Result<(), DbError>;
+         async fn record_mev_event(&self, event: &MevEvent) -> Result<(), DbError>;
+         async fn get_p99_latency(&self, operation: &str, window: Duration) -> Result<f64, DbError>;
+     }
+     ```
+   
+   - `PriceCache` trait:
+     ```rust
+     pub trait PriceCache: Send + Sync + 'static {
+         async fn cache_price(&self, token: &Pubkey, price: f64, ttl: Duration) -> Result<(), DbError>;
+         async fn get_price(&self, token: &Pubkey) -> Result<Option<f64>, DbError>;
+         async fn cache_pool_state(&self, pool: &Pubkey, state: PoolState, ttl: Duration) -> Result<(), DbError>;
+         async fn get_pool_state(&self, pool: &Pubkey) -> Result<Option<PoolState>, DbError>;
+     }
+     ```
+   
+   - `ConfigStore` trait:
+     ```rust
+     pub trait ConfigStore: Send + Sync + 'static {
+         async fn save_trader_config(&self, config: &TraderConfig) -> Result<(), DbError>;
+         async fn get_trader_config(&self, id: &str) -> Result<Option<TraderConfig>, DbError>;
+         async fn list_trader_configs(&self) -> Result<Vec<TraderConfig>, DbError>;
+     }
+     ```
+
+2. Implement PostgreSQL implementations:
+   - Create `PostgresTradeStore`, `PostgresMetricsStore`, and `PostgresConfigStore` structs
+   - Use `sqlx` crate for type-safe SQL queries
+   - Implement connection pooling with proper error handling
+   - Add transaction support for operations that require atomicity
+
+3. Implement QuestDB implementations:
+   - Create `QuestDbMetricsStore` and `QuestDbTradeStore` structs
+   - Optimize for time-series data patterns with efficient batch operations
+   - Implement specialized query methods for time-range analytics
+
+4. Implement Redis implementations:
+   - Create `RedisPriceCache` struct with optimized caching strategies
+   - Implement TTL-based cache invalidation
+   - Add support for atomic operations where needed
+
+5. Create comprehensive error handling:
+   - Define a `DbError` enum that wraps underlying database errors
+   - Implement proper error conversion and context preservation
+   - Add retry logic for transient failures
+
+6. Implement mock implementations for testing:
+   - Create in-memory implementations of all traits
+   - Add configurable failure modes for testing error handling
+   - Implement latency simulation for performance testing
+
+7. Add connection management:
+   - Implement connection pooling for each database type
+   - Add health checking and reconnection logic
+   - Create graceful shutdown procedures
+
+8. Implement batch operations:
+   - Add efficient bulk insert methods for high-throughput scenarios
+   - Optimize batch sizes based on database characteristics
+   - Implement proper error handling for partial batch failures
+
+9. Add transaction support:
+   - Implement transaction abstractions where applicable
+   - Add rollback capabilities for error scenarios
+   - Support nested transactions where needed
+
+# Test Strategy:
+1. Unit testing:
+   - Create comprehensive unit tests for each trait implementation:
+     ```rust
+     #[tokio::test]
+     async fn test_postgres_trade_store() {
+         let store = PostgresTradeStore::new_with_mock_connection();
+         let trade = Trade::new_test_trade();
+         
+         assert!(store.save_trade(&trade).await.is_ok());
+         let trades = store.get_trades_by_token(&trade.token, 10).await.unwrap();
+         assert_eq!(trades.len(), 1);
+         assert_eq!(trades[0].id, trade.id);
+     }
+     ```
+   - Test error handling with simulated failures
+   - Verify connection pooling behavior with concurrent operations
+   - Test batch operations with various batch sizes
+
+2. Integration testing:
+   - Create Docker-based integration tests with actual database instances:
+     ```rust
+     #[tokio::test]
+     #[cfg(feature = "integration_tests")]
+     async fn test_postgres_integration() {
+         let db = test_utils::spawn_postgres_container().await;
+         let store = PostgresTradeStore::new(&db.connection_string).await.unwrap();
+         
+         // Run integration tests against real database
+     }
+     ```
+   - Test transaction behavior with concurrent operations
+   - Verify proper connection handling during database restarts
+   - Test performance characteristics under load
+
+3. Mock testing:
+   - Create tests using mock implementations:
+     ```rust
+     #[tokio::test]
+     async fn test_with_mock_store() {
+         let mock_store = MockTradeStore::new();
+         mock_store.expect_save_trade().times(1).returning(|_| Ok(()));
+         
+         let service = TradeService::new(mock_store);
+         service.execute_trade(&trade).await.unwrap();
+     }
+     ```
+   - Verify that higher-level components work correctly with the traits
+   - Test error propagation through the abstraction layers
+
+4. Performance testing:
+   - Benchmark read and write operations for each implementation
+   - Test cache hit/miss rates for the Redis implementation
+   - Verify batch operation efficiency with large datasets
+   - Measure connection pool utilization under load
+
+5. Resilience testing:
+   - Test behavior during database unavailability
+   - Verify reconnection logic works correctly
+   - Test error handling during partial batch failures
+   - Verify transaction rollback behavior during failures

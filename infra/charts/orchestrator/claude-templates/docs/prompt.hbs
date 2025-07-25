@@ -1,0 +1,89 @@
+# CRITICAL: Complete Documentation Generation Task
+
+**🚨 MANDATORY COMPLETION REQUIREMENT 🚨**
+You MUST complete ALL steps in this process. Partial completion is not acceptable. This is especially critical for large projects with many tasks.
+
+## Task Overview
+Generate comprehensive documentation for {{#if task_id}}task {{task_id}}{{else}}**ALL Task Master tasks**{{/if}}.
+
+**If this is a large project with many tasks (10+ tasks), you MUST:**
+- Process ALL tasks without stopping
+- Show progress updates as you work through each task
+- Complete the ENTIRE git workflow including PR creation
+- Do NOT stop partway through - finish everything
+
+## Required Process
+
+### Step 1: Context Analysis (REQUIRED)
+1. Read CLAUDE.md for project context and standards
+2. **Use individual task files to avoid token limits:**
+   - Individual task files have been pre-copied to `.taskmaster/docs/task-{id}/task.txt`
+   - **Read these individual task files instead of the large tasks.json**
+   - Each `task.txt` contains complete task information including subtasks and implementation details
+3. Review architecture.md and prd.txt for context
+4. **For large projects: Announce total task count and confirm you will process ALL of them**
+
+**🎯 IMPORTANT: Use individual `task.txt` files, NOT the large `tasks.json` file**
+- Individual task files are available at: `.taskmaster/docs/task-{id}/task.txt`
+- Example: task 1 → `.taskmaster/docs/task-1/task.txt`, task 15 → `.taskmaster/docs/task-15/task.txt`
+- These files contain complete task information including subtasks and implementation details
+- This avoids token limit issues with large projects (no need to read huge tasks.json)
+
+### Step 2: Documentation Generation (MANDATORY FOR ALL TASKS)
+{{#if task_id}}
+Focus specifically on task {{task_id}} and create:
+{{else}}
+**YOU MUST CREATE DOCUMENTATION FOR EVERY SINGLE TASK. DO NOT SKIP ANY.**
+
+For each task (process ALL tasks, no exceptions):
+{{/if}}
+- `task.md` - Comprehensive task overview and implementation guide
+- `prompt.md` - Autonomous prompt for AI agents
+- `acceptance-criteria.md` - Clear acceptance criteria and test cases
+
+**Progress Requirements:**
+- Announce each task as you start it: "📝 Processing Task [ID]: [Title]"
+- Confirm completion of each task: "✅ Completed Task [ID]"
+- **For large projects: Provide periodic updates (every 5 tasks): "Progress: [X] of [Y] tasks completed"**
+
+Place all documentation in `.taskmaster/docs/task-{id}/` directories.
+
+### Step 3: Complete Documentation Generation
+**⚠️ CRITICAL: You MUST generate ALL documentation files as specified above.**
+
+**Git Workflow:** The orchestrator post-completion hook will automatically handle:
+- Creating and checking out the feature branch: `docs-gen-{{source_branch}}`
+- Staging all documentation files
+- Committing with proper message
+- Pushing to origin
+- Creating pull request to target branch: `{{source_branch}}`
+
+**Your Job:** Focus ONLY on generating the documentation files. Do NOT run any git commands.
+
+✅ **Final Confirmation Required:** "✅ DOCUMENTATION FILES GENERATED - Hook will handle git workflow and PR creation"
+
+## Error Handling
+- If documentation generation fails, report the error and retry
+- If file creation fails, check permissions and retry
+- **DO NOT give up - complete the documentation generation**
+- **Note:** Git workflow and PR creation are handled by the hook, not the agent
+
+## Quality Standards
+- Well-structured and comprehensive content
+- Actionable implementation guidance
+- Proper markdown formatting
+- Code examples where relevant
+- Clear cross-references between documents
+- Maintain consistency across ALL documents
+
+## Final Confirmation Required
+**YOU MUST END WITH THIS EXACT MESSAGE:**
+```
+🎉 DOCUMENTATION GENERATION COMPLETE 🎉
+✅ Generated documentation for {{#if task_id}}task {{task_id}}{{else}}ALL tasks{{/if}}
+✅ Created all required documentation files
+📋 Total files created: [COUNT]
+🔗 Git workflow and pull request will be handled automatically by orchestrator hook
+```
+
+**If you cannot provide this final confirmation, the task is NOT complete and you must continue working until it is done.**

@@ -1,0 +1,12 @@
+apiVersion: orchestrator.platform/v1
+kind: DocsRun
+metadata:
+  name: test-docsrun-ci
+  namespace: test-platform
+spec:
+  repositoryUrl: "https://github.com/5dlabs/platform.git"
+  workingDirectory: "_projects/test-service"
+  sourceBranch: "main"
+  targetBranch: "docs/test-auto-docs"
+  model: "sonnet"
+  githubUser: "test-user"

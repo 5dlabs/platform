@@ -1,0 +1,177 @@
+# Task ID: 23
+# Title: Implement Advanced Configuration Management System
+# Status: pending
+# Dependencies: 1, 2, 13, 18
+# Priority: medium
+# Description: Create a comprehensive configuration management system that handles trader settings, risk parameters, and system configuration for both paper and live trading modes with persistence in PostgreSQL.
+# Details:
+1. Design and implement a centralized configuration management system:
+   - Create a `ConfigManager` struct that serves as the central access point for all configuration
+   - Implement hierarchical configuration with inheritance and overrides
+   - Support environment-specific configurations (dev, test, prod)
+
+2. Implement configuration storage and persistence:
+   - Create PostgreSQL schema for configuration storage:
+     ```sql
+     CREATE TABLE configuration_versions (
+       id SERIAL PRIMARY KEY,
+       version VARCHAR(50) NOT NULL,
+       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+       created_by VARCHAR(100) NOT NULL,
+       is_active BOOLEAN DEFAULT FALSE,
+       description TEXT
+     );
+     
+     CREATE TABLE configuration_items (
+       id SERIAL PRIMARY KEY,
+       version_id INTEGER REFERENCES configuration_versions(id),
+       path VARCHAR(255) NOT NULL,
+       value JSONB NOT NULL,
+       sensitive BOOLEAN DEFAULT FALSE,
+       UNIQUE(version_id, path)
+     );
+     
+     CREATE TABLE configuration_audit (
+       id SERIAL PRIMARY KEY,
+       version_id INTEGER REFERENCES configuration_versions(id),
+       path VARCHAR(255) NOT NULL,
+       old_value JSONB,
+       new_value JSONB,
+       changed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+       changed_by VARCHAR(100) NOT NULL
+     );
+     ```
+   - Implement versioning and audit trail functionality
+   - Create database access layer with proper connection pooling
+
+3. Implement configuration schema validation:
+   - Use JSON Schema for configuration validation
+   - Create schema definitions for all configuration types:
+     ```rust
+     pub struct ConfigSchema {
+         trader_config: serde_json::Value,
+         risk_params: serde_json::Value,
+         mev_protection: serde_json::Value,
+         token_config: serde_json::Value,
+         monitoring: serde_json::Value,
+         circuit_breaker: serde_json::Value,
+     }
+     
+     impl ConfigSchema {
+         pub fn validate_config(&self, config_path: &str, config_value: &serde_json::Value) -> Result<(), ValidationError> {
+             // Implementation of schema validation
+         }
+     }
+     ```
+   - Implement validation hooks that run before configuration changes
+
+4. Implement secure storage for sensitive configuration:
+   - Use encryption for sensitive values (API keys, private endpoints)
+   - Implement masking for sensitive values in logs and audit trails
+   - Create secure access methods that prevent accidental exposure
+
+5. Implement configuration categories:
+   - Trader configuration:
+     - Trading mode (paper vs live)
+     - Default slippage tolerance
+     - Default priority fees
+   - Risk management parameters:
+     - Position size limits (per token and portfolio-wide)
+     - Daily loss limits
+     - Maximum exposure per token
+   - MEV protection settings:
+     - Priority fee thresholds
+     - Sandwich attack protection parameters
+     - Timeout settings
+   - Token-specific configuration:
+     - Token metadata (decimals, extensions)
+     - Token-specific fees
+     - Custom slippage settings per token
+   - Monitoring configuration:
+     - Alert thresholds
+     - Monitoring intervals
+     - Log levels
+   - Circuit breaker configuration:
+     - Latency thresholds
+     - Error rate thresholds
+     - Recovery parameters
+
+6. Implement hot-reload capabilities:
+   - Create a configuration watcher that detects changes
+   - Implement reload hooks for non-critical settings
+   - Add versioning to prevent concurrent modification issues
+   - Implement graceful reload without service interruption
+
+7. Create configuration access API:
+   - Implement strongly-typed access methods:
+     ```rust
+     impl ConfigManager {
+         pub fn get_risk_params(&self) -> RiskParameters {
+             // Implementation
+         }
+         
+         pub fn get_token_config(&self, token: &Pubkey) -> TokenConfig {
+             // Implementation
+         }
+         
+         pub fn get_circuit_breaker_config(&self) -> CircuitBreakerConfig {
+             // Implementation
+         }
+     }
+     ```
+   - Add caching layer for frequently accessed configuration
+   - Implement change notification system for configuration updates
+
+8. Create configuration CLI tools:
+   - Implement commands for viewing current configuration
+   - Add commands for updating configuration values
+   - Create import/export functionality for configuration backup
+   - Add validation commands to check configuration integrity
+
+# Test Strategy:
+1. Unit testing:
+   - Create comprehensive tests for all configuration manager components:
+     ```rust
+     #[test]
+     fn test_config_validation() {
+         let schema = ConfigSchema::default();
+         let valid_config = json!({
+             "maxPositionSize": 1000,
+             "dailyLossLimit": 500,
+         });
+         let invalid_config = json!({
+             "maxPositionSize": "not_a_number",
+         });
+         
+         assert!(schema.validate_config("risk_params", &valid_config).is_ok());
+         assert!(schema.validate_config("risk_params", &invalid_config).is_err());
+     }
+     ```
+   - Test configuration persistence with a test database
+   - Verify encryption/decryption of sensitive values
+   - Test versioning and audit trail functionality
+   - Verify hot-reload capabilities with configuration changes
+
+2. Integration testing:
+   - Test integration with PostgreSQL using testcontainers
+   - Verify proper handling of configuration dependencies
+   - Test configuration access from multiple components
+   - Verify proper inheritance and override behavior
+   - Test environment-specific configuration loading
+
+3. Security testing:
+   - Verify that sensitive configuration is properly encrypted
+   - Test access controls for configuration modification
+   - Verify audit trail captures all configuration changes
+   - Test for potential SQL injection vulnerabilities
+
+4. Performance testing:
+   - Benchmark configuration access times under load
+   - Verify caching effectiveness for frequently accessed values
+   - Test hot-reload performance with large configuration changes
+
+5. End-to-end testing:
+   - Test configuration system with both paper and live trading modes
+   - Verify that all components correctly use configuration values
+   - Test configuration changes while system is running
+   - Verify that configuration versioning prevents conflicts

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: debugger
+description: Debug pod for inspecting shared workspace and cluster resources
+type: application
+version: 0.1.0
+appVersion: "24.04"

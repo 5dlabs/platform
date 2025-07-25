@@ -1,6 +1,6 @@
 ---
-# Complete ARC organization runner setup for 5dlabs
-# This single file contains everything needed for org-level runners
+# Consolidated ARC organization runner setup for 5dlabs
+# Single file with all optimizations and org-level configuration
 
 # Namespace with privileged pod security for Docker-in-Docker
 apiVersion: v1
@@ -71,63 +71,115 @@ subjects:
     name: github-runner
     namespace: arc-systems
 ---
-# Organization-level runners
+# Persistent Volume Claim for Rust caching
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rust-cache-pvc
+  namespace: arc-systems
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: local-path
+---
+# Organization-level runners with optimizations
 apiVersion: actions.summerwind.dev/v1alpha1
 kind: RunnerDeployment
 metadata:
   name: org-runners
   namespace: arc-systems
 spec:
-  replicas: 4  # Adjust based on your workload
+  replicas: 4  # Scaled up for better parallelism
   template:
     spec:
-      # Organization-level configuration
+      # FIXED: Organization-level configuration (not repository-specific)
       organization: 5dlabs
 
-      # GitHub authentication (requires PAT with admin:org scope)
+      # GitHub authentication using the existing secret
       githubAPICredentialsFrom:
         secretRef:
-          name: arc-github-token
+          name: controller-manager
 
-      # Runner labels
+      # Enhanced runner labels for identification
       labels:
         - self-hosted
         - linux
         - x64
         - k8s-runner
+        - rust-builder
+        - org-runner
+        - optimized
 
-      # Resources
+      # Enhanced resources for better performance
       resources:
         limits:
           cpu: "4"
           memory: "8Gi"
         requests:
-          cpu: "1"
-          memory: "2Gi"
+          cpu: "2"
+          memory: "4Gi"
 
-      # Docker-in-Docker image
-      image: summerwind/actions-runner-dind:latest
+      # Use the working rust-builder image
+      image: ghcr.io/5dlabs/platform/rust-builder:1.1.0
+      imagePullPolicy: Always
       dockerEnabled: true
       dockerdWithinRunnerContainer: true
 
-      # Environment
+      # Optimized environment variables
       env:
         - name: RUNNER_FEATURE_FLAG_EPHEMERAL
           value: "true"
         - name: PATH
-          value: "/shared/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          value: "/home/runner/.cargo/bin:/shared/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        # Rust optimizations
+        - name: CARGO_HOME
+          value: "/cache/cargo"
+        - name: RUSTUP_HOME
+          value: "/cache/rustup"
+        - name: SCCACHE_DIR
+          value: "/cache/sccache"
+        - name: SCCACHE_CACHE_SIZE
+          value: "40G"
+        - name: RUSTC_WRAPPER
+          value: "sccache"
+        - name: CARGO_TARGET_DIR
+          value: "/cache/target"
 
       # Service account
       serviceAccountName: github-runner
 
-      # Init container to install tools
+      # Image pull secrets for private registries
+      imagePullSecrets:
+        - name: ghcr-secret
+
+      # Init containers for cache setup and tool installation
       initContainers:
+        - name: setup-cache
+          image: ghcr.io/5dlabs/platform/rust-builder:1.1.0
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Setting up cache directories..."
+              mkdir -p /cache/cargo /cache/rustup /cache/sccache /cache/target
+              chown -R 1000:1000 /cache
+              chmod -R 755 /cache
+              echo "Cache setup complete"
+          volumeMounts:
+            - name: rust-cache
+              mountPath: /cache
+              subPath: rust-cache
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
         - name: install-tools
           image: alpine:3.19
           command: ["/bin/sh", "-c"]
           args:
             - |
-              echo "Installing tools..."
+              echo "Installing additional tools..."
               apk add --no-cache wget tar
               mkdir -p /shared/bin
 
@@ -151,11 +203,18 @@ spec:
             - name: shared-tools
               mountPath: /shared
 
-      # Volumes
+      # Volumes for caching and tools
       volumes:
+        - name: rust-cache
+          persistentVolumeClaim:
+            claimName: rust-cache-pvc
         - name: shared-tools
           emptyDir: {}
+
       volumeMounts:
+        - name: rust-cache
+          mountPath: /cache
+          subPath: rust-cache
         - name: shared-tools
           mountPath: /shared
 
