@@ -92,15 +92,16 @@ For the MCP tools and CLI utilities, you can install pre-built binaries:
 
 ```bash
 # One-liner installer (Linux/macOS)
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/5dlabs/platform/releases/download/v0.0.2/fivedlabs-tools-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/5dlabs/platform/releases/download/v0.1.2/tools-installer.sh | sh
 
 # Verify installation
-fivedlabs-tools --help          # CLI tool (5d-cli)
-fivedlabs-tools --mcp --help    # MCP server (5d-mcp)
+5d-cli --help    # CLI tool for direct API calls
+5d-mcp --help    # MCP server for Cursor/Claude integration
 ```
 
 **What you get:**
-- `fivedlabs-tools` binary with both CLI and MCP server functionality
+- `5d-cli` - Command-line tool for direct orchestrator API calls
+- `5d-mcp` - MCP server that integrates with Cursor/Claude
 - Multi-platform support (Linux x64/ARM64, macOS Intel/Apple Silicon, Windows x64)
 - Automatic installation to system PATH
 
@@ -111,15 +112,16 @@ fivedlabs-tools --mcp --help    # MCP server (5d-mcp)
 git clone https://github.com/5dlabs/platform.git
 cd platform/orchestrator
 
-# Build the tools binary (contains both CLI and MCP server)
-cargo build --release --bin fivedlabs-tools
+# Build both CLI and MCP server
+cargo build --release --bin 5d-cli --bin 5d-mcp
 
-# The binary includes both tools:
-./target/release/fivedlabs-tools --help          # CLI tool (5d-cli)
-./target/release/fivedlabs-tools --mcp --help    # MCP server (5d-mcp)
+# Verify the builds
+./target/release/5d-cli --help    # CLI tool
+./target/release/5d-mcp --help    # MCP server
 
 # Install to your system (optional)
-cp target/release/fivedlabs-tools /usr/local/bin/
+cp target/release/5d-cli /usr/local/bin/
+cp target/release/5d-mcp /usr/local/bin/
 ```
 
 ### MCP Tools Available
