@@ -191,12 +191,19 @@ impl Default for ControllerConfig {
                     "Bash(npm:install*, yarn:install*, cargo:install*, docker:*, kubectl:*, rm:-rf*, git:*)".to_string(),
                 ],
             },
+            // Telemetry configuration with environment variable overrides:
+            // - OTLP_ENDPOINT: OTLP traces endpoint (default: http://localhost:4317)
+            // - LOGS_ENDPOINT: Logs endpoint (default: http://localhost:4318)
+            // - LOGS_PROTOCOL: Logs protocol (default: http)
             telemetry: TelemetryConfig {
                 enabled: false,
-                otlp_endpoint: "http://localhost:4317".to_string(),
+                otlp_endpoint: std::env::var("OTLP_ENDPOINT")
+                    .unwrap_or_else(|_| "http://localhost:4317".to_string()),
                 otlp_protocol: "grpc".to_string(),
-                logs_endpoint: "http://localhost:4318".to_string(),
-                logs_protocol: "http".to_string(),
+                logs_endpoint: std::env::var("LOGS_ENDPOINT")
+                    .unwrap_or_else(|_| "http://localhost:4318".to_string()),
+                logs_protocol: std::env::var("LOGS_PROTOCOL")
+                    .unwrap_or_else(|_| "http".to_string()),
             },
             storage: StorageConfig {
                 storage_class_name: None, // Let K8s use default storage class

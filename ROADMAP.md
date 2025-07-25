@@ -44,6 +44,14 @@ The 5D Labs Platform is evolving to become the premier AI-driven development pla
 - Agent assignment based on service ownership
 - Real-time status updates and milestone tracking
 
+### Configuration Management
+**Environment-specific deployment configuration**
+- Environment variable overrides for all service URLs
+- Configurable telemetry endpoints (OTLP, logging)
+- Flexible MCP server URL configuration
+- Support for different deployment environments (local, cloud, on-premises)
+- Configuration validation and documentation
+
 ## 🎭 Agent Specialization
 
 ### Agent Profiles
