@@ -16,7 +16,7 @@ use kube::{
 };
 use std::sync::Arc;
 use tokio::time::Duration;
-use tracing::{error, info, warn};
+use tracing::{error, info, warn, debug};
 
 use super::resources::{cleanup_resources, reconcile_create_or_update};
 use super::status::monitor_job_status;
@@ -26,40 +26,55 @@ use super::types::{Context, Error, Result, TaskType, CODE_FINALIZER_NAME, DOCS_F
 pub async fn run_task_controller(client: Client, namespace: String) -> Result<()> {
     info!("Starting task controller in namespace: {}", namespace);
 
+    debug!("About to load controller configuration from mounted file...");
+
     // Load controller configuration from mounted file
     let config = match ControllerConfig::from_mounted_file("/config/config.yaml") {
         Ok(cfg) => {
-            info!("Loaded controller configuration from mounted file");
+            info!("✅ Successfully loaded controller configuration from mounted file");
+            debug!("Configuration loaded: cleanup enabled = {}", cfg.cleanup.enabled);
+
             // Validate configuration has required fields
             if let Err(validation_error) = cfg.validate() {
+                error!("❌ Configuration validation failed: {}", validation_error);
                 return Err(Error::ConfigError(validation_error.to_string()));
             }
+            info!("✅ Configuration validation passed");
             cfg
         }
         Err(e) => {
             warn!(
-                "Failed to load configuration from mounted file, using defaults: {}",
+                "❌ Failed to load configuration from mounted file, using defaults: {}",
                 e
             );
+            debug!("About to create default configuration...");
             let default_config = ControllerConfig::default();
+
             // Validate default configuration - this should fail if image config is missing
             if let Err(validation_error) = default_config.validate() {
-                error!("Default configuration is invalid: {}", validation_error);
+                error!("❌ Default configuration is invalid: {}", validation_error);
                 return Err(Error::ConfigError(validation_error.to_string()));
             }
+            info!("✅ Default configuration validation passed");
             default_config
         }
     };
 
+    debug!("Creating controller context...");
     let context = Arc::new(Context {
         client: client.clone(),
         namespace: namespace.clone(),
         config: Arc::new(config),
     });
 
+    info!("✅ Controller context created successfully");
+
     // Start controllers for both DocsRun and CodeRun
+    debug!("Creating API clients for DocsRun and CodeRun...");
     let docs_runs = Api::<DocsRun>::namespaced(client.clone(), &namespace);
     let code_runs = Api::<CodeRun>::namespaced(client.clone(), &namespace);
+
+    info!("✅ API clients created, starting controllers...");
 
     let docs_controller = Controller::new(docs_runs, Config::default())
         .shutdown_on_signal()
@@ -72,6 +87,8 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
         .run(reconcile_code, error_policy_code, context.clone())
         .filter_map(|x| async move { std::result::Result::ok(x) })
         .for_each(|_| futures::future::ready(()));
+
+    info!("🚀 Both controllers started, entering main loop...");
 
     // Run both controllers concurrently
     tokio::select! {
