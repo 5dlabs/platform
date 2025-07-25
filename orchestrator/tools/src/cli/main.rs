@@ -77,9 +77,9 @@ pub enum TaskCommands {
         #[arg(long)]
         source_branch: Option<String>,
 
-        /// GitHub username for authentication
+        /// GitHub username for authentication (required)
         #[arg(long)]
-        github_user: Option<String>,
+        github_user: String,
     },
 
     /// Submit implementation task to orchestrator
@@ -103,9 +103,9 @@ pub enum TaskCommands {
         #[arg(long)]
         docs_project_directory: Option<String>,
 
-        /// GitHub username for authentication
+        /// GitHub username for authentication (required)
         #[arg(long)]
-        github_user: Option<String>,
+        github_user: String,
 
         /// Working directory within target repository
         #[arg(long, short = 'w')]

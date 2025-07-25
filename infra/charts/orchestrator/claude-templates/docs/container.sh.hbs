@@ -54,11 +54,20 @@ if [ -d "/workspace/.git" ]; then
   git checkout "$REPO_BRANCH"
   git pull origin "$REPO_BRANCH"
 else
-  echo "Cloning repository..."
-  if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" /workspace; then
+  echo "Setting up repository..."
+  # Clone to temp directory first, then move contents
+  TEMP_CLONE_DIR="/tmp/repo-clone"
+  rm -rf "$TEMP_CLONE_DIR"
+
+  if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$TEMP_CLONE_DIR"; then
     echo "❌ Failed to clone repository"
     exit 1
   fi
+
+  # Move repository contents to workspace
+  mv "$TEMP_CLONE_DIR"/* /workspace/ 2>/dev/null || true
+  mv "$TEMP_CLONE_DIR"/.[^.]* /workspace/ 2>/dev/null || true
+  rm -rf "$TEMP_CLONE_DIR"
   cd /workspace
 fi
 

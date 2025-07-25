@@ -29,7 +29,7 @@ pub async fn handle_task_command(
                 model.as_deref(),
                 repository_url.as_deref(),
                 source_branch.as_deref(),
-                github_user.as_deref(),
+                &github_user,
             )
             .await
         }
@@ -60,7 +60,7 @@ pub async fn handle_task_command(
                 repository_url.as_deref(),
                 docs_repository_url.as_deref(),
                 docs_project_directory.as_deref(),
-                github_user.as_deref(),
+                &github_user,
                 working_directory.as_deref(),
                 model.as_deref(),
                 local_tools.as_deref(),
@@ -86,7 +86,7 @@ async fn handle_docs_command(
     model: Option<&str>,
     repository_url: Option<&str>,
     source_branch: Option<&str>,
-    github_user: Option<&str>,
+    github_user: &str,
 ) -> Result<()> {
     output.info("Initializing documentation generator...");
 
@@ -99,19 +99,13 @@ async fn handle_docs_command(
     let final_working_dir = working_directory.unwrap_or(&detected_working_dir);
     let final_source_branch = source_branch.unwrap_or(&detected_source_branch);
 
-    // Auto-detect GitHub user if not provided
-    let final_github_user = match github_user {
-        Some(user) => user.to_string(),
-        None => get_github_user().unwrap_or_else(|_| "claude-agent-1".to_string()),
-    };
-
     // Create documentation generation request
     let request = DocsRequest {
         repository_url: final_repo_url.to_string(),
         working_directory: final_working_dir.to_string(),
         source_branch: final_source_branch.to_string(),
         model: model.map(|s| s.to_string()),
-        github_user: final_github_user,
+        github_user: github_user.to_string(),
     };
 
     output.info("Submitting documentation generation job...");
@@ -157,7 +151,7 @@ async fn handle_code_command(
     repository_url: Option<&str>,
     docs_repository_url: Option<&str>,
     docs_project_directory: Option<&str>,
-    github_user: Option<&str>,
+    github_user: &str,
     working_directory: Option<&str>,
     model: Option<&str>,
     local_tools: Option<&str>,
@@ -186,11 +180,8 @@ async fn handle_code_command(
         None => get_git_remote_url()?, // TODO: This should be configurable
     };
 
-    // Auto-detect GitHub user from git config if not provided
-    let github_user_name = match github_user {
-        Some(user) => user.to_string(),
-        None => get_github_user().unwrap_or_else(|_| "claude-agent-1".to_string()),
-    };
+    // Use provided GitHub user (now required)
+    let github_user_name = github_user.to_string();
 
     // Auto-detect working directory if not provided
     let working_dir = match working_directory {
@@ -295,18 +286,6 @@ fn get_working_directory() -> Result<String> {
     } else {
         rel_path
     })
-}
-
-fn get_github_user() -> Result<String> {
-    use std::process::Command;
-
-    let output = Command::new("git").args(["config", "user.name"]).output()?;
-
-    if !output.status.success() {
-        anyhow::bail!("Failed to get git user.name");
-    }
-
-    Ok(String::from_utf8(output.stdout)?.trim().to_string())
 }
 
 /// Parse environment variables from comma-separated key=value string

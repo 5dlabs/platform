@@ -9,13 +9,12 @@ The 5D Labs Platform is evolving to become the premier AI-driven development pla
 - Auto-detect and ingest architecture documents from repositories
 - Parse PRD (Product Requirements Document) files into agent context
 - Dynamic documentation discovery and indexing
-- Maintain up-to-date context without manual intervention
 
 ### MCP Tools Integration
 **Curated tool selection and management**
 - Template-driven tool documentation generation
 - Selective tool enablement per agent configuration
-- Tool risk assessment and usage guidelines
+- Tool usage guidelines
 - Dynamic tool capability detection and documentation
 
 ## 🔧 Core Platform Enhancements
@@ -97,29 +96,6 @@ The 5D Labs Platform is evolving to become the premier AI-driven development pla
 - Conditional tool availability based on context
 - Tool usage analytics and optimization
 - Custom tool integration framework
-
-### Workflow Automation
-**End-to-end development process automation**
-- Intelligent task routing and assignment
-- Automated testing and deployment pipelines
-- Cross-service integration testing
-- Rollback and recovery automation
-
-## 🛡️ Enterprise Features
-
-### Security & Compliance
-**Enterprise-grade security and compliance**
-- Role-based access control (RBAC)
-- Audit logging and compliance reporting
-- Secure credential management
-- Data privacy and protection controls
-
-### Scalability & Performance
-**Production-ready scalability**
-- Multi-tenant agent isolation
-- Horizontal scaling capabilities
-- Performance optimization and monitoring
-- Resource management and quota controls
 
 ## 🌟 Advanced Capabilities
 

@@ -60,7 +60,21 @@ struct RpcRequest {
     id: Option<Value>,
 }
 
-// Helper to run orchestrator CLI command and capture output.
+/// Get the current git branch
+fn get_current_git_branch() -> Result<String> {
+    let output = Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .output()
+        .context("Failed to get current git branch")?;
+
+    if !output.status.success() {
+        return Ok("main".to_string());
+    }
+
+    Ok(String::from_utf8(output.stdout)?.trim().to_string())
+}
+
+/// Run the orchestrator CLI command
 fn run_orchestrator_cli(args: &[&str]) -> Result<String> {
     // Use the local build in the same directory as this MCP binary
     let mut cmd = Command::new("fdl");
@@ -153,24 +167,37 @@ fn handle_orchestrator_tools(
             // Initialize documentation for Task Master tasks
             // Debug output removed to satisfy clippy
 
-            // Extract parameters with docs-specific default
+            // Extract required working directory parameter
+            let working_directory = match params_map
+                .get("working_directory")
+                .and_then(|v| v.as_str())
+            {
+                Some(wd) => wd,
+                None => return Some(Err(anyhow!("working_directory parameter is required"))),
+            };
+
+            // Extract model with default
             let model = params_map
                 .get("model")
                 .and_then(|v| v.as_str())
-                .filter(|s| !s.is_empty());
-
-            let model = match model {
-                Some(m) => m,
-                None => return Some(Err(anyhow!("Model parameter is required. Please specify a model like 'claude-opus-4-20250514' or 'claude-sonnet-4-20250514'"))),
-            };
-
-            let working_directory = params_map.get("working_directory").and_then(|v| v.as_str());
+                .unwrap_or("claude-opus-4-20250514");
 
             let repository_url = params_map.get("repository_url").and_then(|v| v.as_str());
 
-            let source_branch = params_map.get("source_branch").and_then(|v| v.as_str());
+            // Get GitHub user from parameter or environment variable
+            let env_user = std::env::var("FDL_DEFAULT_DOCS_USER").ok();
+            let github_user = match params_map
+                .get("github_user")
+                .and_then(|v| v.as_str())
+                .or_else(|| env_user.as_deref())
+            {
+                Some(user) => user,
+                None => return Some(Err(anyhow!("github_user parameter is required or FDL_DEFAULT_DOCS_USER environment variable must be set"))),
+            };
 
-            let github_user = params_map.get("github_user").and_then(|v| v.as_str());
+            // Auto-detect source branch from current git repository
+            let source_branch = get_current_git_branch()
+                .unwrap_or_else(|_| "main".to_string());
 
             // Validate model parameter - allow any model that starts with "claude-"
             if !model.starts_with("claude-") {
@@ -180,27 +207,15 @@ fn handle_orchestrator_tools(
             // Build CLI arguments
             let mut args = vec!["task", "docs"];
 
-            // Add model
+            // Add required parameters
             args.extend(&["--model", model]);
-
-            // Add working directory if specified
-            if let Some(wd) = working_directory {
-                args.extend(&["--working-directory", wd]);
-            }
+            args.extend(&["--working-directory", working_directory]);
+            args.extend(&["--github-user", github_user]);
+            args.extend(&["--source-branch", &source_branch]);
 
             // Add repository URL if specified
             if let Some(repo) = repository_url {
                 args.extend(&["--repository-url", repo]);
-            }
-
-            // Add source branch if specified
-            if let Some(branch) = source_branch {
-                args.extend(&["--source-branch", branch]);
-            }
-
-            // Add GitHub user if specified
-            if let Some(user) = github_user {
-                args.extend(&["--github-user", user]);
             }
 
             // Debug output removed to satisfy clippy

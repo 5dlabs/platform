@@ -17,27 +17,25 @@ fn get_init_docs_schema() -> Value {
         "inputSchema": {
             "type": "object",
             "properties": {
-                "model": {
-                    "type": "string",
-                    "description": "Claude model to use (required) - e.g., 'claude-opus-4-20250514'",
-                },
                 "working_directory": {
                     "type": "string",
-                    "description": "Working directory containing .taskmaster folder (auto-detected from current directory if not specified). Use relative paths like '_projects/simple-api'."
+                    "description": "Working directory containing .taskmaster folder (required). Use relative paths like '_projects/simple-api'."
+                },
+                "model": {
+                    "type": "string",
+                    "description": "Claude model to use (default: 'claude-opus-4-20250514')",
+                    "default": "claude-opus-4-20250514"
                 },
                 "repository_url": {
                     "type": "string",
                     "description": "Documentation repository URL (auto-detected from current git repo if not specified)"
                 },
-                "source_branch": {
-                    "type": "string",
-                    "description": "Source branch to use (auto-detected from current git branch if not specified)"
-                },
                 "github_user": {
                     "type": "string",
                     "description": "GitHub username for authentication (auto-detected from git config if not specified)"
                 }
-            }
+            },
+            "required": ["working_directory"]
         }
     })
 }
@@ -59,6 +57,15 @@ fn get_submit_implementation_task_schema() -> Value {
                     "description": "REQUIRED: Target service name (creates workspace-{service} PVC)",
                     "pattern": "^[a-z0-9-]+$"
                 },
+                "working_directory": {
+                    "type": "string",
+                    "description": "Working directory within target repository (required)"
+                },
+                "model": {
+                    "type": "string",
+                    "description": "Claude model to use (default: 'claude-sonnet-4-20250514')",
+                    "default": "claude-sonnet-4-20250514"
+                },
                 "repository_url": {
                     "type": "string",
                     "description": "Target project repository URL (where implementation work happens, auto-detected from .git/config if not specified)"
@@ -70,14 +77,6 @@ fn get_submit_implementation_task_schema() -> Value {
                 "docs_project_directory": {
                     "type": "string",
                     "description": "Project directory within docs repository (e.g. '_projects/simple-api')"
-                },
-                "working_directory": {
-                    "type": "string",
-                    "description": "Working directory within target repository (defaults to service name)"
-                },
-                "model": {
-                    "type": "string",
-                    "description": "Claude model to use (required) - e.g., 'claude-sonnet-4-20250514'",
                 },
                 "github_user": {
                     "type": "string",
@@ -94,8 +93,8 @@ fn get_submit_implementation_task_schema() -> Value {
                 "context_version": {
                     "type": "integer",
                     "description": "Context version for retry attempts (incremented on each retry, default: 1)",
-                    "default": 1,
-                    "minimum": 1
+                    "minimum": 1,
+                    "default": 1
                 },
                 "prompt_modification": {
                     "type": "string",
@@ -138,7 +137,7 @@ fn get_submit_implementation_task_schema() -> Value {
                                 "description": "Name of the secret"
                             },
                             "secretKey": {
-                    "type": "string",
+                                "type": "string",
                                 "description": "Key within the secret"
                             }
                         },
@@ -146,7 +145,7 @@ fn get_submit_implementation_task_schema() -> Value {
                     }
                 }
             },
-            "required": ["task_id", "service"]
+            "required": ["task_id", "service", "working_directory"]
         }
     })
 }
