@@ -17,6 +17,67 @@ Both operations run as Kubernetes jobs and automatically submit results via GitH
 - A project with Task Master initialized (`.taskmaster/` directory)
 - GitHub repository for your project
 
+## Installation
+
+### Option 1: Deploy the Platform (Kubernetes)
+
+If you want to deploy the platform yourself, you can install it using Helm:
+
+```bash
+# Add the 5dlabs Helm repository
+helm repo add 5dlabs https://5dlabs.github.io/platform
+helm repo update
+
+# Install Custom Resource Definitions (CRDs) first
+kubectl apply -f https://github.com/5dlabs/platform/releases/download/v0.0.2/platform-crds.yaml
+
+# Install the orchestrator
+helm install orchestrator 5dlabs/orchestrator --namespace orchestrator --create-namespace
+
+# Setup agent secrets (interactive)
+wget https://raw.githubusercontent.com/5dlabs/platform/main/infra/scripts/setup-agent-secrets.sh
+chmod +x setup-agent-secrets.sh
+./setup-agent-secrets.sh --help
+```
+
+**Requirements:**
+- Kubernetes 1.19+
+- Helm 3.2.0+
+- GitHub Personal Access Token
+- Anthropic API Key
+
+**What you get:**
+- Complete orchestrator platform deployed to Kubernetes
+- REST API for task management
+- Custom Kubernetes operators for CodeRun/DocsRun resources
+- Agent workspace management and isolation
+
+### Option 2: Use CLI Tools Standalone
+
+If you just want the CLI tools without deploying the full platform:
+
+```bash
+# Build from source
+git clone https://github.com/5dlabs/platform.git
+cd platform/orchestrator
+
+# Build the tools binary (contains both CLI and MCP server)
+cargo build --release --bin fivedlabs-tools
+
+# The binary includes both tools:
+./target/release/fivedlabs-tools --help          # CLI tool (5d-cli)
+./target/release/fivedlabs-tools --mcp --help    # MCP server (5d-mcp)
+
+# Install to your system (optional)
+cp target/release/fivedlabs-tools /usr/local/bin/
+```
+
+**Use cases:**
+- Integration with existing CI/CD pipelines
+- Standalone documentation generation
+- Script automation
+- Development workflows
+
 ### MCP Tools Available
 
 The platform exposes two primary MCP tools:
