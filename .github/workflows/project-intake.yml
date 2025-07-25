@@ -1,0 +1,278 @@
+name: Project Intake Pipeline
+on:
+  push:
+    paths:
+      - 'intake/**'
+  pull_request:
+    paths:
+      - 'intake/**'
+
+jobs:
+  process-new-project:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, 'intake:') || github.event_name == 'pull_request'
+
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Rust and build orchestrator MCP
+        run: |
+          # Build the orchestrator MCP tool that we'll use
+          cd orchestrator
+          cargo build --release
+          # The MCP server will be available for Claude Code to use
+
+      - name: Detect new project files
+        id: detect-files
+        run: |
+          echo "Checking for new files in intake/"
+
+          # Find PRD and architecture files
+          PRD_FILE=$(find intake/ -name "*.txt" -o -name "*prd*" -o -name "*PRD*" | head -1)
+          ARCH_FILE=$(find intake/ -name "*.md" -o -name "*architecture*" -o -name "*arch*" | head -1)
+
+          if [[ -z "$PRD_FILE" || -z "$ARCH_FILE" ]]; then
+            echo "❌ Missing required files. Need both PRD (.txt) and Architecture (.md) files"
+            exit 1
+          fi
+
+          echo "✅ Found PRD file: $PRD_FILE"
+          echo "✅ Found Architecture file: $ARCH_FILE"
+
+          # Set outputs
+          echo "prd_file=$PRD_FILE" >> $GITHUB_OUTPUT
+          echo "arch_file=$ARCH_FILE" >> $GITHUB_OUTPUT
+
+      - name: Extract project name from documents
+        id: extract-name
+        run: |
+          PRD_FILE="${{ steps.detect-files.outputs.prd_file }}"
+          ARCH_FILE="${{ steps.detect-files.outputs.arch_file }}"
+
+          # Try to extract project name from document titles or content
+          PROJECT_NAME=""
+
+          # Check PRD file for project name patterns
+          if grep -i "project.*:" "$PRD_FILE" | head -1 | grep -v "^#"; then
+            PROJECT_NAME=$(grep -i "project.*:" "$PRD_FILE" | head -1 | sed 's/.*project[^:]*:\s*//' | sed 's/[^a-zA-Z0-9 -]//g' | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/--*/-/g')
+          fi
+
+          # Fallback: extract from first heading
+          if [[ -z "$PROJECT_NAME" ]]; then
+            PROJECT_NAME=$(head -5 "$PRD_FILE" | grep -E "^#.*" | head -1 | sed 's/^#*\s*//' | sed 's/[^a-zA-Z0-9 -]//g' | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/--*/-/g')
+          fi
+
+          # Fallback: use filename
+          if [[ -z "$PROJECT_NAME" ]]; then
+            PROJECT_NAME=$(basename "$PRD_FILE" .txt | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9-]/-/g')
+          fi
+
+          # Clean up name
+          PROJECT_NAME=$(echo "$PROJECT_NAME" | sed 's/^-*//;s/-*$//' | cut -c1-50)
+
+          echo "📝 Extracted project name: $PROJECT_NAME"
+          echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create project directory structure
+        id: create-structure
+        run: |
+          PROJECT_NAME="${{ steps.extract-name.outputs.project_name }}"
+          PROJECT_DIR="_projects/$PROJECT_NAME"
+
+          echo "🏗️ Creating project structure at: $PROJECT_DIR"
+
+          # Create directory structure
+          mkdir -p "$PROJECT_DIR/.taskmaster/docs"
+
+          # Move files to appropriate locations
+          cp "${{ steps.detect-files.outputs.prd_file }}" "$PROJECT_DIR/.taskmaster/docs/prd.txt"
+          cp "${{ steps.detect-files.outputs.arch_file }}" "$PROJECT_DIR/.taskmaster/docs/architecture.md"
+
+          echo "✅ Project structure created"
+          echo "project_dir=$PROJECT_DIR" >> $GITHUB_OUTPUT
+
+      - name: Initialize TaskMaster structure
+        working-directory: ${{ steps.create-structure.outputs.project_dir }}
+        run: |
+          echo "🚀 Setting up TaskMaster structure in $(pwd)"
+
+          # Create basic tasks.json structure to start
+          cat > .taskmaster/tasks.json << 'EOF'
+          {
+            "project": "${{ steps.extract-name.outputs.project_name }}",
+            "tasks": [],
+            "metadata": {
+              "created": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+              "model": "claude-opus-4-20250514",
+              "version": "1.0"
+            }
+          }
+          EOF
+
+          echo "✅ TaskMaster structure initialized"
+
+      - name: Generate and refine tasks using Claude Code
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            I need you to analyze the PRD and architecture documents to generate comprehensive TaskMaster tasks.
+
+            **Project**: ${{ steps.extract-name.outputs.project_name }}
+            **Location**: ${{ steps.create-structure.outputs.project_dir }}
+
+            Please:
+            1. Read and analyze the PRD at .taskmaster/docs/prd.txt
+            2. Read and analyze the architecture at .taskmaster/docs/architecture.md
+            3. Generate comprehensive tasks that cover all requirements from both documents
+            4. Ensure tasks are detailed with proper descriptions, dependencies, and priorities
+            5. Use the Opus model for analysis (claude-opus-4-20250514)
+            6. Create tasks with NO research restrictions and NO task limits
+            7. Analyze complexity and expand with subtasks where needed
+            8. Cross-reference everything to ensure 100% coverage
+
+            Update the .taskmaster/tasks.json file with the complete task structure.
+            Then generate individual task text files in docs/task-X/ directories following the existing pattern.
+
+      - name: Initialize documentation using MCP orchestrator
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          allowed_tools: "mcp__orchestrator-mcp__docs"
+          direct_prompt: |
+            Now that the tasks are generated, I need to initialize the documentation system using the MCP orchestrator.
+
+            **Project**: ${{ steps.extract-name.outputs.project_name }}
+            **Working Directory**: ${{ steps.create-structure.outputs.project_dir }}
+
+            Please use the mcp_orchestrator-mcp_docs tool to initialize documentation for this project:
+            - Repository URL: ${{ github.repository_owner }}/${{ github.event.repository.name }}
+            - Source Branch: ${{ github.ref_name }}
+            - GitHub User: ${{ github.actor }}
+            - Model: claude-opus-4-20250514
+            - Working Directory: ${{ steps.create-structure.outputs.project_dir }}
+
+            This should set up the complete documentation framework following the established patterns.
+
+      - name: Create Pull Request
+        id: create-pr
+        run: |
+          PROJECT_NAME="${{ steps.extract-name.outputs.project_name }}"
+          BRANCH_NAME="project-intake/$PROJECT_NAME-$(date +%Y%m%d-%H%M%S)"
+
+          # Configure git
+          git config user.name "Project Intake Bot"
+          git config user.email "action@github.com"
+
+          # Create new branch
+          git checkout -b "$BRANCH_NAME"
+
+          # Add all project files
+          git add "_projects/$PROJECT_NAME/"
+
+          # Remove intake files (they've been processed)
+          git rm -r intake/ || true
+
+          # Commit changes
+          git commit -m "🚀 Add new project: $PROJECT_NAME
+
+          Automated project intake processing:
+          - Created project structure under _projects/$PROJECT_NAME
+          - Initialized TaskMaster with Opus model
+          - Generated tasks from PRD (no research, no limits)
+          - Analyzed task complexity (with research)
+          - Expanded tasks with subtasks
+          - Cross-referenced with architecture document
+          - Generated complete task files and directories
+          - Initialized documentation generation
+
+          Project is ready for development workflow."
+
+          # Push branch
+          git push origin "$BRANCH_NAME"
+
+          # Create PR using GitHub CLI
+          gh pr create \
+            --title "🚀 New Project: $PROJECT_NAME" \
+            --body "## 🎉 Automated Project Intake Complete!
+
+          This PR adds a new project **$PROJECT_NAME** that has been fully processed through our automated intake pipeline.
+
+          ### 📋 What was processed:
+          - ✅ PRD document analyzed and parsed
+          - ✅ Architecture document integrated
+          - ✅ TaskMaster initialized with Opus model
+          - ✅ Tasks generated (no research limits)
+          - ✅ Complexity analysis completed (with research)
+          - ✅ Tasks expanded with subtasks
+          - ✅ Cross-referenced with architecture for alignment
+          - ✅ Complete file structure generated
+          - ✅ Documentation framework initialized
+
+          ### 🏗️ Project Structure Created:
+          \`\`\`
+          _projects/$PROJECT_NAME/
+          ├── .taskmaster/
+          │   ├── docs/
+          │   │   ├── prd.txt
+          │   │   └── architecture.md
+          │   └── tasks.json
+          └── docs/
+              ├── task-1/
+              │   └── task.txt
+              ├── task-2/
+              │   └── task.txt
+              └── ...
+          \`\`\`
+
+          ### 🎯 Next Steps:
+          1. Review the generated tasks for accuracy
+          2. Merge this PR to activate the project
+          3. Begin development using TaskMaster workflows
+          4. Tasks are ready for Claude Code implementation
+
+          ### 🤖 Models Used:
+          - **Documentation**: claude-opus-4-20250514
+          - **Task Generation**: claude-opus-4-20250514
+          - **Complexity Analysis**: claude-4-20250514
+          - **Cross-referencing**: claude-code-action
+
+          This project is now ready for the development workflow! 🚀" \
+            --head "$BRANCH_NAME" \
+            --base main
+
+          echo "✅ Pull request created successfully"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          PROJECT_NAME="${{ steps.extract-name.outputs.project_name }}"
+          echo "
+          ## 🎉 Project Intake Complete!
+
+          **Project**: $PROJECT_NAME
+          **Location**: _projects/$PROJECT_NAME
+          **Status**: ✅ Ready for development
+
+          ### What was accomplished:
+          - 📁 Project structure created
+          - 🤖 TaskMaster initialized with Opus model
+          - 📋 Tasks generated from PRD (no limits)
+          - 🔍 Complexity analysis performed
+          - 🌳 Tasks expanded with subtasks
+          - 🔄 Cross-referenced with architecture
+          - 📄 Task files and directories generated
+          - 📚 Documentation framework initialized
+          - 🔀 Pull request created for review
+
+          The project is now ready for the development workflow!
+          "
