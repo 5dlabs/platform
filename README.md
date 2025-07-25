@@ -19,9 +19,14 @@ Both operations run as Kubernetes jobs and automatically submit results via GitH
 
 ## Installation
 
-### Option 1: Deploy the Platform (Kubernetes)
+This is an integrated platform that consists of:
+- **Orchestrator**: Kubernetes service that manages Claude agents
+- **MCP Tools**: CLI interface for docs/task commands
+- **Agent Management**: Automated deployment and workspace isolation
 
-If you want to deploy the platform yourself, you can install it using Helm:
+All components work together - the MCP tools communicate with the orchestrator service to deploy and manage Claude agents.
+
+### Deploy the Complete Platform
 
 ```bash
 # Add the 5dlabs Helm repository
@@ -51,10 +56,9 @@ chmod +x setup-agent-secrets.sh
 - REST API for task management
 - Custom Kubernetes operators for CodeRun/DocsRun resources
 - Agent workspace management and isolation
+- MCP tools that connect to your deployment
 
-### Option 2: Use CLI Tools Standalone
-
-If you just want the CLI tools without deploying the full platform:
+### Building from Source (Development)
 
 ```bash
 # Build from source
@@ -71,12 +75,6 @@ cargo build --release --bin fivedlabs-tools
 # Install to your system (optional)
 cp target/release/fivedlabs-tools /usr/local/bin/
 ```
-
-**Use cases:**
-- Integration with existing CI/CD pipelines
-- Standalone documentation generation
-- Script automation
-- Development workflows
 
 ### MCP Tools Available
 
