@@ -62,7 +62,7 @@ pub async fn reconcile_create_or_update(
     Ok(Action::await_change())
 }
 
-/// Generate a unique ConfigMap name for the task
+/// Generate a unique `ConfigMap` name for the task
 fn generate_configmap_name(task: &TaskType) -> String {
     let task_id = task.task_id().unwrap_or(0); // Fallback for docs
     let service_name = task.service_name().replace('_', "-");
@@ -75,7 +75,7 @@ fn generate_configmap_name(task: &TaskType) -> String {
     }
 }
 
-/// Create ConfigMap with all template files
+/// Create `ConfigMap` with all template files
 fn create_configmap(
     task: &TaskType,
     name: &str,
@@ -550,7 +550,7 @@ async fn cleanup_old_configmaps(task: &TaskType, configmaps: &Api<ConfigMap>) ->
     Ok(())
 }
 
-/// Update the owner reference of an existing ConfigMap
+/// Update the owner reference of an existing `ConfigMap`
 async fn update_configmap_owner(
     _task: &TaskType,
     configmaps: &Api<ConfigMap>,

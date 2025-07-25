@@ -432,6 +432,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
 
 [[package]]
+name = "cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "colored",
+ "common",
+ "reqwest 0.12.22",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "colorchoice"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -447,12 +464,64 @@ dependencies = [
 ]
 
 [[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "k8s-openapi",
+ "serde",
+ "serde_json",
+ "serde_test",
+ "thiserror 2.0.12",
+ "uuid",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ca0197aee26d1ae37445ee532fefce43251d24cc7c166799f4d46817f1d3973"
 dependencies = [
  "crossbeam-utils",
+]
+
+[[package]]
+name = "core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum 0.8.4",
+ "chrono",
+ "common",
+ "futures",
+ "handlebars",
+ "k8s-openapi",
+ "kube",
+ "kube-derive",
+ "mockall",
+ "opentelemetry 0.30.0",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk 0.24.1",
+ "regex",
+ "reqwest 0.12.22",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+ "thiserror 2.0.12",
+ "tokio",
+ "tokio-test",
+ "tower 0.5.2",
+ "tower-http 0.5.2",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "uuid",
+ "wiremock",
 ]
 
 [[package]]
@@ -1654,6 +1723,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
+name = "mcp"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "memchr"
 version = "2.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1929,86 +2009,6 @@ dependencies = [
  "percent-encoding",
  "rand 0.9.1",
  "thiserror 2.0.12",
-]
-
-[[package]]
-name = "orchestrator-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "clap",
- "colored",
- "orchestrator-common",
- "reqwest 0.12.22",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "orchestrator-common"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "k8s-openapi",
- "serde",
- "serde_json",
- "serde_test",
- "thiserror 2.0.12",
- "uuid",
-]
-
-[[package]]
-name = "orchestrator-core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "axum 0.8.4",
- "chrono",
- "futures",
- "handlebars",
- "k8s-openapi",
- "kube",
- "kube-derive",
- "mockall",
- "opentelemetry 0.30.0",
- "opentelemetry-otlp",
- "opentelemetry_sdk 0.24.1",
- "orchestrator-common",
- "regex",
- "reqwest 0.12.22",
- "schemars",
- "serde",
- "serde_json",
- "serde_yaml",
- "tempfile",
- "thiserror 2.0.12",
- "tokio",
- "tokio-test",
- "tower 0.5.2",
- "tower-http 0.5.2",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "uuid",
- "wiremock",
-]
-
-[[package]]
-name = "orchestrator-mcp"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "reqwest 0.11.27",
- "serde",
- "serde_json",
- "tokio",
 ]
 
 [[package]]

@@ -127,6 +127,7 @@ pub enum AssistancePriority {
 
 impl Request {
     /// Create a new request
+    #[must_use]
     pub fn new(source: RequestSource, action: RequestAction, payload: Value) -> Self {
         use chrono::Utc;
         use uuid::Uuid;
@@ -144,12 +145,14 @@ impl Request {
     }
 
     /// Add trace ID for distributed tracing
+    #[must_use]
     pub fn with_trace_id(mut self, trace_id: String) -> Self {
         self.metadata.trace_id = Some(trace_id);
         self
     }
 
     /// Add user information
+    #[must_use]
     pub fn with_user(mut self, user: String) -> Self {
         self.metadata.user = Some(user);
         self

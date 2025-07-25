@@ -61,6 +61,7 @@ pub struct TaskMetadata {
 
 impl Task {
     /// Create a new task with default values
+    #[must_use]
     pub fn new(id: String, title: String, description: String, microservice: String) -> Self {
         let now = Utc::now();
         Self {
@@ -79,6 +80,7 @@ impl Task {
     }
 
     /// Check if the task is in a terminal state
+    #[must_use]
     pub fn is_terminal(&self) -> bool {
         matches!(
             self.status,

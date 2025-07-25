@@ -1,6 +1,6 @@
 //! Task Controller
 //!
-//! Unified controller for both DocsRun and CodeRun resources.
+//! Unified controller for both `DocsRun` and `CodeRun` resources.
 //! Handles job orchestration, resource management, and status tracking.
 
 // Public API - re-export the main controller function

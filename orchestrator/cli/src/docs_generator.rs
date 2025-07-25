@@ -113,7 +113,9 @@ impl DocsGenerator {
             .output()
             .context("Failed to check git status")?;
 
-        if !status_output.stdout.is_empty() {
+        if status_output.stdout.is_empty() {
+            info!("No uncommitted changes in .taskmaster directory");
+        } else {
             info!("Found uncommitted changes in .taskmaster directory");
 
             Command::new("git")
@@ -141,8 +143,6 @@ impl DocsGenerator {
             }
 
             info!("✓ Auto-committed and pushed .taskmaster directory");
-        } else {
-            info!("No uncommitted changes in .taskmaster directory");
         }
 
         Ok(())
@@ -173,7 +173,7 @@ impl DocsGenerator {
 
         let mut created_count = 0;
         for task in tasks {
-            if let Some(task_id) = task.get("id").and_then(|id| id.as_u64()) {
+            if let Some(task_id) = task.get("id").and_then(serde_json::Value::as_u64) {
                 if let Some(title) = task.get("title").and_then(|t| t.as_str()) {
                     let task_dir = format!("{docs_dir}/task-{task_id}");
                     fs::create_dir_all(&task_dir)

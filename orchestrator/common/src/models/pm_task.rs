@@ -201,6 +201,7 @@ pub struct Task {
 
 impl PmTaskRequest {
     /// Create a new PM task request from Task Master task and markdown files
+    #[must_use]
     pub fn new(
         task: Task,
         service_name: String,
@@ -219,6 +220,7 @@ impl PmTaskRequest {
     }
 
     /// Create a new PM task request with agent tools specification
+    #[must_use]
     pub fn new_with_tools(
         task: Task,
         service_name: String,
@@ -254,6 +256,7 @@ impl PmTaskRequest {
 
     /// Create a new PM task request from Task Master task with repository support
     #[allow(clippy::too_many_arguments)]
+    #[must_use]
     pub fn new_with_repository(
         task: Task,
         service_name: String,
@@ -290,6 +293,7 @@ impl PmTaskRequest {
 
     /// Create a new PM task request with full specification including working directory
     #[allow(clippy::too_many_arguments)]
+    #[must_use]
     pub fn new_with_full_spec(
         task: Task,
         service_name: String,
@@ -327,6 +331,7 @@ impl PmTaskRequest {
 
     /// Create a new PM task request with prompt modification support for retries
     #[allow(clippy::too_many_arguments)]
+    #[must_use]
     pub fn new_with_prompt_modification(
         task: Task,
         service_name: String,
@@ -366,6 +371,7 @@ impl PmTaskRequest {
 
     /// Create a new PM task request with full tool configuration support
     #[allow(clippy::too_many_arguments)]
+    #[must_use]
     pub fn new_with_tool_config(
         task: Task,
         service_name: String,

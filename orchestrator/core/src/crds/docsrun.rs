@@ -1,4 +1,4 @@
-//! DocsRun Custom Resource Definition for documentation generation
+//! `DocsRun` Custom Resource Definition for documentation generation
 
 use kube::CustomResource;
 use schemars::JsonSchema;
@@ -33,7 +33,7 @@ pub struct DocsRunStatus {
     pub configmap_name: Option<String>,
 }
 
-/// Condition for the DocsRun
+/// Condition for the `DocsRun`
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct DocsRunCondition {
@@ -57,10 +57,10 @@ pub struct DocsRunCondition {
     pub message: Option<String>,
 }
 
-/// Phase of DocsRun execution
+/// Phase of `DocsRun` execution
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
 pub enum DocsRunPhase {
-    /// DocsRun has been created but not yet processed
+    /// `DocsRun` has been created but not yet processed
     Pending,
     /// Documentation generation is in progress
     Running,
@@ -68,6 +68,6 @@ pub enum DocsRunPhase {
     Succeeded,
     /// Documentation generation failed
     Failed,
-    /// DocsRun was manually cancelled
+    /// `DocsRun` was manually cancelled
     Cancelled,
 }

@@ -151,7 +151,7 @@ impl TaskType {
         }
     }
 
-    /// Get docs repository info (only for CodeRun)
+    /// Get docs repository info (only for `CodeRun`)
     pub fn docs_repository_url(&self) -> Option<&str> {
         match self {
             TaskType::Docs(_) => None,
@@ -174,7 +174,7 @@ impl TaskType {
         format!("github-token-{}", self.github_user())
     }
 
-    /// Get docs branch (only for CodeRun)
+    /// Get docs branch (only for `CodeRun`)
     pub fn docs_branch(&self) -> &str {
         match self {
             TaskType::Docs(_) => "main", // Docs use default branch
@@ -194,7 +194,7 @@ impl TaskType {
         }
     }
 
-    /// Get overwrite memory flag (only for CodeRun)
+    /// Get overwrite memory flag (only for `CodeRun`)
     pub fn overwrite_memory(&self) -> bool {
         match self {
             TaskType::Docs(_) => true, // Docs always overwrite memory
@@ -202,7 +202,7 @@ impl TaskType {
         }
     }
 
-    /// Get docs project directory (only for CodeRun)
+    /// Get docs project directory (only for `CodeRun`)
     pub fn docs_project_directory(&self) -> Option<&str> {
         match self {
             TaskType::Docs(_) => None,

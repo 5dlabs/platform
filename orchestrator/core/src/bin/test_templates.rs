@@ -1,7 +1,7 @@
 #!/usr/bin/env cargo
 //! Template testing utility for local handlebars template validation
 //!
-//! Usage: cargo run --bin test_templates
+//! Usage: cargo run --bin `test_templates`
 
 #![allow(clippy::disallowed_macros)]
 

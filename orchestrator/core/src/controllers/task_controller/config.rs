@@ -137,7 +137,7 @@ impl ControllerConfig {
         Ok(())
     }
 
-    /// Load configuration from a ConfigMap
+    /// Load configuration from a `ConfigMap`
     pub async fn from_configmap(
         client: &Client,
         namespace: &str,

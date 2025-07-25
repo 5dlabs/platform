@@ -64,3 +64,6 @@ orchestrator/target/
 # Task files
 # tasks.json
 # tasks/
+
+# Agent files
+agent_*.md

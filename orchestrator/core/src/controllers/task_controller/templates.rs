@@ -10,7 +10,7 @@ use tracing::debug;
 // Template base path (mounted from ConfigMap)
 const CLAUDE_TEMPLATES_PATH: &str = "/claude-templates";
 
-/// Load a template file from the mounted ConfigMap
+/// Load a template file from the mounted `ConfigMap`
 fn load_template(relative_path: &str) -> Result<String> {
     // Convert path separators to underscores for ConfigMap key lookup
     let configmap_key = relative_path.replace('/', "_");

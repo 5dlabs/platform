@@ -81,11 +81,11 @@ pub struct VolumeSpec {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum VolumeType {
-    /// ConfigMap volume
+    /// `ConfigMap` volume
     ConfigMap { name: String },
-    /// PersistentVolumeClaim
+    /// `PersistentVolumeClaim`
     Pvc { claim_name: String },
-    /// EmptyDir volume
+    /// `EmptyDir` volume
     EmptyDir,
     /// Secret volume
     Secret { name: String },
@@ -93,6 +93,7 @@ pub enum VolumeType {
 
 impl Job {
     /// Create a new job
+    #[must_use]
     pub fn new(
         id: String,
         task_id: String,
@@ -142,11 +143,13 @@ impl Job {
     }
 
     /// Check if the job is in a terminal state
+    #[must_use]
     pub fn is_terminal(&self) -> bool {
         matches!(self.status, JobStatus::Succeeded | JobStatus::Failed)
     }
 
     /// Get job duration if available
+    #[must_use]
     pub fn duration(&self) -> Option<chrono::Duration> {
         match (self.started_at, self.completed_at) {
             (Some(start), Some(end)) => Some(end - start),

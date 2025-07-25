@@ -22,7 +22,7 @@ use super::resources::{cleanup_resources, reconcile_create_or_update};
 use super::status::monitor_job_status;
 use super::types::{Context, Error, Result, TaskType, CODE_FINALIZER_NAME, DOCS_FINALIZER_NAME};
 
-/// Run the task controller for both DocsRun and CodeRun resources
+/// Run the task controller for both `DocsRun` and `CodeRun` resources
 pub async fn run_task_controller(client: Client, namespace: String) -> Result<()> {
     info!("Starting task controller in namespace: {}", namespace);
 
@@ -77,26 +77,26 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
 
     // Run both controllers concurrently
     tokio::select! {
-        _ = docs_controller => info!("DocsRun controller finished"),
-        _ = code_controller => info!("CodeRun controller finished"),
+        () = docs_controller => info!("DocsRun controller finished"),
+        () = code_controller => info!("CodeRun controller finished"),
     }
 
     Ok(())
 }
 
-/// Reconcile function for DocsRun resources
+/// Reconcile function for `DocsRun` resources
 async fn reconcile_docs(dr: Arc<DocsRun>, ctx: Arc<Context>) -> Result<Action> {
     let task = TaskType::Docs(dr.clone());
     reconcile_common(task, ctx, DOCS_FINALIZER_NAME).await
 }
 
-/// Reconcile function for CodeRun resources
+/// Reconcile function for `CodeRun` resources
 async fn reconcile_code(cr: Arc<CodeRun>, ctx: Arc<Context>) -> Result<Action> {
     let task = TaskType::Code(cr.clone());
     reconcile_common(task, ctx, CODE_FINALIZER_NAME).await
 }
 
-/// Common reconciliation logic for both DocsRun and CodeRun
+/// Common reconciliation logic for both `DocsRun` and `CodeRun`
 async fn reconcile_common(
     task: TaskType,
     ctx: Arc<Context>,
@@ -202,13 +202,13 @@ async fn monitor_running_job(task: &TaskType, jobs: &Api<Job>, ctx: &Arc<Context
     Ok(())
 }
 
-/// Error policy for DocsRun controller
+/// Error policy for `DocsRun` controller
 fn error_policy_docs(_dr: Arc<DocsRun>, error: &Error, _ctx: Arc<Context>) -> Action {
     error!("DocsRun reconciliation error: {:?}", error);
     Action::requeue(Duration::from_secs(30))
 }
 
-/// Error policy for CodeRun controller
+/// Error policy for `CodeRun` controller
 fn error_policy_code(_cr: Arc<CodeRun>, error: &Error, _ctx: Arc<Context>) -> Action {
     error!("CodeRun reconciliation error: {:?}", error);
     Action::requeue(Duration::from_secs(30))

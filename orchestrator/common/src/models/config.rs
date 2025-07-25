@@ -72,6 +72,7 @@ impl Default for ResourceLimits {
 
 impl AgentType {
     /// Get display name for the agent
+    #[must_use]
     pub fn display_name(&self) -> &'static str {
         match self {
             AgentType::Claude => "Claude Code",
@@ -80,6 +81,7 @@ impl AgentType {
     }
 
     /// Get the default image for the agent
+    #[must_use]
     pub fn default_image(&self) -> &'static str {
         match self {
             AgentType::Claude => "anthropic/claude-code:latest",
@@ -88,6 +90,7 @@ impl AgentType {
     }
 
     /// Check if this agent can be a primary implementer
+    #[must_use]
     pub fn can_implement(&self) -> bool {
         match self {
             AgentType::Claude => true,
@@ -96,6 +99,7 @@ impl AgentType {
     }
 
     /// Check if this agent can provide assistance
+    #[must_use]
     pub fn can_assist(&self) -> bool {
         match self {
             AgentType::Claude => false, // Claude is implementation-only in our pattern

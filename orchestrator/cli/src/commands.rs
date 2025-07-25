@@ -208,14 +208,14 @@ async fn handle_code_command(
         service: service.to_string(),
         repository_url: repo_url.clone(),
         docs_repository_url: docs_repo_url.clone(),
-        docs_project_directory: docs_project_directory.map(|s| s.to_string()),
+        docs_project_directory: docs_project_directory.map(std::string::ToString::to_string),
         working_directory: Some(working_dir.clone()),
         model: model.to_string(),
         github_user: github_user_name.clone(),
-        local_tools: local_tools.map(|s| s.to_string()),
-        remote_tools: remote_tools.map(|s| s.to_string()),
+        local_tools: local_tools.map(std::string::ToString::to_string),
+        remote_tools: remote_tools.map(std::string::ToString::to_string),
         context_version,
-        prompt_modification: prompt_modification.map(|s| s.to_string()),
+        prompt_modification: prompt_modification.map(std::string::ToString::to_string),
         docs_branch: docs_branch.to_string(),
         continue_session,
         overwrite_memory,
@@ -355,7 +355,7 @@ fn parse_env_vars(env_str: Option<&str>) -> Result<std::collections::HashMap<Str
 /// Parse environment variables from secrets in format: name:secretName:secretKey,...
 fn parse_env_from_secrets(
     env_secrets_str: Option<&str>,
-) -> Result<Vec<orchestrator_common::models::code_request::SecretEnvVar>> {
+) -> Result<Vec<common::models::code_request::SecretEnvVar>> {
     use common::models::code_request::SecretEnvVar;
 
     let mut secrets = Vec::new();

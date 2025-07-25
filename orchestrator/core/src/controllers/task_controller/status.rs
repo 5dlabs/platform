@@ -48,7 +48,7 @@ fn get_current_job_name(task: &TaskType) -> Option<String> {
     }
 }
 
-/// Analyze job status and return (phase, message, pull_request_url)
+/// Analyze job status and return (phase, message, `pull_request_url`)
 fn analyze_job_status(job: &Job) -> (String, String, Option<String>) {
     if let Some(status) = &job.status {
         // Check completion time first
@@ -163,7 +163,7 @@ async fn update_task_status(
     Ok(())
 }
 
-/// Build conditions for DocsRun status
+/// Build conditions for `DocsRun` status
 fn build_docs_conditions(phase: &str, message: &str, timestamp: &str) -> Vec<DocsRunCondition> {
     vec![DocsRunCondition {
         condition_type: "Ready".to_string(),
@@ -179,7 +179,7 @@ fn build_docs_conditions(phase: &str, message: &str, timestamp: &str) -> Vec<Doc
     }]
 }
 
-/// Build conditions for CodeRun status
+/// Build conditions for `CodeRun` status
 fn build_code_conditions(phase: &str, message: &str, timestamp: &str) -> Vec<CodeRunCondition> {
     vec![CodeRunCondition {
         condition_type: "Ready".to_string(),

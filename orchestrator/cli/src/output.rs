@@ -3,7 +3,7 @@
 #![allow(clippy::disallowed_macros)]
 
 use anyhow::Result;
-use colored::*;
+use colored::Colorize;
 
 /// Simple output manager for consistent formatting
 pub struct OutputManager;

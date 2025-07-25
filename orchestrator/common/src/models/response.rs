@@ -139,6 +139,7 @@ impl<T> ApiResponse<T> {
     }
 
     /// Create an error response
+    #[must_use]
     pub fn error(error: ErrorDetails, request_id: String) -> Self {
         Self {
             status: ResponseStatus::Error,

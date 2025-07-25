@@ -57,6 +57,7 @@ pub struct ApiResponse {
 }
 
 impl ApiResponse {
+    #[must_use]
     pub fn success(message: &str) -> Self {
         Self {
             success: true,
@@ -65,6 +66,7 @@ impl ApiResponse {
         }
     }
 
+    #[must_use]
     pub fn error(message: &str) -> Self {
         Self {
             success: false,

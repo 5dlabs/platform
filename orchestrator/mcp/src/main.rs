@@ -204,7 +204,10 @@ fn handle_orchestrator_tools(
             // Debug output removed to satisfy clippy
 
             // Extract required parameters
-            let task_id = match params_map.get("task_id").and_then(|v| v.as_u64()) {
+            let task_id = match params_map
+                .get("task_id")
+                .and_then(serde_json::Value::as_u64)
+            {
                 Some(id) => id,
                 None => return Some(Err(anyhow!("Missing required parameter: task_id"))),
             };
@@ -240,7 +243,7 @@ fn handle_orchestrator_tools(
 
             let context_version = params_map
                 .get("context_version")
-                .and_then(|v| v.as_u64())
+                .and_then(serde_json::Value::as_u64)
                 .unwrap_or(1) as u32;
 
             let prompt_modification = params_map
@@ -254,12 +257,12 @@ fn handle_orchestrator_tools(
 
             let continue_session = params_map
                 .get("continue_session")
-                .and_then(|v| v.as_bool())
+                .and_then(serde_json::Value::as_bool)
                 .unwrap_or(false);
 
             let overwrite_memory = params_map
                 .get("overwrite_memory")
-                .and_then(|v| v.as_bool())
+                .and_then(serde_json::Value::as_bool)
                 .unwrap_or(false);
 
             let env = params_map.get("env").and_then(|v| v.as_object());

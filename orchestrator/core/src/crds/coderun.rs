@@ -1,4 +1,4 @@
-//! CodeRun Custom Resource Definition for code implementation tasks
+//! `CodeRun` Custom Resource Definition for code implementation tasks
 
 use kube::CustomResource;
 use schemars::JsonSchema;
@@ -38,7 +38,7 @@ fn default_overwrite_memory() -> bool {
     false
 }
 
-/// CodeRun CRD for code implementation tasks
+/// `CodeRun` CRD for code implementation tasks
 #[derive(CustomResource, Deserialize, Serialize, Clone, Debug, JsonSchema)]
 #[kube(group = "orchestrator.platform", version = "v1", kind = "CodeRun")]
 #[kube(namespaced)]
@@ -116,7 +116,7 @@ pub struct CodeRunSpec {
     pub env_from_secrets: Vec<SecretEnvVar>,
 }
 
-/// Status of the CodeRun
+/// Status of the `CodeRun`
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
 pub struct CodeRunStatus {
     /// Current phase of the code implementation
@@ -137,10 +137,10 @@ pub struct CodeRunStatus {
     /// Current retry attempt (if applicable)
     pub retry_count: Option<u32>,
 
-    /// Conditions for the CodeRun
+    /// Conditions for the `CodeRun`
     pub conditions: Option<Vec<CodeRunCondition>>,
 
-    /// Name of the ConfigMap containing the prompt and context
+    /// Name of the `ConfigMap` containing the prompt and context
     pub configmap_name: Option<String>,
 
     /// Version of the context and prompt used
@@ -156,7 +156,7 @@ pub struct CodeRunStatus {
     pub session_id: Option<String>,
 }
 
-/// Condition for the CodeRun
+/// Condition for the `CodeRun`
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CodeRunCondition {
