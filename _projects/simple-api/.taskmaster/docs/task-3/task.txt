@@ -1,0 +1,14 @@
+# Task ID: 3
+# Title: Create Health and Welcome Endpoints
+# Status: pending
+# Dependencies: 2
+# Priority: high
+# Description: Implement GET `/health` and GET `/` endpoints for health checks and API info.
+# Details:
+- In `/src/routes`, define routes for `/` and `/health`.
+- `/` returns a JSON object with a welcome message, API version (from package.json), and current timestamp.
+- `/health` returns server status (e.g., 'ok'), uptime (process.uptime()), and timestamp.
+- Use controllers for response logic to keep routes clean.
+
+# Test Strategy:
+Send GET requests to `/` and `/health` and verify correct JSON structure and values.

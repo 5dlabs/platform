@@ -1,0 +1,16 @@
+# Task ID: 2
+# Title: Implement Express Server and Middleware
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Create the Express server with JSON parsing, environment variable support, and clean startup logging.
+# Details:
+- In `/src/index.js`, set up the Express app.
+- Use `express.json()` for JSON body parsing (built-in since Express 4.16+).
+- Load environment variables with `dotenv`.
+- Configure the server to listen on `process.env.PORT` or default to 3000.
+- Add startup logging with timestamp and environment info.
+- Follow best practices for middleware order and error handling setup.
+
+# Test Strategy:
+Start the server and confirm logs display correct port and environment. Send a test JSON request to verify parsing.
