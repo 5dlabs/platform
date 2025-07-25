@@ -41,7 +41,7 @@ jobs:
             taskrun:
               - 'orchestrator/orchestrator-core/src/controllers/taskrun.rs'
               - 'orchestrator/orchestrator-core/src/crds/**'
-              - 'infra/crds/**'
+              - 'infra/test-resources/crds/**'
             infra:
               - 'infra/**'
               - '.github/workflows/**'
@@ -296,8 +296,9 @@ jobs:
           kubectl create namespace test-platform
 
           # Apply test CodeRun and DocsRun
-          kubectl apply -f infra/crds/test-coderun.yaml -n test-platform || true
-          kubectl apply -f infra/crds/test-docsrun.yaml -n test-platform || true
+          echo "🧪 Applying test CRDs..."
+          kubectl apply -f infra/test-resources/crds/test-coderun.yaml -n test-platform || true
+          kubectl apply -f infra/test-resources/crds/test-docsrun.yaml -n test-platform || true
 
       - name: Verify CRD deployment
         run: |
