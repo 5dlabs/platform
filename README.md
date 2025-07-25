@@ -95,13 +95,13 @@ For the MCP tools and CLI utilities, you can install pre-built binaries:
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/5dlabs/platform/releases/download/v0.1.2/tools-installer.sh | sh
 
 # Verify installation
-5d-cli --help    # CLI tool for direct API calls
-5d-mcp --help    # MCP server for Cursor/Claude integration
+fdl --help       # CLI tool for direct API calls
+fdl-mcp --help   # MCP server for Cursor/Claude integration
 ```
 
 **What you get:**
-- `5d-cli` - Command-line tool for direct orchestrator API calls
-- `5d-mcp` - MCP server that integrates with Cursor/Claude
+- `fdl` - Command-line tool for direct orchestrator API calls
+- `fdl-mcp` - MCP server that integrates with Cursor/Claude
 - Multi-platform support (Linux x64/ARM64, macOS Intel/Apple Silicon, Windows x64)
 - Automatic installation to system PATH
 
@@ -113,15 +113,15 @@ git clone https://github.com/5dlabs/platform.git
 cd platform/orchestrator
 
 # Build both CLI and MCP server
-cargo build --release --bin 5d-cli --bin 5d-mcp
+cargo build --release --bin fdl --bin fdl-mcp
 
 # Verify the builds
-./target/release/5d-cli --help    # CLI tool
-./target/release/5d-mcp --help    # MCP server
+./target/release/fdl --help       # CLI tool
+./target/release/fdl-mcp --help   # MCP server
 
 # Install to your system (optional)
-cp target/release/5d-cli /usr/local/bin/
-cp target/release/5d-mcp /usr/local/bin/
+cp target/release/fdl /usr/local/bin/
+cp target/release/fdl-mcp /usr/local/bin/
 ```
 
 ### MCP Tools Available

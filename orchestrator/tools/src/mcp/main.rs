@@ -63,7 +63,7 @@ struct RpcRequest {
 // Helper to run orchestrator CLI command and capture output.
 fn run_orchestrator_cli(args: &[&str]) -> Result<String> {
     // Use the local build in the same directory as this MCP binary
-    let mut cmd = Command::new("5d-cli");
+    let mut cmd = Command::new("fdl");
     cmd.args(args);
     cmd.stderr(Stdio::piped());
     let output = cmd.output().context("Failed to execute orchestrator-cli")?;
