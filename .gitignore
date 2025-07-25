@@ -12,6 +12,12 @@ node_modules/
 # Environment variables
 .env
 
+# Agent secrets (SSH keys and tokens)
+agents/
+**/id_ed25519
+**/id_ed25519.pub
+**/.env
+
 # Editor directories and files
 .idea
 .vscode

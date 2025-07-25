@@ -7,7 +7,7 @@ A Helm chart for deploying the Platform Orchestrator that manages Claude Code ag
 The Orchestrator is a Rust-based service that:
 - Processes PM task submissions via REST API
 - Deploys Claude Code jobs to Kubernetes clusters
-- Manages shared workspace and agent coordination
+- Manages per-service workspaces and agent coordination
 - Handles webhook events from GitHub
 - Orchestrates multi-agent collaboration
 
@@ -15,12 +15,49 @@ The Orchestrator is a Rust-based service that:
 
 - Kubernetes 1.19+
 - Helm 3.2.0+
-- Persistent Volume provisioner (for shared workspace)
+- Persistent Volume provisioner (for per-service workspaces)
 - Container registry access for pulling images
 
 ## Installation
 
-### Quick Start
+### Step 1: Install Custom Resource Definitions (CRDs)
+
+**⚠️ Important**: CRDs must be installed before the Helm chart.
+
+```bash
+# Install CRDs from GitHub releases (recommended)
+kubectl apply -f https://github.com/5dlabs/platform/releases/download/v0.0.2/platform-crds.yaml
+
+# Or install from local files
+kubectl apply -f crds/
+```
+
+### Step 2: Setup GitHub Agent Secrets
+
+**⚠️ Important**: Each agent needs SSH keys and GitHub tokens configured externally.
+
+```bash
+# Setup secrets for your GitHub user
+./infra/scripts/setup-agent-secrets.sh \
+  --user your-github-username \
+  --ssh-key ~/.ssh/your_github_key \
+  --token ghp_your_personal_access_token
+
+# Setup additional agents (repeat as needed)
+./infra/scripts/setup-agent-secrets.sh \
+  --user another-user \
+  --ssh-key ~/.ssh/another_key \
+  --token ghp_another_token
+```
+
+**Requirements:**
+- SSH key pair for each GitHub user (private key + `.pub` file)
+- GitHub Personal Access Token with `repo` permissions
+- SSH key must be added to the GitHub account
+
+### Step 3: Install the Helm Chart
+
+#### Quick Start
 
 ```bash
 # Add the chart repository (if using a helm repo)
@@ -31,21 +68,23 @@ The Orchestrator is a Rust-based service that:
 helm install orchestrator ./infra/orchestrator-chart \
   --namespace orchestrator \
   --create-namespace \
-  --set secrets.anthropicApiKey="your-anthropic-api-key" \
-  --set secrets.githubToken="your-github-token"
+  --set secrets.anthropicApiKey="your-anthropic-api-key"
 ```
 
-### Production Installation
+#### Production Installation
 
 ```bash
-# Create a values file for production
+# 1. First install CRDs and setup agent secrets (if not already done)
+kubectl apply -f https://github.com/5dlabs/platform/releases/download/v0.0.2/platform-crds.yaml
+./infra/scripts/setup-agent-secrets.sh --user your-user --ssh-key ~/.ssh/key --token ghp_xxx
+
+# 2. Create a values file for production
 cat > orchestrator-prod-values.yaml << EOF
 image:
   tag: "v1.0.0"  # Use specific version tag
 
 secrets:
   anthropicApiKey: "your-anthropic-api-key"
-  githubToken: "your-github-token"
 
 ingress:
   enabled: true
@@ -67,11 +106,10 @@ resources:
     cpu: 200m
     memory: 256Mi
 
-# Enable shared workspace PVC creation
-sharedWorkspace:
-  enabled: true
-  size: "100Gi"
-  storageClass: "fast-ssd"
+# Per-service workspace configuration
+storage:
+  storageClassName: "fast-ssd"
+  workspaceSize: "100Gi"
 EOF
 
 # Install with production values
@@ -126,17 +164,12 @@ helm install orchestrator ./infra/orchestrator-chart \
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `claudeCodeChart.enabled` | Include Claude Code Helm chart | `true` |
-| `claudeCodeChart.mountPath` | Mount path for chart files | `"/infra"` |
+| `storage.storageClassName` | Storage class for workspace PVCs | `"local-path"` |
+| `storage.workspaceSize` | Size for workspace PVCs | `"10Gi"` |
 
-### Shared Workspace Configuration
+### Workspace Management
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `sharedWorkspace.enabled` | Create shared workspace PVC | `false` |
-| `sharedWorkspace.name` | PVC name | `"shared-workspace-pvc"` |
-| `sharedWorkspace.storageClass` | Storage class | `"local-path"` |
-| `sharedWorkspace.size` | Storage size | `"50Gi"` |
+Workspaces are automatically created per-service as PVCs named `workspace-{service}`. Each CodeRun gets its own isolated workspace, while DocsRuns use ephemeral storage.
 
 ## Upgrading
 
@@ -197,7 +230,7 @@ kubectl logs -n orchestrator deployment/orchestrator -f
 
 2. **Claude Code deployments failing**
    - Verify RBAC permissions
-   - Check if shared workspace PVC exists
+   - Check if service workspace PVCs exist (`kubectl get pvc | grep workspace-`)
    - Ensure Claude Code Helm chart is properly mounted
 
 3. **Ingress not working**

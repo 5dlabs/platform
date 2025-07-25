@@ -26,32 +26,30 @@ use super::types::{Context, Error, Result, TaskType, CODE_FINALIZER_NAME, DOCS_F
 pub async fn run_task_controller(client: Client, namespace: String) -> Result<()> {
     info!("Starting task controller in namespace: {}", namespace);
 
-    // Load controller configuration from ConfigMap
-    let config =
-        match ControllerConfig::from_configmap(&client, &namespace, "task-controller-config").await
-        {
-            Ok(cfg) => {
-                info!("Loaded controller configuration from ConfigMap");
-                // Validate configuration has required fields
-                if let Err(validation_error) = cfg.validate() {
-                    return Err(Error::ConfigError(validation_error.to_string()));
-                }
-                cfg
+    // Load controller configuration from mounted file
+    let config = match ControllerConfig::from_mounted_file("/config/config.yaml") {
+        Ok(cfg) => {
+            info!("Loaded controller configuration from mounted file");
+            // Validate configuration has required fields
+            if let Err(validation_error) = cfg.validate() {
+                return Err(Error::ConfigError(validation_error.to_string()));
             }
-            Err(e) => {
-                warn!(
-                    "Failed to load configuration from ConfigMap, using defaults: {}",
-                    e
-                );
-                let default_config = ControllerConfig::default();
-                // Validate default configuration - this should fail if image config is missing
-                if let Err(validation_error) = default_config.validate() {
-                    error!("Default configuration is invalid: {}", validation_error);
-                    return Err(Error::ConfigError(validation_error.to_string()));
-                }
-                default_config
+            cfg
+        }
+        Err(e) => {
+            warn!(
+                "Failed to load configuration from mounted file, using defaults: {}",
+                e
+            );
+            let default_config = ControllerConfig::default();
+            // Validate default configuration - this should fail if image config is missing
+            if let Err(validation_error) = default_config.validate() {
+                error!("Default configuration is invalid: {}", validation_error);
+                return Err(Error::ConfigError(validation_error.to_string()));
             }
-        };
+            default_config
+        }
+    };
 
     let context = Arc::new(Context {
         client: client.clone(),

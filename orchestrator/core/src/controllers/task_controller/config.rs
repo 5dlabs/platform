@@ -27,6 +27,9 @@ pub struct ControllerConfig {
 
     /// Storage configuration
     pub storage: StorageConfig,
+
+    /// Cleanup configuration
+    pub cleanup: CleanupConfig,
 }
 
 /// Job configuration
@@ -123,6 +126,42 @@ fn default_workspace_size() -> String {
     "10Gi".to_string()
 }
 
+/// Cleanup configuration
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct CleanupConfig {
+    /// Whether automatic cleanup is enabled
+    #[serde(default = "default_cleanup_enabled")]
+    pub enabled: bool,
+
+    /// Minutes to wait before cleaning up completed (successful) jobs
+    #[serde(rename = "completedJobDelayMinutes", default = "default_completed_delay")]
+    pub completed_job_delay_minutes: u64,
+
+    /// Minutes to wait before cleaning up failed jobs
+    #[serde(rename = "failedJobDelayMinutes", default = "default_failed_delay")]
+    pub failed_job_delay_minutes: u64,
+
+    /// Whether to delete the ConfigMap when cleaning up the job
+    #[serde(rename = "deleteConfigMap", default = "default_delete_configmap")]
+    pub delete_configmap: bool,
+}
+
+fn default_cleanup_enabled() -> bool {
+    true
+}
+
+fn default_completed_delay() -> u64 {
+    5 // 5 minutes
+}
+
+fn default_failed_delay() -> u64 {
+    60 // 60 minutes (1 hour)
+}
+
+fn default_delete_configmap() -> bool {
+    true
+}
+
 impl ControllerConfig {
     /// Validate that configuration has required fields
     pub fn validate(&self) -> Result<(), anyhow::Error> {
@@ -137,7 +176,18 @@ impl ControllerConfig {
         Ok(())
     }
 
-    /// Load configuration from a `ConfigMap`
+    /// Load configuration from mounted ConfigMap file
+    pub fn from_mounted_file(config_path: &str) -> Result<Self, anyhow::Error> {
+        let config_str = std::fs::read_to_string(config_path)
+            .map_err(|e| anyhow::anyhow!("Failed to read config file {}: {}", config_path, e))?;
+
+        let config: ControllerConfig = serde_yaml::from_str(&config_str)
+            .map_err(|e| anyhow::anyhow!("Failed to parse config YAML: {}", e))?;
+
+        Ok(config)
+    }
+
+    /// Load configuration from a `ConfigMap` (legacy API-based method)
     pub async fn from_configmap(
         client: &Client,
         namespace: &str,
@@ -209,6 +259,12 @@ impl Default for ControllerConfig {
                 storage_class_name: None, // Let K8s use default storage class
                 workspace_size: "10Gi".to_string(),
             },
+            cleanup: CleanupConfig {
+                enabled: true,
+                completed_job_delay_minutes: 5,
+                failed_job_delay_minutes: 60,
+                delete_configmap: true,
+            },
         }
     }
 }
@@ -247,6 +303,12 @@ telemetry:
 storage:
   storageClassName: "local-path"
   workspaceSize: "5Gi"
+
+cleanup:
+  enabled: true
+  completedJobDelayMinutes: 5
+  failedJobDelayMinutes: 60
+  deleteConfigMap: true
 "#;
 
         let config: ControllerConfig = serde_yaml::from_str(yaml).unwrap();
@@ -254,6 +316,9 @@ storage:
         assert_eq!(config.agent.image.repository, "test/image");
         assert!(config.telemetry.enabled);
         assert_eq!(config.permissions.allow, vec!["*"]);
+        assert!(config.cleanup.enabled);
+        assert_eq!(config.cleanup.completed_job_delay_minutes, 5);
+        assert_eq!(config.cleanup.failed_job_delay_minutes, 60);
     }
 
     #[test]
