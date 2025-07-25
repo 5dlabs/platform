@@ -7,6 +7,7 @@ on:
       - 'chart-v*'
     branches:
       - main
+      - feature/distribution  # Temporary for testing
     paths:
       - 'infra/charts/orchestrator/**'
 
