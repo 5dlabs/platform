@@ -522,8 +522,46 @@ jobs:
       - name: Build release binary
         working-directory: ./orchestrator
         run: |
+          echo "🔨 Building orchestrator-core for container..."
           cargo build --release --package orchestrator-core
           cp target/release/orchestrator-core orchestrator
+
+          echo "🔨 Building orchestrator-mcp for release..."
+          cargo build --release --package orchestrator-mcp
+
+          echo "🔨 Building orchestrator-cli for release..."
+          cargo build --release --package orchestrator-cli
+
+      - name: Prepare release artifacts
+        working-directory: ./orchestrator
+        run: |
+          echo "📦 Preparing release artifacts..."
+          mkdir -p release-artifacts
+
+          # Copy binaries to release artifacts
+          cp target/release/orchestrator-mcp release-artifacts/
+          cp target/release/orchestrator-cli release-artifacts/
+
+          # Create platform-specific archives
+          echo "🗜️ Creating release archives..."
+
+          # Linux x64 archive
+          tar -czf release-artifacts/orchestrator-tools-linux-x64.tar.gz \
+            -C target/release orchestrator-mcp orchestrator-cli
+
+          # Create checksums
+          cd release-artifacts
+          sha256sum orchestrator-mcp orchestrator-cli orchestrator-tools-linux-x64.tar.gz > checksums.txt
+
+          echo "✅ Release artifacts prepared:"
+          ls -la
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: orchestrator-release-artifacts
+          path: orchestrator/release-artifacts/
+          retention-days: 30
 
   build-gemini-cli:
     needs: [version, lint-rust, test-rust, integration-tests, lint-rust-retry]
@@ -698,20 +736,29 @@ jobs:
           echo "- ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/gemini-cli:${{ needs.version.outputs.version }}"
           echo "  (Gemini CLI also tagged with its official version from Google)"
           echo ""
+          echo "CLI Tools & MCP Server built:"
+          echo "- orchestrator-mcp (MCP server for AI development environments)"
+          echo "- orchestrator-cli (Command-line interface)"
+          echo "- Available as GitHub release artifacts for download"
+          echo ""
           echo "Cluster status:"
           kubectl get pods -n orchestrator -o wide
-          echo ""
-          echo "🌐 Orchestrator should be accessible through your Twingate network"
 
   # Create release (only for tags)
   release:
-    needs: [version, deploy]
+    needs: [version, deploy, build-orchestrator]
     if: needs.version.outputs.is-release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: orchestrator-release-artifacts
+          path: ./release-artifacts
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -726,8 +773,31 @@ jobs:
             - `${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.version }}`
             - `${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/gemini-cli:${{ needs.version.outputs.version }}`
 
+            ## CLI Tools & MCP Server
+
+            This release includes standalone CLI tools and MCP server:
+            - **orchestrator-mcp**: MCP server for AI development environments (Cursor, etc.)
+            - **orchestrator-cli**: Command-line interface for direct orchestrator interaction
+
+            ### Download Options:
+            - **Individual binaries**: Download `orchestrator-mcp` or `orchestrator-cli` directly
+            - **Archive**: Download `orchestrator-tools-linux-x64.tar.gz` for both tools
+            - **Checksums**: Verify downloads using `checksums.txt`
+
+            ### Installation:
+            ```bash
+            # Download and extract tools
+            wget https://github.com/5dlabs/platform/releases/download/${{ needs.version.outputs.version }}/orchestrator-tools-linux-x64.tar.gz
+            tar -xzf orchestrator-tools-linux-x64.tar.gz
+
+            # Make executable and install
+            chmod +x orchestrator-mcp orchestrator-cli
+            sudo mv orchestrator-mcp orchestrator-cli /usr/local/bin/
+            ```
+
             ## Deployment
 
             Update your Helm values or Kubernetes manifests to use the new image tags.
+          files: |
+            release-artifacts/*
           draft: false
-          prerelease: false
