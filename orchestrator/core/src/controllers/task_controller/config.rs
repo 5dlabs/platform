@@ -7,28 +7,29 @@ use k8s_openapi::api::core::v1::ConfigMap;
 use kube::{api::Api, Client};
 use serde::{Deserialize, Serialize};
 
-/// Main controller configuration - simplified for current needs
+/// Main controller configuration structure
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ControllerConfig {
     /// Job configuration
     pub job: JobConfig,
 
-    /// Claude agent configuration
+    /// Agent configuration
     pub agent: AgentConfig,
 
     /// Secrets configuration
     pub secrets: SecretsConfig,
 
-    /// Tool permissions configuration (for templates)
+    /// Tool permissions configuration
     pub permissions: PermissionsConfig,
 
-    /// Telemetry configuration (for templates)
+    /// Telemetry configuration
     pub telemetry: TelemetryConfig,
 
     /// Storage configuration
     pub storage: StorageConfig,
 
     /// Cleanup configuration
+    #[serde(default)]
     pub cleanup: CleanupConfig,
 }
 
@@ -160,6 +161,17 @@ fn default_failed_delay() -> u64 {
 
 fn default_delete_configmap() -> bool {
     true
+}
+
+impl Default for CleanupConfig {
+    fn default() -> Self {
+        CleanupConfig {
+            enabled: default_cleanup_enabled(),
+            completed_job_delay_minutes: default_completed_delay(),
+            failed_job_delay_minutes: default_failed_delay(),
+            delete_configmap: default_delete_configmap(),
+        }
+    }
 }
 
 impl ControllerConfig {
