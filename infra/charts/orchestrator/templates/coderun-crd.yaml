@@ -59,7 +59,8 @@ spec:
                 description: "Project directory within docs repository (e.g. '_projects/simple-api')"
               docsBranch:
                 type: string
-                description: "Git branch to work on in docs repository"
+                default: "main"
+                description: "Docs branch to use (e.g., 'main', 'feature/branch')"
               workingDirectory:
                 type: string
                 description: "Working directory within target repository (defaults to service name if not specified)"
@@ -75,10 +76,6 @@ spec:
               remoteTools:
                 type: string
                 description: "Remote MCP tools/servers to enable (comma-separated)"
-              toolConfig:
-                type: string
-                default: "default"
-                description: "Tool configuration preset (default, minimal, advanced)"
               contextVersion:
                 type: integer
                 default: 1
@@ -86,14 +83,6 @@ spec:
               promptModification:
                 type: string
                 description: "Additional context for retry attempts"
-              promptMode:
-                type: string
-                default: "append"
-                description: "How to apply prompt modifications (append, replace)"
-              platformBranch:
-                type: string
-                default: "main"
-                description: "Platform branch to use (e.g., 'main', 'feature/branch')"
               continueSession:
                 type: boolean
                 default: false
@@ -109,10 +98,8 @@ spec:
                 description: "Environment variables to set in the container"
               envFromSecrets:
                 type: array
-                description: "Environment variables from secrets"
                 items:
                   type: object
-                  required: ["name", "secretName", "secretKey"]
                   properties:
                     name:
                       type: string
@@ -123,6 +110,11 @@ spec:
                     secretKey:
                       type: string
                       description: "Key within the secret"
+                  required:
+                    - name
+                    - secretName
+                    - secretKey
+                description: "Environment variables from secrets"
           status:
             type: object
             properties:

@@ -295,8 +295,13 @@ jobs:
           # Create test namespace
           kubectl create namespace test-platform
 
-          # Apply test CodeRun and DocsRun
-          echo "🧪 Applying test CRDs..."
+          # Install CRD definitions first
+          echo "🏗️  Installing CRD definitions..."
+          kubectl apply -f infra/charts/orchestrator/templates/coderun-crd.yaml
+          kubectl apply -f infra/charts/orchestrator/templates/docsrun-crd.yaml
+
+          # Apply test CodeRun and DocsRun instances
+          echo "🧪 Applying test CRD instances..."
           kubectl apply -f infra/test-resources/crds/test-coderun.yaml -n test-platform || true
           kubectl apply -f infra/test-resources/crds/test-docsrun.yaml -n test-platform || true
 
