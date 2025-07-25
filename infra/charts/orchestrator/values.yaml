@@ -123,10 +123,6 @@ config:
   # Logging
   rustLog: "orchestrator=debug,tower_http=debug,axum=debug,kube=info"
 
-  # Task Controller configuration
-  controllerEnabled: true
-  controllerConfigMap: "task-controller-config"
-
 # Secret configuration for API keys
 secrets:
   # REQUIRED: Set your Anthropic API key

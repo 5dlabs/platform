@@ -12,9 +12,7 @@ data:
   SERVER_HOST: {{ .Values.config.serverHost | quote }}
   SERVER_PORT: {{ .Values.config.serverPort | quote }}
 
-  # Logging
+  # Logging configuration
   RUST_LOG: {{ .Values.config.rustLog | quote }}
 
-  # TaskRun Controller configuration
-  CONTROLLER_ENABLED: {{ .Values.config.controllerEnabled | quote }}
-  CONTROLLER_CONFIG_MAP: {{ .Values.config.controllerConfigMap | quote }}
+  # Anthropic API configuration
