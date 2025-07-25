@@ -10,7 +10,6 @@ on:
 jobs:
   process-new-project:
     runs-on: ubuntu-latest
-    if: contains(github.event.head_commit.message, 'intake:') || github.event_name == 'pull_request'
 
     permissions:
       contents: write
@@ -23,12 +22,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Rust and build orchestrator MCP
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install TaskMaster
         run: |
-          # Build the orchestrator MCP tool that we'll use
-          cd orchestrator
-          cargo build --release
-          # The MCP server will be available for Claude Code to use
+          npm install -g taskmaster-ai
+          taskmaster --version
 
       - name: Detect new project files
         id: detect-files
@@ -55,7 +57,6 @@ jobs:
         id: extract-name
         run: |
           PRD_FILE="${{ steps.detect-files.outputs.prd_file }}"
-          ARCH_FILE="${{ steps.detect-files.outputs.arch_file }}"
 
           # Try to extract project name from document titles or content
           PROJECT_NAME=""
@@ -99,68 +100,62 @@ jobs:
           echo "✅ Project structure created"
           echo "project_dir=$PROJECT_DIR" >> $GITHUB_OUTPUT
 
-      - name: Initialize TaskMaster structure
+      - name: Initialize TaskMaster and generate tasks
         working-directory: ${{ steps.create-structure.outputs.project_dir }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          echo "🚀 Setting up TaskMaster structure in $(pwd)"
+          echo "🚀 Initializing TaskMaster and generating tasks"
 
-          # Create basic tasks.json structure to start
-          cat > .taskmaster/tasks.json << 'EOF'
-          {
-            "project": "${{ steps.extract-name.outputs.project_name }}",
-            "tasks": [],
-            "metadata": {
-              "created": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-              "model": "claude-opus-4-20250514",
-              "version": "1.0"
-            }
-          }
-          EOF
+          # Initialize TaskMaster with Opus model
+          taskmaster init \
+            --model="claude-opus-4-20250514" \
+            --working-directory="$(pwd)"
 
-          echo "✅ TaskMaster structure initialized"
+          # Parse PRD with no research and no task limit
+          taskmaster parse-prd \
+            --file=".taskmaster/docs/prd.txt" \
+            --research=false \
+            --no-task-limit \
+            --model="claude-opus-4-20250514"
 
-      - name: Generate and refine tasks using Claude Code
+          # Analyze task complexity (with research for this step)
+          taskmaster analyze-complexity \
+            --research=true \
+            --model="claude-4-20250514"
+
+          # Expand tasks with subtasks
+          taskmaster expand-tasks \
+            --include-subtasks=true \
+            --model="claude-opus-4-20250514"
+
+          echo "✅ Tasks generated and analyzed"
+
+      - name: Cross-reference with architecture and finalize
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: |
-            I need you to analyze the PRD and architecture documents to generate comprehensive TaskMaster tasks.
+            I need you to cross-reference the generated TaskMaster tasks with the architecture document and finalize the project structure.
 
             **Project**: ${{ steps.extract-name.outputs.project_name }}
             **Location**: ${{ steps.create-structure.outputs.project_dir }}
 
             Please:
-            1. Read and analyze the PRD at .taskmaster/docs/prd.txt
-            2. Read and analyze the architecture at .taskmaster/docs/architecture.md
-            3. Generate comprehensive tasks that cover all requirements from both documents
-            4. Ensure tasks are detailed with proper descriptions, dependencies, and priorities
-            5. Use the Opus model for analysis (claude-opus-4-20250514)
-            6. Create tasks with NO research restrictions and NO task limits
-            7. Analyze complexity and expand with subtasks where needed
-            8. Cross-reference everything to ensure 100% coverage
+            1. Review the tasks in .taskmaster/tasks.json
+            2. Compare them against the architecture document at .taskmaster/docs/architecture.md
+            3. Identify any missing tasks, unnecessary tasks, or misaligned requirements
+            4. Update the tasks.json file to ensure 100% alignment with the architecture
+            5. Add any missing tasks that the architecture requires
+            6. Remove any tasks that don't align with the architecture
+            7. Update task descriptions to better match architectural requirements
+            8. Generate individual task text files in docs/task-X/ directories following the existing pattern
+            9. Create any additional documentation structure needed
 
-            Update the .taskmaster/tasks.json file with the complete task structure.
-            Then generate individual task text files in docs/task-X/ directories following the existing pattern.
+            Focus on ensuring every architectural component, feature, and requirement has corresponding tasks.
+            Make sure task dependencies align with the architectural design.
 
-      - name: Initialize documentation using MCP orchestrator
-        uses: anthropics/claude-code-action@beta
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          allowed_tools: "mcp__orchestrator-mcp__docs"
-          direct_prompt: |
-            Now that the tasks are generated, I need to initialize the documentation system using the MCP orchestrator.
-
-            **Project**: ${{ steps.extract-name.outputs.project_name }}
-            **Working Directory**: ${{ steps.create-structure.outputs.project_dir }}
-
-            Please use the mcp_orchestrator-mcp_docs tool to initialize documentation for this project:
-            - Repository URL: ${{ github.repository_owner }}/${{ github.event.repository.name }}
-            - Source Branch: ${{ github.ref_name }}
-            - GitHub User: ${{ github.actor }}
-            - Model: claude-opus-4-20250514
-            - Working Directory: ${{ steps.create-structure.outputs.project_dir }}
-
-            This should set up the complete documentation framework following the established patterns.
+            After making changes, the project should be ready for development workflow.
 
       - name: Create Pull Request
         id: create-pr
@@ -192,7 +187,6 @@ jobs:
           - Expanded tasks with subtasks
           - Cross-referenced with architecture document
           - Generated complete task files and directories
-          - Initialized documentation generation
 
           Project is ready for development workflow."
 
@@ -215,7 +209,6 @@ jobs:
           - ✅ Tasks expanded with subtasks
           - ✅ Cross-referenced with architecture for alignment
           - ✅ Complete file structure generated
-          - ✅ Documentation framework initialized
 
           ### 🏗️ Project Structure Created:
           \`\`\`
@@ -240,7 +233,6 @@ jobs:
           4. Tasks are ready for Claude Code implementation
 
           ### 🤖 Models Used:
-          - **Documentation**: claude-opus-4-20250514
           - **Task Generation**: claude-opus-4-20250514
           - **Complexity Analysis**: claude-4-20250514
           - **Cross-referencing**: claude-code-action
@@ -271,7 +263,6 @@ jobs:
           - 🌳 Tasks expanded with subtasks
           - 🔄 Cross-referenced with architecture
           - 📄 Task files and directories generated
-          - 📚 Documentation framework initialized
           - 🔀 Pull request created for review
 
           The project is now ready for the development workflow!
