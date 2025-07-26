@@ -10,8 +10,36 @@ on:
       - 'intake/**'
 
 jobs:
+  validate-setup:
+    runs-on: ubuntu-latest
+    outputs:
+      validation-passed: ${{ steps.validation.outputs.passed }}
+    
+    steps:
+      - name: Validate workflow requirements
+        id: validation
+        run: |
+          echo "🔍 Validating workflow requirements..."
+          
+          # Check if required secrets are available
+          if [[ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]]; then
+            echo "❌ ANTHROPIC_API_KEY secret is not configured"
+            exit 1
+          fi
+          
+          if [[ -z "${{ secrets.GITHUB_TOKEN }}" ]]; then
+            echo "❌ GITHUB_TOKEN is not available"
+            exit 1
+          fi
+          
+          echo "✅ All required secrets are available"
+          echo "✅ Workflow validation passed"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
   process-new-project:
     runs-on: ubuntu-latest
+    needs: validate-setup
+    if: needs.validate-setup.outputs.validation-passed == 'true'
 
     permissions:
       contents: write
@@ -185,32 +213,32 @@ jobs:
           echo "✅ Docs directory structure created"
           ls -la docs/ || echo "No docs directory created"
 
-      - name: Cross-reference with architecture and finalize
-        uses: anthropics/claude-code-action@beta
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          direct_prompt: |
-            I need you to cross-reference the generated TaskMaster tasks with the architecture document and finalize the project structure.
-
-            **Project**: ${{ steps.extract-name.outputs.project_name }}
-            **Location**: ${{ steps.create-structure.outputs.project_dir }}
-
-            Please:
-            1. Review the tasks in .taskmaster/tasks.json
-            2. Compare them against the architecture document at .taskmaster/docs/architecture.md
-            3. Identify any missing tasks, unnecessary tasks, or misaligned requirements
-            4. Update the tasks.json file to ensure 100% alignment with the architecture
-            5. Add any missing tasks that the architecture requires
-            6. Remove any tasks that don't align with the architecture
-            7. Update task descriptions to better match architectural requirements
-            8. Update tasks.json with any changes
-            9. Create any additional documentation structure needed
-
-            Focus on ensuring every architectural component, feature, and requirement has corresponding tasks.
-            Make sure task dependencies align with the architectural design.
-
-            After making changes, the project should be ready for development workflow.
+      - name: Finalize project structure
+        working-directory: ${{ steps.create-structure.outputs.project_dir }}
+        run: |
+          echo "🔄 Finalizing project structure and ensuring task files are created"
+          
+          # The task-master generate command should have already run in the previous step
+          # Let's verify the task files exist and show a summary
+          echo "📋 Task generation summary:"
+          if [ -f ".taskmaster/tasks/tasks.json" ]; then
+            task_count=$(jq '.tasks | length' .taskmaster/tasks/tasks.json 2>/dev/null || echo "0")
+            echo "✅ Found tasks.json with $task_count tasks"
+          else
+            echo "❌ No tasks.json found"
+          fi
+          
+          # Check if individual task files were generated
+          if [ -d ".taskmaster/tasks" ]; then
+            individual_files=$(find .taskmaster/tasks -name "task-*.txt" | wc -l)
+            echo "✅ Found $individual_files individual task files"
+          else
+            echo "❌ No individual task files found"
+          fi
+          
+          # Show project structure
+          echo "📁 Final project structure:"
+          find . -type f -name "*.json" -o -name "*.md" -o -name "*.txt" | head -20
 
       - name: Create Pull Request
         id: create-pr
