@@ -44,8 +44,8 @@ If you prefer to install from the source repository:
 **⚠️ Important**: CRDs must be installed before the Helm chart.
 
 ```bash
-# Install CRDs from GitHub releases (recommended)
-kubectl apply -f https://github.com/5dlabs/platform/releases/download/v0.0.2/platform-crds.yaml
+# Install CRDs from GitHub (recommended)
+kubectl apply -f https://raw.githubusercontent.com/5dlabs/platform/main/infra/charts/orchestrator/crds/platform-crds.yaml
 
 # Or install from local files
 kubectl apply -f crds/
@@ -94,7 +94,7 @@ helm install orchestrator ./infra/orchestrator-chart \
 
 ```bash
 # 1. First install CRDs and setup agent secrets (if not already done)
-kubectl apply -f https://github.com/5dlabs/platform/releases/download/v0.0.2/platform-crds.yaml
+kubectl apply -f https://raw.githubusercontent.com/5dlabs/platform/main/infra/charts/orchestrator/crds/platform-crds.yaml
 ./infra/scripts/setup-agent-secrets.sh --user your-user --ssh-key ~/.ssh/key --token ghp_xxx
 
 # 2. Create a values file for production

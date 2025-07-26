@@ -43,7 +43,7 @@ helm repo add 5dlabs https://5dlabs.github.io/platform
 helm repo update
 
 # Install Custom Resource Definitions (CRDs) first
-kubectl apply -f https://github.com/5dlabs/platform/releases/download/v0.0.2/platform-crds.yaml
+kubectl apply -f https://raw.githubusercontent.com/5dlabs/platform/main/infra/charts/orchestrator/crds/platform-crds.yaml
 
 # Install the orchestrator
 helm install orchestrator 5dlabs/orchestrator --namespace orchestrator --create-namespace
