@@ -133,12 +133,12 @@ jobs:
 
           # Analyze task complexity (with research for this step)
           task-master analyze-complexity \
-            --research=true
+            --research
 
           # Expand tasks with subtasks
           task-master expand --all \
             --force \
-            --research=true
+            --research
 
           # Generate individual task files
           task-master generate
