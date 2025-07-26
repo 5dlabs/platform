@@ -52,11 +52,25 @@ jobs:
             exit 1
           fi
           
-          # Claude Code action will work in agent mode for all events
-          echo "✅ Claude Code action will use agent mode for AI cross-referencing"
-          
           echo "✅ All required secrets are available and working"
-          echo "✅ Workflow validation passed"
+
+      - name: Test Claude Code agent mode
+        id: test-claude
+        uses: anthropics/claude-code-action@v0.0.44
+        with:
+          mode: agent
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          direct_prompt: |
+            This is a validation test for agent mode. Please respond with exactly:
+            "VALIDATION_SUCCESS: Agent mode is working correctly"
+            
+            This is just to verify the mode parameter works before proceeding with the full workflow.
+
+      - name: Validation complete
+        run: |
+          echo "✅ Claude Code agent mode test passed"
+          echo "✅ Workflow validation complete"
           echo "passed=true" >> $GITHUB_OUTPUT
 
   process-new-project:
