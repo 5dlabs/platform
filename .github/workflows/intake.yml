@@ -52,15 +52,8 @@ jobs:
             exit 1
           fi
           
-          # Check if Claude Code action would work with current event
-          echo "🔍 Checking Claude Code action compatibility..."
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            echo "⚠️  WARNING: Claude Code action does not support 'push' events"
-            echo "⚠️  This workflow will use simplified cross-referencing instead"
-            echo "⚠️  For full AI cross-referencing, trigger via pull_request event"
-          else
-            echo "✅ Event type '${{ github.event_name }}' is compatible with Claude Code action"
-          fi
+          # Claude Code action will work in agent mode for all events
+          echo "✅ Claude Code action will use agent mode for AI cross-referencing"
           
           echo "✅ All required secrets are available and working"
           echo "✅ Workflow validation passed"
@@ -244,9 +237,9 @@ jobs:
           ls -la docs/ || echo "No docs directory created"
 
       - name: Cross-reference with architecture (AI-powered)
-        if: github.event_name != 'push'
         uses: anthropics/claude-code-action@beta
         with:
+          mode: agent
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           direct_prompt: |
@@ -271,37 +264,6 @@ jobs:
 
             After making changes, the project should be ready for development workflow.
 
-      - name: Cross-reference with architecture (simplified)
-        if: github.event_name == 'push'
-        working-directory: ${{ steps.create-structure.outputs.project_dir }}
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          echo "🔄 Cross-referencing tasks with architecture document (simplified mode)"
-          echo "ℹ️  Note: Full AI cross-referencing requires pull_request event"
-          
-          echo "📋 Current task summary:"
-          if [ -f ".taskmaster/tasks/tasks.json" ]; then
-            task_count=$(jq '.tasks | length' .taskmaster/tasks/tasks.json 2>/dev/null || echo "0")
-            echo "✅ Found tasks.json with $task_count tasks"
-          else
-            echo "❌ No tasks.json found"
-            exit 1
-          fi
-          
-          # Basic validation - ensure tasks exist and architecture document exists
-          if [ -f ".taskmaster/docs/architecture.md" ]; then
-            echo "✅ Architecture document found"
-          else
-            echo "⚠️  Architecture document not found"
-          fi
-          
-          echo "✅ Basic validation completed"
-          echo "💡 For AI-powered cross-referencing, create a pull request"
-          
-          # Show final project structure
-          echo "📁 Final project structure:"
-          find . -type f -name "*.json" -o -name "*.md" -o -name "*.txt" | head -20
 
       - name: Create Pull Request
         id: create-pr
