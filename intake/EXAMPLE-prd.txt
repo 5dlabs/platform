@@ -1,78 +1,58 @@
-# EXAMPLE - Chat Application - Product Requirements Document
+# Simple Calculator App - Product Requirements Document
 
 ## Project Overview
-Create a real-time chat application with React frontend and Node.js backend, supporting multiple rooms and user authentication.
+**Project Name:** Basic Calculator
+**Target Platform:** Web application
+**Timeline:** 2-week development cycle
+
+## Product Vision
+Create a simple, clean calculator web application that performs basic arithmetic operations.
+
+## Core Features
+
+### 1. Basic Operations
+- Addition, subtraction, multiplication, division
+- Clear and equals buttons
+- Number input (0-9)
+
+### 2. User Interface
+- Simple button layout
+- Display screen for numbers and results
+- Responsive design
 
 ## Technical Requirements
 
-### Technology Stack
-- **Frontend**: React 18+ with TypeScript
-- **Backend**: Node.js with Express and Socket.io
-- **Database**: PostgreSQL with Redis for sessions
-- **Authentication**: JWT with refresh tokens
+### Frontend
+- HTML, CSS, JavaScript
+- Responsive design
+- Clean, modern styling
 
-### Core Features
+### Testing
+- Unit tests for calculation functions
+- Browser compatibility testing
 
-#### 1. User Authentication
-- User registration with email/password
-- Login with JWT token generation
-- Password reset functionality
-- User profile management
+## User Stories
 
-#### 2. Chat Rooms
-- Create and join chat rooms
-- Real-time messaging with Socket.io
-- Message history persistence
-- Online user indicators
+### Calculator Stories
+- As a user, I want to add two numbers so I can get their sum
+- As a user, I want to subtract numbers so I can get the difference
+- As a user, I want to multiply numbers so I can get the product
+- As a user, I want to divide numbers so I can get the quotient
+- As a user, I want to clear the display so I can start fresh
 
-#### 3. Real-time Features
-- Live message delivery
-- Typing indicators
-- User presence status
-- Message read receipts
+## Acceptance Criteria
 
-#### 4. UI/UX Requirements
-- Responsive design for mobile and desktop
-- Dark/light theme toggle
-- Emoji support in messages
-- File/image sharing capability
-
-## API Specifications
-
-### Authentication Endpoints
-```
-POST /api/auth/register
-POST /api/auth/login
-POST /api/auth/refresh
-GET /api/auth/profile
-```
-
-### Chat Endpoints
-```
-GET /api/rooms
-POST /api/rooms
-GET /api/rooms/:id/messages
-POST /api/rooms/:id/messages
-```
-
-## Quality Requirements
-- Sub-100ms message delivery latency
-- Support for 1000+ concurrent users
-- 99.9% uptime requirement
-- Mobile-responsive interface
-- Comprehensive error handling
-
-## Deliverables
-1. React frontend application
-2. Node.js backend API
-3. PostgreSQL database schema
-4. Redis configuration
-5. Docker deployment setup
-6. API documentation
-7. User guide
+### Must Have
+- Basic arithmetic operations (+, -, *, /)
+- Number buttons (0-9)
+- Clear button
+- Equals button
+- Display screen
 
 ## Success Metrics
-- Message delivery under 100ms
-- User engagement >80%
-- Zero-downtime deployments
-- Cross-platform compatibility
+- All calculations return correct results
+- Interface is intuitive and easy to use
+
+## Timeline
+- Week 1: HTML structure, CSS styling, basic JavaScript
+- Week 2: Testing, refinement, deployment
