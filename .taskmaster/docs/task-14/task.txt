@@ -1,0 +1,69 @@
+# Task ID: 14
+# Title: Create Tool Administration Documentation
+# Status: pending
+# Dependencies: 13
+# Priority: medium
+# Description: Write comprehensive documentation for platform administrators on how to add, remove, and manage MCP tools via the toolman ConfigMap
+# Details:
+Create docs/admin/tool-management.md:
+```markdown
+# Tool Administration Guide
+
+## Adding New MCP Tools
+
+1. Edit the toolman ConfigMap:
+```bash
+kubectl edit configmap toolman-servers-config -n orchestrator
+```
+
+2. Add new server configuration:
+```json
+{
+  "servers": {
+    "existing-tool": { ... },
+    "new-tool-name": {
+      "transport": "stdio",
+      "command": "mcp-server-new-tool",
+      "args": ["--arg1", "value1"],
+      "env": {
+        "API_KEY": "${NEW_TOOL_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+3. Restart toolman to pick up changes:
+```bash
+kubectl rollout restart deployment toolman -n orchestrator
+```
+
+## Viewing Available Tools
+
+```bash
+# List all configured tools
+kubectl get configmap toolman-servers-config -n orchestrator -o json | \
+  jq '.data["servers-config.json"]' | jq -r '. | fromjson | .servers | keys[]'
+```
+
+## Tool Naming Conventions
+
+- Use lowercase with hyphens: `brave-search`, `kubernetes-client`
+- Be descriptive but concise
+- Avoid version numbers in names
+
+## Troubleshooting
+
+### Tool Not Available
+1. Check ConfigMap is updated
+2. Verify toolman pod restarted
+3. Check toolman logs for errors
+
+### Tool Errors
+1. Check tool-specific logs in toolman
+2. Verify credentials/environment variables
+3. Test tool command manually
+```
+
+# Test Strategy:
+Follow documentation to add a test tool. Verify tool appears in discovery. Test removal process. Ensure documentation is clear and complete

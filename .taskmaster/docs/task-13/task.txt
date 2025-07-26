@@ -1,0 +1,49 @@
+# Task ID: 13
+# Title: Deploy and Test Toolman Service
+# Status: pending
+# Dependencies: 1, 2, 3
+# Priority: high
+# Description: Deploy toolman to the Kubernetes cluster using the existing Helm chart and verify it's accessible from within the cluster
+# Details:
+Deployment steps:
+```bash
+# Create values override file for orchestrator deployment
+cat > toolman-values.yaml <<EOF
+namespace: orchestrator
+image:
+  repository: your-registry/toolman
+  tag: latest
+# Add any custom configuration here
+EOF
+
+# Deploy using the existing Helm chart
+helm install toolman ./toolman/charts/toolman/ \
+  --namespace orchestrator \
+  --create-namespace \
+  -f toolman-values.yaml
+
+# Verify deployment
+kubectl get pods -n orchestrator -l app.kubernetes.io/name=toolman
+kubectl logs -n orchestrator -l app.kubernetes.io/name=toolman
+
+# Test health and readiness endpoints
+kubectl run test-pod --rm -it --image=curlimages/curl -- \
+  curl http://toolman-service.orchestrator.svc.cluster.local:3000/health
+
+kubectl run test-pod --rm -it --image=curlimages/curl -- \
+  curl http://toolman-service.orchestrator.svc.cluster.local:3000/ready
+
+# Test MCP server proxy functionality
+kubectl run test-pod --rm -it --image=curlimages/curl -- \
+  curl -X POST http://toolman-service.orchestrator.svc.cluster.local:3000/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"method": "tools/list", "params": {}}'
+
+# Verify MCP servers are accessible through the proxy
+kubectl exec -n orchestrator deployment/toolman -- \
+  curl -X POST localhost:3000/mcp/servers \
+  -H "Content-Type: application/json"
+```
+
+# Test Strategy:
+Verify pod is running and healthy. Test /health and /ready endpoints respond with appropriate status codes. Test MCP proxy endpoint returns expected tool list. Verify MCP servers configured in ConfigMap are accessible through the proxy. Confirm service is reachable at http://toolman-service.orchestrator.svc.cluster.local:3000

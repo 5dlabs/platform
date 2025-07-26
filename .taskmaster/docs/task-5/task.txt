@@ -1,0 +1,53 @@
+# Task ID: 5
+# Title: Implement Docs Agent Tool Discovery
+# Status: pending
+# Dependencies: 3
+# Priority: high
+# Description: Add functionality to docs agent to read Toolman ConfigMap and discover available MCP tools during documentation generation
+# Details:
+Add tool discovery to docs agent:
+```rust
+use k8s_openapi::api::core::v1::ConfigMap;
+use kube::{Api, Client};
+
+#[derive(Debug, Deserialize)]
+struct ToolmanConfig {
+    servers: HashMap<String, serde_json::Value>,
+}
+
+async fn discover_available_tools(client: Client) -> Result<Vec<String>> {
+    let configmaps: Api<ConfigMap> = Api::namespaced(client, "orchestrator");
+    let cm = configmaps.get("toolman-servers-config").await?;
+    
+    let config_json = cm.data
+        .and_then(|d| d.get("servers-config.json"))
+        .ok_or("Missing servers-config.json")?;
+    
+    let config: ToolmanConfig = serde_json::from_str(config_json)?;
+    Ok(config.servers.keys().cloned().collect())
+}
+
+async fn analyze_project_and_recommend_tools(
+    project_path: &Path,
+    available_tools: &[String]
+) -> Result<ProjectToolConfig> {
+    let mut recommended_tools = ProjectToolConfig::default();
+    
+    // Check for various file patterns
+    if has_kubernetes_files(project_path).await? && available_tools.contains(&"kubernetes".to_string()) {
+        recommended_tools.remote.push("kubernetes".to_string());
+    }
+    
+    if has_postgres_config(project_path).await? && available_tools.contains(&"postgres".to_string()) {
+        recommended_tools.remote.push("postgres".to_string());
+    }
+    
+    // Always include filesystem for local development
+    recommended_tools.local.push("filesystem".to_string());
+    
+    Ok(recommended_tools)
+}
+```
+
+# Test Strategy:
+Mock Kubernetes client to return test ConfigMap. Verify tool discovery correctly parses available tools. Test project analysis with various file patterns. Ensure recommendations only include available tools

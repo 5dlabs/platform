@@ -1,0 +1,68 @@
+# Task ID: 2
+# Title: Implement Toolman Kubernetes Deployment
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Review and customize the existing Kubernetes deployment manifest for Toolman to ensure it meets our specific requirements
+# Details:
+The deployment manifest already exists at toolman/charts/toolman/templates/deployment.yaml with comprehensive configuration including:
+
+**Current Features:**
+- Image configuration using ghcr.io/5dlabs/toolman
+- Resource limits and requests (configurable via values.yaml)
+- Volume mounts for config, tmp, docker socket, and persistent storage
+- Security context with non-root user (UID 1001, GID 2375)
+- Environment variables (PORT, PROJECT_DIR, RUST_LOG) via direct env and secretRef
+- Docker-in-Docker sidecar container for MCP servers requiring Docker
+- Init container for setting up directories with proper permissions
+- Support for liveness and readiness probes
+
+**Review Areas:**
+1. Verify resource limits are appropriate for our workload
+2. Ensure volume mounts align with our ConfigMap structure from task 16
+3. Check if additional environment variables are needed
+4. Review security context settings for production use
+5. Validate Docker-in-Docker sidecar configuration if needed
+6. Ensure proper integration with the servers-config ConfigMap
+
+**Potential Customizations:**
+- Adjust resource requests/limits based on expected load
+- Add specific environment variables for our use case
+- Configure appropriate health check endpoints
+- Set up proper node affinity/anti-affinity rules
+- Review and adjust security policies
+
+# Test Strategy:
+Deploy to test namespace using existing manifest. Verify pod starts successfully with all volume mounts working. Check environment variables are properly injected from both direct env and secretRefs. Test Docker sidecar functionality if MCP servers require it. Validate resource consumption under load
+
+# Subtasks:
+## 1. Review existing deployment manifest [pending]
+### Dependencies: None
+### Description: Analyze the current deployment.yaml to understand all configured features
+### Details:
+
+
+## 2. Validate ConfigMap integration [pending]
+### Dependencies: None
+### Description: Ensure the deployment properly mounts and references the servers-config ConfigMap from task 16
+### Details:
+
+
+## 3. Assess resource requirements [pending]
+### Dependencies: None
+### Description: Determine appropriate CPU/memory limits based on expected MCP server load
+### Details:
+
+
+## 4. Test deployment in development [pending]
+### Dependencies: None
+### Description: Deploy and verify all features work correctly including volume mounts and environment variables
+### Details:
+
+
+## 5. Document any customizations [pending]
+### Dependencies: None
+### Description: Update values.yaml with our specific requirements and document any changes made
+### Details:
+
+
