@@ -83,4 +83,4 @@ The GitHub Action will:
 
 Ready to submit your project? Just add your files and push! 🚀
 
-<!-- Test trigger for workflow v27 - Simple API validation for speed -->
+<!-- Test trigger for workflow v28 - Use intake as target directory -->
