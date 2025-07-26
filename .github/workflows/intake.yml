@@ -68,7 +68,7 @@ jobs:
           claude --version
           
           echo "🧪 Testing Claude Code functionality..."
-          claude -p "This is a validation test. Please respond with: VALIDATION_SUCCESS"
+          claude -p "What time is it? Just respond with the current time."
           echo "✅ Claude Code test completed"
 
       - name: Validation complete
