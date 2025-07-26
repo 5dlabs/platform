@@ -189,6 +189,7 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           direct_prompt: |
             I need you to cross-reference the generated TaskMaster tasks with the architecture document and finalize the project structure.
 
