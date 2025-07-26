@@ -1,0 +1,31 @@
+# Task ID: 12
+# Title: Create JavaScript File Structure
+# Status: pending
+# Dependencies: 3
+# Priority: high
+# Description: Set up the main JavaScript file with proper structure and strict mode
+# Details:
+Create script.js, add 'use strict' directive, create main IIFE (Immediately Invoked Function Expression) to avoid global scope pollution, set up basic structure with sections for variables, event listeners, and functions
+
+# Test Strategy:
+Verify JavaScript file loads without errors, ensure strict mode is active, confirm no variables leak to global scope
+
+# Subtasks:
+## 1. Create script.js with strict mode [pending]
+### Dependencies: None
+### Description: Create the main JavaScript file and add the 'use strict' directive at the beginning
+### Details:
+Create a new file named script.js in the project root. Add 'use strict'; as the first line to enable strict mode, which helps catch common coding errors and prevents the use of certain error-prone features
+
+## 2. Set up IIFE structure [pending]
+### Dependencies: 12.1
+### Description: Implement an Immediately Invoked Function Expression to encapsulate all code and prevent global scope pollution
+### Details:
+Wrap all JavaScript code in an IIFE pattern: (function() { 'use strict'; // all code here })(); This creates a private scope for all variables and functions, preventing them from polluting the global window object
+
+## 3. Define main sections (variables, functions, initialization) [pending]
+### Dependencies: 12.2
+### Description: Create organized sections within the IIFE for variables, functions, event listeners, and initialization code
+### Details:
+Structure the code with clear sections: // Variables section for all variable declarations, // Functions section for all function definitions, // Event Listeners section for DOM event handling, // Initialization section for code that runs on page load. Add clear comments to separate each section
+

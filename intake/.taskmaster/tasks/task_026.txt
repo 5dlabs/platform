@@ -1,0 +1,37 @@
+# Task ID: 26
+# Title: Create Unit Test Setup
+# Status: pending
+# Dependencies: 19
+# Priority: high
+# Description: Set up testing framework for JavaScript unit tests
+# Details:
+Create test directory, set up simple test runner using vanilla JavaScript or lightweight framework, create test-calculator.js file, implement basic assertion functions if not using framework
+
+# Test Strategy:
+Verify test setup runs without errors, ensure tests can access calculator functions, confirm test output is clear and readable
+
+# Subtasks:
+## 1. Set up test directory structure [pending]
+### Dependencies: None
+### Description: Create the necessary directory structure and file organization for the testing framework
+### Details:
+Create a 'tests' directory at the project root. Inside, create subdirectories for unit tests, test utilities, and test fixtures. Create initial test files including test-calculator.js, test-utils.js, and a main test runner file. Ensure the directory structure allows for easy expansion as more tests are added.
+
+## 2. Create or configure test runner [pending]
+### Dependencies: 26.1
+### Description: Implement a simple test runner using vanilla JavaScript to execute tests and report results
+### Details:
+Create a test-runner.js file that can discover and execute all test files. Implement functions to run test suites, track pass/fail results, measure execution time, and output results to console. Add an HTML file to run tests in browser environment. Include error handling to catch and report test failures gracefully.
+
+## 3. Implement assertion utilities [pending]
+### Dependencies: 26.1
+### Description: Create basic assertion functions for testing without external dependencies
+### Details:
+Implement common assertion methods in test-utils.js including assertEqual, assertNotEqual, assertTrue, assertFalse, assertThrows, and assertDeepEqual. Each assertion should provide clear error messages showing expected vs actual values. Include helper functions for test setup and teardown. Ensure assertions work with various data types.
+
+## 4. Create first example test [pending]
+### Dependencies: 26.2, 26.3
+### Description: Write initial tests for calculator functions to validate the testing setup
+### Details:
+In test-calculator.js, write comprehensive tests for basic calculator operations (add, subtract, multiply, divide). Include edge cases like division by zero, decimal operations, and large numbers. Verify the test runner executes these tests correctly and reports results clearly. Ensure tests can properly import and access calculator functions from the main codebase.
+

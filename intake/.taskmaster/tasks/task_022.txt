@@ -1,0 +1,31 @@
+# Task ID: 22
+# Title: Add Decimal Point Support
+# Status: pending
+# Dependencies: 16
+# Priority: medium
+# Description: Implement decimal point button functionality
+# Details:
+Add decimal button to HTML if not present, add click listener, check if currentNumber already contains '.', if not, append decimal point, handle edge case of adding '0.' when display is empty
+
+# Test Strategy:
+Test decimal point can be added once per number, verify '0.' is added when decimal is first input, ensure decimal works after operations
+
+# Subtasks:
+## 1. Add decimal button if needed [pending]
+### Dependencies: None
+### Description: Check if decimal button exists in HTML, and add it if missing
+### Details:
+Inspect the calculator HTML structure to verify if a decimal point button exists. If not present, add a button element with appropriate class and '.' as text content. Position it correctly in the calculator grid layout next to the number buttons.
+
+## 2. Implement decimal validation logic [pending]
+### Dependencies: 22.1
+### Description: Add logic to validate and handle decimal point input correctly
+### Details:
+Create a function to check if currentNumber already contains a decimal point. Add click event listener to decimal button that appends '.' only if no decimal exists. Update the display after adding decimal point. Ensure decimal point can only be added once per number.
+
+## 3. Handle edge cases (leading decimal, multiple decimals) [pending]
+### Dependencies: 22.2
+### Description: Implement special handling for edge cases related to decimal input
+### Details:
+Handle case when decimal is pressed first by prepending '0' to create '0.'. Prevent multiple decimals in same number. Ensure decimal point resets correctly after operations. Handle decimal point behavior when result already contains decimal.
+

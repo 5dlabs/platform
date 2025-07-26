@@ -1,0 +1,43 @@
+# Task ID: 43
+# Title: Implement PWA Features
+# Status: pending
+# Dependencies: 41
+# Priority: low
+# Description: Add Progressive Web App capabilities for offline use
+# Details:
+Create manifest.json with app metadata, add service worker for offline caching, implement cache-first strategy for assets, add install prompt for add to home screen
+
+# Test Strategy:
+Test offline functionality works, verify service worker caches correctly, test installation process on mobile
+
+# Subtasks:
+## 1. Create manifest.json [pending]
+### Dependencies: None
+### Description: Create and configure the web app manifest file with all required metadata
+### Details:
+Create manifest.json in project root with app name, short_name, description, start_url, display mode set to 'standalone', theme_color, background_color, and icons array with multiple sizes (192x192, 512x512). Link manifest in HTML head tag.
+
+## 2. Implement service worker [pending]
+### Dependencies: None
+### Description: Create and register the service worker for offline functionality
+### Details:
+Create service-worker.js file, implement install event to cache static assets, add activate event to clean old caches, implement fetch event handler. Register service worker in main JavaScript file with proper scope and error handling.
+
+## 3. Set up caching strategy [pending]
+### Dependencies: 43.2
+### Description: Implement cache-first strategy for static assets and network-first for dynamic content
+### Details:
+Define cache name and version, create list of static assets to cache (HTML, CSS, JS files), implement cache-first strategy for static resources, add network-first with cache fallback for API calls if any, handle cache updates on new deployments.
+
+## 4. Add install prompt [pending]
+### Dependencies: 43.1, 43.2
+### Description: Implement the 'Add to Home Screen' prompt functionality
+### Details:
+Listen for beforeinstallprompt event, create UI button or banner for install prompt, handle user interaction to trigger prompt, track installation choice, hide prompt after installation or dismissal, store user preference in localStorage.
+
+## 5. Test offline functionality [pending]
+### Dependencies: 43.3, 43.4
+### Description: Thoroughly test all PWA features work correctly offline
+### Details:
+Test calculator works completely offline after initial load, verify all cached resources load properly, test install process on mobile devices, check service worker updates correctly, test in Chrome DevTools Application tab, verify Lighthouse PWA audit passes.
+

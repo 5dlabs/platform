@@ -1,0 +1,37 @@
+# Task ID: 18
+# Title: Implement Operation Handler
+# Status: pending
+# Dependencies: 17
+# Priority: high
+# Description: Create function to handle operation selection and chaining
+# Details:
+Create handleOperation(op) function, if previousNumber exists and operation exists, perform calculation first, set previousNumber = currentNumber, operation = op, shouldResetDisplay = true
+
+# Test Strategy:
+Test operation chaining (e.g., 2 + 3 * 4), verify state updates correctly, ensure operations can be changed before entering second number
+
+# Subtasks:
+## 1. Handle Operation Chaining Logic [pending]
+### Dependencies: None
+### Description: Implement logic to handle consecutive operations without pressing equals
+### Details:
+Create logic to detect when a new operation is selected while a previous operation is pending. If previousNumber exists and operation exists, trigger calculation before setting new operation. This enables chains like '2 + 3 * 4' to work correctly by calculating '2 + 3 = 5' before applying multiplication.
+
+## 2. Manage State Transitions [pending]
+### Dependencies: 18.1
+### Description: Implement state management for operation selection
+### Details:
+After handling any pending calculation, update state variables: set previousNumber = currentNumber to store the first operand, set operation = op to store the selected operation, set shouldResetDisplay = true to prepare for next number input. Ensure state transitions are atomic and consistent.
+
+## 3. Handle Operation Changes [pending]
+### Dependencies: 18.2
+### Description: Allow users to change operation before entering second number
+### Details:
+Implement logic to detect when user selects a different operation before entering the second operand. Update the operation variable without triggering calculation. This allows users to correct mistaken operation selections (e.g., pressing + then changing to -).
+
+## 4. Integrate with Calculation Trigger [pending]
+### Dependencies: 18.3
+### Description: Connect operation handler with calculation function
+### Details:
+Ensure handleOperation properly integrates with the calculate() function for chained operations. Pass correct parameters to calculate() when needed. Update display after operation selection to show current state. Handle edge cases like selecting operation immediately after equals.
+

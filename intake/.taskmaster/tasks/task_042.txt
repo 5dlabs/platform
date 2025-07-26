@@ -1,0 +1,31 @@
+# Task ID: 42
+# Title: Add Error Logging
+# Status: pending
+# Dependencies: 25
+# Priority: low
+# Description: Implement error logging for debugging production issues
+# Details:
+Add try-catch blocks around main functions, log errors to console with meaningful messages, add debug mode flag for verbose logging, ensure sensitive data isn't logged
+
+# Test Strategy:
+Trigger various errors and verify they're logged, ensure logging doesn't impact performance, test debug mode toggle works
+
+# Subtasks:
+## 1. Add try-catch blocks to main functions [pending]
+### Dependencies: None
+### Description: Wrap all major functions in try-catch blocks to capture and handle errors gracefully
+### Details:
+Identify all main functions (calculate, handleNumberInput, handleOperationInput, clear, etc.) and wrap their contents in try-catch blocks. In catch blocks, call a centralized error logging function. Ensure error messages are descriptive and include function name and error context.
+
+## 2. Implement console logging with context [pending]
+### Dependencies: 42.1
+### Description: Create a logging utility that outputs errors with meaningful context and timestamps
+### Details:
+Create a logError function that accepts error object, function name, and additional context. Format logs with timestamp, error type, function name, and error message. Include relevant state information (current number, operation, etc.) without exposing sensitive data. Use console.error for errors and console.warn for warnings.
+
+## 3. Add debug mode toggle [pending]
+### Dependencies: 42.2
+### Description: Implement a debug flag that enables verbose logging when activated
+### Details:
+Add a global DEBUG flag (default false) that can be toggled via console command or URL parameter. When enabled, log all function calls, state changes, and user interactions. Create separate logDebug function that only outputs when DEBUG is true. Add documentation on how to enable debug mode.
+

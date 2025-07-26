@@ -1,0 +1,25 @@
+# Task ID: 9
+# Title: Style Operator Buttons
+# Status: pending
+# Dependencies: 8
+# Priority: medium
+# Description: Apply distinct styling to operator buttons to differentiate from number buttons
+# Details:
+Add class 'operator' to +, -, *, / buttons, style with background-color: #ff9800, color: white, hover state with background-color: #e68900
+
+# Test Strategy:
+Verify operator buttons are visually distinct, ensure color contrast meets accessibility standards, test hover states
+
+# Subtasks:
+## 1. Add operator class and distinct colors [pending]
+### Dependencies: None
+### Description: Add 'operator' class to +, -, *, / buttons and apply distinct orange styling
+### Details:
+Add class='operator' to all operator buttons (+, -, *, /) in HTML. In CSS, create .operator selector with background-color: #ff9800 and color: white to differentiate from number buttons
+
+## 2. Apply hover states maintaining consistency [pending]
+### Dependencies: 9.1
+### Description: Implement hover effects for operator buttons with darker orange shade
+### Details:
+Add .operator:hover selector with background-color: #e68900 to provide visual feedback. Ensure transition property is applied for smooth color change matching other button hover states
+

@@ -1,0 +1,37 @@
+# Task ID: 16
+# Title: Implement Number Input Handler
+# Status: pending
+# Dependencies: 15
+# Priority: high
+# Description: Create function to handle number input logic including decimal points
+# Details:
+Create handleNumber(num) function, check if currentNumber is '0' and replace instead of append (except for decimal), limit number length to prevent overflow, handle multiple decimal points prevention
+
+# Test Strategy:
+Test that leading zeros are handled correctly, verify decimal point can only be added once, ensure number length limits work
+
+# Subtasks:
+## 1. Handle leading zero replacement [pending]
+### Dependencies: None
+### Description: Implement logic to replace leading zero with new number input, except when adding decimal point
+### Details:
+Check if currentNumber equals '0' and incoming input is not '.', then replace the zero instead of appending. Handle edge case where '0.' should be preserved when adding more digits
+
+## 2. Implement decimal point validation [pending]
+### Dependencies: None
+### Description: Add logic to prevent multiple decimal points in a single number
+### Details:
+Check if currentNumber already contains a decimal point before allowing another one. Return early from function if decimal already exists. Handle case where user types decimal as first character (should become '0.')
+
+## 3. Add number length limiting [pending]
+### Dependencies: None
+### Description: Implement maximum length check to prevent display overflow
+### Details:
+Define MAX_DIGITS constant (e.g., 12), check currentNumber length before appending new digit, consider decimal point in length calculation, prevent input if limit reached
+
+## 4. Integrate with display update [pending]
+### Dependencies: 16.1, 16.2, 16.3
+### Description: Connect number input handler to display update function
+### Details:
+After all validations pass and number is updated, call updateDisplay() function to refresh the calculator display. Handle shouldResetDisplay flag to clear display before new number input after operation
+

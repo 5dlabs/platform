@@ -1,0 +1,31 @@
+# Task ID: 6
+# Title: Style Display Screen
+# Status: pending
+# Dependencies: 5
+# Priority: high
+# Description: Create styling for the calculator display area where numbers and results appear
+# Details:
+Style .display with background-color: #444, color: white, padding: 10px, font-size: 2em, text-align: right, min-height: 50px, margin-bottom: 10px, border-radius: 5px, overflow: hidden to handle long numbers
+
+# Test Strategy:
+Verify display is clearly visible, test with various number lengths, ensure text remains right-aligned and doesn't overflow container
+
+# Subtasks:
+## 1. Apply basic display styling [pending]
+### Dependencies: None
+### Description: Implement fundamental visual properties for the calculator display including background color, text color, and padding
+### Details:
+Add CSS rules to .display class: background-color: #444 for dark background, color: white for text visibility, padding: 10px for internal spacing, font-size: 2em for large readable numbers, min-height: 50px to maintain consistent height even when empty
+
+## 2. Handle text alignment and overflow [pending]
+### Dependencies: 6.1
+### Description: Configure text positioning and manage overflow behavior for long number sequences
+### Details:
+Set text-align: right to align numbers to the right edge like traditional calculators, add overflow: hidden to prevent text from breaking layout, consider adding white-space: nowrap and text-overflow: ellipsis for better handling of extremely long numbers
+
+## 3. Add visual polish [pending]
+### Dependencies: 6.2
+### Description: Apply finishing touches to enhance the display's appearance and ensure proper sizing
+### Details:
+Add border-radius: 5px for rounded corners matching modern design, set margin-bottom: 10px to create spacing between display and buttons, verify the display maintains proper dimensions across different screen sizes, test appearance with various number lengths to ensure readability
+

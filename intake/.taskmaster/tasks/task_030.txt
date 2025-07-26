@@ -1,0 +1,31 @@
+# Task ID: 30
+# Title: Write Tests for Clear Functionality
+# Status: pending
+# Dependencies: 26
+# Priority: medium
+# Description: Create unit tests for clear button behavior
+# Details:
+Test clear resets display to '0', test clear cancels pending operations, test clear after error state, test clear in middle of calculation
+
+# Test Strategy:
+Verify all state variables reset correctly, ensure display updates properly, test various timing scenarios
+
+# Subtasks:
+## 1. Test basic clear functionality [pending]
+### Dependencies: None
+### Description: Write tests to verify that the clear button resets the display to '0' and clears all calculator state
+### Details:
+Create test cases for: clicking clear when display shows a number, clicking clear when display shows '0', verifying currentValue resets to '0', verifying previousValue resets to null, verifying currentOperation resets to null
+
+## 2. Test clear during operations [pending]
+### Dependencies: 30.1
+### Description: Write tests to verify clear button behavior when pressed during ongoing calculations
+### Details:
+Test scenarios: clear after entering first number but before operator, clear after selecting operator but before second number, clear in the middle of entering second number, verify pending operations are cancelled, ensure calculator returns to initial state
+
+## 3. Test clear after errors [pending]
+### Dependencies: 30.1
+### Description: Write tests to verify clear button properly resets calculator after error states
+### Details:
+Test cases: clear after division by zero error, clear after overflow error, clear after any error message display, verify error flags are reset, ensure calculator is fully functional after clearing error
+

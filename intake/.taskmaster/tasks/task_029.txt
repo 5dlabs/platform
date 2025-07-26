@@ -1,0 +1,37 @@
+# Task ID: 29
+# Title: Write Tests for Operation Chaining
+# Status: pending
+# Dependencies: 26
+# Priority: medium
+# Description: Create tests for consecutive operations without equals
+# Details:
+Test 2+3*4 (should calculate 2+3=5 first, then 5*4=20), test changing operations before second number, test long chains of operations
+
+# Test Strategy:
+Verify operation precedence follows calculator logic (not mathematical), ensure state updates correctly throughout chain
+
+# Subtasks:
+## 1. Test basic operation chains [pending]
+### Dependencies: None
+### Description: Create tests for simple consecutive operations like 2+3*4
+### Details:
+Write tests that verify basic operation chains work correctly. Test cases should include: 2+3*4 (should equal 20, not 14), 10-5+3 (should equal 8), 20/4*2 (should equal 10). Verify that each operation is performed sequentially from left to right, not following mathematical precedence rules.
+
+## 2. Test operation changes mid-calculation [pending]
+### Dependencies: 29.1
+### Description: Test changing operators before entering the second number
+### Details:
+Create tests for scenarios where user changes operation before entering second operand. Test cases: enter '5+' then change to '-' before entering '3', enter '10*' then change to '/' then '+' before entering '2'. Verify that only the last selected operation is used and previous operations are discarded.
+
+## 3. Test long operation chains [pending]
+### Dependencies: 29.1, 29.2
+### Description: Test extended sequences of operations with multiple calculations
+### Details:
+Write tests for longer operation chains involving 4 or more operations. Test cases: 1+2*3-4/2 (should calculate sequentially to equal 2.5), 100/10+5*2-8 (should equal 22). Verify memory management and that intermediate results are correctly stored and used throughout the chain.
+
+## 4. Test state management throughout chains [pending]
+### Dependencies: 29.1, 29.2, 29.3
+### Description: Verify calculator state is correctly maintained during operation chains
+### Details:
+Create comprehensive tests for state variables during operation chains. Test that previousNumber, currentNumber, operation, and shouldResetDisplay are correctly updated at each step. Include edge cases like pressing equals mid-chain, clearing during a chain, and starting new chains after completing previous ones.
+

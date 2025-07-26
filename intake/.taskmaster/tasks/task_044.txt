@@ -1,0 +1,43 @@
+# Task ID: 44
+# Title: Add Theme Support
+# Status: pending
+# Dependencies: 39
+# Priority: low
+# Description: Implement basic theme switching capability
+# Details:
+Create CSS variables for colors, add dark theme styles, implement theme toggle button, save theme preference to localStorage, respect system theme preference
+
+# Test Strategy:
+Verify theme switches correctly, test theme persists across sessions, ensure all elements are properly themed
+
+# Subtasks:
+## 1. Create CSS variables for theming [pending]
+### Dependencies: None
+### Description: Define CSS custom properties for all color values used in the calculator
+### Details:
+Create :root selector with CSS variables for background colors, text colors, button colors, hover states, and shadows. Define variables like --bg-primary, --text-primary, --button-bg, --button-hover, etc. Ensure all existing styles reference these variables instead of hardcoded colors
+
+## 2. Implement dark theme styles [pending]
+### Dependencies: 44.1
+### Description: Create dark theme color scheme and apply it via data attribute or class
+### Details:
+Define dark theme colors by creating [data-theme='dark'] selector that overrides the CSS variables. Set appropriate dark background colors, light text colors, and adjusted button colors for good contrast. Ensure all UI elements remain readable and accessible in dark mode
+
+## 3. Add theme toggle UI [pending]
+### Dependencies: 44.2
+### Description: Create and implement a theme toggle button in the calculator interface
+### Details:
+Add a theme toggle button (sun/moon icon or text toggle) to the calculator UI. Implement click handler that toggles data-theme attribute on document.documentElement between 'light' and 'dark'. Add smooth CSS transitions for theme changes. Position button appropriately without interfering with calculator functionality
+
+## 4. Save preference to localStorage [pending]
+### Dependencies: 44.3
+### Description: Persist user's theme preference across browser sessions
+### Details:
+When theme is toggled, save preference to localStorage with key 'calculator-theme'. On page load, check localStorage for saved preference and apply it. Handle cases where localStorage is not available. Update theme toggle button state to reflect loaded preference
+
+## 5. Detect system theme preference [pending]
+### Dependencies: 44.4
+### Description: Implement detection and respect of system-level theme preference
+### Details:
+Use window.matchMedia('(prefers-color-scheme: dark)') to detect system theme preference. If no localStorage preference exists, default to system preference. Add listener for system theme changes to update calculator theme automatically. Ensure manual toggle overrides system preference and saves to localStorage
+

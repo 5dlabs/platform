@@ -1,0 +1,25 @@
+# Task ID: 34
+# Title: Create Loading State
+# Status: pending
+# Dependencies: 12
+# Priority: low
+# Description: Add loading indicator while JavaScript initializes
+# Details:
+Show 'Loading...' in display initially, hide once JavaScript loads, add noscript tag with message for users without JavaScript, ensure graceful degradation
+
+# Test Strategy:
+Test with JavaScript disabled, verify loading state appears and disappears correctly, ensure no flash of unstyled content
+
+# Subtasks:
+## 1. Implement loading indicator [pending]
+### Dependencies: None
+### Description: Add a loading message to the display that shows while JavaScript initializes and hide it once the calculator is ready
+### Details:
+Add 'Loading...' text to the display element in HTML, create JavaScript function to hide loading message after DOMContentLoaded event, ensure smooth transition when calculator becomes ready, prevent flash of unstyled content
+
+## 2. Add noscript fallback message [pending]
+### Dependencies: None
+### Description: Implement a noscript tag with appropriate message for users who have JavaScript disabled
+### Details:
+Add noscript tag in HTML body with message explaining JavaScript is required, style the noscript message to be visible and user-friendly, ensure message provides clear information about enabling JavaScript, test with JavaScript disabled in browser
+

@@ -1,0 +1,37 @@
+# Task ID: 39
+# Title: Implement Local Storage
+# Status: pending
+# Dependencies: 20
+# Priority: low
+# Description: Add ability to persist last calculation result
+# Details:
+Save last result to localStorage on calculation, add 'ANS' button to recall last result, handle localStorage not available gracefully, clear stored result on clear all
+
+# Test Strategy:
+Test localStorage saves and retrieves correctly, verify graceful handling when localStorage is disabled, test across browser sessions
+
+# Subtasks:
+## 1. Implement save to localStorage [pending]
+### Dependencies: None
+### Description: Add functionality to save calculation results to browser localStorage whenever a calculation is completed
+### Details:
+Create saveToLocalStorage() function that stores the result value with key 'calculatorLastResult'. Call this function after every successful calculation in the equals operation handler. Ensure the value is stored as a string for consistency.
+
+## 2. Add ANS button functionality [pending]
+### Dependencies: 39.1
+### Description: Create and implement an ANS (answer) button that retrieves the last stored result from localStorage
+### Details:
+Add ANS button to the calculator UI. Create retrieveLastResult() function that gets 'calculatorLastResult' from localStorage. Add click handler that retrieves the value and sets it as currentNumber, then updates the display. Handle case when no previous result exists.
+
+## 3. Handle localStorage errors [pending]
+### Dependencies: 39.1, 39.2
+### Description: Implement error handling for localStorage operations to gracefully handle when localStorage is unavailable or disabled
+### Details:
+Wrap all localStorage operations in try-catch blocks. Create isLocalStorageAvailable() function to check if localStorage is accessible. If localStorage throws errors or is disabled, ensure calculator continues to function normally without persistence features. Log errors to console for debugging.
+
+## 4. Clear storage on reset [pending]
+### Dependencies: 39.1, 39.3
+### Description: Modify the clear button functionality to also remove the stored result from localStorage
+### Details:
+Update the clear button event handler to call localStorage.removeItem('calculatorLastResult') when clearing the calculator. Ensure this is wrapped in error handling from subtask 39.3. This ensures a full reset of calculator state including persisted data.
+

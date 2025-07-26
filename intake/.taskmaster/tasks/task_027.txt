@@ -1,0 +1,43 @@
+# Task ID: 27
+# Title: Write Tests for Calculate Function
+# Status: pending
+# Dependencies: 26
+# Priority: high
+# Description: Create comprehensive unit tests for the calculate function
+# Details:
+Test addition: 2+2=4, 0.1+0.2≈0.3, negative numbers; Test subtraction: 5-3=2, 3-5=-2; Test multiplication: 3*4=12, 2.5*2=5; Test division: 10/2=5, 1/3≈0.333, division by zero
+
+# Test Strategy:
+Run all arithmetic tests, verify edge cases are covered, ensure floating point precision is handled correctly
+
+# Subtasks:
+## 1. Test basic addition cases [pending]
+### Dependencies: None
+### Description: Write unit tests for addition operations including positive numbers, zero, and decimal values
+### Details:
+Create test cases for: 2+2=4, 10+5=15, 0+0=0, 100+200=300, 0.1+0.2≈0.3, 1.5+2.5=4. Verify that the calculate function correctly handles string to number conversion and returns accurate results for all addition operations.
+
+## 2. Test subtraction including negatives [pending]
+### Dependencies: None
+### Description: Write unit tests for subtraction operations covering positive results, negative results, and decimal values
+### Details:
+Create test cases for: 5-3=2, 3-5=-2, 10-10=0, 0-5=-5, -5-3=-8, 7.5-2.5=5, 0.3-0.1≈0.2. Ensure proper handling of negative numbers and verify that subtraction order is correctly maintained.
+
+## 3. Test multiplication [pending]
+### Dependencies: None
+### Description: Write unit tests for multiplication operations including integers, decimals, and special cases
+### Details:
+Create test cases for: 3*4=12, 2.5*2=5, 0*100=0, -3*4=-12, -2*-3=6, 0.1*0.1=0.01, 10*0.5=5. Test multiplication with zero, negative numbers, and decimal values to ensure accurate results.
+
+## 4. Test division including edge cases [pending]
+### Dependencies: None
+### Description: Write unit tests for division operations with special attention to edge cases like division by zero
+### Details:
+Create test cases for: 10/2=5, 1/3≈0.333, 0/5=0, -10/2=-5, -6/-3=2, 7.5/2.5=3. Implement specific test for division by zero that verifies error handling returns appropriate error message instead of Infinity or NaN.
+
+## 5. Test floating point precision [pending]
+### Dependencies: 27.1, 27.2, 27.3, 27.4
+### Description: Write unit tests to verify proper handling of floating point precision issues
+### Details:
+Create test cases that verify rounding is applied correctly: 0.1+0.2≈0.3 (not 0.30000000000000004), 0.3-0.1≈0.2, 0.1*0.1=0.01. Test that results are properly rounded to avoid common floating point errors. Verify the calculate function's rounding mechanism works for all operations.
+

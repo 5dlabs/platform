@@ -1,0 +1,37 @@
+# Task ID: 23
+# Title: Implement Keyboard Support
+# Status: pending
+# Dependencies: 20
+# Priority: medium
+# Description: Add keyboard event listeners for number and operation input
+# Details:
+Add keydown event listener to document, map number keys 0-9 to number input, map +, -, *, / to operations, Enter key to equals, Escape or Delete to clear, handle numpad keys
+
+# Test Strategy:
+Test all number keys work correctly, verify operation keys trigger correct operations, ensure Enter and Escape work as expected
+
+# Subtasks:
+## 1. Add keyboard event listener [pending]
+### Dependencies: None
+### Description: Set up document-level keydown event listener to capture keyboard input
+### Details:
+Add keydown event listener to document, create main keyboard handler function, prevent default behavior for calculator keys, ensure event listener is properly attached on page load
+
+## 2. Map number keys to number input [pending]
+### Dependencies: 23.1
+### Description: Handle numeric key presses (0-9) and route to existing number button logic
+### Details:
+Map keys 0-9 to trigger numberClick() function, handle both main keyboard numbers and numpad numbers, ensure proper display update after key press, maintain existing number input validation
+
+## 3. Map operation keys and special keys [pending]
+### Dependencies: 23.1
+### Description: Handle operation keys (+, -, *, /) and special function keys (Enter, Escape)
+### Details:
+Map +, -, *, / keys to operationClick() function, map Enter key to equalsClick() function, map Escape and Delete keys to clear function, handle both regular and numpad operation keys
+
+## 4. Handle numpad keys [pending]
+### Dependencies: 23.2, 23.3
+### Description: Ensure numpad keys work identically to main keyboard keys
+### Details:
+Map numpad 0-9 to number input, map numpad operators to operations, handle numpad Enter key, test NumLock on/off behavior, ensure consistent behavior across browsers
+

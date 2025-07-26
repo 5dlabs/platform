@@ -1,0 +1,31 @@
+# Task ID: 4
+# Title: Create Base CSS File
+# Status: pending
+# Dependencies: 2
+# Priority: high
+# Description: Set up the CSS file with reset styles and base typography
+# Details:
+Create styles.css, add CSS reset or normalize styles, set box-sizing: border-box globally, define base font family (e.g., Arial, sans-serif), set body margin to 0 and establish a clean background color
+
+# Test Strategy:
+Verify CSS file loads correctly, check that reset styles are applied, ensure no default browser margins/paddings interfere with layout
+
+# Subtasks:
+## 1. Create styles.css and add CSS reset/normalize [pending]
+### Dependencies: None
+### Description: Create the main CSS file and implement CSS reset or normalize styles to ensure consistent rendering across browsers
+### Details:
+Create styles.css in the project root, add CSS reset rules to remove default browser styles (margins, paddings, list styles), consider using a minimal normalize approach for better cross-browser consistency, include comments explaining the purpose of reset styles
+
+## 2. Set up global styles and box-sizing [pending]
+### Dependencies: 4.1
+### Description: Implement global CSS rules including box-sizing and other foundational styles
+### Details:
+Add box-sizing: border-box to all elements using universal selector, set up CSS custom properties for common values if needed, establish consistent outline styles for accessibility, define any global utility classes
+
+## 3. Define base typography and body styles [pending]
+### Dependencies: 4.2
+### Description: Set up fundamental typography rules and body element styling
+### Details:
+Define base font-family (Arial, sans-serif), set appropriate font-size and line-height for body, remove body margin and set clean background color, establish base color scheme for text, ensure good readability defaults
+

@@ -1,0 +1,31 @@
+# Task ID: 17
+# Title: Add Operator Button Event Listeners
+# Status: pending
+# Dependencies: 15
+# Priority: high
+# Description: Attach click event listeners to operator buttons (+, -, *, /)
+# Details:
+Query select all operator buttons, add click event listener to each, on click: if there's a pending operation, calculate first, store current number as previous, store selected operation, set shouldResetDisplay to true
+
+# Test Strategy:
+Verify each operator button responds to clicks, test that consecutive operations work correctly, ensure proper state management
+
+# Subtasks:
+## 1. Query and Select Operator Buttons [pending]
+### Dependencies: None
+### Description: Select all operator button elements from the DOM using appropriate selectors
+### Details:
+Use document.querySelectorAll to select all buttons with the 'operator' class or specific operator symbols (+, -, *, /). Store the NodeList in a variable for iteration. Ensure all four basic operation buttons are captured.
+
+## 2. Attach Click Event Listeners to Operators [pending]
+### Dependencies: 17.1
+### Description: Iterate through operator buttons and attach click event listeners to each
+### Details:
+Use forEach to iterate through the operator button NodeList. For each button, add an event listener using addEventListener('click', callback). The callback should capture the operator value from the button's text content or data attribute.
+
+## 3. Implement Operation Selection Logic [pending]
+### Dependencies: 17.2
+### Description: Create the logic inside event listeners to handle operator selection and state management
+### Details:
+Inside each operator's click handler: check if there's a pending operation and calculate if needed, store the current display value as previousNumber, store the selected operation type, set shouldResetDisplay flag to true to prepare for next number input.
+

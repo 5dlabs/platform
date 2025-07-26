@@ -1,0 +1,43 @@
+# Task ID: 19
+# Title: Create Calculate Function
+# Status: pending
+# Dependencies: 18
+# Priority: high
+# Description: Implement the core calculation logic for all operations
+# Details:
+Create calculate() function with switch statement for operations, convert strings to numbers using parseFloat, handle division by zero with error message, return result as string, round to avoid floating point issues
+
+# Test Strategy:
+Test all four operations with various inputs, verify division by zero handling, check floating point precision issues are addressed
+
+# Subtasks:
+## 1. Implement basic arithmetic operations [pending]
+### Dependencies: None
+### Description: Create the core calculate() function with a switch statement to handle addition, subtraction, multiplication, and division operations
+### Details:
+Set up the calculate() function structure that accepts two operands and an operator. Implement switch cases for '+', '-', '*', and '/' operators. Each case should perform the corresponding arithmetic operation and return the raw result.
+
+## 2. Add number parsing and validation [pending]
+### Dependencies: 19.1
+### Description: Implement parseFloat() conversion for string inputs and validate that inputs are valid numbers before performing calculations
+### Details:
+Convert string inputs to numbers using parseFloat(). Check if the parsed values are valid numbers using isNaN(). Return appropriate error messages for invalid inputs. Handle edge cases like empty strings or non-numeric characters.
+
+## 3. Handle division by zero [pending]
+### Dependencies: 19.2
+### Description: Add specific error handling for division by zero cases to prevent undefined or infinity results
+### Details:
+In the division case of the switch statement, check if the second operand equals zero before performing division. Return a user-friendly error message like 'Error' or 'Cannot divide by zero' when division by zero is attempted.
+
+## 4. Implement floating point precision fixes [pending]
+### Dependencies: 19.3
+### Description: Add rounding logic to handle JavaScript floating point precision issues in calculations
+### Details:
+Implement a rounding function to fix floating point errors (e.g., 0.1 + 0.2 = 0.30000000000000004). Use techniques like Math.round((result + Number.EPSILON) * 100000000) / 100000000 or similar to ensure clean decimal results.
+
+## 5. Format and return results [pending]
+### Dependencies: 19.4
+### Description: Convert calculation results to properly formatted strings for display and handle special cases
+### Details:
+Convert numeric results to strings using appropriate methods. Handle special cases like very large numbers, very small numbers, or results that need scientific notation. Ensure consistent string formatting for all return values including error messages.
+

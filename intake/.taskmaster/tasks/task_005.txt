@@ -1,0 +1,25 @@
+# Task ID: 5
+# Title: Style Calculator Container
+# Status: pending
+# Dependencies: 4
+# Priority: high
+# Description: Apply styling to the main calculator container for centered positioning and appearance
+# Details:
+Style #calculator with max-width: 400px, center using margin: 50px auto, add padding: 20px, background-color: #f0f0f0, border-radius: 10px, box-shadow for depth effect
+
+# Test Strategy:
+Verify calculator is centered on page, check responsive behavior on different screen sizes, ensure container styling is visually appealing
+
+# Subtasks:
+## 1. Apply positioning and sizing styles to calculator container [pending]
+### Dependencies: None
+### Description: Implement CSS rules for the #calculator element to control its dimensions and center it on the page
+### Details:
+Add CSS rules to #calculator selector: max-width: 400px, margin: 50px auto for horizontal centering, padding: 20px for internal spacing. Ensure the container maintains proper centering across different viewport sizes.
+
+## 2. Add visual styling (background, border-radius, shadow) [pending]
+### Dependencies: 5.1
+### Description: Apply aesthetic CSS properties to enhance the calculator container's visual appearance
+### Details:
+Add to #calculator selector: background-color: #f0f0f0, border-radius: 10px for rounded corners, box-shadow (e.g., 0 4px 6px rgba(0,0,0,0.1)) for depth effect. Ensure visual styles complement the overall design.
+

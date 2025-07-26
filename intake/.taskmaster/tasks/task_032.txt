@@ -1,0 +1,31 @@
+# Task ID: 32
+# Title: Add CSS Animations
+# Status: pending
+# Dependencies: 10
+# Priority: low
+# Description: Implement subtle animations for better user experience
+# Details:
+Add CSS transitions for button hover states (0.2s ease), add subtle scale transform on button press, add fade-in animation for display updates, ensure animations don't impact usability
+
+# Test Strategy:
+Verify animations are smooth and not distracting, test performance on lower-end devices, ensure animations can be disabled for accessibility
+
+# Subtasks:
+## 1. Add button transition effects [pending]
+### Dependencies: None
+### Description: Implement CSS transitions for button hover states with smooth color and shadow changes
+### Details:
+Add transition property to all buttons with 0.2s ease timing, implement hover state with background-color change, add subtle box-shadow on hover, ensure transitions work for both mouse and keyboard focus states, maintain consistent transition timing across all interactive elements
+
+## 2. Implement button press animations [pending]
+### Dependencies: 32.1
+### Description: Add scale transform animations when buttons are clicked or pressed
+### Details:
+Add transform: scale(0.95) on button:active state, implement smooth transition for scale effect, ensure animation doesn't cause layout shift, add visual feedback for keyboard activation, test animation performance on mobile devices
+
+## 3. Add display update animations [pending]
+### Dependencies: 32.1, 32.2
+### Description: Implement fade-in animations for calculator display updates and results
+### Details:
+Add CSS keyframe animation for fade-in effect, apply animation to display value changes, implement subtle slide-in effect for new digits, ensure animations don't interfere with rapid input, add CSS media query for prefers-reduced-motion to disable animations for accessibility
+

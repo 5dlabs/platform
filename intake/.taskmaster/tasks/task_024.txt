@@ -1,0 +1,37 @@
+# Task ID: 24
+# Title: Add Input Validation
+# Status: pending
+# Dependencies: 16
+# Priority: medium
+# Description: Implement validation to prevent invalid inputs and edge cases
+# Details:
+Limit display length to prevent overflow, prevent multiple operators in sequence, handle very large numbers with scientific notation, prevent leading zeros except before decimal
+
+# Test Strategy:
+Test maximum number length handling, verify invalid input sequences are prevented, ensure scientific notation displays correctly
+
+# Subtasks:
+## 1. Implement display length limits [pending]
+### Dependencies: None
+### Description: Add validation to limit the maximum number of characters that can be displayed to prevent overflow
+### Details:
+Define maximum display length constant (e.g., 12 characters), check input length before adding new digits, prevent additional input when limit reached, show visual feedback when limit is reached, handle decimal point within character count
+
+## 2. Prevent invalid operation sequences [pending]
+### Dependencies: None
+### Description: Add validation logic to prevent multiple operators in sequence and other invalid operation combinations
+### Details:
+Prevent consecutive operators (++, --, etc.), allow negative numbers after operators, prevent operators at start except minus, replace operator if new operator selected immediately after previous, handle edge cases like decimal after operator
+
+## 3. Handle large number formatting [pending]
+### Dependencies: 24.1
+### Description: Implement scientific notation display for very large or very small numbers that exceed display limits
+### Details:
+Define threshold for scientific notation (e.g., numbers > 999999999), implement conversion to scientific notation format, ensure scientific notation respects display length limits, handle very small decimal numbers (e.g., 0.000001), maintain precision in calculations despite display format
+
+## 4. Validate leading zeros [pending]
+### Dependencies: 24.2
+### Description: Implement validation to prevent invalid leading zeros while allowing valid cases like 0.5
+### Details:
+Prevent multiple leading zeros (00, 000), allow single zero before decimal point, replace leading zero with new digit if not followed by decimal, handle zero as valid standalone number, ensure proper behavior when clearing and re-entering numbers
+

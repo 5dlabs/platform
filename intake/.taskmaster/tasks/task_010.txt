@@ -1,0 +1,25 @@
+# Task ID: 10
+# Title: Style Special Buttons
+# Status: pending
+# Dependencies: 8
+# Priority: medium
+# Description: Apply unique styling to Clear and Equals buttons
+# Details:
+Style Clear button with background-color: #f44336, color: white, Equals button with background-color: #4CAF50, color: white, add appropriate hover states for both
+
+# Test Strategy:
+Verify Clear and Equals buttons stand out visually, test color contrast for accessibility, ensure hover states work
+
+# Subtasks:
+## 1. Style Clear button with warning color [pending]
+### Dependencies: None
+### Description: Apply red/warning color scheme to the Clear button to indicate its destructive action
+### Details:
+Add class 'clear' to the Clear (C) button element. Apply CSS styling with background-color: #f44336 (red) and color: white. Add hover state with darker red background-color: #da190b for better user feedback. Ensure the button maintains consistent sizing and spacing with other buttons
+
+## 2. Style Equals button with success color [pending]
+### Dependencies: None
+### Description: Apply green/success color scheme to the Equals button to indicate calculation completion
+### Details:
+Add class 'equals' to the Equals (=) button element. Apply CSS styling with background-color: #4CAF50 (green) and color: white. Add hover state with darker green background-color: #45a049 for better user feedback. Ensure the button maintains consistent sizing and spacing with other buttons
+

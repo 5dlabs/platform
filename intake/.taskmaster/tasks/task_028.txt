@@ -1,0 +1,43 @@
+# Task ID: 28
+# Title: Write Tests for Number Input
+# Status: pending
+# Dependencies: 26
+# Priority: medium
+# Description: Create unit tests for number input handling
+# Details:
+Test single digit input, multi-digit input, decimal point handling, leading zero handling, maximum length validation, number after operation selection
+
+# Test Strategy:
+Verify all number input scenarios work correctly, ensure edge cases like multiple decimals are prevented, test state management
+
+# Subtasks:
+## 1. Test single digit input [pending]
+### Dependencies: None
+### Description: Create unit tests to verify single digit input (0-9) is handled correctly
+### Details:
+Write tests for each digit 0-9, verify digits are appended to display, test that pressing '0' when display shows '0' doesn't append, ensure single digits update currentNumber state correctly
+
+## 2. Test multi-digit input [pending]
+### Dependencies: 28.1
+### Description: Create unit tests for entering multiple digits in sequence
+### Details:
+Test entering sequences like '123', '999', verify digits append correctly to form multi-digit numbers, test state management for currentNumber with multiple inputs, ensure display updates correctly with each digit
+
+## 3. Test decimal handling [pending]
+### Dependencies: 28.1
+### Description: Create unit tests for decimal point input and validation
+### Details:
+Test adding decimal point to whole numbers, verify only one decimal point allowed per number, test decimal at start creates '0.', test sequences like '3.14', ensure decimal point prevention logic works
+
+## 4. Test leading zero cases [pending]
+### Dependencies: 28.1
+### Description: Create unit tests for leading zero handling and edge cases
+### Details:
+Test that entering '0' then another digit replaces the zero, verify '0' followed by decimal keeps the zero, test multiple zeros don't accumulate, ensure '00' is prevented but '0.0' is allowed
+
+## 5. Test maximum length validation [pending]
+### Dependencies: 28.2
+### Description: Create unit tests to verify number length limits are enforced
+### Details:
+Test entering numbers up to maximum allowed length, verify additional digits are ignored after limit, test length validation with decimals included, ensure very long numbers don't cause display overflow
+

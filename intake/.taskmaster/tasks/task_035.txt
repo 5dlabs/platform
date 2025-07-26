@@ -1,0 +1,31 @@
+# Task ID: 35
+# Title: Add Memory Functions Preparation
+# Status: pending
+# Dependencies: 13
+# Priority: low
+# Description: Prepare infrastructure for potential memory functions (M+, M-, MR, MC)
+# Details:
+Add memory variable to state, create placeholder functions for memory operations, add comments for future implementation, ensure current functionality isn't affected
+
+# Test Strategy:
+Verify placeholder code doesn't interfere with current operations, ensure code structure supports easy addition of memory features
+
+# Subtasks:
+## 1. Add memory state variable [pending]
+### Dependencies: None
+### Description: Add a memory variable to the calculator's state management to store memory values
+### Details:
+Add 'let memory = 0;' alongside other state variables (currentNumber, previousNumber, operation). Initialize to 0 to represent empty memory. Ensure variable is accessible to future memory functions.
+
+## 2. Create placeholder memory functions [pending]
+### Dependencies: 35.1
+### Description: Create empty function declarations for all memory operations (M+, M-, MR, MC)
+### Details:
+Create four placeholder functions: memoryAdd(), memorySubtract(), memoryRecall(), and memoryClear(). Each function should have a comment indicating future implementation. Functions should be empty but properly declared to avoid errors.
+
+## 3. Document future implementation approach [pending]
+### Dependencies: 35.2
+### Description: Add comprehensive comments documenting how memory functions will be implemented
+### Details:
+Add detailed comments above each placeholder function explaining: expected behavior (M+ adds current to memory, M- subtracts, MR recalls, MC clears), when buttons will be added to UI, how functions will interact with display and state, any edge cases to consider.
+

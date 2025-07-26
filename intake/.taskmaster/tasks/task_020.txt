@@ -1,0 +1,37 @@
+# Task ID: 20
+# Title: Implement Equals Button Functionality
+# Status: pending
+# Dependencies: 19
+# Priority: high
+# Description: Add event listener and logic for equals button
+# Details:
+Add click listener to equals button, on click: if operation and previousNumber exist, call calculate(), update currentNumber with result, clear operation and previousNumber, call updateDisplay()
+
+# Test Strategy:
+Test equals button completes calculations correctly, verify state is properly reset after calculation, ensure multiple equals presses don't cause errors
+
+# Subtasks:
+## 1. Add equals button event listener [pending]
+### Dependencies: None
+### Description: Attach click event listener to the equals button element
+### Details:
+Select the equals button element using querySelector, add click event listener that will trigger the calculation process, ensure event listener is properly attached after DOM loads
+
+## 2. Implement calculation trigger logic [pending]
+### Dependencies: 20.1
+### Description: Create the main logic flow that executes when equals button is clicked
+### Details:
+Check if both operation and previousNumber exist before proceeding, call the calculate() function with current state values, handle the flow of passing correct parameters to calculate function
+
+## 3. Update state after calculation [pending]
+### Dependencies: 20.2
+### Description: Update calculator state variables after calculation completes
+### Details:
+Set currentNumber to the calculation result, clear the operation variable to null, clear previousNumber to empty string, set shouldResetDisplay flag appropriately, call updateDisplay() to refresh the screen
+
+## 4. Handle edge cases [pending]
+### Dependencies: 20.3
+### Description: Implement handling for edge cases like no operation selected or repeated equals presses
+### Details:
+Add check for when equals is pressed without an operation selected, prevent errors on multiple consecutive equals button presses, handle case where previousNumber is empty, ensure display doesn't show undefined or NaN
+

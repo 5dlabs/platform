@@ -1,0 +1,37 @@
+# Task ID: 1
+# Title: Setup Project Repository
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Initialize a new Git repository and create the basic project structure for the calculator web application
+# Details:
+Create a new directory 'basic-calculator', initialize Git with 'git init', create .gitignore file with common web development exclusions (node_modules/, .DS_Store, etc.), create README.md with project overview, and establish folder structure: /src for source files, /tests for test files, /assets for any images or icons
+
+# Test Strategy:
+Verify repository is initialized correctly by checking .git folder exists, ensure .gitignore is properly configured, and confirm folder structure matches requirements
+
+# Subtasks:
+## 1. Create project directory and initialize Git [pending]
+### Dependencies: None
+### Description: Create the 'basic-calculator' directory and initialize it as a Git repository
+### Details:
+Create a new directory named 'basic-calculator' using mkdir command, navigate into it with cd command, then run 'git init' to initialize the Git repository. Verify the .git folder is created successfully.
+
+## 2. Create and configure .gitignore file [pending]
+### Dependencies: 1.1
+### Description: Create a .gitignore file with common web development exclusions
+### Details:
+Create .gitignore file in the project root. Add common exclusions: node_modules/, .DS_Store, *.log, .env, dist/, coverage/, .vscode/, .idea/. Include any OS-specific files and editor configurations that should not be tracked.
+
+## 3. Create initial README.md with project structure [pending]
+### Dependencies: 1.1
+### Description: Create README.md file with project overview and structure documentation
+### Details:
+Create README.md in project root. Include: project title 'Basic Calculator Web App', brief description, project structure outline, setup instructions placeholder, and technology stack (HTML, CSS, JavaScript). Format using Markdown syntax.
+
+## 4. Set up folder structure (/src, /tests, /assets) [pending]
+### Dependencies: 1.1
+### Description: Create the required directory structure for organizing project files
+### Details:
+Create three directories in project root: /src for source files (HTML, CSS, JS), /tests for test files, /assets for images, icons, or other static resources. Optionally create placeholder .gitkeep files in empty directories to ensure they're tracked by Git.
+

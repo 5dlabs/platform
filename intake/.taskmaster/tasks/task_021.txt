@@ -1,0 +1,25 @@
+# Task ID: 21
+# Title: Implement Clear Button Functionality
+# Status: pending
+# Dependencies: 14
+# Priority: high
+# Description: Add event listener and logic for clear button to reset calculator
+# Details:
+Add click listener to clear button, on click: reset currentNumber = '0', previousNumber = '', operation = null, shouldResetDisplay = false, call updateDisplay()
+
+# Test Strategy:
+Test clear button resets all state correctly, verify display shows '0' after clear, ensure pending operations are cancelled
+
+# Subtasks:
+## 1. Add clear button event listener [pending]
+### Dependencies: None
+### Description: Attach click event listener to the clear button element
+### Details:
+Select the clear button element using querySelector, add click event listener that calls a clearCalculator function when triggered
+
+## 2. Implement full state reset logic [pending]
+### Dependencies: 21.1
+### Description: Create clearCalculator function that resets all calculator state variables
+### Details:
+Inside clearCalculator function: set currentNumber = '0', previousNumber = '', operation = null, shouldResetDisplay = false, then call updateDisplay() to refresh the display
+

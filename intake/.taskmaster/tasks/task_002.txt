@@ -1,0 +1,31 @@
+# Task ID: 2
+# Title: Create HTML Structure
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Build the basic HTML structure for the calculator interface including DOCTYPE, head section, and body skeleton
+# Details:
+Create index.html with HTML5 DOCTYPE, add meta tags for viewport and charset UTF-8, link to CSS file (styles.css), add title 'Basic Calculator', create main container div with id='calculator', and link to JavaScript file (script.js) at bottom of body
+
+# Test Strategy:
+Validate HTML using W3C validator, ensure all meta tags are present, verify file links are correctly referenced, and check that page loads without errors in browser console
+
+# Subtasks:
+## 1. Create index.html with DOCTYPE and basic structure [pending]
+### Dependencies: None
+### Description: Create the index.html file with HTML5 DOCTYPE declaration and establish the fundamental HTML document structure
+### Details:
+Create a new file named index.html in the project root. Add the HTML5 DOCTYPE declaration (<!DOCTYPE html>). Create the opening and closing <html> tags with lang='en' attribute. Add the basic <head> and <body> tag structure. Save the file with UTF-8 encoding.
+
+## 2. Set up head section with meta tags and file links [pending]
+### Dependencies: 2.1
+### Description: Configure the head section with all necessary meta tags, title, and CSS file link
+### Details:
+Inside the <head> section, add meta charset UTF-8 tag for proper character encoding. Add viewport meta tag with content='width=device-width, initial-scale=1.0' for responsive design. Set the page title to 'Basic Calculator' using the <title> tag. Add a link tag to reference styles.css with rel='stylesheet'. Include any additional meta tags for description or author if needed.
+
+## 3. Create body skeleton with main container [pending]
+### Dependencies: 2.2
+### Description: Build the body structure with the main calculator container and JavaScript file reference
+### Details:
+Within the <body> tags, create a main container <div> element with id='calculator'. This will serve as the wrapper for all calculator components. Add a <script> tag at the bottom of the body (just before the closing </body> tag) with src='script.js' to link the JavaScript file. Ensure proper indentation and clean HTML structure for maintainability.
+
