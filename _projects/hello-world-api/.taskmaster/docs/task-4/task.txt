@@ -1,0 +1,89 @@
+# Task ID: 4
+# Title: Implement Health Check Endpoint
+# Status: pending
+# Dependencies: 2
+# Priority: medium
+# Description: Create the health endpoint that returns the service status and current timestamp
+# Details:
+Add the following route handler to src/index.js after the root endpoint:
+
+```javascript
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
+});
+```
+
+This implements the health check endpoint that returns the service status and current timestamp in ISO format with a 200 status code as specified in the PRD.
+
+# Test Strategy:
+Test the endpoint by starting the server and making a GET request to http://localhost:3000/health using a browser or tools like curl or Postman. Verify that the response is a JSON object with the status 'healthy' and a valid ISO timestamp, and the status code is 200.
+
+# Subtasks:
+## 1. Create Health Check Route Handler [pending]
+### Dependencies: None
+### Description: Add the health check endpoint route handler to src/index.js that returns the service status and current timestamp
+### Details:
+Add the following code to src/index.js after the root endpoint handler:
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
+});
+
+## 2. Add Response Status Code [pending]
+### Dependencies: 4.1
+### Description: Ensure the health endpoint returns the correct HTTP status code (200)
+### Details:
+Verify that the response status is set to 200 in the health endpoint handler:
+
+res.status(200).json({
+  status: 'healthy',
+  timestamp: new Date().toISOString()
+});
+
+## 3. Format Timestamp in ISO Format [pending]
+### Dependencies: 4.1
+### Description: Ensure the timestamp is properly formatted in ISO 8601 format
+### Details:
+Verify that the timestamp is generated using the toISOString() method:
+
+timestamp: new Date().toISOString()
+
+## 4. Add Health Check Documentation [pending]
+### Dependencies: 4.1
+### Description: Add comments explaining the purpose and response format of the health check endpoint
+### Details:
+Add the following documentation above the health check endpoint:
+
+/**
+ * Health check endpoint
+ * Returns the service status and current timestamp
+ * Used for monitoring and automated health checks
+ * Response format:
+ * {
+ *   status: 'healthy',
+ *   timestamp: '2023-04-15T14:32:17.000Z'
+ * }
+ */
+
+## 5. Test Health Check Endpoint [pending]
+### Dependencies: 4.1, 4.2, 4.3
+### Description: Create a comprehensive test for the health endpoint to verify all requirements are met
+### Details:
+Create a test script or manual test plan that verifies:
+1. The endpoint is accessible at /health
+2. The response contains the correct status field with value 'healthy'
+3. The response contains a valid ISO timestamp
+4. The HTTP status code is 200
+
+Example test using curl:
+
+curl -v http://localhost:3000/health
+

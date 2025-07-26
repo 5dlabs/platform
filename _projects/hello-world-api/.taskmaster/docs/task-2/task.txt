@@ -1,0 +1,90 @@
+# Task ID: 2
+# Title: Create Express.js Server
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Implement the basic Express.js server that listens on port 3000 with request logging
+# Details:
+1. Create src/index.js file
+2. Import Express.js
+3. Create an Express application
+4. Set up middleware for request logging
+5. Configure the server to listen on port 3000
+
+Example implementation:
+```javascript
+const express = require('express');
+const app = express();
+const PORT = 3000;
+
+// Middleware for logging requests
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+// Server setup
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
+```
+
+# Test Strategy:
+Start the server with `npm start` and verify that it runs without errors and logs the startup message. Check that the server is accessible by making a request to http://localhost:3000 (it will return 404 at this point, but should be reachable).
+
+# Subtasks:
+## 1. Create src/index.js file and import Express.js [pending]
+### Dependencies: None
+### Description: Create the main server file and import the Express.js framework to begin building the server application.
+### Details:
+Create a src directory if it doesn't exist yet. Inside it, create an index.js file. Add the necessary import statements for Express.js and initialize the application and port constant:
+
+const express = require('express');
+const app = express();
+const PORT = 3000;
+
+## 2. Implement request logging middleware [pending]
+### Dependencies: 2.1
+### Description: Add middleware to log all incoming HTTP requests with timestamp, method, and URL information.
+### Details:
+Add the following middleware code after the Express initialization:
+
+// Middleware for logging requests
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+## 3. Configure server to listen on port 3000 [pending]
+### Dependencies: 2.1
+### Description: Set up the Express application to listen on port 3000 and log a startup message when the server successfully starts.
+### Details:
+Add the following code at the end of the index.js file to make the server listen on the specified port:
+
+// Server setup
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
+
+## 4. Add basic route placeholder [pending]
+### Dependencies: 2.2, 2.3
+### Description: Add a simple placeholder route to test that the server is functioning correctly before implementing specific endpoints.
+### Details:
+Add a basic route handler before the server.listen call:
+
+// Basic route placeholder
+app.get('/', (req, res) => {
+  res.status(200).send('Server is running');
+});
+
+## 5. Create a 404 handler for undefined routes [pending]
+### Dependencies: 2.4
+### Description: Implement a catch-all middleware that handles requests to undefined routes by returning a 404 status code.
+### Details:
+Add the following middleware after all route definitions but before the server.listen call:
+
+// 404 handler for undefined routes
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
