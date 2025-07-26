@@ -1,0 +1,139 @@
+# Task ID: 10
+# Title: Implement Health Check Endpoint
+# Status: pending
+# Dependencies: 8
+# Priority: medium
+# Description: Create a health check endpoint that returns the service status and current timestamp.
+# Details:
+Add the following route handler to src/index.js:
+```javascript
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
+});
+```
+This implements the GET /health endpoint that returns a JSON response with the service status and current ISO timestamp as specified in the requirements.
+
+# Test Strategy:
+Test the endpoint manually using a browser or tools like curl/Postman. Verify that the endpoint returns a JSON response with the correct status and a valid ISO timestamp.
+
+# Subtasks:
+## 1. Create basic health check route handler [pending]
+### Dependencies: None
+### Description: Add the initial health check endpoint route handler to src/index.js that returns a 200 status code with basic JSON response
+### Details:
+Add the following code to src/index.js after the existing route definitions:
+
+```javascript
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
+});
+```
+
+## 2. Add timestamp generation function [pending]
+### Dependencies: 10.1
+### Description: Create a separate function to generate the ISO timestamp to make the code more maintainable and testable
+### Details:
+Refactor the health check endpoint to use a dedicated function for timestamp generation:
+
+```javascript
+// Timestamp generation function
+const generateTimestamp = () => {
+  return new Date().toISOString();
+};
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: generateTimestamp()
+  });
+});
+```
+
+## 3. Add service status determination logic [pending]
+### Dependencies: 10.1
+### Description: Implement logic to determine the actual service status rather than hardcoding 'healthy'
+### Details:
+Create a function to determine the service status based on application state:
+
+```javascript
+// Service status determination function
+const getServiceStatus = () => {
+  // In a real application, this would check database connections,
+  // external service availability, etc.
+  // For now, we'll just return 'healthy'
+  return 'healthy';
+};
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: getServiceStatus(),
+    timestamp: new Date().toISOString()
+  });
+});
+```
+
+## 4. Add detailed health information to response [pending]
+### Dependencies: 10.1, 10.3
+### Description: Enhance the health check response with additional system information such as uptime and memory usage
+### Details:
+Expand the health check response to include more detailed system information:
+
+```javascript
+const os = require('os');
+
+// Enhanced health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: getServiceStatus(),
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: {
+      free: os.freemem(),
+      total: os.totalmem()
+    },
+    cpu: os.cpus().length
+  });
+});
+```
+
+## 5. Add documentation for the health check endpoint [pending]
+### Dependencies: 10.1, 10.2, 10.3, 10.4
+### Description: Add code comments and update any API documentation to include information about the health check endpoint
+### Details:
+Add comprehensive comments to the health check implementation and update any API documentation:
+
+```javascript
+/**
+ * Health Check Endpoint
+ * 
+ * GET /health
+ * 
+ * Returns the current service status and system information.
+ * Used by monitoring tools and load balancers to determine if the service is operational.
+ * 
+ * Response format:
+ * {
+ *   status: String - 'healthy' or 'unhealthy',
+ *   timestamp: String - ISO 8601 formatted date-time,
+ *   uptime: Number - seconds the process has been running,
+ *   memory: Object - memory usage information,
+ *   cpu: Number - number of CPU cores
+ * }
+ */
+app.get('/health', (req, res) => {
+  // Implementation as defined in previous subtasks
+});
+```
+
+Also update any README.md or API documentation files to include information about this endpoint.
+

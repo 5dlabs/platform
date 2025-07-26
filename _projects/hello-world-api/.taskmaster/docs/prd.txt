@@ -34,6 +34,7 @@ Create a minimal Express.js API that serves as a simple "Hello, World!" service.
 6. Add basic error handling
 7. Create README with usage instructions
 8. Test endpoints manually
+9. Research and document current Express.js best practices for error handling and middleware
 
 ## Out of Scope
 - Authentication/authorization
