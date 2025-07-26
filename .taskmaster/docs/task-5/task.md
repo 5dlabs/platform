@@ -779,41 +779,46 @@ async fn get_available_tool_names(client: Client) -> Result<Vec<String>, Box<dyn
 
 ## Completion Summary
 
-### Orchestrator Implementation ✅
+### What We Actually Implemented ✅
 
-1. **RBAC for Toolman**:
-   - Created `role.yaml` and `rolebinding.yaml` templates
-   - Added `rbac.create: true` to values.yaml
-   - Deployed Toolman with RBAC permissions to manage ConfigMaps
+After discussing with the user, we clarified the architecture and implemented the orchestrator-side changes:
 
-2. **ConfigMap Mounting**:
+1. **ConfigMap Mounting** (Task 5):
    - Updated `resources.rs` to mount `toolman-tool-catalog` ConfigMap
    - Mounts to `/etc/tool-catalog` in agent containers
    - Set as optional to not fail if ConfigMap doesn't exist
 
-3. **Tool Validation**:
-   - Created `tool_discovery.rs` module for validation
+2. **CRD Structure Update**:
+   - Updated `CodeRunSpec` to use structured `ToolConfig` instead of string fields
+   - Maintained backward compatibility in API
+   - Converts comma-separated strings to arrays
+
+3. **Tool Validation** (Task 11):
+   - Added `validate_tools` function in `common.rs`
    - Validates local tools against fixed set ["filesystem", "git"]
    - Validates remote tools exist in Toolman ConfigMap
-   - Gracefully handles missing ConfigMap
+   - Integrated validation into `code_handler`
 
 4. **Test ConfigMap**:
-   - Created test `toolman-tool-catalog` with sample data
+   - Created and applied test `toolman-tool-catalog` with sample data
    - Verified mounting works correctly
+
+### Architecture Clarification
+
+The user helped clarify that:
+- **Orchestrator**: Only mounts ConfigMaps and validates tools - no discovery logic
+- **Toolman**: Creates and maintains the tool catalog ConfigMap
+- **Docs Agent**: Reads mounted catalog and performs discovery/matching (runs in container)
 
 ### Pending Work
 
 1. **Toolman Implementation**:
-   - Toolman needs to create/update the catalog on startup
+   - Needs to create/update the catalog on startup
    - Should query each MCP server for tool details
-   - Update the ConfigMap with rich metadata
+   - Already has RBAC permissions via Helm chart updates
 
 2. **Docs Agent Implementation**:
    - Read mounted catalog from `/etc/tool-catalog/tool-catalog.json`
    - Implement project analysis logic
    - Match tools based on catalog metadata
    - Output configuration for code agents
-
-3. **Integration with Handlers**:
-   - Hook up validation in code_handler and docs_handler
-   - Update CodeRun/DocsRun status on validation errors
