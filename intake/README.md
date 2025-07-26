@@ -83,4 +83,4 @@ The GitHub Action will:
 
 Ready to submit your project? Just add your files and push! 🚀
 
-<!-- Test trigger for workflow v16 - Testing agent mode validation step -->
+<!-- Test trigger for workflow v17 - Testing custom Claude Code container -->
