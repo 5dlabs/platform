@@ -48,6 +48,44 @@ For each task (process ALL tasks, no exceptions):
 
 Place all documentation in `.taskmaster/docs/task-{id}/` directories.
 
+### Step 2.5: Tool Discovery and Selection (REQUIRED FOR EACH TASK)
+**For greenfield projects, intelligently select MCP tools based on task requirements:**
+
+1. **Read Tool Catalog**: Load the available tools from `/etc/tool-catalog/tool-catalog.json`
+   - This contains comprehensive information about all available MCP tools
+   - Study each tool's description, capabilities, and use cases
+
+2. **Analyze Task Requirements**: For each task, deeply understand:
+   - What needs to be built or implemented
+   - What technologies are mentioned or implied
+   - What capabilities the implementation will require
+
+3. **Select Appropriate Tools**: Make thoughtful tool recommendations:
+   - Always include "filesystem" for local file operations
+   - Select remote tools that directly support the task objectives
+   - Be selective - only include tools that are truly needed
+   - Consider the relationships between tools
+
+4. **Create Tool Configuration**: Save a `tools.json` file in each task folder:
+   ```json
+   {
+     "tools": {
+       "local": ["filesystem"],
+       "remote": ["kubernetes", "terraform"]  // Your intelligent selections
+     },
+     "reasoning": "Explain why these tools support the task requirements",
+     "generated_at": "2025-01-20T10:00:00Z"
+   }
+   ```
+
+**Example Analysis:**
+- Task mentions "Kubernetes deployment" → Include kubernetes tools
+- Task mentions "Terraform infrastructure" → Include terraform tools
+- Task mentions "Rust development" → Include rustdocs if available
+- Task is simple file manipulation → Just filesystem is sufficient
+
+**Important**: Use your understanding of the task and tools, not simple keyword matching. Make intelligent, context-aware decisions.
+
 ### Step 3: Complete Documentation Generation
 **⚠️ CRITICAL: You MUST generate ALL documentation files as specified above.**
 
@@ -82,7 +120,8 @@ Place all documentation in `.taskmaster/docs/task-{id}/` directories.
 🎉 DOCUMENTATION GENERATION COMPLETE 🎉
 ✅ Generated documentation for {{#if task_id}}task {{task_id}}{{else}}ALL tasks{{/if}}
 ✅ Created all required documentation files
-📋 Total files created: [COUNT]
+✅ Generated tools.json configurations for each task
+📋 Total files created: [COUNT] (including task.md, prompt.md, acceptance-criteria.md, and tools.json for each task)
 🔗 Git workflow and pull request will be handled automatically by orchestrator hook
 ```
 
