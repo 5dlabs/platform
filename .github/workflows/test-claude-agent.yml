@@ -1,0 +1,31 @@
+name: Test Claude Agent Mode
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-agent-mode:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test Claude Code in Agent Mode
+        uses: anthropics/claude-code-action@v0.0.44
+        with:
+          mode: agent
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          direct_prompt: |
+            This is a test of agent mode. Please:
+            
+            1. Read the current directory structure
+            2. Create a simple test file called "agent-mode-test.txt" with today's date
+            3. Confirm agent mode is working properly
+            
+            This is just a test to verify the mode parameter works correctly.
