@@ -126,6 +126,9 @@ jobs:
           # Set the main model to Opus
           task-master models --set-main "claude-opus-4-20250514"
 
+          # Set the research model to Opus as well (avoid Perplexity requirement)
+          task-master models --set-research "claude-opus-4-20250514"
+
           # Parse PRD with no research and unlimited tasks
           task-master parse-prd \
             --input=".taskmaster/docs/prd.txt" \
