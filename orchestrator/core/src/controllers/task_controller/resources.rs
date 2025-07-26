@@ -294,11 +294,13 @@ fn build_job_spec(
             env_vars
                 .push(json!({"name": "MCP_CLIENT_CONFIG", "value": "/.claude/client-config.json"}));
 
-            if let Some(local_tools) = &cr.spec.local_tools {
-                env_vars.push(json!({"name": "LOCAL_TOOLS", "value": local_tools}));
-            }
-            if let Some(remote_tools) = &cr.spec.remote_tools {
-                env_vars.push(json!({"name": "REMOTE_TOOLS", "value": remote_tools}));
+            if let Some(tools) = &cr.spec.tools {
+                if !tools.local.is_empty() {
+                    env_vars.push(json!({"name": "LOCAL_TOOLS", "value": tools.local.join(",")}));
+                }
+                if !tools.remote.is_empty() {
+                    env_vars.push(json!({"name": "REMOTE_TOOLS", "value": tools.remote.join(",")}));
+                }
             }
 
             // Add toolman server URL for MCP integration

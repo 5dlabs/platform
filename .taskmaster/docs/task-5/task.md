@@ -776,3 +776,44 @@ async fn get_available_tool_names(client: Client) -> Result<Vec<String>, Box<dyn
 ```
 
 ### 6. Pattern Matching
+
+## Completion Summary
+
+### Orchestrator Implementation ✅
+
+1. **RBAC for Toolman**:
+   - Created `role.yaml` and `rolebinding.yaml` templates
+   - Added `rbac.create: true` to values.yaml
+   - Deployed Toolman with RBAC permissions to manage ConfigMaps
+
+2. **ConfigMap Mounting**:
+   - Updated `resources.rs` to mount `toolman-tool-catalog` ConfigMap
+   - Mounts to `/etc/tool-catalog` in agent containers
+   - Set as optional to not fail if ConfigMap doesn't exist
+
+3. **Tool Validation**:
+   - Created `tool_discovery.rs` module for validation
+   - Validates local tools against fixed set ["filesystem", "git"]
+   - Validates remote tools exist in Toolman ConfigMap
+   - Gracefully handles missing ConfigMap
+
+4. **Test ConfigMap**:
+   - Created test `toolman-tool-catalog` with sample data
+   - Verified mounting works correctly
+
+### Pending Work
+
+1. **Toolman Implementation**:
+   - Toolman needs to create/update the catalog on startup
+   - Should query each MCP server for tool details
+   - Update the ConfigMap with rich metadata
+
+2. **Docs Agent Implementation**:
+   - Read mounted catalog from `/etc/tool-catalog/tool-catalog.json`
+   - Implement project analysis logic
+   - Match tools based on catalog metadata
+   - Output configuration for code agents
+
+3. **Integration with Handlers**:
+   - Hook up validation in code_handler and docs_handler
+   - Update CodeRun/DocsRun status on validation errors

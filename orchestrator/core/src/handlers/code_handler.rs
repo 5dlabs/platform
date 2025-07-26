@@ -10,6 +10,17 @@ use crate::crds::{CodeRun, CodeRunSpec, CodeRunStatus};
 use crate::handlers::common::{ApiResponse, AppState};
 use common::models::CodeRequest;
 
+/// Convert comma-separated tools string to vector
+fn parse_tools_string(tools: Option<String>) -> Vec<String> {
+    tools
+        .unwrap_or_default()
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect()
+}
+
 pub async fn submit_code_task(
     State(state): State<AppState>,
     Json(request): Json<CodeRequest>,
@@ -18,6 +29,28 @@ pub async fn submit_code_task(
         "Received code task request: task_id={}, service={}",
         request.task_id, request.service
     );
+
+    // Convert string-based tools to structured format
+    let tools = if request.local_tools.is_some() || request.remote_tools.is_some() {
+        Some(crate::crds::coderun::ToolConfig {
+            local: parse_tools_string(request.local_tools.clone()),
+            remote: parse_tools_string(request.remote_tools.clone()),
+        })
+    } else {
+        None
+    };
+
+    // Validate tools if specified
+    if let Some(ref tool_config) = tools {
+        if let Err(e) = super::common::validate_tools(
+            &tool_config.local,
+            &tool_config.remote,
+            state.k8s_client.clone(),
+        ).await {
+            error!("Tool validation failed: {}", e);
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    }
 
     let spec = CodeRunSpec {
         task_id: request.task_id,
@@ -31,8 +64,7 @@ pub async fn submit_code_task(
                 .unwrap_or_else(|_| "claude-sonnet-4-20250514".to_string())
         }),
         github_user: request.github_user,
-        local_tools: request.local_tools,
-        remote_tools: request.remote_tools,
+        tools,
         context_version: request.context_version,
         prompt_modification: request.prompt_modification,
         docs_branch: request.docs_branch,

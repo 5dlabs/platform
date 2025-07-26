@@ -137,17 +137,29 @@ impl TaskType {
     }
 
     /// Get tool configuration for the task
-    pub fn local_tools(&self) -> Option<&str> {
+    pub fn local_tools(&self) -> Option<String> {
         match self {
             TaskType::Docs(_) => None, // Docs use fixed tool set
-            TaskType::Code(cr) => cr.spec.local_tools.as_deref(),
+            TaskType::Code(cr) => cr.spec.tools.as_ref().and_then(|t| {
+                if t.local.is_empty() {
+                    None
+                } else {
+                    Some(t.local.join(","))
+                }
+            }),
         }
     }
 
-    pub fn remote_tools(&self) -> Option<&str> {
+    pub fn remote_tools(&self) -> Option<String> {
         match self {
             TaskType::Docs(_) => None, // Docs use fixed tool set
-            TaskType::Code(cr) => cr.spec.remote_tools.as_deref(),
+            TaskType::Code(cr) => cr.spec.tools.as_ref().and_then(|t| {
+                if t.remote.is_empty() {
+                    None
+                } else {
+                    Some(t.remote.join(","))
+                }
+            }),
         }
     }
 

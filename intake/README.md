@@ -31,7 +31,7 @@ Our automated pipeline will:
 
 ✅ **Detect** your submitted files
 ✅ **Extract** the project name from your documents
-✅ **Create** a complete project structure under `_projects/`
+✅ **Create** a complete project structure under `projects/`
 ✅ **Initialize** TaskMaster with the Opus model
 ✅ **Generate** comprehensive tasks from your PRD
 ✅ **Analyze** task complexity and expand with subtasks
@@ -44,7 +44,7 @@ Our automated pipeline will:
 After processing, your project will look like this:
 
 ```
-_projects/your-project-name/
+projects/your-project-name/
 ├── .taskmaster/
 │   ├── docs/
 │   │   ├── prd.txt

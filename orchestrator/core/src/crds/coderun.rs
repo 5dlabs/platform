@@ -38,6 +38,18 @@ fn default_overwrite_memory() -> bool {
     false
 }
 
+/// Tool configuration
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, Default)]
+pub struct ToolConfig {
+    /// Local MCP tools to enable
+    #[serde(default)]
+    pub local: Vec<String>,
+
+    /// Remote MCP tools via toolman
+    #[serde(default)]
+    pub remote: Vec<String>,
+}
+
 /// `CodeRun` CRD for code implementation tasks
 #[derive(CustomResource, Deserialize, Serialize, Clone, Debug, JsonSchema)]
 #[kube(group = "orchestrator.platform", version = "v1", kind = "CodeRun")]
@@ -79,13 +91,9 @@ pub struct CodeRunSpec {
     #[serde(rename = "githubUser")]
     pub github_user: String,
 
-    /// Local MCP tools/servers to enable (comma-separated)
-    #[serde(default, rename = "localTools")]
-    pub local_tools: Option<String>,
-
-    /// Remote MCP tools/servers to enable (comma-separated)
-    #[serde(default, rename = "remoteTools")]
-    pub remote_tools: Option<String>,
+    /// Tool configuration for this run
+    #[serde(default)]
+    pub tools: Option<ToolConfig>,
 
     /// Context version for retry attempts (incremented on each retry)
     #[serde(default = "default_context_version", rename = "contextVersion")]
