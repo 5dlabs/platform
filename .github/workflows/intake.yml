@@ -59,15 +59,16 @@ jobs:
         uses: docker://ghcr.io/5dlabs/platform/claude-code:1.0.61
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          HOME: /workspace
         with:
           entrypoint: /bin/bash
           args: |
             -c "echo '🧪 Testing Claude Code functionality...' && 
-                echo 'Container working directory:' && pwd &&
-                echo 'GitHub workspace (/github/workspace):' && ls -la /github/workspace || echo 'No /github/workspace' &&
-                echo 'Workspace env var: $GITHUB_WORKSPACE' &&
-                echo 'Root directory:' && ls -la / &&
-                echo 'Workspace directory (/workspace):' && ls -la /workspace || echo 'No /workspace' &&
+                echo 'Current user:' && whoami &&
+                echo 'Home directory: $HOME' &&
+                echo 'Setting up Claude Code workspace...' &&
+                mkdir -p /workspace/.claude &&
+                chown -R node:node /workspace &&
                 cd /github/workspace &&
                 echo 'Testing simple Claude command...' &&
                 echo 'This is a validation test. Please respond with: VALIDATION_SUCCESS' | claude --prompt-stdin --non-interactive &&
