@@ -75,6 +75,10 @@ spec:
             - name: controller-config
               mountPath: /config
               readOnly: true
+            # Mount tool catalog ConfigMap
+            - name: tool-catalog
+              mountPath: /tool-catalog
+              readOnly: true
           {{- if .Values.healthCheck.enabled }}
           livenessProbe:
             httpGet:
@@ -106,6 +110,10 @@ spec:
         - name: controller-config
           configMap:
             name: {{ include "orchestrator.fullname" . }}-task-controller-config
+        # Mount tool catalog ConfigMap
+        - name: tool-catalog
+          configMap:
+            name: toolman-tool-catalog
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

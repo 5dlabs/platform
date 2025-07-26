@@ -542,7 +542,7 @@ fn get_hook_templates(task: &TaskType) -> Result<Vec<(String, String)>> {
     Ok(templates)
 }
 
-/// Generate tool catalog documentation from live ConfigMap data
+/// Generate tool catalog documentation from mounted ConfigMap file
 fn generate_tool_catalog_documentation() -> Result<String> {
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false);
@@ -557,8 +557,8 @@ fn generate_tool_catalog_documentation() -> Result<String> {
             ))
         })?;
 
-    // For now use mock data - TODO: Pass ConfigMap data from caller
-    let tool_catalog_data = get_mock_tool_catalog_data();
+    // Read tool catalog data from mounted ConfigMap file
+    let tool_catalog_data = get_tool_catalog_data_from_file()?;
 
     let data = json!({
         "tool_catalog": tool_catalog_data
@@ -571,61 +571,22 @@ fn generate_tool_catalog_documentation() -> Result<String> {
     })
 }
 
-/// Get mock tool catalog data (temporary fallback)
-fn get_mock_tool_catalog_data() -> serde_json::Value {
-    json!({
-        "last_updated": "2025-07-26T23:20:00.000000000+00:00",
-        "remote": {
-            "kubernetes": {
-                "description": "Kubernetes cluster operations",
-                "tools": [
-                    {
-                        "name": "kubernetes_listResources",
-                        "description": "List cluster resources by type",
-                        "category": "cluster-ops"
-                    },
-                    {
-                        "name": "kubernetes_getResource",
-                        "description": "Get specific resource details",
-                        "category": "cluster-ops"
-                    }
-                ]
-            },
-            "brave-search": {
-                "description": "Web search using Brave Search API",
-                "tools": [
-                    {
-                        "name": "brave_web_search",
-                        "description": "Performs a web search using the Brave Search API",
-                        "category": "search"
-                    }
-                ]
-            }
-        },
-        "local": {
-            "filesystem": {
-                "description": "File system operations for reading, writing, and managing files",
-                "command": "npx",
-                "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
-                "working_directory": "project_root",
-                "tools": [
-                    {
-                        "name": "read_file",
-                        "description": "Read file contents",
-                        "category": "file-ops"
-                    },
-                    {
-                        "name": "write_file",
-                        "description": "Create or overwrite files",
-                        "category": "file-ops"
-                    },
-                    {
-                        "name": "list_directory",
-                        "description": "List directory contents",
-                        "category": "file-ops"
-                    }
-                ]
-            }
-        }
+/// Read tool catalog data from mounted ConfigMap file
+fn get_tool_catalog_data_from_file() -> Result<serde_json::Value> {
+    use std::fs;
+
+    // Read the tool catalog JSON from the mounted ConfigMap
+    let tool_catalog_json = fs::read_to_string("/tool-catalog/tool-catalog.json")
+        .map_err(|e| {
+            crate::controllers::task_controller::types::Error::ConfigError(format!(
+                "Failed to read tool catalog file: {e}"
+            ))
+        })?;
+
+    // Parse the JSON
+    serde_json::from_str(&tool_catalog_json).map_err(|e| {
+        crate::controllers::task_controller::types::Error::ConfigError(format!(
+            "Failed to parse tool catalog JSON: {e}"
+        ))
     })
 }
