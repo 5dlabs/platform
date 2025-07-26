@@ -1,0 +1,43 @@
+# Task ID: 17
+# Title: Implement Number Button Click Handler
+# Status: pending
+# Dependencies: 15, 16
+# Priority: high
+# Description: Create event handler for number button clicks
+# Details:
+Create handleNumberClick(num) function, check if waitingForNewValue is true and reset currentValue, append number to currentValue (handle '0' edge case), update waitingForNewValue to false, call updateDisplay(), prevent multiple leading zeros
+
+# Test Strategy:
+Test clicking numbers updates display correctly, verify handling of multiple zeros, check state updates properly
+
+# Subtasks:
+## 1. Create basic click handler function [pending]
+### Dependencies: None
+### Description: Set up the handleNumberClick function structure and event binding
+### Details:
+Create handleNumberClick(num) function that accepts a number parameter. Set up event listeners for all number buttons (0-9) to call this function with the appropriate digit value when clicked.
+
+## 2. Implement digit appending logic [pending]
+### Dependencies: 17.1
+### Description: Add logic to append clicked digits to the current value
+### Details:
+Inside handleNumberClick, implement logic to append the clicked number to currentValue. Convert currentValue to string, append the new digit, and convert back to appropriate numeric format. Handle the case where currentValue is '0' by replacing instead of appending.
+
+## 3. Handle waitingForNewValue state [pending]
+### Dependencies: 17.1
+### Description: Implement state management for new number entry after operations
+### Details:
+Check if waitingForNewValue is true at the start of handleNumberClick. If true, replace currentValue with the clicked digit instead of appending. Set waitingForNewValue to false after handling the input to ensure subsequent digits are appended correctly.
+
+## 4. Prevent leading zeros [pending]
+### Dependencies: 17.2
+### Description: Add validation to prevent multiple leading zeros
+### Details:
+Implement logic to prevent multiple leading zeros. Check if currentValue is '0' and the clicked digit is also '0' - in this case, do nothing. Allow '0' followed by decimal point. Ensure single '0' is valid but '00', '000' etc. are prevented.
+
+## 5. Integrate with display updates [pending]
+### Dependencies: 17.2, 17.3, 17.4
+### Description: Connect number handler to display update function
+### Details:
+Call updateDisplay() function at the end of handleNumberClick to reflect changes in the UI. Ensure the display is updated after every valid number input. Test that the display shows the correct value after each digit is clicked.
+

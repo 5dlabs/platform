@@ -1,0 +1,37 @@
+# Task ID: 32
+# Title: Write Tests for Display Updates
+# Status: pending
+# Dependencies: 29, 16
+# Priority: medium
+# Description: Create tests for display update functionality
+# Details:
+Test display shows correct values, test number formatting (leading zeros, decimals), test display updates after operations, test error message display, test display clearing
+
+# Test Strategy:
+Mock DOM elements for testing, verify display updates match expected values, check all display scenarios
+
+# Subtasks:
+## 1. Test Basic Display Updates [pending]
+### Dependencies: None
+### Description: Create tests for basic display update functionality including initial state and value changes
+### Details:
+Test that display shows '0' initially, verify updateDisplay() correctly updates the display element text content, test display updates with single digits, multi-digit numbers, and decimal values, ensure display reflects current calculator state accurately
+
+## 2. Test Number Formatting [pending]
+### Dependencies: 32.1
+### Description: Implement tests for various number formatting scenarios in the display
+### Details:
+Test leading zero handling (0.5 displays as '0.5'), verify decimal point formatting, test large number display with appropriate formatting, check negative number display, test scientific notation for very large/small numbers if applicable
+
+## 3. Test Error Display [pending]
+### Dependencies: 32.1
+### Description: Create tests for error message display and clearing functionality
+### Details:
+Test 'Error' display for division by zero, verify error messages for invalid operations, test that error display clears on next valid input, ensure error state is properly managed and displayed, test overflow error display for numbers exceeding display capacity
+
+## 4. Mock DOM for Testing [pending]
+### Dependencies: None
+### Description: Set up DOM mocking infrastructure for display testing
+### Details:
+Create mock display element with getElementById stub, implement document.createElement mock for test setup, ensure mocked elements support textContent property, set up beforeEach/afterEach hooks to reset DOM state between tests, verify mock DOM behaves like real display element
+

@@ -1,0 +1,43 @@
+# Task ID: 29
+# Title: Create Unit Tests Structure
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Set up testing framework and create test file structure
+# Details:
+Create tests directory, set up simple test runner (can use vanilla JS or lightweight framework), create calculator.test.js file, implement basic test assertion functions, structure tests by functionality groups
+
+# Test Strategy:
+Verify test structure is created, ensure test runner can execute tests, check basic assertion functions work
+
+# Subtasks:
+## 1. Create test directory structure [pending]
+### Dependencies: None
+### Description: Set up the tests directory with proper folder organization for unit tests, integration tests, and test utilities
+### Details:
+Create /tests directory at project root, add subdirectories for /unit, /integration, and /utils, create index.html as test runner page, add .gitkeep files to maintain empty directories
+
+## 2. Set up test runner [pending]
+### Dependencies: 29.1
+### Description: Implement a simple test runner system that can discover and execute test files
+### Details:
+Create testRunner.js with functions to load test files, execute test suites, track pass/fail results, display results in console and HTML, implement async test support
+
+## 3. Create assertion utilities [pending]
+### Dependencies: 29.1
+### Description: Build assertion functions for testing including assertEqual, assertTrue, assertFalse, and assertThrows
+### Details:
+Create assertions.js in tests/utils with assertEqual(actual, expected), assertTrue(condition), assertFalse(condition), assertThrows(fn, errorType), include helpful error messages with actual vs expected values
+
+## 4. Organize test suites [pending]
+### Dependencies: 29.2, 29.3
+### Description: Create test suite structure with describe() and it() functions for organizing related tests
+### Details:
+Implement describe(suiteName, callback) for grouping tests, create it(testName, callback) for individual tests, add beforeEach() and afterEach() hooks, support nested describe blocks
+
+## 5. Create example tests [pending]
+### Dependencies: 29.4
+### Description: Write calculator.test.js with example tests demonstrating the testing framework usage
+### Details:
+Create tests for basic arithmetic operations, test display updates, verify button click handlers, demonstrate async test patterns, include at least 10 example test cases covering main calculator functionality
+

@@ -1,0 +1,25 @@
+# Task ID: 8
+# Title: Create Control Buttons HTML
+# Status: pending
+# Dependencies: 7
+# Priority: high
+# Description: Add HTML markup for Clear (C) and Equals (=) buttons
+# Details:
+Create Clear button with id='clear-btn' and text 'C', create Equals button with id='equals-btn' and text '=', position Clear button at top of calculator, position Equals button at bottom right, add appropriate classes for styling
+
+# Test Strategy:
+Verify Clear and Equals buttons exist with correct IDs, check positioning in the layout, ensure buttons are accessible via keyboard
+
+# Subtasks:
+## 1. Create Clear button with proper ID and positioning [pending]
+### Dependencies: None
+### Description: Add HTML markup for the Clear button with correct ID attribute and position it at the top of the calculator layout
+### Details:
+Create a button element with id='clear-btn' and text content 'C'. Add appropriate classes for styling and ensure the button is positioned at the top of the calculator grid layout for easy access
+
+## 2. Create Equals button with ID and grid placement [pending]
+### Dependencies: None
+### Description: Add HTML markup for the Equals button with correct ID attribute and position it at the bottom right of the calculator
+### Details:
+Create a button element with id='equals-btn' and text content '='. Add appropriate classes for styling and position the button at the bottom right corner of the calculator grid, typically spanning multiple columns for emphasis
+

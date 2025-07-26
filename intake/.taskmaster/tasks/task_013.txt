@@ -1,0 +1,25 @@
+# Task ID: 13
+# Title: Style Operation Buttons
+# Status: pending
+# Dependencies: 7, 12
+# Priority: medium
+# Description: Apply distinct styling to operation buttons
+# Details:
+Style .operation-btn with background-color: #ff9800, color: white, same size as number buttons, hover state with darker orange, ensure visual distinction from number buttons, maintain consistent button size and spacing
+
+# Test Strategy:
+Verify operation buttons are visually distinct, check color contrast meets accessibility standards, ensure hover states work
+
+# Subtasks:
+## 1. Apply distinct colors and base styles to operation buttons [pending]
+### Dependencies: None
+### Description: Style operation buttons with orange theme (#ff9800) and ensure they match the size of number buttons while being visually distinct
+### Details:
+Set background-color: #ff9800 for .operation-btn, color: white for text, match width and height to number buttons (50px), apply same border-radius and font-size as number buttons, ensure proper contrast ratio for accessibility
+
+## 2. Implement hover states and ensure visual consistency [pending]
+### Dependencies: 13.1
+### Description: Add hover effects to operation buttons and verify consistent spacing and alignment with other calculator elements
+### Details:
+Create hover state with darker orange color (#e68900), add transition effect for smooth color change, verify button spacing matches number button grid, ensure operation buttons maintain consistent appearance across different screen sizes
+

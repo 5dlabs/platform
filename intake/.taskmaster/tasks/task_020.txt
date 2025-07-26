@@ -1,0 +1,43 @@
+# Task ID: 20
+# Title: Implement Basic Calculation Logic
+# Status: pending
+# Dependencies: 15
+# Priority: high
+# Description: Create function to perform arithmetic calculations
+# Details:
+Create calculate() function that takes two numbers and an operation, implement switch statement for +, -, *, / operations, handle division by zero with error message, return calculated result as string, ensure proper number precision
+
+# Test Strategy:
+Test all four operations with various inputs, verify division by zero handling, check precision of results
+
+# Subtasks:
+## 1. Create calculate function structure [pending]
+### Dependencies: None
+### Description: Set up the basic calculate() function that accepts two numbers and an operation parameter
+### Details:
+Define function signature as calculate(num1, num2, operation), validate input parameters are numbers, set up switch statement structure for operations, return result as string
+
+## 2. Implement arithmetic operations [pending]
+### Dependencies: 20.1
+### Description: Add cases for addition, subtraction, multiplication, and division in the switch statement
+### Details:
+Implement case '+' for addition, case '-' for subtraction, case '*' for multiplication, case '/' for division, include default case for invalid operations
+
+## 3. Handle division by zero [pending]
+### Dependencies: 20.2
+### Description: Add special handling for division by zero to prevent errors and show appropriate message
+### Details:
+Check if divisor is zero before division operation, return 'Error' or 'Cannot divide by zero' message, ensure error state is handled properly in display
+
+## 4. Manage number precision [pending]
+### Dependencies: 20.2
+### Description: Implement logic to handle floating point precision issues and limit decimal places
+### Details:
+Use parseFloat and toFixed for precision control, handle very small numbers close to zero, prevent floating point errors like 0.1 + 0.2 = 0.30000000000000004, limit to reasonable decimal places (8-10)
+
+## 5. Format results appropriately [pending]
+### Dependencies: 20.3, 20.4
+### Description: Format the calculation results for display, removing unnecessary decimals and handling edge cases
+### Details:
+Remove trailing zeros after decimal point, convert very large numbers to exponential notation if needed, ensure result fits within display constraints, handle special cases like Infinity or NaN
+

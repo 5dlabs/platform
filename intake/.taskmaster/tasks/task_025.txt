@@ -1,0 +1,43 @@
+# Task ID: 25
+# Title: Implement Input Validation
+# Status: pending
+# Dependencies: 17, 23
+# Priority: medium
+# Description: Add validation to prevent invalid inputs and edge cases
+# Details:
+Limit input length to prevent overflow (max 15 digits), prevent multiple operators in sequence, validate decimal point usage, handle very large numbers with scientific notation if needed, prevent invalid operations
+
+# Test Strategy:
+Test input length limits, verify invalid sequences are prevented, check edge cases with large numbers
+
+# Subtasks:
+## 1. Implement Length Limits [pending]
+### Dependencies: None
+### Description: Add validation to limit input length to prevent overflow
+### Details:
+Create a validation function to check if current input length exceeds 15 digits. Prevent additional digit input when limit is reached. Handle edge cases for decimal numbers and negative numbers in length calculation. Consider scientific notation display for very large results.
+
+## 2. Prevent Invalid Operation Sequences [pending]
+### Dependencies: None
+### Description: Validate and prevent multiple operators in sequence
+### Details:
+Implement logic to prevent consecutive operators (++, --, **, //). Allow operator replacement if user presses different operator. Handle special cases like negative numbers after operators. Ensure proper state management when preventing invalid sequences.
+
+## 3. Validate Decimal Usage [pending]
+### Dependencies: None
+### Description: Implement validation for decimal point usage
+### Details:
+Prevent multiple decimal points in a single number. Check if current number already contains decimal before allowing decimal input. Reset decimal flag when new number starts. Handle edge cases like starting with decimal point (should prepend 0).
+
+## 4. Handle Large Numbers [pending]
+### Dependencies: 25.1
+### Description: Implement handling for very large numbers and overflow
+### Details:
+Detect when calculation results exceed display limits. Implement scientific notation conversion for numbers larger than 10^15. Handle JavaScript number precision limits. Prevent operations that would cause infinity or NaN results.
+
+## 5. Add Error Feedback [pending]
+### Dependencies: 25.1, 25.2, 25.3, 25.4
+### Description: Implement user feedback for validation errors
+### Details:
+Create visual feedback system for validation errors (flash display, show error message, or change color). Add audio feedback option for invalid inputs. Display appropriate error messages for different validation failures. Implement error state management and clearing.
+

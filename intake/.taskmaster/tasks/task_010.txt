@@ -1,0 +1,31 @@
+# Task ID: 10
+# Title: Style Calculator Container
+# Status: pending
+# Dependencies: 5
+# Priority: medium
+# Description: Apply CSS styling to the main calculator container
+# Details:
+Style #calculator with background color, border-radius: 10px, box-shadow for depth effect, padding: 20px, margin: 50px auto for centering, add subtle gradient or solid background, ensure container is visually distinct from page background
+
+# Test Strategy:
+Verify calculator container is centered on page, check styling is applied correctly, ensure visual hierarchy is clear
+
+# Subtasks:
+## 1. Apply basic container styles and dimensions [pending]
+### Dependencies: None
+### Description: Set fundamental styles for the calculator container including dimensions, padding, and margin for centering
+### Details:
+Target #calculator element and apply: max-width: 400px (matching grid layout), padding: 20px for internal spacing, margin: 50px auto for horizontal centering, display: block to ensure proper margin auto behavior. These foundational styles establish the container's size and position on the page.
+
+## 2. Add visual effects (shadow, border-radius, gradient) [pending]
+### Dependencies: 10.1
+### Description: Enhance the container's appearance with decorative CSS properties for depth and visual appeal
+### Details:
+Apply border-radius: 10px for rounded corners, add box-shadow (e.g., 0 4px 20px rgba(0,0,0,0.1)) for depth effect, implement background using either a subtle gradient (e.g., linear-gradient(135deg, #f5f5f5, #e0e0e0)) or solid color that contrasts with the page background. Ensure these effects create visual hierarchy without being overwhelming.
+
+## 3. Implement centering and spacing [pending]
+### Dependencies: 10.1, 10.2
+### Description: Fine-tune the container's positioning and ensure proper spacing from viewport edges
+### Details:
+Verify margin: 50px auto centers the container horizontally, add position: relative to establish positioning context for child elements, ensure adequate spacing from viewport edges on smaller screens, test centering at various viewport widths. Consider adding min-height to prevent container collapse and maintain consistent appearance.
+

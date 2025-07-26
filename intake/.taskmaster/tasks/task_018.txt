@@ -1,0 +1,43 @@
+# Task ID: 18
+# Title: Implement Operation Button Click Handler
+# Status: pending
+# Dependencies: 17
+# Priority: high
+# Description: Create event handler for operation button clicks
+# Details:
+Create handleOperationClick(op) function, if there's a pending operation perform it first, store currentValue in previousValue, set operation to clicked operation, set waitingForNewValue to true, handle consecutive operations correctly
+
+# Test Strategy:
+Test operation buttons set correct state, verify handling of consecutive operations, check edge cases like operating on zero
+
+# Subtasks:
+## 1. Create operation handler function [pending]
+### Dependencies: None
+### Description: Implement the main handleOperationClick function that processes operation button clicks
+### Details:
+Create handleOperationClick(op) function that accepts an operation parameter (+, -, *, /). The function should be attached to all operation buttons and handle the initial setup when an operation is clicked.
+
+## 2. Handle pending calculations [pending]
+### Dependencies: 18.1
+### Description: Implement logic to perform any pending operation before setting a new one
+### Details:
+Check if there's already a pending operation (previousValue and operation are set). If so, perform the calculation first using the existing operation, previousValue, and currentValue. Update the display with the result before proceeding with the new operation.
+
+## 3. Manage state transitions [pending]
+### Dependencies: 18.1
+### Description: Update calculator state variables when an operation is selected
+### Details:
+After handling any pending calculation, store currentValue in previousValue, set the operation variable to the clicked operation, and set waitingForNewValue to true. This prepares the calculator to accept the next number input.
+
+## 4. Implement consecutive operations [pending]
+### Dependencies: 18.2, 18.3
+### Description: Enable chaining multiple operations without pressing equals
+### Details:
+Ensure that clicking operation buttons consecutively works correctly. When a new operation is clicked while one is pending, calculate the result of the pending operation, display it, and set up for the new operation. This allows for continuous calculations like '2 + 3 * 4'.
+
+## 5. Handle edge cases [pending]
+### Dependencies: 18.1, 18.2, 18.3
+### Description: Implement error handling and special case logic for operation handling
+### Details:
+Handle edge cases including: division by zero (display 'Error'), operations on empty or zero values, clicking an operation immediately after equals, and switching operations before entering a second number. Ensure the calculator remains in a valid state.
+

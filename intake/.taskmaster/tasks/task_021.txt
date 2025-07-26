@@ -1,0 +1,37 @@
+# Task ID: 21
+# Title: Implement Equals Button Functionality
+# Status: pending
+# Dependencies: 20
+# Priority: high
+# Description: Create handler for equals button to perform calculations
+# Details:
+Create handleEquals() function, check if operation and previousValue exist, call calculate() with previousValue, currentValue, and operation, update currentValue with result, reset operation and previousValue, call updateDisplay()
+
+# Test Strategy:
+Test equals button performs calculations correctly, verify state is properly reset after calculation, check edge cases
+
+# Subtasks:
+## 1. Create equals handler function [pending]
+### Dependencies: None
+### Description: Implement the handleEquals() function that will be triggered when the equals button is clicked
+### Details:
+Create a new function called handleEquals() in the calculator logic. This function should be attached to the equals button click event. The function will serve as the main entry point for executing calculations when the user presses equals.
+
+## 2. Validate operation state [pending]
+### Dependencies: 21.1
+### Description: Check if all necessary values exist before attempting calculation
+### Details:
+Inside handleEquals(), validate that both previousValue and operation exist in the calculator state. If either is missing, the function should return early without performing any calculation. This prevents errors when equals is pressed without a complete operation.
+
+## 3. Perform calculation and update display [pending]
+### Dependencies: 21.2
+### Description: Execute the calculation using the calculate() function and update the display with the result
+### Details:
+Call the calculate() function with previousValue, currentValue, and operation as parameters. Store the result and update currentValue in the calculator state with this result. Call updateDisplay() to show the calculated result to the user.
+
+## 4. Reset operation state appropriately [pending]
+### Dependencies: 21.3
+### Description: Clear the operation state after calculation to prepare for the next calculation
+### Details:
+After successfully performing the calculation and updating the display, reset the operation to null and clear previousValue. This ensures the calculator is in a clean state for the next operation, allowing the result to be used as the starting point for a new calculation if needed.
+

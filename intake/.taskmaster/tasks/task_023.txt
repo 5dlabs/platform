@@ -1,0 +1,37 @@
+# Task ID: 23
+# Title: Implement Decimal Point Support
+# Status: pending
+# Dependencies: 17
+# Priority: medium
+# Description: Add support for decimal numbers in calculations
+# Details:
+Add decimal button to HTML with class 'number-btn' and data-number='.', modify handleNumberClick to prevent multiple decimals in one number, ensure decimal calculations work correctly, update display logic to handle decimals
+
+# Test Strategy:
+Test decimal point can only be added once per number, verify decimal calculations are accurate, check display formatting
+
+# Subtasks:
+## 1. Add decimal button to HTML [pending]
+### Dependencies: None
+### Description: Add a decimal point button to the calculator HTML layout with appropriate styling and data attributes
+### Details:
+Create a button element with class 'number-btn' and data-number='.' attribute. Position it appropriately in the calculator grid layout, typically near the 0 button. Ensure consistent styling with other number buttons.
+
+## 2. Modify number handler for decimal input [pending]
+### Dependencies: 23.1
+### Description: Update the handleNumberClick function to properly handle decimal point input and append it to the current number
+### Details:
+Modify handleNumberClick to recognize '.' as a valid input. Ensure decimal point is appended to currentValue in state. Handle edge case where decimal is pressed first by prepending '0.' to the display.
+
+## 3. Prevent multiple decimals [pending]
+### Dependencies: 23.2
+### Description: Add validation logic to prevent users from entering multiple decimal points in a single number
+### Details:
+Check if currentValue already contains a decimal point before allowing another one. Ignore subsequent decimal button presses if one already exists. Consider visual or audio feedback for invalid input attempts.
+
+## 4. Update calculation logic for decimals [pending]
+### Dependencies: 23.3
+### Description: Ensure all calculation operations properly handle decimal numbers with appropriate precision
+### Details:
+Verify parseFloat is used instead of parseInt for number conversion. Handle floating-point precision issues using appropriate rounding. Test all operations (add, subtract, multiply, divide) with decimal inputs. Consider displaying results with reasonable decimal places.
+

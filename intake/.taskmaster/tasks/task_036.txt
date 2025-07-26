@@ -1,0 +1,31 @@
+# Task ID: 36
+# Title: Add Loading Animation
+# Status: pending
+# Dependencies: 2, 3
+# Priority: low
+# Description: Create a simple loading animation while calculator initializes
+# Details:
+Create simple CSS loading spinner, show during DOMContentLoaded, hide once calculator is initialized, ensure fast loading doesn't show flicker, add fade-in animation for calculator
+
+# Test Strategy:
+Verify loading animation appears and disappears correctly, check no flicker on fast connections, test animation is smooth
+
+# Subtasks:
+## 1. Create CSS spinner animation [pending]
+### Dependencies: None
+### Description: Design and implement a CSS-based loading spinner animation using keyframes
+### Details:
+Create a simple CSS spinner using ::before/::after pseudo-elements or a div element. Define @keyframes for rotation animation. Style the spinner with appropriate size (40-60px), colors matching calculator theme, and position it centered on screen. Use transform: rotate() for smooth animation. Set animation duration to 1-2 seconds with infinite loop.
+
+## 2. Implement show/hide logic [pending]
+### Dependencies: 36.1
+### Description: Add JavaScript logic to control when the loading animation appears and disappears
+### Details:
+Create functions showLoader() and hideLoader() to control visibility. Show loader immediately when page starts loading. Hide loader after DOMContentLoaded and calculator initialization complete. Add minimum display time (e.g., 300ms) to prevent flicker on fast loads. Use CSS classes to control visibility rather than inline styles.
+
+## 3. Add fade-in transition [pending]
+### Dependencies: 36.2
+### Description: Implement smooth fade-in effect for calculator after loading completes
+### Details:
+Add CSS transition for opacity on calculator container (transition: opacity 0.3s ease-in). Start calculator with opacity: 0. When hiding loader, simultaneously fade in calculator by adding a class that sets opacity: 1. Ensure proper timing so loader fades out as calculator fades in. Test transition smoothness across different devices.
+

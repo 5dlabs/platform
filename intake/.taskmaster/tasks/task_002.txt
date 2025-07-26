@@ -1,0 +1,43 @@
+# Task ID: 2
+# Title: Create HTML Structure
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Build the basic HTML skeleton for the calculator application with semantic markup
+# Details:
+Create index.html with DOCTYPE, meta tags for viewport and charset, title 'Basic Calculator', main container div with id='calculator', display div with id='display', buttons container div with id='buttons', link to CSS and JavaScript files. Use semantic HTML5 elements where appropriate
+
+# Test Strategy:
+Validate HTML using W3C validator, ensure all required elements are present, check that file structure is correct and links to CSS/JS are properly referenced
+
+# Subtasks:
+## 1. Create basic HTML5 boilerplate with meta tags [pending]
+### Dependencies: None
+### Description: Set up the foundational HTML5 document structure with proper DOCTYPE declaration and essential meta tags for viewport responsiveness and character encoding
+### Details:
+Create index.html file with <!DOCTYPE html> declaration, html element with lang='en' attribute, head section containing meta charset='UTF-8', meta viewport tag for responsive design, and title element with 'Basic Calculator' text
+
+## 2. Build calculator container structure [pending]
+### Dependencies: 2.1
+### Description: Create the main container element that will house all calculator components using semantic HTML5 markup
+### Details:
+Add body element with main semantic tag, create div element with id='calculator' as the primary container, ensure proper nesting and semantic structure for accessibility
+
+## 3. Add display area markup [pending]
+### Dependencies: 2.2
+### Description: Implement the display section of the calculator where numbers and calculation results will be shown
+### Details:
+Create div with id='display' inside calculator container, add nested div with id='display-screen' containing initial value '0', include ARIA attributes role='status' and aria-live='polite' for screen reader accessibility
+
+## 4. Create buttons container [pending]
+### Dependencies: 2.3
+### Description: Build the container structure that will hold all calculator buttons including numbers, operations, and controls
+### Details:
+Add div with id='buttons' after display div, prepare container for grid layout structure, ensure proper hierarchy for future button elements placement
+
+## 5. Link CSS and JavaScript files [pending]
+### Dependencies: 2.1
+### Description: Add references to external stylesheet and script files to connect styling and functionality to the HTML structure
+### Details:
+In head section, add link element with rel='stylesheet' href='styles.css', before closing body tag add script element with src='script.js', ensure correct file paths and proper placement for optimal loading
+

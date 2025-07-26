@@ -1,0 +1,43 @@
+# Task ID: 40
+# Title: Implement Continuous Operations
+# Status: pending
+# Dependencies: 18, 21
+# Priority: medium
+# Description: Allow continuous calculations without pressing equals
+# Details:
+Modify operation handler to perform pending calculation before setting new operation, show intermediate results in display, maintain calculation chain, ensure equals still works to finalize
+
+# Test Strategy:
+Test chaining multiple operations, verify intermediate results are correct, check equals finalizes chain properly
+
+# Subtasks:
+## 1. Modify operation handler logic [pending]
+### Dependencies: None
+### Description: Update the operation button handler to perform pending calculations before setting a new operation
+### Details:
+Modify handleOperation() function to check if there's a pending operation and previousValue. If both exist, calculate the result using the pending operation before setting the new operation. Store the result as the new previousValue.
+
+## 2. Implement intermediate calculations [pending]
+### Dependencies: 40.1
+### Description: Create logic to perform calculations when a new operation is selected while a calculation is pending
+### Details:
+Implement calculateIntermediateResult() function that takes previousValue, currentValue, and pendingOperation. Use existing calculate() function to compute result. Handle edge cases like division by zero during intermediate calculations.
+
+## 3. Update display for results [pending]
+### Dependencies: 40.2
+### Description: Modify display logic to show intermediate results after each operation in a continuous chain
+### Details:
+Update the display to show intermediate results immediately after an operation button is pressed. Ensure the display shows the calculated result which becomes the starting point for the next operation. Handle number formatting and overflow.
+
+## 4. Maintain calculation chain [pending]
+### Dependencies: 40.3
+### Description: Implement state management to track the ongoing calculation chain and ensure proper operation flow
+### Details:
+Add state variables to track calculation chain status. Ensure previousValue is updated with intermediate results, currentValue resets for new input, and pendingOperation updates to the latest operation. Maintain proper state through the entire chain.
+
+## 5. Test edge cases [pending]
+### Dependencies: 40.4
+### Description: Thoroughly test continuous operations with various edge cases and operation sequences
+### Details:
+Test sequences like: 5 + 3 * 2 = (should show 8 after *, then 16), operations with decimals, switching operations mid-chain, pressing equals to finalize, clear/AC behavior during chains, and very long calculation chains.
+

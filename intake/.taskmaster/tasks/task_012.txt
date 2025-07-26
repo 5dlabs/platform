@@ -1,0 +1,31 @@
+# Task ID: 12
+# Title: Style Number Buttons
+# Status: pending
+# Dependencies: 6, 10
+# Priority: medium
+# Description: Apply consistent styling to all number buttons
+# Details:
+Style .number-btn with background-color: #fff, border: 1px solid #ddd, font-size: 1.5rem, padding: 20px, cursor: pointer, transition: background-color 0.2s, hover state with darker background, active state with transform: scale(0.95)
+
+# Test Strategy:
+Verify all number buttons have consistent styling, check hover and active states work correctly, ensure buttons are clickable and responsive
+
+# Subtasks:
+## 1. Apply base button styles and dimensions [pending]
+### Dependencies: None
+### Description: Implement the foundational CSS styles for all number buttons including background, border, font size, padding, and cursor properties
+### Details:
+Add CSS rules for .number-btn class with background-color: #fff, border: 1px solid #ddd, font-size: 1.5rem, padding: 20px, cursor: pointer. Ensure buttons have consistent appearance across all number buttons including the decimal point button
+
+## 2. Implement hover and active states [pending]
+### Dependencies: 12.1
+### Description: Add interactive CSS states for number buttons to provide visual feedback when users hover over or click buttons
+### Details:
+Create .number-btn:hover rule with darker background color (e.g., #f0f0f0), implement .number-btn:active rule with transform: scale(0.95) for press effect. Ensure states work smoothly and provide clear visual feedback
+
+## 3. Add transitions and visual feedback [pending]
+### Dependencies: 12.1, 12.2
+### Description: Implement smooth transitions between button states to enhance user experience and make interactions feel responsive
+### Details:
+Add transition: background-color 0.2s, transform 0.1s to .number-btn for smooth state changes. Test that transitions work correctly between normal, hover, and active states. Verify visual feedback is immediate and smooth
+

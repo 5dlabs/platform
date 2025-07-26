@@ -1,0 +1,43 @@
+# Task ID: 37
+# Title: Implement History Feature
+# Status: pending
+# Dependencies: 21
+# Priority: low
+# Description: Add basic calculation history display
+# Details:
+Create history array to store last 5 calculations, display history above main display, format as 'x + y = z', clear history with Clear button, style with smaller font and muted color
+
+# Test Strategy:
+Verify history stores calculations correctly, test history limit of 5 items, check clear button clears history
+
+# Subtasks:
+## 1. Create history data structure [pending]
+### Dependencies: None
+### Description: Set up the data structure to store calculation history
+### Details:
+Create a history array in the calculator state to store up to 5 calculation objects. Each object should contain the full calculation string (e.g., 'x + y = z') and a timestamp. Initialize the array as empty in the initial state.
+
+## 2. Add history display UI [pending]
+### Dependencies: 37.1
+### Description: Create the UI elements to display calculation history
+### Details:
+Add a history container div above the main display element. Create individual history item elements that will show each calculation. Ensure the container can hold up to 5 history items with proper overflow handling.
+
+## 3. Implement history tracking [pending]
+### Dependencies: 37.1, 37.2
+### Description: Add functionality to track and store calculations in history
+### Details:
+Modify the equals operation handler to add completed calculations to the history array. Format calculations as 'x + y = z' before storing. Implement logic to maintain maximum 5 items by removing oldest when limit is reached. Update the history display after each new calculation.
+
+## 4. Add history clearing [pending]
+### Dependencies: 37.3
+### Description: Implement functionality to clear calculation history
+### Details:
+Modify the Clear button handler to also clear the history array when pressed. Update the history display to reflect the empty state. Ensure the history container is properly cleared in the UI.
+
+## 5. Style history display [pending]
+### Dependencies: 37.2
+### Description: Apply styling to the history display elements
+### Details:
+Style history items with smaller font size than main display. Apply muted color (e.g., #666 or rgba with opacity) to history text. Add proper spacing between history items. Style the history container with appropriate padding and alignment.
+

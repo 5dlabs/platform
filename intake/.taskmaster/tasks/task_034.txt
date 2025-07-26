@@ -1,0 +1,43 @@
+# Task ID: 34
+# Title: Add Accessibility Features
+# Status: pending
+# Dependencies: 24
+# Priority: medium
+# Description: Implement ARIA labels and keyboard navigation for accessibility
+# Details:
+Add ARIA labels to all buttons, ensure tab navigation works logically, add role='application' to calculator container, implement focus visible styles, add screen reader announcements for results
+
+# Test Strategy:
+Test with screen reader software, verify keyboard navigation is logical, check ARIA labels are descriptive
+
+# Subtasks:
+## 1. Add ARIA labels to buttons [pending]
+### Dependencies: None
+### Description: Implement descriptive ARIA labels for all calculator buttons to improve screen reader accessibility
+### Details:
+Add aria-label attributes to all button elements including numbers (0-9), operators (+, -, *, /), equals, clear, and decimal point. Ensure labels are descriptive (e.g., 'plus' instead of '+', 'multiply' instead of '*'). Add role='button' to any clickable elements that aren't semantic buttons
+
+## 2. Implement keyboard navigation [pending]
+### Dependencies: None
+### Description: Enable full calculator functionality through keyboard input and navigation
+### Details:
+Map number keys (0-9) to calculator number buttons, map operator keys (+, -, *, /) to operations, implement Enter key for equals, Escape key for clear, decimal point key for decimal input. Ensure Tab key navigates through all interactive elements in logical order. Add tabindex attributes where necessary
+
+## 3. Add screen reader support [pending]
+### Dependencies: 34.1
+### Description: Implement ARIA live regions and announcements for calculation results and state changes
+### Details:
+Add aria-live='polite' region for result announcements, implement aria-label for display showing current calculation state, add role='application' to calculator container, ensure error messages are announced, provide context for operations (e.g., 'Result: 25' instead of just '25')
+
+## 4. Ensure focus management [pending]
+### Dependencies: 34.2
+### Description: Implement proper focus indicators and focus trap within calculator interface
+### Details:
+Add visible focus styles using :focus-visible pseudo-class, implement focus trap to keep keyboard navigation within calculator bounds, ensure focus returns to appropriate element after operations, maintain focus on clear button after clearing, style focus indicators with sufficient contrast (minimum 3:1)
+
+## 5. Test with accessibility tools [pending]
+### Dependencies: 34.1, 34.2, 34.3, 34.4
+### Description: Validate accessibility implementation using automated and manual testing tools
+### Details:
+Run axe DevTools or WAVE to check for accessibility violations, test with NVDA/JAWS screen readers on Windows and VoiceOver on Mac, verify keyboard-only navigation flow, check color contrast ratios meet WCAG AA standards, test with browser zoom at 200%, validate ARIA implementation with accessibility tree inspector
+

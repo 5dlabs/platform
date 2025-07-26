@@ -1,0 +1,49 @@
+# Task ID: 41
+# Title: Add Memory Functions
+# Status: pending
+# Dependencies: 15
+# Priority: low
+# Description: Implement basic memory storage functions (M+, M-, MR, MC)
+# Details:
+Add memory variable to state, create memory buttons (M+, M-, MR, MC), implement memory add/subtract functions, memory recall shows stored value, memory clear resets to 0
+
+# Test Strategy:
+Test all memory operations work correctly, verify memory persists between calculations, check memory clear resets properly
+
+# Subtasks:
+## 1. Add memory buttons to UI [pending]
+### Dependencies: None
+### Description: Add M+, M-, MR, and MC buttons to the calculator interface
+### Details:
+Create four new button elements for memory operations (M+, M-, MR, MC) in the HTML structure. Position them appropriately in the calculator layout, typically above or beside the number pad. Assign unique IDs to each button for event handling.
+
+## 2. Implement memory state [pending]
+### Dependencies: None
+### Description: Add memory variable to calculator state management
+### Details:
+Add a 'memory' property to the calculator state object, initialized to 0. Ensure the memory value persists across different calculator operations and is only modified by memory-specific functions.
+
+## 3. Create M+ functionality [pending]
+### Dependencies: 41.1, 41.2
+### Description: Implement memory add function to add current display value to memory
+### Details:
+Create handleMemoryAdd() function that adds the current display value to the stored memory value. Parse the current display value as a number, add it to the existing memory value, and update the memory state. Handle edge cases like adding when display shows error or invalid values.
+
+## 4. Create M- functionality [pending]
+### Dependencies: 41.1, 41.2
+### Description: Implement memory subtract function to subtract current display value from memory
+### Details:
+Create handleMemorySubtract() function that subtracts the current display value from the stored memory value. Parse the current display value as a number, subtract it from the existing memory value, and update the memory state. Handle edge cases similar to M+ functionality.
+
+## 5. Implement MR and MC [pending]
+### Dependencies: 41.1, 41.2
+### Description: Create memory recall and memory clear functions
+### Details:
+Implement handleMemoryRecall() to display the stored memory value on the calculator display, setting currentValue to the memory value and calling updateDisplay(). Implement handleMemoryClear() to reset the memory value to 0. Ensure MR properly handles the calculator state for subsequent operations.
+
+## 6. Add visual indicators [pending]
+### Dependencies: 41.2, 41.3, 41.4, 41.5
+### Description: Add visual feedback to show when memory contains a value
+### Details:
+Create a visual indicator (such as 'M' display or highlighting memory buttons) to show when memory contains a non-zero value. Update the indicator whenever memory operations are performed. Consider adding the indicator to the display area or as a separate element.
+

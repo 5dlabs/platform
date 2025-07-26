@@ -1,0 +1,25 @@
+# Task ID: 19
+# Title: Implement Clear Button Functionality
+# Status: pending
+# Dependencies: 15, 16
+# Priority: high
+# Description: Create function to clear calculator state and display
+# Details:
+Create handleClear() function that resets all state variables to initial values (currentValue: '0', previousValue: '', operation: null, waitingForNewValue: false), call updateDisplay() to show '0'
+
+# Test Strategy:
+Verify Clear button resets all state, check display shows '0' after clear, test clear during various calculator states
+
+# Subtasks:
+## 1. Create handleClear function [pending]
+### Dependencies: None
+### Description: Implement the handleClear() function that resets all calculator state variables to their initial values
+### Details:
+Create handleClear() function that sets currentValue to '0', previousValue to empty string, operation to null, and waitingForNewValue to false. This function will be called when the Clear button is clicked.
+
+## 2. Connect clear function to display update [pending]
+### Dependencies: 19.1
+### Description: Call updateDisplay() after resetting state to show '0' on the calculator display
+### Details:
+After resetting all state variables in handleClear(), call the updateDisplay() function to ensure the display shows '0'. Add event listener to Clear button that calls handleClear().
+

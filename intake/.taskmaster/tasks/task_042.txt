@@ -1,0 +1,37 @@
+# Task ID: 42
+# Title: Implement Percentage Calculation
+# Status: pending
+# Dependencies: 20
+# Priority: low
+# Description: Add percentage button and calculation functionality
+# Details:
+Add % button to calculator layout, implement percentage calculation (divide by 100), handle percentage in context of operations (e.g., 50 + 10% = 55), update display appropriately
+
+# Test Strategy:
+Test percentage calculations in isolation, verify percentage works with operations, check edge cases
+
+# Subtasks:
+## 1. Add percentage button to calculator layout [pending]
+### Dependencies: None
+### Description: Add a % button to the calculator interface in an appropriate position
+### Details:
+Add percentage button element to HTML, position it logically (near operators or special functions), apply consistent styling to match other calculator buttons, ensure button has proper ID for event handling
+
+## 2. Implement basic percentage calculation logic [pending]
+### Dependencies: 42.1
+### Description: Create core percentage calculation functionality that divides by 100
+### Details:
+Create handlePercentage() function, implement basic logic to divide current value by 100, update calculator state with percentage result, call updateDisplay() to show the result
+
+## 3. Handle contextual percentage operations [pending]
+### Dependencies: 42.2
+### Description: Implement percentage calculations in context of mathematical operations
+### Details:
+Detect when percentage is used with an operation (e.g., 50 + 10%), calculate percentage relative to first operand (10% of 50 = 5), apply the operation with calculated percentage value (50 + 5 = 55), handle all four basic operations with percentages
+
+## 4. Test percentage functionality scenarios [pending]
+### Dependencies: 42.3
+### Description: Thoroughly test all percentage calculation use cases and edge cases
+### Details:
+Test standalone percentage (25% = 0.25), test percentage with addition (100 + 10% = 110), test percentage with subtraction (100 - 10% = 90), test percentage with multiplication and division, verify edge cases like 0% and negative percentages
+

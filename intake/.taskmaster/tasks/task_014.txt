@@ -1,0 +1,25 @@
+# Task ID: 14
+# Title: Style Control Buttons
+# Status: pending
+# Dependencies: 8, 12
+# Priority: medium
+# Description: Apply styling to Clear and Equals buttons
+# Details:
+Style #clear-btn with background-color: #f44336 (red), color: white, style #equals-btn with background-color: #4CAF50 (green), color: white, ensure both buttons match size of other buttons, add appropriate hover states
+
+# Test Strategy:
+Verify Clear and Equals buttons have distinct colors, check hover states, ensure visual hierarchy is maintained
+
+# Subtasks:
+## 1. Style Clear button with red theme [pending]
+### Dependencies: None
+### Description: Apply red color scheme and styling to the Clear button to make it visually distinct
+### Details:
+Target #clear-btn element and apply background-color: #f44336 (red), color: white, ensure button matches the size of other calculator buttons (same padding and font-size as number buttons), add border: none for clean appearance
+
+## 2. Style Equals button with green theme and hover states [pending]
+### Dependencies: 14.1
+### Description: Apply green color scheme to Equals button and implement hover effects for both control buttons
+### Details:
+Target #equals-btn with background-color: #4CAF50 (green), color: white, matching button size. Add hover states for both buttons: #clear-btn:hover with darker red (#d32f2f), #equals-btn:hover with darker green (#45a049). Include transition: background-color 0.2s for smooth hover effect
+

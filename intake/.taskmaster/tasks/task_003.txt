@@ -1,0 +1,37 @@
+# Task ID: 3
+# Title: Setup CSS File Structure
+# Status: pending
+# Dependencies: 2
+# Priority: high
+# Description: Create the CSS file and establish basic styling reset and variables
+# Details:
+Create styles.css in src folder, add CSS reset (box-sizing: border-box, margin/padding reset), define CSS custom properties for colors (--primary-color, --secondary-color, --text-color, --button-color, --button-hover), set up root font-size for rem units, import any web fonts if needed
+
+# Test Strategy:
+Verify CSS file is linked correctly in HTML, check that reset styles are applied, ensure CSS variables are defined and accessible
+
+# Subtasks:
+## 1. Create CSS file and add reset styles [pending]
+### Dependencies: None
+### Description: Create styles.css file in src folder and implement CSS reset for consistent cross-browser styling
+### Details:
+Create styles.css in src directory, add universal box-sizing: border-box rule, reset default margins and paddings on all elements, normalize list styles, remove default button styles, ensure consistent line-height inheritance
+
+## 2. Define CSS custom properties for theming [pending]
+### Dependencies: 3.1
+### Description: Set up CSS variables in :root selector for consistent color scheme and theming capabilities
+### Details:
+Define custom properties in :root including --primary-color, --secondary-color, --text-color, --button-color, --button-hover, --background-color, --display-bg, --border-color, ensure proper color contrast for accessibility
+
+## 3. Set up typography and base styles [pending]
+### Dependencies: 3.1
+### Description: Establish base typography settings including font sizes, line heights, and rem unit configuration
+### Details:
+Set html font-size to 62.5% for easy rem calculations, define base body font-family stack, set default text color and background, establish heading and paragraph styles, configure base line-height for readability
+
+## 4. Import web fonts if needed [pending]
+### Dependencies: 3.3
+### Description: Add @import or link tags for any custom web fonts required for the calculator design
+### Details:
+Evaluate need for custom fonts, add Google Fonts or other web font imports if required, define font-display: swap for performance, update font-family stacks to include web fonts with appropriate fallbacks
+

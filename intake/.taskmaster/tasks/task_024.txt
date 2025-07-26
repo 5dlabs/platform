@@ -1,0 +1,43 @@
+# Task ID: 24
+# Title: Add Keyboard Support
+# Status: pending
+# Dependencies: 22
+# Priority: medium
+# Description: Implement keyboard input for calculator operations
+# Details:
+Add keydown event listener to document, map number keys 0-9 to handleNumberClick, map +, -, *, / keys to operations, map Enter key to equals, map Escape or C key to clear, prevent default behavior for mapped keys
+
+# Test Strategy:
+Test all number keys work correctly, verify operation keys trigger correct handlers, check Enter and Escape functionality
+
+# Subtasks:
+## 1. Add keydown event listener [pending]
+### Dependencies: None
+### Description: Attach a keydown event listener to the document to capture all keyboard input for the calculator
+### Details:
+Add document.addEventListener('keydown', handleKeyPress) in the initialization code. Create handleKeyPress function that will route key events to appropriate handlers. Ensure listener is added after DOM is loaded.
+
+## 2. Map number keys to handlers [pending]
+### Dependencies: 24.1
+### Description: Implement mapping of number keys (0-9) to the existing handleNumberClick function
+### Details:
+In handleKeyPress, check if event.key is between '0' and '9'. If true, call handleNumberClick with the appropriate number value. Handle both main keyboard numbers and numpad numbers.
+
+## 3. Map operation keys [pending]
+### Dependencies: 24.1
+### Description: Map arithmetic operation keys (+, -, *, /) to their corresponding operation handlers
+### Details:
+Map '+' key to addition, '-' to subtraction, '*' to multiplication, and '/' to division. Call handleOperationClick with the appropriate operation. Consider mapping numpad operation keys as well.
+
+## 4. Map control keys (Enter, Escape) [pending]
+### Dependencies: 24.1
+### Description: Implement Enter key for equals operation and Escape/C key for clear functionality
+### Details:
+Map 'Enter' key to trigger handleEqualsClick function. Map 'Escape' key and 'c'/'C' keys to trigger handleClearClick function. Ensure both uppercase and lowercase 'C' work.
+
+## 5. Prevent default behaviors [pending]
+### Dependencies: 24.2, 24.3, 24.4
+### Description: Prevent default browser behaviors for all mapped keys to avoid unwanted actions
+### Details:
+Call event.preventDefault() for all handled keys to prevent default browser actions like form submission on Enter or browser shortcuts. Only prevent default for keys that are actually handled by the calculator.
+

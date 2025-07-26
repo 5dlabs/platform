@@ -1,0 +1,43 @@
+# Task ID: 30
+# Title: Write Tests for Calculation Functions
+# Status: pending
+# Dependencies: 29, 20
+# Priority: high
+# Description: Create unit tests for all arithmetic operations
+# Details:
+Test addition with positive, negative, decimal numbers, test subtraction including negative results, test multiplication with various inputs, test division including decimal results, test division by zero handling
+
+# Test Strategy:
+Run all calculation tests, verify 100% coverage of calculation logic, check edge cases are tested
+
+# Subtasks:
+## 1. Test basic arithmetic operations [pending]
+### Dependencies: None
+### Description: Create comprehensive tests for addition, subtraction, multiplication, and division with standard positive and negative integers
+### Details:
+Write test cases for: addition of positive numbers (2+3=5), addition of negative numbers (-5+-3=-8), subtraction resulting in positive (10-3=7), subtraction resulting in negative (3-10=-7), multiplication of positive numbers (4*5=20), multiplication with negative numbers (-3*4=-12), division of integers (20/4=5), division with negative numbers (-20/4=-5). Use assertion methods to verify expected results match actual calculations
+
+## 2. Test edge cases and limits [pending]
+### Dependencies: 30.1
+### Description: Verify calculator behavior with extreme values, zero operations, and JavaScript number limits
+### Details:
+Test operations with zero (0+5, 0*100, 0-10), test very large numbers approaching Number.MAX_VALUE, test very small numbers approaching Number.MIN_VALUE, test operations that might cause overflow, test empty string or null inputs, test operations with Infinity and -Infinity results, verify proper handling of NaN scenarios
+
+## 3. Test decimal calculations [pending]
+### Dependencies: 30.1
+### Description: Ensure accurate handling of floating-point arithmetic and decimal precision
+### Details:
+Test decimal addition (0.1+0.2), test decimal subtraction (1.5-0.3), test decimal multiplication (2.5*1.2), test decimal division (7.5/2.5), test operations mixing integers and decimals (5+2.5), test very small decimals (0.0001*0.0001), verify proper rounding for display (handle floating-point precision issues), test operations resulting in repeating decimals (1/3)
+
+## 4. Test division by zero [pending]
+### Dependencies: 30.1
+### Description: Verify proper error handling and messaging when attempting to divide by zero
+### Details:
+Test direct division by zero (5/0), test division by zero with decimals (3.14/0), test zero divided by zero (0/0), verify error message is displayed correctly, ensure calculator state is properly handled after error, test that subsequent operations work correctly after division by zero error, verify both positive and negative numbers divided by zero
+
+## 5. Test precision handling [pending]
+### Dependencies: 30.3, 30.4
+### Description: Ensure calculator maintains appropriate precision and handles rounding correctly
+### Details:
+Test maximum decimal places displayed (e.g., limit to 10 decimal places), test rounding behavior for long decimal results, verify scientific notation handling for very large/small numbers, test precision loss in chain calculations, ensure consistent precision across different operations, test conversion between string display and number calculations, verify no precision errors accumulate in sequential operations
+

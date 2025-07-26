@@ -1,0 +1,43 @@
+# Task ID: 31
+# Title: Write Tests for State Management
+# Status: pending
+# Dependencies: 29, 15
+# Priority: medium
+# Description: Create tests for calculator state management functions
+# Details:
+Test initial state values, test state updates when numbers are entered, test state changes during operations, test clear function resets state, test state transitions during calculations
+
+# Test Strategy:
+Verify all state transitions are tested, check state integrity is maintained, ensure no unexpected state mutations
+
+# Subtasks:
+## 1. Test Initial State Values [pending]
+### Dependencies: None
+### Description: Write tests to verify that the calculator's initial state is correctly set when the application starts
+### Details:
+Create test cases to check that currentValue is '0', previousValue is null, currentOperation is null, and shouldResetDisplay is false on initialization. Verify the initial state object structure matches the expected schema.
+
+## 2. Test State Updates on Input [pending]
+### Dependencies: 31.1
+### Description: Create tests for state changes when users input numbers and decimal points
+### Details:
+Test state updates when entering single digits, multiple digits, decimal points, and leading zeros. Verify currentValue updates correctly, shouldResetDisplay flag behavior, and that previousValue remains unchanged during number input.
+
+## 3. Test Operation State Transitions [pending]
+### Dependencies: 31.2
+### Description: Write tests for state changes when arithmetic operations are selected
+### Details:
+Test state transitions when selecting +, -, *, / operations. Verify previousValue is set correctly, currentOperation is updated, shouldResetDisplay flag is set to true, and chained operations update state properly.
+
+## 4. Test Clear Functionality [pending]
+### Dependencies: 31.1
+### Description: Create tests to ensure the clear function properly resets all state values
+### Details:
+Test that clear function resets currentValue to '0', previousValue to null, currentOperation to null, and shouldResetDisplay to false. Verify clear works correctly at any point during calculation.
+
+## 5. Test State Integrity [pending]
+### Dependencies: 31.1, 31.2, 31.3, 31.4
+### Description: Write tests to verify state integrity is maintained throughout all operations
+### Details:
+Test for unexpected state mutations, verify state immutability where required, check for race conditions in state updates, and ensure no memory leaks in state management. Test edge cases like very large numbers and division by zero.
+

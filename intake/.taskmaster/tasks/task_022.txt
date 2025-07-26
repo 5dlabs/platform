@@ -1,0 +1,37 @@
+# Task ID: 22
+# Title: Add Event Listeners Setup
+# Status: pending
+# Dependencies: 17, 18, 19, 21
+# Priority: high
+# Description: Set up all event listeners for calculator buttons
+# Details:
+In init() function, use querySelectorAll to get all buttons, add click event listeners to number buttons calling handleNumberClick, add listeners to operation buttons calling handleOperationClick, add listener to clear button, add listener to equals button
+
+# Test Strategy:
+Verify all buttons have event listeners attached, test each button type triggers correct handler, check no duplicate listeners
+
+# Subtasks:
+## 1. Query and cache DOM elements [pending]
+### Dependencies: None
+### Description: Query all necessary DOM elements and store references for event listener attachment
+### Details:
+Use querySelectorAll to get all number buttons (0-9), operation buttons (+, -, *, /), equals button, clear button, and display element. Store references in variables for efficient access. Ensure all elements are found before proceeding with event attachment.
+
+## 2. Attach number button listeners [pending]
+### Dependencies: 22.1
+### Description: Add click event listeners to all number buttons (0-9) that call handleNumberClick
+### Details:
+Loop through all number button elements and attach click event listeners. Each listener should call handleNumberClick() with the button's value. Use event delegation or individual listeners as appropriate. Verify decimal point button is included if present.
+
+## 3. Attach operation button listeners [pending]
+### Dependencies: 22.1
+### Description: Add click event listeners to all operation buttons (+, -, *, /) that call handleOperationClick
+### Details:
+Loop through all operation button elements and attach click event listeners. Each listener should call handleOperationClick() with the operation type. Ensure all four basic operations are covered. Consider using data attributes to identify operation types.
+
+## 4. Attach control button listeners [pending]
+### Dependencies: 22.1
+### Description: Add click event listeners to control buttons (clear and equals) with their respective handlers
+### Details:
+Attach click event listener to clear button that calls clearCalculator() or resets state. Attach click event listener to equals button that calls calculateResult() or performs calculation. Ensure these buttons have unique identifiers for easy selection.
+

@@ -1,0 +1,37 @@
+# Task ID: 1
+# Title: Setup Project Repository
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Initialize a new Git repository and create the basic project structure for the calculator web application
+# Details:
+Create a new directory 'basic-calculator', initialize Git with 'git init', create .gitignore file with common web development exclusions (node_modules/, .DS_Store, etc.), create README.md with project overview, and establish folder structure: /src for source files, /tests for test files, /assets for any images or icons
+
+# Test Strategy:
+Verify repository is initialized correctly by checking .git folder exists, ensure .gitignore is properly configured, and confirm folder structure matches requirements
+
+# Subtasks:
+## 1. Create directory structure and initialize Git [pending]
+### Dependencies: None
+### Description: Create the main project directory 'basic-calculator' and initialize it as a Git repository. Set up the required folder structure including /src for source files, /tests for test files, and /assets for images or icons.
+### Details:
+Execute 'mkdir basic-calculator' followed by 'cd basic-calculator' and 'git init'. Create subdirectories using 'mkdir src tests assets'. This establishes the foundation for version control and organizes the project files logically.
+
+## 2. Configure .gitignore with web development exclusions [pending]
+### Dependencies: 1.1
+### Description: Create a .gitignore file in the root directory with common web development exclusions to prevent unnecessary files from being tracked in version control.
+### Details:
+Create .gitignore file and add entries for node_modules/, .DS_Store, *.log, .env, dist/, build/, .vscode/, .idea/, *.swp, *.swo, and any other common development artifacts. This ensures only relevant source files are committed to the repository.
+
+## 3. Create initial README.md with project overview [pending]
+### Dependencies: 1.1
+### Description: Write a comprehensive README.md file that provides an overview of the basic calculator web application project, including its purpose, features, and setup instructions.
+### Details:
+Create README.md in the root directory with sections for: Project Title (Basic Calculator), Description (web-based calculator for basic arithmetic operations), Features (addition, subtraction, multiplication, division), Project Structure (explain the folder organization), and Setup Instructions (how to clone and run the project).
+
+## 4. Verify setup and make initial commit [pending]
+### Dependencies: 1.1, 1.2, 1.3
+### Description: Verify that all components of the repository setup are correct and make the first Git commit to establish the project baseline.
+### Details:
+Check that .git folder exists using 'ls -la', verify folder structure is correct with 'tree' or 'ls' commands, ensure .gitignore is properly configured by testing with 'git status', stage all files with 'git add .', and create initial commit with message 'Initial commit: Project setup with folder structure and README'.
+

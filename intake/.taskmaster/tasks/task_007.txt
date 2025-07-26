@@ -1,0 +1,25 @@
+# Task ID: 7
+# Title: Create Operation Buttons HTML
+# Status: pending
+# Dependencies: 6
+# Priority: high
+# Description: Add HTML markup for arithmetic operation buttons (+, -, *, /)
+# Details:
+Create button elements for addition (+), subtraction (-), multiplication (*), and division (/), add data-operation attribute to each button, assign class 'operation-btn' to all operation buttons, position in right column of calculator grid
+
+# Test Strategy:
+Verify all 4 operation buttons are present, check data attributes match operations, ensure correct positioning and class assignment
+
+# Subtasks:
+## 1. Create all four operation buttons with data attributes [pending]
+### Dependencies: None
+### Description: Generate HTML button elements for addition, subtraction, multiplication, and division operations with appropriate data-operation attributes and operation-btn class
+### Details:
+Create button element for addition with data-operation='+' and text '+', create button for subtraction with data-operation='-' and text '-', create button for multiplication with data-operation='*' and text '×', create button for division with data-operation='/' and text '÷', apply class='operation-btn' to all four buttons
+
+## 2. Position buttons in the grid and apply operation classes [pending]
+### Dependencies: 7.1
+### Description: Place the four operation buttons in the right column of the calculator grid layout with proper positioning and styling classes
+### Details:
+Position operation buttons vertically in the right column of the calculator grid, ensure proper spacing between buttons, apply any additional CSS classes needed for grid positioning, verify buttons align correctly with number pad rows
+

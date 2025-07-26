@@ -1,0 +1,43 @@
+# Task ID: 15
+# Title: Implement Calculator State Management
+# Status: pending
+# Dependencies: 4
+# Priority: high
+# Description: Create JavaScript state variables to track calculator state
+# Details:
+Define state object with properties: currentValue: '0', previousValue: '', operation: null, waitingForNewValue: false. Create getter/setter methods for state management, implement state reset function
+
+# Test Strategy:
+Verify state object initializes correctly, test getter/setter methods work as expected, ensure state can be reset to initial values
+
+# Subtasks:
+## 1. Define state object structure [pending]
+### Dependencies: None
+### Description: Create the main state object with all required properties for calculator operation
+### Details:
+Define a state object containing: currentValue (string, default '0'), previousValue (string, default ''), operation (string or null, default null), waitingForNewValue (boolean, default false). Consider adding additional properties for future features like history array and memory storage. Ensure the structure is extensible and well-documented with JSDoc comments.
+
+## 2. Implement getter methods for state access [pending]
+### Dependencies: 15.1
+### Description: Create getter methods to safely access state properties
+### Details:
+Implement getter methods: getCurrentValue(), getPreviousValue(), getOperation(), isWaitingForNewValue(). Each getter should return a copy of the value to prevent direct state mutation. Add getState() method to return a deep copy of the entire state object. Include proper error handling and type checking.
+
+## 3. Create setter methods with validation [pending]
+### Dependencies: 15.1
+### Description: Implement setter methods with input validation and state integrity checks
+### Details:
+Create setters: setCurrentValue(value) with numeric validation and length limits, setPreviousValue(value), setOperation(op) with valid operator checking, setWaitingForNewValue(bool). Each setter should validate input types, check for valid ranges/values, and maintain state consistency. Include error messages for invalid inputs.
+
+## 4. Implement state reset functionality [pending]
+### Dependencies: 15.1, 15.3
+### Description: Create methods to reset calculator state to initial values
+### Details:
+Implement resetState() to clear all state to initial values. Create clearEntry() to reset only currentValue while preserving operation state. Add clearAll() for complete reset including any history. Ensure reset methods trigger any necessary UI updates and maintain state consistency.
+
+## 5. Add state debugging utilities [pending]
+### Dependencies: 15.1, 15.2
+### Description: Create debugging tools for state inspection and logging
+### Details:
+Implement logState() method to console.log formatted state information. Create getStateSnapshot() for capturing state at specific points. Add state change listeners/observers for debugging. Include development-only state validation checks. Create exportState() and importState() methods for testing purposes.
+

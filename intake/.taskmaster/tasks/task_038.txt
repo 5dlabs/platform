@@ -1,0 +1,43 @@
+# Task ID: 38
+# Title: Add Theme Toggle
+# Status: pending
+# Dependencies: 10
+# Priority: low
+# Description: Implement light/dark theme toggle for the calculator
+# Details:
+Create theme toggle button, implement CSS custom properties for theme colors, save theme preference to localStorage, smooth transition between themes, ensure good contrast in both themes
+
+# Test Strategy:
+Test theme toggle switches colors correctly, verify localStorage saves preference, check contrast ratios meet standards
+
+# Subtasks:
+## 1. Create toggle button UI [pending]
+### Dependencies: None
+### Description: Design and implement the theme toggle button interface element
+### Details:
+Create a button element with sun/moon icons, position it in the calculator header or corner, style with appropriate size and hover effects, ensure button is accessible with proper ARIA labels
+
+## 2. Implement theme switching logic [pending]
+### Dependencies: 38.1
+### Description: Create JavaScript functionality to handle theme changes when toggle is clicked
+### Details:
+Add click event listener to toggle button, implement function to switch between light and dark themes, toggle data-theme attribute on root element, update button icon based on current theme
+
+## 3. Define theme color schemes [pending]
+### Dependencies: None
+### Description: Set up CSS custom properties for light and dark theme colors
+### Details:
+Define CSS variables for background, text, button, and accent colors, create separate color sets for light and dark themes, ensure proper contrast ratios (WCAG AA compliance), include colors for all calculator elements
+
+## 4. Add localStorage persistence [pending]
+### Dependencies: 38.2
+### Description: Implement saving and loading of user's theme preference
+### Details:
+Save selected theme to localStorage when changed, load saved theme preference on page load, set default theme if no preference exists, handle localStorage errors gracefully
+
+## 5. Ensure smooth transitions [pending]
+### Dependencies: 38.3
+### Description: Add CSS transitions for smooth theme switching animation
+### Details:
+Add transition properties to color-changing elements, set appropriate transition duration (200-300ms), prevent transitions on initial page load, ensure transitions don't affect calculator functionality
+

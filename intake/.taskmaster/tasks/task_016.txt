@@ -1,0 +1,37 @@
+# Task ID: 16
+# Title: Implement Display Update Function
+# Status: pending
+# Dependencies: 15
+# Priority: high
+# Description: Create function to update the calculator display with current value
+# Details:
+Create updateDisplay() function that gets display element by ID, sets textContent to currentValue from state, handles number formatting (remove leading zeros except for decimal numbers), limit display to reasonable length (12-15 characters)
+
+# Test Strategy:
+Verify display updates when updateDisplay() is called, check leading zero handling, test with various number formats
+
+# Subtasks:
+## 1. Create basic updateDisplay function [pending]
+### Dependencies: None
+### Description: Implement the core updateDisplay() function that retrieves the display element and updates its content
+### Details:
+Create updateDisplay() function that gets the display element by ID ('display'), sets the textContent property to the currentValue from calculator state, ensure function is called whenever state changes
+
+## 2. Implement number formatting logic [pending]
+### Dependencies: 16.1
+### Description: Add formatting rules to properly display numbers in the calculator
+### Details:
+Implement logic to remove unnecessary leading zeros (except for numbers like 0.5), handle decimal point display, ensure proper formatting for negative numbers, maintain decimal precision
+
+## 3. Handle edge cases (leading zeros, length limits) [pending]
+### Dependencies: 16.2
+### Description: Implement validation and handling for display edge cases
+### Details:
+Limit display to 12-15 characters maximum, handle very long numbers with truncation or scientific notation, prevent display overflow, handle special cases like '0.', ensure proper display of very small decimal numbers
+
+## 4. Add display clearing functionality [pending]
+### Dependencies: 16.1
+### Description: Implement display clearing logic for reset operations
+### Details:
+Add clearDisplay() function or integrate clearing logic into updateDisplay(), handle display reset when Clear button is pressed, ensure display shows '0' when cleared, coordinate with state management for proper clearing
+

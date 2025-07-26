@@ -1,0 +1,31 @@
+# Task ID: 9
+# Title: Create Display Element
+# Status: pending
+# Dependencies: 2
+# Priority: high
+# Description: Build the display screen element for showing numbers and results
+# Details:
+Create div with id='display-screen' inside display container, add initial value of '0', set appropriate ARIA attributes for accessibility (role='status', aria-live='polite'), ensure display can handle long numbers with overflow handling
+
+# Test Strategy:
+Verify display element exists and shows '0' initially, check ARIA attributes are present, test overflow behavior with long numbers
+
+# Subtasks:
+## 1. Create display container and screen element [pending]
+### Dependencies: None
+### Description: Build the main display container div and inner screen element with initial value
+### Details:
+Create a div element with class 'display-container' to hold the display, create inner div with id='display-screen' for showing numbers, set initial text content to '0', ensure proper parent-child relationship between container and screen
+
+## 2. Add accessibility attributes (ARIA) [pending]
+### Dependencies: 9.1
+### Description: Implement ARIA attributes to make the display accessible to screen readers
+### Details:
+Add role='status' to display-screen element for dynamic content updates, add aria-live='polite' to announce changes to screen readers, add aria-label='Calculator display' for context, ensure attributes are properly applied to the display-screen element
+
+## 3. Implement overflow handling styles [pending]
+### Dependencies: 9.1
+### Description: Add CSS styles to handle long numbers that exceed display width
+### Details:
+Set overflow: hidden on display-screen to prevent text spillover, add text-overflow: ellipsis for visual indication of truncated content, implement white-space: nowrap to keep numbers on single line, consider adding title attribute to show full number on hover
+
