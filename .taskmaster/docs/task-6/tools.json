@@ -1,0 +1,4 @@
+{
+  "localTools": ["filesystem"],
+  "remoteTools": ["kubernetes"]
+}

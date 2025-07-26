@@ -51,6 +51,8 @@ pub fn generate_templates(
     if task.is_docs() {
         // Generate docs prompt
         templates.insert("prompt.md".to_string(), generate_docs_prompt(task)?);
+        // Generate tool catalog markdown generator script
+        templates.insert("generate-tool-catalog-markdown.py".to_string(), generate_tool_catalog_script()?);
     } else {
         // Generate code-specific templates
         templates.insert("mcp.json".to_string(), generate_mcp_config(task, config)?);
@@ -538,4 +540,9 @@ fn get_hook_templates(task: &TaskType) -> Result<Vec<(String, String)>> {
     }
 
     Ok(templates)
+}
+
+/// Generate the tool catalog markdown generator script
+fn generate_tool_catalog_script() -> Result<String> {
+    Ok(include_str!("../../../../../scripts/generate-tool-catalog-markdown.py").to_string())
 }

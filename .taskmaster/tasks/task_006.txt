@@ -5,7 +5,13 @@
 # Priority: high
 # Description: Implement logic to generate optimal tool configuration during docs generation and save it for code agents to consume
 # Details:
-Extend docs agent to save configuration:
+Extend docs agent to save configuration using Kubernetes storage and cluster operations:
+
+**Required Operations:**
+1. **Kubernetes Cluster Access** - Query available tools from ConfigMaps, create/update storage resources
+2. **Storage Operations** - Save tool configurations to persistent storage accessible by code agents
+3. **Service Discovery** - Discover and validate available MCP servers in the cluster
+
 ```rust
 #[derive(Debug, Serialize, Deserialize)]
 struct ProjectConfig {
@@ -23,39 +29,60 @@ struct ProjectToolConfig {
 async fn save_project_config(
     project_id: &str,
     config: ProjectConfig,
-    storage: &Storage
+    k8s_client: &Client
 ) -> Result<()> {
+    // Use Kubernetes ConfigMap or PVC for storage
     let config_path = format!("projects/{}/client-config.json", project_id);
     let config_json = serde_json::to_string_pretty(&config)?;
-    storage.write(&config_path, config_json.as_bytes()).await?;
+
+    // Create/update ConfigMap in cluster
+    let config_map = ConfigMap {
+        metadata: ObjectMeta {
+            name: Some(format!("project-config-{}", project_id)),
+            namespace: Some("orchestrator"),
+            ..Default::default()
+        },
+        data: Some(BTreeMap::from([
+            ("client-config.json".to_string(), config_json),
+        ])),
+        ..Default::default()
+    };
+
+    let cm_api: Api<ConfigMap> = Api::namespaced(k8s_client.clone(), "orchestrator");
+    cm_api.patch(&config_map.metadata.name.unwrap(), &PatchParams::apply("docs-agent"), &Patch::Apply(&config_map)).await?;
     Ok(())
 }
 
 // In main docs generation flow:
 async fn generate_docs(ctx: DocsContext) -> Result<()> {
     // Existing docs generation...
-    
-    // Discover available tools
+
+    // Discover available tools from Kubernetes cluster
     let available_tools = discover_available_tools(ctx.k8s_client.clone()).await?;
-    
+
     // Analyze project and recommend tools
     let tool_config = analyze_project_and_recommend_tools(
         &ctx.project_path,
         &available_tools
     ).await?;
-    
-    // Save configuration for code agents
+
+    // Save configuration to Kubernetes storage for code agents
     let project_config = ProjectConfig {
         tools: tool_config,
         generated_at: Utc::now(),
         docs_run_id: ctx.run_id.clone(),
     };
-    
-    save_project_config(&ctx.project_id, project_config, &ctx.storage).await?;
-    
+
+    save_project_config(&ctx.project_id, project_config, &ctx.k8s_client).await?;
+
     // Continue with docs generation...
 }
 ```
+
+**Infrastructure Requirements:**
+- Kubernetes cluster access for ConfigMap operations
+- Service discovery for validating MCP server availability
+- Persistent storage integration for cross-agent data sharing
 
 # Test Strategy:
 Verify configuration is saved to correct location. Test loading saved configuration. Ensure format is compatible with code agent expectations. Test with various tool combinations

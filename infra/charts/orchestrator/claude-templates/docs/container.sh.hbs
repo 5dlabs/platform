@@ -100,6 +100,25 @@ if [ -d "/config" ]; then
     fi
   done
 
+  # Copy Python scripts
+  for py_file in /config/*.py; do
+    if [ -f "$py_file" ]; then
+      basename_file=$(basename "$py_file")
+      cp -f "$py_file" "$CLAUDE_WORK_DIR/"
+      chmod +x "$CLAUDE_WORK_DIR/$basename_file"
+      echo "✓ Copied $basename_file"
+    fi
+  done
+
+  # Generate tool catalog documentation if available
+  if [ -f "/etc/tool-catalog/tool-catalog.json" ] && [ -f "$CLAUDE_WORK_DIR/generate-tool-catalog-markdown.py" ]; then
+    echo "Generating tool catalog documentation..."
+    python3 "$CLAUDE_WORK_DIR/generate-tool-catalog-markdown.py" "/etc/tool-catalog/tool-catalog.json" > "$CLAUDE_WORK_DIR/tool-catalog-documentation.md"
+    echo "✓ Generated tool-catalog-documentation.md"
+  else
+    echo "⚠️  Tool catalog or generator script not available - skipping tool catalog documentation"
+  fi
+
   # Verify enterprise settings
   if [ -f "/etc/claude-code/managed-settings.json" ]; then
     echo "✓ Enterprise settings verified"

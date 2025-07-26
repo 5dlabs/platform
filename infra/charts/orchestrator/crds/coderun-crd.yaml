@@ -78,13 +78,13 @@ spec:
                     type: array
                     description: "Local MCP tools to enable"
                     items:
-                      type: string
+                type: string
                       enum: ["filesystem", "git"]
                   remote:
                     type: array
                     description: "Remote MCP tools via toolman"
                     items:
-                      type: string
+                type: string
               contextVersion:
                 type: integer
                 default: 1

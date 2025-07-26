@@ -297,7 +297,7 @@ fn build_job_spec(
             if let Some(tools) = &cr.spec.tools {
                 if !tools.local.is_empty() {
                     env_vars.push(json!({"name": "LOCAL_TOOLS", "value": tools.local.join(",")}));
-                }
+            }
                 if !tools.remote.is_empty() {
                     env_vars.push(json!({"name": "REMOTE_TOOLS", "value": tools.remote.join(",")}));
                 }

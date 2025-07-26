@@ -53,9 +53,9 @@ cat /tmp/toolman-manifests.yaml
 
 ### 3. Prepare Deployment Values
 Create a minimal values override file for the orchestrator deployment:
-```yaml
+  ```yaml
 # orchestrator-values.yaml
-namespace: orchestrator
+  namespace: orchestrator
 
 # Image pull secret if needed
 imagePullSecrets:
