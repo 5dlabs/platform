@@ -276,7 +276,7 @@ jobs:
           Automated project intake processing:
           - Processed PRD and architecture documents from intake/
           - Created project structure in projects/$PROJECT_NAME/
-          - Initialized TaskMaster with Claude Sonnet
+          - Initialized TaskMaster with Claude Opus
           - Generated tasks from PRD (no research for speed)
           - Created task files in projects/$PROJECT_NAME/docs/task-X/
           - Generated complete project structure in projects/$PROJECT_NAME/
@@ -297,7 +297,7 @@ jobs:
           - ✅ PRD document analyzed and parsed
           - ✅ Architecture document integrated
           - ✅ Project created in projects/$PROJECT_NAME/
-          - ✅ TaskMaster initialized with Claude Sonnet
+          - ✅ TaskMaster initialized with Claude Opus
           - ✅ Tasks generated (no research for speed)
           - ✅ Task files created with individual documentation
           - ✅ Complete project structure generated
@@ -327,7 +327,7 @@ jobs:
           4. Tasks are ready for implementation
 
           ### 🤖 Models Used:
-          - **Task Generation**: Claude Sonnet (via TaskMaster)
+          - **Task Generation**: Claude Opus (via TaskMaster)
 
           Project processing complete! 🚀" \
             --head "$BRANCH_NAME" \
