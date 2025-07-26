@@ -126,11 +126,10 @@ jobs:
           # Set the main model to Opus
           task-master models --set-main "claude-opus-4-20250514"
 
-          # Parse PRD with no research and no task limit
+          # Parse PRD with no research and unlimited tasks
           task-master parse-prd \
             --input=".taskmaster/docs/prd.txt" \
-            --research=false \
-            --no-task-limit
+            --num-tasks=50
 
           # Analyze task complexity (with research for this step)
           task-master analyze-complexity \
