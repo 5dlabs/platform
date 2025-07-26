@@ -83,4 +83,4 @@ The GitHub Action will:
 
 Ready to submit your project? Just add your files and push! 🚀
 
-<!-- Test trigger for workflow v19 - Testing container filesystem access -->
+<!-- Test trigger for workflow v20 - Comprehensive container debugging -->
