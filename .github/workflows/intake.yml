@@ -295,8 +295,9 @@ jobs:
           # Create new branch
           git checkout -b "$BRANCH_NAME"
 
-          # Add all generated files in intake directory
-          git add intake/
+          # Add only TaskMaster generated files (not example files or README)
+          git add intake/.taskmaster/
+          git add intake/docs/
 
           # Commit changes
           git commit -m "🚀 Process project: $PROJECT_NAME
