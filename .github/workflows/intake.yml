@@ -252,34 +252,6 @@ jobs:
           echo "✅ Docs directory structure created"
           ls -la docs/ || echo "No docs directory created"
 
-      - name: Validate API connectivity
-        working-directory: ${{ steps.create-structure.outputs.project_dir }}
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          echo "🔍 Validating Anthropic API connectivity..."
-          
-          # Simple API health check using curl
-          response=$(curl -s -w "%{http_code}" -o /tmp/claude_response.json \
-            -H "x-api-key: ${{ secrets.ANTHROPIC_API_KEY }}" \
-            -H "anthropic-version: 2023-06-01" \
-            -H "Content-Type: application/json" \
-            -X POST https://api.anthropic.com/v1/messages \
-            -d '{
-              "model": "claude-3-haiku-20240307",
-              "max_tokens": 100,
-              "messages": [{"role": "user", "content": "Please respond with: PROJECT_VALIDATED"}]
-            }')
-
-          if [[ "$response" == "200" ]]; then
-            echo "✅ API connectivity validated"
-            cat /tmp/claude_response.json | jq -r '.content[0].text'
-          else
-            echo "❌ API connectivity failed (HTTP $response)"
-            exit 1
-          fi
-          
-          echo "✅ API validation completed - project structure ready"
 
 
       - name: Create Pull Request
@@ -307,7 +279,6 @@ jobs:
           - Initialized TaskMaster with Claude Sonnet
           - Generated tasks from PRD (no research for speed)
           - Created task files in intake/docs/task-X/
-          - Validated API connectivity
           - Generated complete TaskMaster structure in intake/
 
           Project processing complete and ready for review."
@@ -328,7 +299,6 @@ jobs:
           - ✅ TaskMaster initialized with Claude Sonnet
           - ✅ Tasks generated (no research for speed)
           - ✅ Task files created with individual documentation
-          - ✅ API connectivity validated  
           - ✅ Complete TaskMaster structure generated in intake/
 
           ### 🏗️ Generated Structure:
@@ -357,7 +327,6 @@ jobs:
 
           ### 🤖 Models Used:
           - **Task Generation**: Claude Sonnet (via TaskMaster)
-          - **API Health Check**: Direct Anthropic API call (connectivity validation only)
 
           Project processing complete! 🚀" \
             --head "$BRANCH_NAME" \
