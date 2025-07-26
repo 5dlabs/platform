@@ -32,6 +32,11 @@ jobs:
       - name: Install TaskMaster
         run: |
           npm install -g task-master-ai
+          # Add npm global bin to PATH
+          npm_global_bin=$(npm config get prefix)/bin
+          echo "$npm_global_bin" >> $GITHUB_PATH
+          export PATH="$PATH:$npm_global_bin"
+          echo "TaskMaster installed at: $(which taskmaster || echo 'not found')"
           taskmaster --version
 
       - name: Detect new project files
