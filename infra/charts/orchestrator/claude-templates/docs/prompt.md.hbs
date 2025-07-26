@@ -69,13 +69,47 @@ Place all documentation in `.taskmaster/docs/task-{id}/` directories.
 4. **Create Tool Configuration**: Save a `tools.json` file in each task folder:
    ```json
    {
-     "tools": {
-       "local": ["filesystem"],
-       "remote": ["kubernetes", "terraform"]  // Your intelligent selections
-     },
-     "reasoning": "Explain why these tools support the task requirements",
-     "generated_at": "2025-01-20T10:00:00Z"
+     "localTools": ["filesystem"],
+     "remoteTools": ["kubernetes", "terraform"]
    }
+   ```
+
+   **CRITICAL FORMAT REQUIREMENTS:**
+   - Use EXACTLY this format: `"localTools"` and `"remoteTools"` (not nested under "tools")
+   - `localTools` should typically be `["filesystem"]` for most tasks
+   - `remoteTools` should be server names from the catalog (e.g., "kubernetes", "terraform", "solana")
+   - Do NOT include reasoning or timestamps - just the tool arrays
+   - This format is required for MCP client compatibility
+
+5. **Generate mcp-tools.md**: Create `.taskmaster/docs/task-{id}/mcp-tools.md` with detailed information about ONLY the selected tools:
+   - Include tool names and descriptions from the catalog
+   - Provide usage examples specific to this task
+   - Explain why each tool was selected for this particular task
+   - Format as a helpful reference guide for the code agent
+
+   Example structure:
+   ```markdown
+   # MCP Tools for Task {id}
+
+   ## Tool Selection Reasoning
+   This task requires creating a basic Express.js API with health endpoints. I selected:
+   - **filesystem**: Essential for all file operations (creating index.js, package.json, etc.)
+   - No remote tools needed as this is a simple local development task
+
+   ## Selected Tools
+
+   ### filesystem (Local Tool)
+   **Description**: File system operations including read, write, and directory management
+   **Why Selected**: Essential for creating and modifying project files
+   **Task-Specific Usage**: Use for creating Express.js files, package.json, etc.
+
+   ### kubernetes (Remote Tool)
+   **Description**: Kubernetes cluster operations and resource management
+   **Why Selected**: Task requires deployment to Kubernetes
+   **Task-Specific Usage**: Use for creating deployments, services, checking pod status
+
+   ## Tool Usage Guidelines for This Task
+   [Task-specific guidance on how to use these tools effectively]
    ```
 
 **Example Analysis:**
@@ -121,7 +155,8 @@ Place all documentation in `.taskmaster/docs/task-{id}/` directories.
 ✅ Generated documentation for {{#if task_id}}task {{task_id}}{{else}}ALL tasks{{/if}}
 ✅ Created all required documentation files
 ✅ Generated tools.json configurations for each task
-📋 Total files created: [COUNT] (including task.md, prompt.md, acceptance-criteria.md, and tools.json for each task)
+✅ Generated mcp-tools.md documentation for each task
+📋 Total files created: [COUNT] (including task.md, prompt.md, acceptance-criteria.md, tools.json, and mcp-tools.md for each task)
 🔗 Git workflow and pull request will be handled automatically by orchestrator hook
 ```
 
