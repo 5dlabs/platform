@@ -1,24 +1,23 @@
-# Task 1: Create Toolman Helm Chart Structure
+# Task 1: Create Toolman Helm Chart
 
-## Overview
-Document and verify the existing Toolman deployment in the MCP namespace. Toolman has already been successfully deployed using the Helm chart located at `toolman/charts/toolman/`.
+Document and verify the existing Toolman deployment in the orchestrator namespace. Toolman has already been successfully deployed using the Helm chart located at `toolman/charts/toolman/`.
 
-## Current State
-**TOOLMAN IS ALREADY DEPLOYED** in the `mcp` namespace with:
-- Deployment: `toolman` running with image `ghcr.io/5dlabs/toolman:main-4685f6f`
-- Service: Available at `http://toolman.mcp.svc.cluster.local:3000`
+## Deployment Status
+**TOOLMAN IS ALREADY DEPLOYED** in the `orchestrator` namespace with:
+- Deployment: Running with 1 replica
+- Service: Available at `http://toolman.orchestrator.svc.cluster.local:3000`
 - ConfigMap: `toolman-config` containing MCP server definitions
-- Status: Running and healthy (2/2 containers ready)
 
-**Service Access Information:**
-- **Internal Cluster URL**: `http://toolman.mcp.svc.cluster.local:3000`
-- **Short Service Name**: `http://toolman:3000` (when accessed from within MCP namespace)
-- **Health Endpoint**: `http://toolman.mcp.svc.cluster.local:3000/health`
-- **Ready Endpoint**: `http://toolman.mcp.svc.cluster.local:3000/ready`
-- **MCP Servers List**: `http://toolman.mcp.svc.cluster.local:3000/mcp/servers`
+## Service URL Documentation
+For use in other tasks, the Toolman service can be accessed at:
+- **Internal Cluster URL**: `http://toolman.orchestrator.svc.cluster.local:3000`
+- **Short Service Name**: `http://toolman:3000` (when accessed from within orchestrator namespace)
+- **Health Endpoint**: `http://toolman.orchestrator.svc.cluster.local:3000/health`
+- **Ready Endpoint**: `http://toolman.orchestrator.svc.cluster.local:3000/ready`
+- **MCP Servers List**: `http://toolman.orchestrator.svc.cluster.local:3000/mcp/servers`
 
 ## Context
-This task is the foundation for deploying Toolman as part of the MCP tool integration system. Toolman will serve as an HTTP proxy/aggregator for various MCP (Model Context Protocol) servers, enabling Claude to access remote tools like GitHub, Kubernetes, Postgres, and more.
+This task is the foundation for deploying Toolman as part of the MCP tool integration system. Toolman will serve as an HTTP proxy/aggregator for various MCP (Model Context Protocol) servers, enabling Claude to access remote tools like GitHub, Kubernetes, Slack, and others through a single endpoint.
 
 ## Objectives
 1. ~~Verify the ghcr.io/5dlabs/toolman image exists and is accessible~~ ✅ Already deployed
@@ -29,19 +28,27 @@ This task is the foundation for deploying Toolman as part of the MCP tool integr
 6. Test connectivity to the pre-configured MCP servers
 7. Document the service URL for use in other tasks
 
-## Current Deployment Verification
+## Verifying Existing Deployment
 
-### Deployment Details
+### Current Status
+Toolman is already deployed and operational in the **orchestrator** namespace with:
+- **Deployment**: `toolman`
+- **Service**: `toolman` (ClusterIP on port 3000)
+- **ConfigMap**: `toolman-config` containing MCP server configurations
+- **Local Tools ConfigMap**: `toolman-local-tools` for filesystem and git tools
+- **RBAC**: Role and RoleBinding for ConfigMap management
+
+### Quick Verification Commands
 ```bash
-# Current deployment in MCP namespace:
-kubectl get deployment toolman -n mcp
+# Check deployment status:
+kubectl get deployment toolman -n orchestrator
 
 # Output shows:
 NAME      READY   UP-TO-DATE   AVAILABLE   AGE
-toolman   1/1     1            1           6d20h
+toolman   1/1     1            1           8d
 
-# Service details:
-kubectl get service toolman -n mcp
+# Check service:
+kubectl get service toolman -n orchestrator
 
 # Output shows:
 NAME      TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)    AGE
@@ -52,24 +59,24 @@ toolman   ClusterIP   10.97.54.95   <none>        3000/TCP   8d
 ```bash
 # Test from within cluster (any namespace):
 kubectl run test-curl --rm -it --image=curlimages/curl -- \
-  curl http://toolman.mcp.svc.cluster.local:3000/health
+  curl http://toolman.orchestrator.svc.cluster.local:3000/health
 
-# Test from within MCP namespace:
-kubectl run test-curl --rm -it --image=curlimages/curl -n mcp -- \
+# Test from within orchestrator namespace:
+kubectl run test-curl --rm -it --image=curlimages/curl -n orchestrator -- \
   curl http://toolman:3000/health
 
 # List available MCP servers:
 kubectl run test-curl --rm -it --image=curlimages/curl -- \
-  curl http://toolman.mcp.svc.cluster.local:3000/mcp/servers
+  curl http://toolman.orchestrator.svc.cluster.local:3000/mcp/servers
 ```
 
 ### ConfigMap Verification
 ```bash
 # Verify ConfigMap exists:
-kubectl get configmap toolman-config -n mcp
+kubectl get configmap toolman-config -n orchestrator
 
 # View MCP server configurations:
-kubectl get configmap toolman-config -n mcp -o yaml
+kubectl get configmap toolman-config -n orchestrator -o yaml
 ```
 
 ## Implementation Steps
@@ -189,6 +196,23 @@ kubectl run test-pod --rm -it --image=curlimages/curl -n toolman-test -- \
 
 - **Risk**: Persistence requirements unclear
   - **Mitigation**: Start with standard storage class, monitor usage patterns
+
+## Service Information
+
+### Service URL
+The Toolman service is accessible at the following URL from within the Kubernetes cluster:
+- **Full URL**: `http://toolman.orchestrator.svc.cluster.local:3000`
+- **From within orchestrator namespace**: `http://toolman:3000`
+- **Service Type**: ClusterIP on port 3000
+
+### Endpoints
+- `/health` - Health check endpoint
+- `/ready` - Readiness check endpoint
+- `/mcp` - Main MCP proxy endpoint
+- `/mcp/servers` - List configured MCP servers
+
+### ConfigMaps Created
+- `toolman-tool-catalog` - Contains discovered tool metadata (created in orchestrator namespace)
 
 ## Related Tasks
 - Task 2: Implement Toolman Kubernetes Deployment (builds on this chart review)

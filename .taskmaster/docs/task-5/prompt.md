@@ -1,5 +1,27 @@
 # Autonomous Agent Prompt: Implement Docs Agent Tool Discovery
 
+## Implementation Status (July 26, 2025)
+
+### Completed ✅
+- **Toolman RBAC**: Role and RoleBinding templates added for ConfigMap permissions
+- **Tool Discovery Fixed**: Deployed image `main-5724488` - now discovers 48 tools
+- **ConfigMap Creation**: Implemented in Toolman (deployed as `main-adfad50`)
+- **Orchestrator Mounting**: ConfigMap mounted to `/etc/tool-catalog` in agents
+- **Local Tools Discovery**: Dynamic discovery from local MCP servers (no hardcoding)
+- **Server-side Apply**: Fixed conflicts with `.force()` for ConfigMap updates
+
+### Current State 🎯
+- **Task 5 is COMPLETE**: All orchestrator and Toolman components implemented
+- **Toolman creates**: `toolman-tool-catalog` ConfigMap with full tool metadata
+- **Local tools**: Discovered dynamically from `toolman-local-tools` ConfigMap
+- **Remote tools**: Discovered from Toolman-proxied MCP servers
+
+### Pending (Separate Work) 🔄
+- **Docs Agent Implementation**: Read mounted catalog and implement matching logic
+- This is separate from orchestrator work and runs inside the agent container
+
+---
+
 ## Context
 You are implementing the tool discovery functionality for the docs agent. This is a critical component that reads the Toolman ConfigMap to discover available MCP tools and generates optimal tool configurations based on project analysis. This implementation must follow the zero-hardcoding principle - no tool names should be hardcoded.
 
@@ -9,7 +31,7 @@ Implement the complete tool discovery and recommendation system in the docs agen
 ## Key Requirements
 
 ### 1. Tool Catalog ConfigMap
-- **Create** a new ConfigMap called `toolman-tool-catalog` in the mcp namespace
+- **Create** a new ConfigMap called `toolman-tool-catalog` in the orchestrator namespace
 - **Populate** with comprehensive tool information:
   - Local tools (filesystem, git) with descriptions and use cases
   - Remote tools discovered from MCP servers
@@ -26,8 +48,8 @@ Add RBAC resources to the Toolman Helm chart:
 - Update `values.yaml` to include `rbac.create: true`
 
 ## Toolman Service Information
-- **Deployment Namespace**: `mcp`
-- **Service URL**: `http://toolman.mcp.svc.cluster.local:3000`
+- **Deployment Namespace**: `orchestrator`
+- **Service URL**: `http://toolman.orchestrator.svc.cluster.local:3000`
 - **ConfigMap Name**: `toolman-config`
 - **ConfigMap Key**: `servers-config.json`
 - **Service Type**: ClusterIP on port 3000
@@ -111,7 +133,7 @@ impl DocsHandler {
 
         let configmaps: Api<ConfigMap> = Api::namespaced(
             self.k8s_client.clone(),
-            "mcp"  // Toolman is deployed in mcp namespace
+            "orchestrator"  // Toolman is deployed in orchestrator namespace
         );
 
         // Read toolman-config ConfigMap

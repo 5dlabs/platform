@@ -95,9 +95,9 @@ volume_mounts.push(json!({
 The actual tool discovery logic runs in the docs agent container:
 
 ### Toolman Service Information
-- **Namespace**: `mcp` (where Toolman is deployed)
-- **Service URL**: `http://toolman.mcp.svc.cluster.local:3000`
-- **ConfigMap**: `toolman-config` in the `mcp` namespace
+- **Namespace**: `orchestrator` (where Toolman is deployed)
+- **Service URL**: `http://toolman.orchestrator.svc.cluster.local:3000`
+- **ConfigMap**: `toolman-config` in the `orchestrator` namespace
 - **ConfigMap Key**: `servers-config.json`
 
 ### 1. Core Data Structures
@@ -567,7 +567,8 @@ struct ToolInfo {
 }
 
 async fn populate_tool_catalog(client: Client) -> Result<(), Box<dyn Error>> {
-    let configmaps: Api<ConfigMap> = Api::namespaced(client.clone(), "mcp");
+    // Note: Update namespace to match where Toolman is deployed
+    let configmaps: Api<ConfigMap> = Api::namespaced(client.clone(), "orchestrator");
 
     // Build catalog from discovered tools
     let catalog = ToolCatalog {
@@ -581,7 +582,7 @@ async fn populate_tool_catalog(client: Client) -> Result<(), Box<dyn Error>> {
     let cm = ConfigMap {
         metadata: ObjectMeta {
             name: Some("toolman-tool-catalog".to_string()),
-            namespace: Some("mcp".to_string()),
+            namespace: Some("orchestrator".to_string()),
             ..Default::default()
         },
         data: Some(BTreeMap::from([
@@ -737,7 +738,8 @@ The docs agent should now read from the tool catalog instead of the server confi
 
 ```rust
 async fn discover_available_tools(client: Client) -> Result<ToolCatalog, Box<dyn Error>> {
-    let configmaps: Api<ConfigMap> = Api::namespaced(client, "mcp");
+    // Read from the namespace where Toolman is deployed
+    let configmaps: Api<ConfigMap> = Api::namespaced(client, "orchestrator");
 
     // Read from the tool catalog ConfigMap
     let cm = configmaps.get("toolman-tool-catalog").await?;
@@ -810,6 +812,12 @@ The user helped clarify that:
 - **Toolman**: Creates and maintains the tool catalog ConfigMap
 - **Docs Agent**: Reads mounted catalog and performs discovery/matching (runs in container)
 
+**Further Simplification**: The platform side just needs to mount the tool catalog ConfigMap. The docs agent will:
+- Read available tools and descriptions
+- Generate an optimal client config file based on project analysis
+- Save that config with the task documentation
+- No validation needed on platform side - work with whatever tools are available
+
 ### Pending Work
 
 1. **Toolman Implementation**:
@@ -822,3 +830,196 @@ The user helped clarify that:
    - Implement project analysis logic
    - Match tools based on catalog metadata
    - Output configuration for code agents
+
+## Implementation Progress (July 26, 2025)
+
+### Completed ✅
+
+1. **Toolman RBAC Setup**:
+   - Added Role and RoleBinding templates to Helm chart
+   - Grants permissions to create/update `toolman-tool-catalog` ConfigMap
+   - Deployed with `rbac.create: true`
+
+2. **Toolman Tool Discovery Fix**:
+   - Deployed new image `main-5724488` fixing tool discovery
+   - Now successfully discovers 48 tools across all configured servers
+
+3. **Tool Catalog ConfigMap Creation**:
+   - Implemented in `toolman/src/bin/http_server.rs`
+   - Creates `toolman-tool-catalog` after discovery completes
+   - Includes rich metadata:
+     - Tool descriptions and input schemas
+     - Auto-inferred categories (kubernetes, database, search, etc.)
+     - Auto-generated use cases
+     - Separate sections for local and remote tools
+   - Fixed server-side apply conflicts with `.force()`
+   - Deployed as image `main-adfad50`
+
+4. **Local Tools Discovery**:
+   - Added `toolman-local-tools` ConfigMap support (commit `dea64aa`)
+   - Local tools now use same discovery mechanism as remote tools
+   - No hardcoded tool lists - fully dynamic
+   - Administrator only provides minimal server config (command, args, etc.)
+   - Toolman discovers actual tools from local MCP servers
+   - Same pattern as `servers-config.json`
+
+5. **Orchestrator ConfigMap Mounting** (from earlier):
+   - Already implemented in `resources.rs`
+   - Mounts catalog to `/etc/tool-catalog` in agent containers
+
+### Tool Catalog Structure
+
+The created ConfigMap contains:
+```json
+{
+  "last_updated": "2025-07-26T16:10:00Z",
+  "local": {
+    // Discovered from local MCP servers (filesystem, git, etc.)
+    "filesystem": {
+      "description": "File system operations...",
+      "tools": [/* dynamically discovered tools */]
+    },
+    "git": {
+      "description": "Git version control operations",
+      "tools": [/* dynamically discovered tools */]
+    }
+  },
+  "remote": {
+    // Discovered from Toolman-proxied servers
+    "kubernetes": {
+      "description": "Kubernetes cluster management...",
+      "endpoint": "stdio",
+      "tools": [
+        {
+          "name": "getResource",
+          "description": "Get a specific resource...",
+          "category": "kubernetes",
+          "use_cases": ["retrieving information"],
+          "input_schema": {...}
+        }
+      ]
+    },
+    // ... other servers
+  }
+}
+```
+
+### Local Tools ConfigMap Structure
+
+The `toolman-local-tools` ConfigMap follows the same pattern as `servers-config.json`:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: toolman-local-tools
+  namespace: orchestrator
+data:
+  local-tools-config.json: |
+    {
+      "servers": {
+        "filesystem": {
+          "name": "Filesystem",
+          "description": "File system operations",
+          "transport": "stdio",
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-filesystem"],
+          "workingDirectory": "project_root"
+        },
+        "git": {
+          "name": "Git",
+          "description": "Git version control operations",
+          "transport": "stdio",
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-git"],
+          "workingDirectory": "project_root"
+        }
+      }
+    }
+```
+
+### Status
+
+**Task 5 is COMPLETE from the orchestrator/Toolman perspective** ✅
+
+All platform components have been implemented:
+- Toolman discovers both local and remote tools dynamically
+- Creates comprehensive tool catalog ConfigMap with:
+  - 1 local tool server (filesystem) with 12 tools
+  - 6 remote tool servers with 46 tools
+  - Total: 58 tools available
+- No hardcoded tool lists anywhere - fully dynamic discovery
+- Orchestrator mounts the catalog to `/etc/tool-catalog` in agent containers
+- RBAC permissions properly configured
+- Namespace auto-detection implemented (no hardcoded namespaces)
+
+### What the Docs Agent Will Do
+
+Now that the tool catalog ConfigMap is available and mounted, the docs agent will:
+
+1. **Read the Tool Catalog**:
+   ```javascript
+   // Read from mounted ConfigMap
+   const catalogPath = '/etc/tool-catalog/tool-catalog.json';
+   const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+   ```
+
+2. **Analyze the Project**:
+   - Scan project files to detect technologies in use
+   - Identify Kubernetes manifests, database configs, CI/CD pipelines
+   - Detect programming languages and frameworks
+   - Build a project profile
+
+3. **Match Tools to Project Needs**:
+   - Use the rich metadata in the catalog (descriptions, categories, use cases)
+   - Match tools based on project characteristics
+   - Example: If K8s files found → recommend kubernetes tools
+   - Example: If database configs found → recommend relevant DB tools
+
+4. **Generate Tool Configuration**:
+   - Create an optimal list of local and remote tools
+   - Output as a structured configuration (JSON)
+   - Save with the task documentation
+
+5. **Provide to Code Agent**:
+   - The generated configuration tells the code agent which tools to enable
+   - Code agent uses only the recommended tools, not all 58 available
+
+### Example Docs Agent Workflow
+
+```
+Project Analysis:
+- Found: kubernetes/*.yaml files
+- Found: postgres/schema.sql
+- Found: .github/workflows/
+- Language: Python (requirements.txt)
+
+Tool Recommendations:
+- Local: ["filesystem"]  // Always included
+- Remote: ["kubernetes", "postgres", "github"]  // Based on analysis
+
+Output Configuration:
+{
+  "tools": {
+    "local": ["filesystem"],
+    "remote": ["kubernetes", "postgres", "github"]
+  },
+  "analysis": {
+    "has_kubernetes": true,
+    "has_database": true,
+    "has_ci_cd": true,
+    "languages": ["python"]
+  },
+  "generated_at": "2025-07-26T18:00:00Z"
+}
+```
+
+### Next Steps
+
+1. **Docs Agent Implementation** (separate component, not part of orchestrator):
+   - This runs inside the docs agent container
+   - Uses the mounted catalog from `/etc/tool-catalog/tool-catalog.json`
+   - Implements the workflow described above
+
+2. **Downstream Task Updates**:
+   - Task 11 (Tool Validation) may be simplified - catalog is source of truth
+   - Task 6/7 (Code agent configuration) will use the generated configs

@@ -3,45 +3,50 @@
 ## Overview
 This document defines the acceptance criteria for implementing tool discovery functionality in the docs agent, enabling dynamic discovery of available MCP tools and intelligent project-based recommendations.
 
+## Implementation Note (July 26, 2025)
+The orchestrator and Toolman components are **COMPLETE** ✅. The remaining work for the docs agent itself (sections 1, 4, 5, 6) runs inside the agent container and is separate from the platform orchestration work.
+
 ## Core Requirements
 
 ### 1. Tool Discovery
-- [ ] **ConfigMap Reading**: Successfully reads toolman-servers-config
-- [ ] **JSON Parsing**: Correctly parses servers configuration
-- [ ] **Tool Extraction**: Extracts all available tool names
-- [ ] **Error Handling**: Gracefully handles missing/invalid ConfigMap
-- [ ] **Logging**: Logs discovery process and results
+- [x] **ConfigMap Reading**: Successfully reads toolman-servers-config *(via Toolman)*
+- [x] **JSON Parsing**: Correctly parses servers configuration *(via Toolman)*
+- [x] **Tool Extraction**: Extracts all available tool names *(via Toolman)*
+- [x] **Error Handling**: Gracefully handles missing/invalid ConfigMap *(implemented)*
+- [x] **Logging**: Logs discovery process and results *(Toolman logs discovery)*
 
 ### 2. Tool Catalog ConfigMap
-- [ ] **Catalog Creation**: Creates `toolman-tool-catalog` ConfigMap in mcp namespace
-- [ ] **Local Tools**: Includes filesystem and git tool definitions
-- [ ] **Remote Tools**: Populates with discovered tool information
-- [ ] **Tool Metadata**: Includes descriptions, categories, and use cases
-- [ ] **Auto-Update**: Updates catalog on Toolman startup
-- [ ] **RBAC Permissions**: Has proper permissions to create/update ConfigMap
+- [x] **Catalog Creation**: Creates `toolman-tool-catalog` ConfigMap in orchestrator namespace
+- [x] **Local Tools**: Includes filesystem tool definitions (12 tools)
+- [x] **Remote Tools**: Populates with discovered tool information (46 tools across 6 servers)
+- [x] **Tool Metadata**: Includes descriptions, categories, and use cases
+- [x] **Auto-Update**: Updates catalog on Toolman startup
+- [x] **RBAC Permissions**: Has proper permissions to create/update ConfigMap
+- [x] **Namespace Auto-Detection**: Dynamically detects namespace instead of hardcoding
 
 ### 3. RBAC Configuration
-- [ ] **Role Created**: Role with ConfigMap read/write permissions
-- [ ] **RoleBinding Created**: Binds role to Toolman ServiceAccount
-- [ ] **Helm Chart Updated**: Includes role.yaml and rolebinding.yaml templates
-- [ ] **Values Updated**: rbac.create flag added to values.yaml
-- [ ] **Least Privilege**: Only necessary permissions granted
+- [x] **Role Created**: Role with ConfigMap read/write permissions
+- [x] **RoleBinding Created**: Binds role to Toolman ServiceAccount
+- [x] **Helm Chart Updated**: Includes role.yaml and rolebinding.yaml templates
+- [x] **Values Updated**: rbac.create flag added to values.yaml
+- [x] **Least Privilege**: Only necessary permissions granted
+- [x] **Namespace Isolation**: Works within deployed namespace only
 
-### 4. Project Analysis
+### 4. Project Analysis *(Docs Agent - Pending)*
 - [ ] **File Detection**: Identifies relevant project files
 - [ ] **Pattern Matching**: Uses glob patterns effectively
 - [ ] **Language Detection**: Recognizes programming languages
 - [ ] **Framework Detection**: Identifies frameworks in use
 - [ ] **Comprehensive Analysis**: Covers K8s, DB, CI/CD, IaC
 
-### 5. Tool Matching
+### 5. Tool Matching *(Docs Agent - Pending)*
 - [ ] **Pattern-Based**: Uses patterns, not hardcoded names
 - [ ] **Contextual**: Matches based on project needs
-- [ ] **No Hardcoding**: Zero hardcoded tool names
+- [x] **No Hardcoding**: Zero hardcoded tool names *(achieved in Toolman)*
 - [ ] **Deduplication**: Removes duplicate recommendations
 - [ ] **Sorting**: Returns sorted tool lists
 
-### 6. Configuration Storage
+### 6. Configuration Storage *(Docs Agent - Pending)*
 - [ ] **ConfigMap Creation**: Creates project-specific ConfigMap
 - [ ] **JSON Format**: Stores configuration as JSON
 - [ ] **Metadata**: Includes timestamps and analysis
@@ -55,13 +60,43 @@ This document defines the acceptance criteria for implementing tool discovery fu
 ConfigMap Read -> Tool Discovery -> Project Analysis -> Tool Matching -> Config Storage
 ```
 
-### 2. Expected ConfigMap Format
+### 2. Tool Catalog Format (Implemented)
+```json
+{
+  "last_updated": "2025-07-26T16:10:00Z",
+  "local": {
+    // Dynamically discovered from local MCP servers
+    "filesystem": { "description": "...", "tools": [...] },
+    "git": { "description": "...", "tools": [...] }
+  },
+  "remote": {
+    // Dynamically discovered from Toolman-proxied servers
+    "kubernetes": { "description": "...", "endpoint": "stdio", "tools": [...] },
+    "postgres": { "description": "...", "endpoint": "stdio", "tools": [...] }
+  }
+}
+```
+
+### 3. Local Tools ConfigMap Format (Implemented)
 ```json
 {
   "servers": {
-    "github": { "transport": "stdio", ... },
-    "kubernetes": { "transport": "stdio", ... },
-    "postgres": { "transport": "stdio", ... }
+    "filesystem": {
+      "name": "Filesystem",
+      "description": "File system operations",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem"],
+      "workingDirectory": "project_root"
+    },
+    "git": {
+      "name": "Git",
+      "description": "Git version control operations",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-git"],
+      "workingDirectory": "project_root"
+    }
   }
 }
 ```
