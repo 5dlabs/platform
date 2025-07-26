@@ -54,18 +54,17 @@ jobs:
           
           echo "✅ All required secrets are available and working"
 
-      - name: Test Claude Code agent mode
+      - name: Test Claude Code functionality
         id: test-claude
-        uses: anthropics/claude-code-action@v0.0.44
+        uses: docker://ghcr.io/5dlabs/claude-code:latest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         with:
-          mode: agent
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          direct_prompt: |
-            This is a validation test for agent mode. Please respond with exactly:
-            "VALIDATION_SUCCESS: Agent mode is working correctly"
-            
-            This is just to verify the mode parameter works before proceeding with the full workflow.
+          entrypoint: /bin/bash
+          args: |
+            -c "echo '🧪 Testing Claude Code functionality...' && 
+                echo 'This is a validation test. Please respond with: VALIDATION_SUCCESS' | claude --prompt-stdin --non-interactive &&
+                echo '✅ Claude Code test completed'"
 
       - name: Validation complete
         run: |
@@ -251,32 +250,38 @@ jobs:
           ls -la docs/ || echo "No docs directory created"
 
       - name: Cross-reference with architecture (AI-powered)
-        uses: anthropics/claude-code-action@v0.0.44
+        uses: docker://ghcr.io/5dlabs/claude-code:latest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         with:
-          mode: agent
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          direct_prompt: |
-            I need you to cross-reference the generated TaskMaster tasks with the architecture document and finalize the project structure.
+          entrypoint: /bin/bash
+          args: |
+            -c "cd /github/workspace/${{ steps.create-structure.outputs.project_dir }} &&
+                echo '🤖 Running AI-powered cross-referencing with Claude Code...' &&
+                cat > cross_reference_prompt.txt << 'EOF' &&
+                I need you to cross-reference the generated TaskMaster tasks with the architecture document and finalize the project structure.
 
-            **Project**: ${{ steps.extract-name.outputs.project_name }}
-            **Location**: ${{ steps.create-structure.outputs.project_dir }}
+                **Project**: ${{ steps.extract-name.outputs.project_name }}
+                **Location**: ${{ steps.create-structure.outputs.project_dir }}
 
-            Please:
-            1. Review the tasks in .taskmaster/tasks.json
-            2. Compare them against the architecture document at .taskmaster/docs/architecture.md
-            3. Identify any missing tasks, unnecessary tasks, or misaligned requirements
-            4. Update the tasks.json file to ensure 100% alignment with the architecture
-            5. Add any missing tasks that the architecture requires
-            6. Remove any tasks that don't align with the architecture
-            7. Update task descriptions to better match architectural requirements
-            8. Update tasks.json with any changes
-            9. Create any additional documentation structure needed
+                Please:
+                1. Review the tasks in .taskmaster/tasks.json
+                2. Compare them against the architecture document at .taskmaster/docs/architecture.md
+                3. Identify any missing tasks, unnecessary tasks, or misaligned requirements
+                4. Update the tasks.json file to ensure 100% alignment with the architecture
+                5. Add any missing tasks that the architecture requires
+                6. Remove any tasks that don't align with the architecture
+                7. Update task descriptions to better match architectural requirements
+                8. Update tasks.json with any changes
+                9. Create any additional documentation structure needed
 
-            Focus on ensuring every architectural component, feature, and requirement has corresponding tasks.
-            Make sure task dependencies align with the architectural design.
+                Focus on ensuring every architectural component, feature, and requirement has corresponding tasks.
+                Make sure task dependencies align with the architectural design.
 
-            After making changes, the project should be ready for development workflow.
+                After making changes, the project should be ready for development workflow.
+                EOF
+                claude --file cross_reference_prompt.txt --non-interactive &&
+                echo '✅ AI cross-referencing completed'"
 
 
       - name: Create Pull Request
