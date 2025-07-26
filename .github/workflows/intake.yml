@@ -51,6 +51,16 @@ jobs:
             exit 1
           fi
           
+          # Check if Claude Code action would work with current event
+          echo "🔍 Checking Claude Code action compatibility..."
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "⚠️  WARNING: Claude Code action does not support 'push' events"
+            echo "⚠️  This workflow will use simplified cross-referencing instead"
+            echo "⚠️  For full AI cross-referencing, trigger via pull_request event"
+          else
+            echo "✅ Event type '${{ github.event_name }}' is compatible with Claude Code action"
+          fi
+          
           echo "✅ All required secrets are available and working"
           echo "✅ Workflow validation passed"
           echo "passed=true" >> $GITHUB_OUTPUT
@@ -232,15 +242,42 @@ jobs:
           echo "✅ Docs directory structure created"
           ls -la docs/ || echo "No docs directory created"
 
-      - name: Cross-reference with architecture and finalize
+      - name: Cross-reference with architecture (AI-powered)
+        if: github.event_name != 'push'
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          direct_prompt: |
+            I need you to cross-reference the generated TaskMaster tasks with the architecture document and finalize the project structure.
+
+            **Project**: ${{ steps.extract-name.outputs.project_name }}
+            **Location**: ${{ steps.create-structure.outputs.project_dir }}
+
+            Please:
+            1. Review the tasks in .taskmaster/tasks.json
+            2. Compare them against the architecture document at .taskmaster/docs/architecture.md
+            3. Identify any missing tasks, unnecessary tasks, or misaligned requirements
+            4. Update the tasks.json file to ensure 100% alignment with the architecture
+            5. Add any missing tasks that the architecture requires
+            6. Remove any tasks that don't align with the architecture
+            7. Update task descriptions to better match architectural requirements
+            8. Update tasks.json with any changes
+            9. Create any additional documentation structure needed
+
+            Focus on ensuring every architectural component, feature, and requirement has corresponding tasks.
+            Make sure task dependencies align with the architectural design.
+
+            After making changes, the project should be ready for development workflow.
+
+      - name: Cross-reference with architecture (simplified)
+        if: github.event_name == 'push'
         working-directory: ${{ steps.create-structure.outputs.project_dir }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          echo "🔄 Cross-referencing tasks with architecture document"
-          
-          # Since Claude Code action doesn't work with push events, we'll use a direct approach
-          # Create a simple script to cross-reference and update tasks
+          echo "🔄 Cross-referencing tasks with architecture document (simplified mode)"
+          echo "ℹ️  Note: Full AI cross-referencing requires pull_request event"
           
           echo "📋 Current task summary:"
           if [ -f ".taskmaster/tasks/tasks.json" ]; then
@@ -251,9 +288,15 @@ jobs:
             exit 1
           fi
           
-          # For now, we'll just ensure the structure is correct
-          # In the future, this could be enhanced with AI-powered cross-referencing
-          echo "✅ Tasks validated against architecture"
+          # Basic validation - ensure tasks exist and architecture document exists
+          if [ -f ".taskmaster/docs/architecture.md" ]; then
+            echo "✅ Architecture document found"
+          else
+            echo "⚠️  Architecture document not found"
+          fi
+          
+          echo "✅ Basic validation completed"
+          echo "💡 For AI-powered cross-referencing, create a pull request"
           
           # Show final project structure
           echo "📁 Final project structure:"
