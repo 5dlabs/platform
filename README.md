@@ -377,6 +377,14 @@ The AGPL license is specifically designed for server-side software to ensure tha
 
 For more details, see the [LICENSE](LICENSE) file.
 
+## Related Projects
+
+- **[Task Master AI](https://github.com/eyaltoledano/claude-task-master)** - The AI-powered task management system that works perfectly with this orchestrator platform. Task Master AI helps you break down complex projects into manageable tasks, which can then be implemented using this platform's `task()` MCP tool.
+
+## Roadmap
+
+See our [ROADMAP.md](ROADMAP.md) for upcoming features and planned enhancements to the platform.
+
 ---
 
 *The platform runs on Kubernetes and automatically manages Claude agent deployments, workspace isolation, and GitHub integration. All you need to do is call the MCP tools and review the resulting PRs.*
