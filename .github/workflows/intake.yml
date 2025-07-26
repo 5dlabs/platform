@@ -169,18 +169,18 @@ jobs:
         id: create-structure
         run: |
           PROJECT_NAME="${{ steps.extract-name.outputs.project_name }}"
-          PROJECT_DIR="intake"
+          PROJECT_DIR="projects/$PROJECT_NAME"
 
-          echo "🏗️ Setting up TaskMaster in intake directory"
+          echo "🏗️ Creating project structure at: $PROJECT_DIR"
 
-          # Create TaskMaster directory structure in intake
+          # Create TaskMaster directory structure in projects
           mkdir -p "$PROJECT_DIR/.taskmaster/docs"
 
-          # Copy files to appropriate locations in intake
+          # Copy files to appropriate locations in projects
           cp "${{ steps.detect-files.outputs.prd_file }}" "$PROJECT_DIR/.taskmaster/docs/prd.txt"
           cp "${{ steps.detect-files.outputs.arch_file }}" "$PROJECT_DIR/.taskmaster/docs/architecture.md"
 
-          echo "✅ TaskMaster structure created in intake"
+          echo "✅ Project structure created at $PROJECT_DIR"
           echo "project_dir=$PROJECT_DIR" >> $GITHUB_OUTPUT
 
       - name: Initialize TaskMaster and generate tasks
@@ -267,19 +267,19 @@ jobs:
           # Create new branch
           git checkout -b "$BRANCH_NAME"
 
-          # Add only TaskMaster generated files (not example files or README)
-          git add intake/.taskmaster/
-          git add intake/docs/
+          # Add the entire project directory
+          git add "projects/$PROJECT_NAME/"
 
           # Commit changes
           git commit -m "🚀 Process project: $PROJECT_NAME
 
           Automated project intake processing:
-          - Processed PRD and architecture documents in intake/
+          - Processed PRD and architecture documents from intake/
+          - Created project structure in projects/$PROJECT_NAME/
           - Initialized TaskMaster with Claude Sonnet
           - Generated tasks from PRD (no research for speed)
-          - Created task files in intake/docs/task-X/
-          - Generated complete TaskMaster structure in intake/
+          - Created task files in projects/$PROJECT_NAME/docs/task-X/
+          - Generated complete project structure in projects/$PROJECT_NAME/
 
           Project processing complete and ready for review."
 
@@ -296,14 +296,15 @@ jobs:
           ### 📋 What was processed:
           - ✅ PRD document analyzed and parsed
           - ✅ Architecture document integrated
+          - ✅ Project created in projects/$PROJECT_NAME/
           - ✅ TaskMaster initialized with Claude Sonnet
           - ✅ Tasks generated (no research for speed)
           - ✅ Task files created with individual documentation
-          - ✅ Complete TaskMaster structure generated in intake/
+          - ✅ Complete project structure generated
 
           ### 🏗️ Generated Structure:
           \`\`\`
-          intake/
+          projects/$PROJECT_NAME/
           ├── .taskmaster/
           │   ├── docs/
           │   │   ├── prd.txt
@@ -321,7 +322,7 @@ jobs:
 
           ### 🎯 Next Steps:
           1. Review the generated tasks for accuracy
-          2. Copy task structure to your project directory if needed
+          2. Merge this PR to add the project to the repository
           3. Begin development using TaskMaster workflows
           4. Tasks are ready for implementation
 
@@ -330,7 +331,7 @@ jobs:
 
           Project processing complete! 🚀" \
             --head "$BRANCH_NAME" \
-            --base main
+            --base feature/toolman-integration
 
           echo "✅ Pull request created successfully"
         env:
