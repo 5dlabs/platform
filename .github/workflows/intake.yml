@@ -42,8 +42,8 @@ jobs:
       - name: Verify TaskMaster installation
         run: |
           echo "Current PATH: $PATH"
-          which taskmaster || echo "TaskMaster not found in PATH"
-          taskmaster --version
+          which task-master || echo "task-master not found in PATH"
+          task-master --version
 
       - name: Detect new project files
         id: detect-files
@@ -121,27 +121,27 @@ jobs:
           echo "🚀 Initializing TaskMaster and generating tasks"
 
           # Initialize TaskMaster with Opus model
-          taskmaster init \
+          task-master init \
             --model="claude-opus-4-20250514" \
             --working-directory="$(pwd)"
 
           # Parse PRD with no research and no task limit
-          taskmaster parse-prd \
+          task-master parse-prd \
             --input=".taskmaster/docs/prd.txt" \
             --research=false \
             --no-task-limit
 
           # Analyze task complexity (with research for this step)
-          taskmaster analyze-complexity \
+          task-master analyze-complexity \
             --research=true
 
           # Expand tasks with subtasks
-          taskmaster expand --all \
+          task-master expand --all \
             --force \
             --research=true
 
           # Generate individual task files
-          taskmaster generate
+          task-master generate
 
           echo "✅ Tasks generated and individual files created"
 
