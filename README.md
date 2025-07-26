@@ -104,6 +104,37 @@ fdl --help       # CLI tool for direct API calls
 - Multi-platform support (Linux x64/ARM64, macOS Intel/Apple Silicon, Windows x64)
 - Automatic installation to system PATH
 
+### Configure Cursor MCP Integration
+
+After installing the CLI tools, configure Cursor to use the MCP server by creating a `.cursor/mcp.json` file in your project directory:
+
+```json
+{
+  "mcpServers": {
+    "fdl-mcp": {
+      "command": "fdl-mcp",
+      "args": [],
+      "env": {
+        "FDL_DEFAULT_DOCS_USER": "your-github-username",
+        "FDL_DEFAULT_CODE_USER": "your-github-username"
+      }
+    }
+  }
+}
+```
+
+**Configuration options:**
+- `FDL_DEFAULT_DOCS_USER` - Default GitHub username for documentation generation (optional)
+- `FDL_DEFAULT_CODE_USER` - Default GitHub username for code implementation (optional)
+
+**Usage:**
+1. Create the `.cursor/mcp.json` file in your project root
+2. Replace `"your-github-username"` with your actual GitHub username
+3. Restart Cursor to load the MCP server
+4. The `docs()` and `task()` functions will be available in Claude conversations
+
+**Important**: The MCP server connects to your deployed orchestrator service. Ensure your orchestrator is accessible from your development environment (either locally or via TwinGate for remote clusters).
+
 ### Building from Source (Development)
 
 ```bash

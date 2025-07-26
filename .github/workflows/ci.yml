@@ -1,10 +1,11 @@
+---
 name: Continuous Integration
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -16,7 +17,6 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
-      claude-code: ${{ steps.filter.outputs.claude-code }}
       orchestrator: ${{ steps.filter.outputs.orchestrator }}
       taskrun: ${{ steps.filter.outputs.taskrun }}
       infra: ${{ steps.filter.outputs.infra }}
@@ -26,8 +26,6 @@ jobs:
         id: filter
         with:
           filters: |
-            claude-code:
-              - 'infra/images/claude-code/**'
             orchestrator:
               - 'orchestrator/**'
               - '!orchestrator/**/*.md'

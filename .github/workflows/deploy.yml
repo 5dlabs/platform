@@ -1,29 +1,19 @@
-name: Quick Deploy (Test Only)
-
-# Quick deployment for testing changes
-# Skips all tests and linting for rapid iteration
-# Can be triggered manually with branch selection
+name: Deploy Orchestrator
 
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: 'Branch to deploy from'
+      tag:
+        description: 'Release tag to deploy (e.g., v0.1.4)'
         required: true
-        default: 'main'
         type: string
-      skip_tests:
-        description: 'Skip all tests and linting'
-        required: false
-        default: true
-        type: boolean
 
 env:
   REGISTRY: ghcr.io
   IMAGE_BASE: ${{ github.repository }}
 
 jobs:
-  # Quick version determination
+  # Version determination
   version:
     runs-on: ubuntu-latest
     outputs:
@@ -32,19 +22,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || github.ref }}
+          ref: ${{ inputs.tag }}
 
-      - name: Generate quick version
+      - name: Set version from tag
         id: version
         run: |
+          VERSION="${{ inputs.tag }}"
           SHORT_SHA=$(git rev-parse --short HEAD)
-          TIMESTAMP=$(date +%Y%m%d%H%M%S)
-          VERSION="quick-${TIMESTAMP}-${SHORT_SHA}"
 
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "short-sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
-          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
-          echo "📦 Quick deploy version: ${VERSION}"
+          echo "📦 Deploy version: ${VERSION}"
 
 
   # Build only orchestrator (skip Claude Code for now)
@@ -58,7 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || github.ref }}
+          ref: ${{ inputs.tag }}
 
       - name: Setup optimized Rust environment
         run: |
@@ -231,11 +219,11 @@ jobs:
           fi
           echo "$HOME/bin" >> $GITHUB_PATH
 
-      - name: Quick Deploy Orchestrator
+      - name: Deploy Orchestrator
         run: |
-          echo "🚀 Quick deploying version ${{ needs.version.outputs.version }}"
+          echo "🚀 Deploying version ${{ needs.version.outputs.version }}"
 
-          # Deploy with quick version tag
+          # Deploy release version
           helm upgrade --install orchestrator ./infra/charts/orchestrator \
             --namespace orchestrator \
             --create-namespace \
@@ -248,17 +236,14 @@ jobs:
 
       - name: Verify deployment
         run: |
-          echo "🔍 Quick deployment verification..."
+          echo "🔍 Deployment verification..."
           kubectl get pods -n orchestrator -o wide
           kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=orchestrator -n orchestrator --timeout=120s || true
 
           echo ""
-          echo "✅ Quick deployment complete!"
+          echo "✅ Deployment complete!"
           echo "📦 Deployed: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.version }}"
-          echo "🔗 Commit: ${{ github.sha }}"
-          echo ""
-          echo "⚡ This was a QUICK DEPLOY - no tests were run!"
-          echo "🧪 Remember to run full CI before merging to main"
+          echo "🏷️ Tag: ${{ inputs.tag }}"
 
       - name: Show recent TaskRuns
         run: |
