@@ -252,14 +252,14 @@ jobs:
           echo "✅ Docs directory structure created"
           ls -la docs/ || echo "No docs directory created"
 
-      - name: Cross-reference with architecture (simple validation)
+      - name: Validate API connectivity
         working-directory: ${{ steps.create-structure.outputs.project_dir }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          echo "🔍 Running simple cross-referencing validation..."
+          echo "🔍 Validating Anthropic API connectivity..."
           
-          # Simple validation using curl to Anthropic API
+          # Simple API health check using curl
           response=$(curl -s -w "%{http_code}" -o /tmp/claude_response.json \
             -H "x-api-key: ${{ secrets.ANTHROPIC_API_KEY }}" \
             -H "anthropic-version: 2023-06-01" \
@@ -272,14 +272,14 @@ jobs:
             }')
 
           if [[ "$response" == "200" ]]; then
-            echo "✅ Cross-referencing validation completed"
+            echo "✅ API connectivity validated"
             cat /tmp/claude_response.json | jq -r '.content[0].text'
           else
-            echo "❌ Cross-referencing failed (HTTP $response)"
+            echo "❌ API connectivity failed (HTTP $response)"
             exit 1
           fi
           
-          echo "✅ Simple validation completed - project structure ready"
+          echo "✅ API validation completed - project structure ready"
 
 
       - name: Create Pull Request
@@ -307,7 +307,7 @@ jobs:
           - Initialized TaskMaster with Claude Sonnet
           - Generated tasks from PRD (no research for speed)
           - Created task files in intake/docs/task-X/
-          - Cross-referenced with simple API validation
+          - Validated API connectivity
           - Generated complete TaskMaster structure in intake/
 
           Project processing complete and ready for review."
@@ -328,7 +328,7 @@ jobs:
           - ✅ TaskMaster initialized with Claude Sonnet
           - ✅ Tasks generated (no research for speed)
           - ✅ Task files created with individual documentation
-          - ✅ Simple API validation completed
+          - ✅ API connectivity validated  
           - ✅ Complete TaskMaster structure generated in intake/
 
           ### 🏗️ Generated Structure:
@@ -357,7 +357,7 @@ jobs:
 
           ### 🤖 Models Used:
           - **Task Generation**: Claude Sonnet (via TaskMaster)
-          - **Validation**: Claude Haiku (simple API validation)
+          - **API Health Check**: Direct Anthropic API call (connectivity validation only)
 
           Project processing complete! 🚀" \
             --head "$BRANCH_NAME" \
