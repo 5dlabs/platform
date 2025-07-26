@@ -24,6 +24,17 @@ storage:
   # Size of workspace PVCs
   workspaceSize: "10Gi"
 
+# Cleanup configuration (controller-based event-driven cleanup)
+cleanup:
+  # Whether to enable automatic cleanup of completed jobs
+  enabled: true
+  # Minutes to wait before cleaning up successful jobs (default: 5 minutes)
+  completedJobDelayMinutes: 5
+  # Minutes to wait before cleaning up failed jobs (default: 60 minutes)
+  failedJobDelayMinutes: 60
+  # Whether to delete associated ConfigMaps when cleaning up jobs
+  deleteConfigMap: true
+
 imagePullSecrets:
   - name: ghcr-secret
 
@@ -100,9 +111,9 @@ tolerations:
 
 affinity: {}
 
-# Orchestrator-specific configuration
+# Configuration for the orchestrator service
 config:
-  # Kubernetes configuration
+  # Kubernetes namespace (auto-populated in most cases)
   kubernetesNamespace: "orchestrator"
 
   # Server configuration
@@ -112,16 +123,19 @@ config:
   # Logging
   rustLog: "orchestrator=debug,tower_http=debug,axum=debug,kube=info"
 
-  # Task Controller configuration
-  controllerEnabled: true
-  controllerConfigMap: "task-controller-config"
+# Default model configurations
+models:
+  # Default model for documentation generation
+  defaultDocsModel: "claude-opus-4-20250514"
+  # Default model for code tasks
+  defaultCodeModel: "claude-sonnet-4-20250514"
 
 # Secret configuration for API keys
 secrets:
   # REQUIRED: Set your Anthropic API key
   anthropicApiKey: ""
-  # GitHub token for CLI access
-  githubToken: ""
+  # Note: GitHub secrets (SSH keys + tokens) are managed externally per agent
+  # See infra/scripts/setup-agent-secrets.sh for setup instructions
 
 # RBAC configuration
 rbac:
@@ -166,12 +180,6 @@ rbac:
       resources: ["events"]
       verbs: ["get", "list", "watch"]
 
-# Claude Code Helm Chart configuration (no longer needed with CRD)
-claudeCodeChart:
-  enabled: false
-  # The chart will be mounted as a ConfigMap volume
-  mountPath: "/infra"
-
 # Health checks
 healthCheck:
   enabled: true
@@ -189,11 +197,3 @@ healthCheck:
     timeoutSeconds: 1
     successThreshold: 1
     failureThreshold: 3
-
-# Shared workspace PVC (optional - can be managed separately)
-sharedWorkspace:
-  enabled: false  # Set to true to create the PVC with the chart
-  name: "shared-workspace-pvc"
-  storageClass: "local-path"
-  accessMode: "ReadWriteOnce"
-  size: "50Gi"

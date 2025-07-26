@@ -288,7 +288,10 @@ fn build_job_spec(
             }
 
             // Add toolman server URL for MCP integration
-            env_vars.push(json!({"name": "TOOLMAN_SERVER_URL", "value": "http://toolman.mcp.svc.cluster.local:3000/mcp"}));
+            // Environment variable: TOOLMAN_SERVER_URL (default: http://toolman.mcp.svc.cluster.local:3000/mcp)
+            let toolman_url = std::env::var("TOOLMAN_SERVER_URL")
+                .unwrap_or_else(|_| "http://toolman.mcp.svc.cluster.local:3000/mcp".to_string());
+            env_vars.push(json!({"name": "TOOLMAN_SERVER_URL", "value": toolman_url}));
 
             // Add custom environment variables
             for (name, value) in &cr.spec.env {
@@ -575,7 +578,7 @@ pub async fn cleanup_resources(
     let task_label = if let Some(task_id) = task.task_id() {
         format!("task-id={task_id}")
     } else {
-        format!("task-type=docs,github-user={}", task.github_user())
+        format!("task-type=docs,github-user={}", sanitize_label_value(task.github_user()))
     };
 
     info!("Cleaning up resources for task: {}", task.name());

@@ -686,17 +686,6 @@ echo "=========================="
 if [ -f "$CLAUDE_WORK_DIR/task/prompt.md" ]; then
     echo "✓ Using task-specific prompt from docs service: task/prompt.md"
 
-    # Debug: Print both prompts
-    echo ""
-    echo "=== DEBUG: MAIN PROMPT FROM DOCS SERVICE ==="
-    cat "$CLAUDE_WORK_DIR/task/prompt.md"
-    echo ""
-    echo "=== DEBUG: SYSTEM PROMPT (INLINE) ==="
-    echo "$SYSTEM_PROMPT"
-    echo ""
-    echo "=== END DEBUG PROMPTS ==="
-    echo ""
-
     echo "startingTask:{{task_id}}"
     echo ""
 

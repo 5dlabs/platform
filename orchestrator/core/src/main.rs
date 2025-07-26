@@ -1,3 +1,21 @@
+/*
+ * 5D Labs Agent Platform - Kubernetes Orchestrator for AI Coding Agents
+ * Copyright (C) 2025 5D Labs
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 //! Main entry point for the Orchestrator service
 
 use anyhow::Result;
@@ -60,7 +78,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "orchestrator=debug,tower_http=debug,axum=debug".into()),
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
@@ -73,27 +91,18 @@ async fn main() -> Result<()> {
     // Initialize application state
     let app_state = create_app_state().await?;
 
-    // Start task controller if enabled
-    let controller_enabled = std::env::var("CONTROLLER_ENABLED")
-        .unwrap_or_else(|_| "true".to_string())
-        .parse::<bool>()
-        .unwrap_or(true);
+    // Start task controller
+    let client = app_state.k8s_client.clone();
+    let namespace = app_state.namespace.clone();
 
-    if controller_enabled {
-        let client = app_state.k8s_client.clone();
-        let namespace = app_state.namespace.clone();
+    info!("Starting task controller in namespace: {}", namespace);
 
-        info!("Starting task controller in namespace: {}", namespace);
-
-        // Spawn the controller in the background
-        tokio::spawn(async move {
-            if let Err(e) = run_task_controller(client, namespace).await {
-                error!("Task controller error: {}", e);
-            }
-        });
-    } else {
-        info!("Task controller disabled");
-    }
+    // Spawn the controller in the background
+    tokio::spawn(async move {
+        if let Err(e) = run_task_controller(client, namespace).await {
+            error!("Task controller error: {}", e);
+        }
+    });
 
     // Build the application with middleware layers
     let app = Router::new()

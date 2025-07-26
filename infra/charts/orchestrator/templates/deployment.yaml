@@ -16,6 +16,8 @@ spec:
       annotations:
         # Force pod restart when claude-templates ConfigMap changes
         claude-templates/checksum: {{ include (print $.Template.BasePath "/claude-templates-configmap.yaml") . | sha256sum }}
+        # Force pod restart when controller config changes
+        controller-config/checksum: {{ include (print $.Template.BasePath "/task-controller-config.yaml") . | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -52,17 +54,6 @@ spec:
                 configMapKeyRef:
                   name: {{ include "orchestrator.fullname" . }}-config
                   key: RUST_LOG
-            # TaskRun Controller configuration
-            - name: CONTROLLER_ENABLED
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "orchestrator.fullname" . }}-config
-                  key: CONTROLLER_ENABLED
-            - name: CONTROLLER_CONFIG_MAP
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "orchestrator.fullname" . }}-config
-                  key: CONTROLLER_CONFIG_MAP
             # Secrets for agents
             {{- if .Values.secrets.anthropicApiKey }}
             - name: ANTHROPIC_API_KEY
@@ -75,28 +66,15 @@ spec:
                   {{- end }}
                   key: ANTHROPIC_API_KEY
             {{- end }}
-            {{- if .Values.secrets.githubToken }}
-            - name: GITHUB_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  {{- if eq .Values.secrets.githubToken "use-existing" }}
-                  name: orchestrator-secrets
-                  {{- else }}
-                  name: {{ include "orchestrator.fullname" . }}-secrets
-                  {{- end }}
-                  key: GITHUB_TOKEN
-            {{- end }}
           volumeMounts:
             # Mount claude templates ConfigMap
             - name: claude-templates
               mountPath: /claude-templates
               readOnly: true
-            {{- if .Values.claudeCodeChart.enabled }}
-            # Mount the Helm chart
-            - name: helm-chart
-              mountPath: {{ .Values.claudeCodeChart.mountPath }}
+            # Mount controller configuration ConfigMap
+            - name: controller-config
+              mountPath: /config
               readOnly: true
-            {{- end }}
           {{- if .Values.healthCheck.enabled }}
           livenessProbe:
             httpGet:
@@ -124,13 +102,10 @@ spec:
         - name: claude-templates
           configMap:
             name: {{ include "orchestrator.fullname" . }}-claude-templates
-        {{- if .Values.claudeCodeChart.enabled }}
-        # Mount the claude-code helm chart
-        - name: helm-chart
+        # Mount controller configuration ConfigMap
+        - name: controller-config
           configMap:
-            name: {{ include "orchestrator.fullname" . }}-claude-code-helm-chart
-            optional: true
-        {{- end }}
+            name: {{ include "orchestrator.fullname" . }}-task-controller-config
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -95,9 +95,17 @@ This approach creates a new deployment alongside the old one, then switches traf
 #### Step 1: Deploy to New Namespace
 
 ```bash
-# Create values file
-cp infra/orchestrator-chart/values-example.yaml orchestrator-prod-values.yaml
-# Edit the file with your actual API keys and configuration
+# Create a custom values file with your configuration
+cat > orchestrator-prod-values.yaml << EOF
+secrets:
+  anthropicApiKey: "your-anthropic-api-key"
+  githubToken: "your-github-token"
+ingress:
+  enabled: true
+  hosts:
+    - host: orchestrator.yourdomain.com
+EOF
+# Edit the file with additional configuration as needed
 
 # Deploy to new namespace
 helm install orchestrator-new ./infra/orchestrator-chart \
@@ -287,5 +295,5 @@ helm install orchestrator ./infra/orchestrator-chart \
 
 1. **Resources**: Adjust CPU/memory limits based on workload
 2. **Replicas**: Consider running multiple replicas for high availability
-3. **Storage**: Use fast storage classes for shared workspace PVC
+3. **Storage**: Use fast storage classes for per-service workspace PVCs
 4. **Node Affinity**: Pin orchestrator to specific nodes if needed

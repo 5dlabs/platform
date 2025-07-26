@@ -16,7 +16,7 @@ use kube::{
 };
 use std::sync::Arc;
 use tokio::time::Duration;
-use tracing::{error, info, warn};
+use tracing::error;
 
 use super::resources::{cleanup_resources, reconcile_create_or_update};
 use super::status::monitor_job_status;
@@ -24,44 +24,57 @@ use super::types::{Context, Error, Result, TaskType, CODE_FINALIZER_NAME, DOCS_F
 
 /// Run the task controller for both `DocsRun` and `CodeRun` resources
 pub async fn run_task_controller(client: Client, namespace: String) -> Result<()> {
-    info!("Starting task controller in namespace: {}", namespace);
+    error!("🚀 AGGRESSIVE DEBUG: Starting task controller in namespace: {}", namespace);
 
-    // Load controller configuration from ConfigMap
-    let config =
-        match ControllerConfig::from_configmap(&client, &namespace, "task-controller-config").await
-        {
-            Ok(cfg) => {
-                info!("Loaded controller configuration from ConfigMap");
-                // Validate configuration has required fields
-                if let Err(validation_error) = cfg.validate() {
-                    return Err(Error::ConfigError(validation_error.to_string()));
-                }
-                cfg
-            }
-            Err(e) => {
-                warn!(
-                    "Failed to load configuration from ConfigMap, using defaults: {}",
-                    e
-                );
-                let default_config = ControllerConfig::default();
-                // Validate default configuration - this should fail if image config is missing
-                if let Err(validation_error) = default_config.validate() {
-                    error!("Default configuration is invalid: {}", validation_error);
-                    return Err(Error::ConfigError(validation_error.to_string()));
-                }
-                default_config
-            }
-        };
+    error!("🔧 AGGRESSIVE DEBUG: About to load controller configuration from mounted file...");
 
+    // Load controller configuration from mounted file
+    let config = match ControllerConfig::from_mounted_file("/config/config.yaml") {
+        Ok(cfg) => {
+            error!("✅ AGGRESSIVE DEBUG: Successfully loaded controller configuration from mounted file");
+            error!("🔧 AGGRESSIVE DEBUG: Configuration cleanup enabled = {}", cfg.cleanup.enabled);
+
+            // Validate configuration has required fields
+            if let Err(validation_error) = cfg.validate() {
+                error!("❌ AGGRESSIVE DEBUG: Configuration validation failed: {}", validation_error);
+                return Err(Error::ConfigError(validation_error.to_string()));
+            }
+            error!("✅ AGGRESSIVE DEBUG: Configuration validation passed");
+            cfg
+        }
+        Err(e) => {
+            error!(
+                "❌ AGGRESSIVE DEBUG: Failed to load configuration from mounted file, using defaults: {}",
+                e
+            );
+            error!("🔧 AGGRESSIVE DEBUG: About to create default configuration...");
+            let default_config = ControllerConfig::default();
+
+            // Validate default configuration - this should fail if image config is missing
+            if let Err(validation_error) = default_config.validate() {
+                error!("❌ AGGRESSIVE DEBUG: Default configuration is invalid: {}", validation_error);
+                return Err(Error::ConfigError(validation_error.to_string()));
+            }
+            error!("✅ AGGRESSIVE DEBUG: Default configuration validation passed");
+            default_config
+        }
+    };
+
+    error!("🏗️ AGGRESSIVE DEBUG: Creating controller context...");
     let context = Arc::new(Context {
         client: client.clone(),
         namespace: namespace.clone(),
         config: Arc::new(config),
     });
 
+    error!("✅ AGGRESSIVE DEBUG: Controller context created successfully");
+
     // Start controllers for both DocsRun and CodeRun
+    error!("🔗 AGGRESSIVE DEBUG: Creating API clients for DocsRun and CodeRun...");
     let docs_runs = Api::<DocsRun>::namespaced(client.clone(), &namespace);
     let code_runs = Api::<CodeRun>::namespaced(client.clone(), &namespace);
+
+    error!("✅ AGGRESSIVE DEBUG: API clients created, starting controllers...");
 
     let docs_controller = Controller::new(docs_runs, Config::default())
         .shutdown_on_signal()
@@ -75,19 +88,28 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
         .filter_map(|x| async move { std::result::Result::ok(x) })
         .for_each(|_| futures::future::ready(()));
 
+    error!("🚀 AGGRESSIVE DEBUG: Both controllers started, entering main loop...");
+
     // Run both controllers concurrently
     tokio::select! {
-        () = docs_controller => info!("DocsRun controller finished"),
-        () = code_controller => info!("CodeRun controller finished"),
+        () = docs_controller => error!("DocsRun controller finished"),
+        () = code_controller => error!("CodeRun controller finished"),
     }
 
     Ok(())
 }
 
-/// Reconcile function for `DocsRun` resources
-async fn reconcile_docs(dr: Arc<DocsRun>, ctx: Arc<Context>) -> Result<Action> {
-    let task = TaskType::Docs(dr.clone());
-    reconcile_common(task, ctx, DOCS_FINALIZER_NAME).await
+/// Reconciliation logic for `DocsRun` resources
+async fn reconcile_docs(docs_run: Arc<DocsRun>, ctx: Arc<Context>) -> Result<Action> {
+    error!("📝 AGGRESSIVE DEBUG: Starting reconcile_docs for: {}", docs_run.metadata.name.as_ref().unwrap_or(&"unnamed".to_string()));
+
+    let task = TaskType::Docs(docs_run.clone());
+    error!("🔍 AGGRESSIVE DEBUG: Created task type, calling reconcile_common...");
+
+    let result = reconcile_common(task, ctx, DOCS_FINALIZER_NAME).await;
+    error!("🏁 AGGRESSIVE DEBUG: reconcile_common completed with result: {:?}", result.is_ok());
+
+    result
 }
 
 /// Reconcile function for `CodeRun` resources
@@ -102,20 +124,24 @@ async fn reconcile_common(
     ctx: Arc<Context>,
     finalizer_name: &str,
 ) -> Result<Action> {
+    error!("🎯 AGGRESSIVE DEBUG: Starting reconcile_common for: {}", task.name());
+
     let namespace = &ctx.namespace;
     let client = &ctx.client;
     let name = task.name();
 
-    info!(
-        "Reconciling {}: {}",
+    error!(
+        "🔄 AGGRESSIVE DEBUG: Reconciling {}: {}",
         if task.is_docs() { "DocsRun" } else { "CodeRun" },
         name
     );
 
     // Create APIs
+    error!("🔗 AGGRESSIVE DEBUG: Creating Kubernetes API clients...");
     let jobs: Api<Job> = Api::namespaced(client.clone(), namespace);
     let configmaps: Api<ConfigMap> = Api::namespaced(client.clone(), namespace);
     let pvcs: Api<PersistentVolumeClaim> = Api::namespaced(client.clone(), namespace);
+    error!("✅ AGGRESSIVE DEBUG: API clients created successfully");
 
     // Handle finalizers for cleanup based on task type
     let _result = match &task {
@@ -201,6 +227,8 @@ async fn monitor_running_job(task: &TaskType, jobs: &Api<Job>, ctx: &Arc<Context
 
     Ok(())
 }
+
+
 
 /// Error policy for `DocsRun` controller
 fn error_policy_docs(_dr: Arc<DocsRun>, error: &Error, _ctx: Arc<Context>) -> Action {

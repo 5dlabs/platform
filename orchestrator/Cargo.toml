@@ -2,17 +2,16 @@
 resolver = "2"
 members = [
     "core",
-    "cli",
+    "tools",
     "common",
-    "mcp"
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.4"
 edition = "2021"
-authors = ["Platform Team"]
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/yourorg/platform"
+authors = ["5D team"]
+license = "AGPL-3.0"
+repository = "https://github.com/5dlabs/platform"
 
 [workspace.dependencies]
 # Web framework
@@ -54,7 +53,7 @@ indicatif = "0.17"
 colored = "3.0.0"
 
 # HTTP Client
-reqwest = { version = "0.12", features = ["json", "stream"] }
+reqwest = { version = "0.12", features = ["json", "stream", "rustls-tls"], default-features = false }
 eventsource-client = "0.15.0"
 
 # Async utilities
@@ -79,3 +78,8 @@ uuid = { version = "1.10", features = ["v4", "serde"] }
 lto = true
 opt-level = 3
 codegen-units = 1
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

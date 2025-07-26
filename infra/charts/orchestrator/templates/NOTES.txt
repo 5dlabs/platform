@@ -34,12 +34,23 @@
    Health checks are disabled. Enable them by setting healthCheck.enabled=true
 {{- end }}
 
-{{- if .Values.claudeCodeChart.enabled }}
+5. Agent Management:
+   • Agents are deployed via CodeRun and DocsRun custom resources
+   • Workspaces are automatically created as PVCs named "workspace-{service}"
+   • Setup agent secrets: ./infra/scripts/setup-agent-secrets.sh --help
 
-5. Claude Code Helm Chart:
-   The orchestrator includes an embedded Claude Code Helm chart mounted at {{ .Values.claudeCodeChart.mountPath }}
-   This chart will be used to deploy Claude Code agents for task execution.
-{{- end }}
+6. Create your first task:
+   kubectl apply -f - <<EOF
+   apiVersion: orchestrator.platform/v1
+   kind: DocsRun
+   metadata:
+     name: example-docs
+   spec:
+     repositoryUrl: "https://github.com/your-org/your-repo"
+     githubUser: "your-github-username"
+   EOF
 
-For more information about configuring the orchestrator, see the values.yaml file or visit:
-https://github.com/5dlabs/platform
+For more information about configuring the orchestrator, see:
+• Documentation: https://github.com/5dlabs/platform
+• Agent setup: ./infra/scripts/setup-agent-secrets.sh --help
+• CRD reference: kubectl explain coderuns.orchestrator.platform

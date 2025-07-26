@@ -37,8 +37,7 @@ pub async fn generate_docs(
         source_branch: request.source_branch.clone(),
         model: request
             .model
-            .clone()
-            .unwrap_or_else(|| "claude-opus-4-20250514".to_string()),
+            .unwrap_or_else(|| std::env::var("DEFAULT_DOCS_MODEL").unwrap_or_else(|_| "claude-opus-4-20250514".to_string())),
         github_user: request.github_user.clone(),
     };
 

@@ -10,7 +10,7 @@ The main Helm chart for deploying the orchestrator service. This includes:
 - ConfigMaps for configuration
 - Deployment and Service definitions
 - Ingress configuration
-- Optional shared workspace PVC
+- Automatic per-service workspace PVCs
 
 **Usage:**
 ```bash

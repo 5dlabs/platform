@@ -5,16 +5,9 @@ metadata:
   labels:
     {{- include "orchestrator.labels" . | nindent 4 }}
 data:
-  # Kubernetes configuration
   KUBERNETES_NAMESPACE: {{ .Values.config.kubernetesNamespace | quote }}
-
-  # Server configuration
   SERVER_HOST: {{ .Values.config.serverHost | quote }}
   SERVER_PORT: {{ .Values.config.serverPort | quote }}
-
-  # Logging
   RUST_LOG: {{ .Values.config.rustLog | quote }}
-
-  # TaskRun Controller configuration
-  CONTROLLER_ENABLED: {{ .Values.config.controllerEnabled | quote }}
-  CONTROLLER_CONFIG_MAP: {{ .Values.config.controllerConfigMap | quote }}
+  DEFAULT_DOCS_MODEL: {{ .Values.models.defaultDocsModel | quote }}
+  DEFAULT_CODE_MODEL: {{ .Values.models.defaultCodeModel | quote }}

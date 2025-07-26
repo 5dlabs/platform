@@ -350,7 +350,7 @@ fn generate_docs_prompt(task: &TaskType) -> Result<String> {
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(false);
 
-    let template = load_template("docs/prompt.hbs")?;
+    let template = load_template("docs/prompt.md.hbs")?;
 
     handlebars
         .register_template_string("docs_prompt", &template)

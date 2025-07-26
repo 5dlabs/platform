@@ -1,0 +1,251 @@
+name: Deploy Orchestrator
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to deploy (e.g., v0.1.4)'
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BASE: ${{ github.repository }}
+
+jobs:
+  # Version determination
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      short-sha: ${{ steps.version.outputs.short-sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Set version from tag
+        id: version
+        run: |
+          VERSION="${{ inputs.tag }}"
+          SHORT_SHA=$(git rev-parse --short HEAD)
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "short-sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "📦 Deploy version: ${VERSION}"
+
+
+  # Build only orchestrator (skip Claude Code for now)
+  build-orchestrator:
+    needs: [version]
+    runs-on: [k8s-runner]
+    # No container needed - the Arc runners now have the rust-builder image!
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Setup optimized Rust environment
+        run: |
+          echo "🚀 Setting up ULTRA-OPTIMIZED Rust build environment..."
+
+          # Add cargo bin to PATH for this step and all subsequent steps
+          echo "/home/runner/.cargo/bin" >> $GITHUB_PATH
+          export PATH="/home/runner/.cargo/bin:$PATH"
+
+          # Set up Rust toolchain (required for rust-builder image)
+          echo "🦀 Setting up Rust toolchain..."
+          rustup default stable
+          rustup update stable
+
+          # Custom image already has most tools pre-installed, just verify
+          echo "🔍 Verifying pre-installed tools..."
+          rustc --version || echo "⚠️ Rust not found"
+          cargo --version || echo "⚠️ Cargo not found"
+          sccache --version || echo "⚠️ sccache not found"
+          mold --version || echo "⚠️ mold not found"
+          clang --version || echo "⚠️ clang not found"
+          pkg-config --version || echo "⚠️ pkg-config not found"
+          openssl version || echo "⚠️ openssl not found"
+
+          # Show available resources
+          echo "💾 Available resources:"
+          echo "CPU cores: $(nproc)"
+          echo "Memory: $(free -h | grep '^Mem:' | awk '{print $2}')"
+          echo "Disk space: $(df -h . | tail -1 | awk '{print $4}')"
+
+          # Show cache locations
+          echo "📁 Cache locations:"
+          echo "CARGO_HOME: ${CARGO_HOME:-$HOME/.cargo}"
+          echo "SCCACHE_DIR: ${SCCACHE_DIR:-$HOME/.cache/sccache}"
+          echo "RUSTUP_HOME: ${RUSTUP_HOME:-$HOME/.rustup}"
+
+      - name: Setup sccache
+        run: |
+          echo "🗄️ Setting up sccache for ULTRA-FAST builds..."
+
+          # Ensure cargo bin is in PATH
+          export PATH="/home/runner/.cargo/bin:$PATH"
+
+          # Configure sccache
+          export SCCACHE_CACHE_SIZE="50G"
+          export SCCACHE_IDLE_TIMEOUT="0"
+
+          # Ensure sccache is running
+          sccache --stop-server 2>/dev/null || true
+          sccache --start-server
+
+          echo "📊 Initial sccache stats:"
+          sccache --show-stats
+
+          # Verify mold is available
+          echo "🔗 Verifying mold linker:"
+          mold --version
+
+      - name: Verify pre-warmed dependencies
+        run: |
+          echo "🗂️ Checking pre-warmed dependency cache..."
+
+          # Check if dependencies are pre-warmed in the image
+          if [ -d "$CARGO_HOME/registry" ] && [ "$(ls -A $CARGO_HOME/registry 2>/dev/null)" ]; then
+            echo "✅ Pre-warmed dependencies found in image"
+            echo "Registry cache size: $(du -sh $CARGO_HOME/registry 2>/dev/null || echo '0B')"
+            echo "Git cache size: $(du -sh $CARGO_HOME/git 2>/dev/null || echo '0B')"
+            echo "📦 Sample pre-warmed packages:"
+            find $CARGO_HOME/registry -name "*.crate" 2>/dev/null | head -5 | xargs -I {} basename {} .crate || echo "Unable to list packages"
+          else
+            echo "⚠️ No pre-warmed dependencies found - will download at build time"
+            echo "CARGO_HOME contents:"
+            ls -la $CARGO_HOME/ 2>/dev/null || echo "CARGO_HOME not found"
+          fi
+
+      - name: Build release binary (ultra-fast)
+        working-directory: ./orchestrator
+        env:
+          CARGO_INCREMENTAL: "0"  # Disable for better sccache hits
+          RUSTC_WRAPPER: "sccache"
+          SCCACHE_CACHE_SIZE: "50G"
+          SCCACHE_IDLE_TIMEOUT: "0"
+          CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+          CARGO_REGISTRIES_CRATES_IO_PROTOCOL: "sparse"
+        run: |
+          echo "🏗️ Building orchestrator binary with pre-warmed dependencies..."
+
+          # Show build environment
+          echo "Build environment:"
+          echo "Available cores: $(nproc)"
+          echo "RUSTFLAGS: $RUSTFLAGS"
+          echo "RUSTC_WRAPPER: $RUSTC_WRAPPER"
+          echo "CARGO_HOME: ${CARGO_HOME:-$HOME/.cargo}"
+          echo "SCCACHE_DIR: ${SCCACHE_DIR:-$HOME/.cache/sccache}"
+
+          # Pre-warm sccache
+          sccache --start-server || true
+          echo "📊 Initial sccache stats:"
+          sccache --show-stats
+
+                    # Build with detailed output
+          echo "⏱️ Starting build..."
+          cargo build --release --package core
+
+          # Show final sccache stats
+          echo "📊 Final sccache stats:"
+          sccache --show-stats
+
+          # Debug: Show what's in the target directory
+          echo "🔍 Checking target directory contents:"
+          echo "CARGO_TARGET_DIR is: ${CARGO_TARGET_DIR:-not set}"
+          ls -la target/release/ || echo "target/release/ not found"
+          ls -la /cache/target/release/ || echo "/cache/target/release/ not found"
+          find target -name "*orchestrator*" -type f 2>/dev/null || echo "No orchestrator files found in target/"
+          find /cache/target -name "*orchestrator*" -type f 2>/dev/null || echo "No orchestrator files found in /cache/target/"
+
+          # Copy binary from cache target dir (where CARGO_TARGET_DIR points)
+          cp /cache/target/release/orchestrator-core orchestrator
+
+          # Show binary info
+          echo "📦 Built binary info:"
+          ls -lh orchestrator
+          file orchestrator
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Orchestrator image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./orchestrator
+          file: ./orchestrator/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.short-sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+  # Deploy immediately
+  deploy:
+    needs: [version, build-orchestrator]
+    runs-on: [self-hosted, k8s-runner]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || github.ref }}
+
+      - name: Setup tools
+        run: |
+          mkdir -p $HOME/bin
+          if [ -f /shared/kubectl ]; then
+            cp /shared/kubectl $HOME/bin/
+            chmod +x $HOME/bin/kubectl
+          fi
+          if [ -f /shared/helm ]; then
+            cp /shared/helm $HOME/bin/
+            chmod +x $HOME/bin/helm
+          fi
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Deploy Orchestrator
+        run: |
+          echo "🚀 Deploying version ${{ needs.version.outputs.version }}"
+
+          # Deploy release version
+          helm upgrade --install orchestrator ./infra/charts/orchestrator \
+            --namespace orchestrator \
+            --create-namespace \
+            --values infra/charts/orchestrator/values.yaml \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator \
+            --set image.tag=${{ needs.version.outputs.version }} \
+            --set secrets.anthropicApiKey="${{ secrets.ANTHROPIC_API_KEY }}" \
+            --timeout 5m \
+            --wait
+
+      - name: Verify deployment
+        run: |
+          echo "🔍 Deployment verification..."
+          kubectl get pods -n orchestrator -o wide
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=orchestrator -n orchestrator --timeout=120s || true
+
+          echo ""
+          echo "✅ Deployment complete!"
+          echo "📦 Deployed: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.version }}"
+          echo "🏷️ Tag: ${{ inputs.tag }}"
+
+      - name: Show recent TaskRuns
+        run: |
+          echo "📋 Recent TaskRuns:"
+          kubectl get taskruns -A --sort-by=.metadata.creationTimestamp | tail -10 || echo "No TaskRuns found"

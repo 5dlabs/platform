@@ -21,6 +21,11 @@ pub async fn monitor_job_status(
             Ok(job) => {
                 let (phase, message, pull_request_url) = analyze_job_status(&job);
                 update_task_status(task, ctx, &phase, &message, pull_request_url).await?;
+
+                // Schedule cleanup if job is complete and cleanup is enabled
+                if ctx.config.cleanup.enabled && (phase == "Succeeded" || phase == "Failed") {
+                    schedule_job_cleanup(task, ctx, &job_name, &phase).await?;
+                }
             }
             Err(kube::Error::Api(ae)) if ae.code == 404 => {
                 // Job doesn't exist yet, which is fine for newly created tasks
@@ -249,5 +254,87 @@ pub async fn update_job_started(
     }
 
     info!("Updated {} status to Running with job: {}", name, job_name);
+    Ok(())
+}
+
+/// Schedule cleanup of completed job after configured delay
+async fn schedule_job_cleanup(
+    task: &TaskType,
+    ctx: &Arc<Context>,
+    job_name: &str,
+    phase: &str,
+) -> Result<()> {
+    let delay_minutes = if phase == "Succeeded" {
+        ctx.config.cleanup.completed_job_delay_minutes
+    } else {
+        ctx.config.cleanup.failed_job_delay_minutes
+    };
+
+    let job_name = job_name.to_string();
+    let task_name = task.name();
+    let namespace = ctx.namespace.clone();
+    let client = ctx.client.clone();
+    let delete_configmap = ctx.config.cleanup.delete_configmap;
+
+    info!(
+        "Scheduling cleanup for job {} in {} minutes (phase: {})",
+        job_name, delay_minutes, phase
+    );
+
+    // Spawn background task to handle cleanup after delay
+    tokio::spawn(async move {
+        // Wait for the configured delay
+        tokio::time::sleep(tokio::time::Duration::from_secs(delay_minutes * 60)).await;
+
+        info!("Starting scheduled cleanup for job: {}", job_name);
+
+        // Delete the job
+        let jobs_api: Api<Job> = Api::namespaced(client.clone(), &namespace);
+        match jobs_api.delete(&job_name, &kube::api::DeleteParams::background()).await {
+            Ok(_) => info!("Successfully deleted job: {}", job_name),
+            Err(kube::Error::Api(ae)) if ae.code == 404 => {
+                info!("Job {} already deleted", job_name);
+            }
+            Err(e) => {
+                error!("Failed to delete job {}: {}", job_name, e);
+            }
+        }
+
+        // Delete associated ConfigMap if enabled
+        if delete_configmap {
+            let configmaps_api: Api<k8s_openapi::api::core::v1::ConfigMap> = Api::namespaced(client.clone(), &namespace);
+
+            // Find ConfigMap associated with this job
+            let labels_selector = "app=orchestrator".to_string();
+            let list_params = kube::api::ListParams::default().labels(&labels_selector);
+
+            match configmaps_api.list(&list_params).await {
+                Ok(cms) => {
+                    for cm in cms.items {
+                        if let Some(cm_name) = &cm.metadata.name {
+                            // Check if ConfigMap is associated with this job
+                            if cm_name.starts_with(&task_name.replace('_', "-")) {
+                                match configmaps_api.delete(cm_name, &kube::api::DeleteParams::default()).await {
+                                    Ok(_) => info!("Successfully deleted ConfigMap: {}", cm_name),
+                                    Err(kube::Error::Api(ae)) if ae.code == 404 => {
+                                        info!("ConfigMap {} already deleted", cm_name);
+                                    }
+                                    Err(e) => {
+                                        error!("Failed to delete ConfigMap {}: {}", cm_name, e);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!("Failed to list ConfigMaps for cleanup: {}", e);
+                }
+            }
+        }
+
+        info!("Completed cleanup for job: {}", job_name);
+    });
+
     Ok(())
 }
