@@ -25,8 +25,10 @@
 ## Context
 You are implementing the tool discovery functionality for the docs agent. This is a critical component that reads the Toolman ConfigMap to discover available MCP tools and generates optimal tool configurations based on project analysis. This implementation must follow the zero-hardcoding principle - no tool names should be hardcoded.
 
+**Important**: The primary use case is **greenfield projects** where the docs agent must determine needed tools based on task requirements, not by scanning existing code.
+
 ## Your Mission
-Implement the complete tool discovery and recommendation system in the docs agent, ensuring it dynamically discovers tools and makes intelligent recommendations based on project characteristics.
+Implement the complete tool discovery and recommendation system in the docs agent, ensuring it dynamically discovers tools and makes intelligent recommendations based on task requirements.
 
 ## Key Requirements
 
@@ -153,159 +155,42 @@ impl DocsHandler {
 ### 4. Implement Project Analysis
 ```rust
 impl DocsHandler {
-    /// Analyze project to understand tool requirements
-    pub async fn analyze_project(&self, project_path: &Path) -> Result<ProjectAnalysis> {
-        log::info!("Analyzing project at: {}", project_path.display());
+    /// Analyze task content to understand tool requirements (greenfield focus)
+    pub async fn analyze_task(&self, task_content: &str) -> Result<TaskAnalysis> {
+        log::info!("Analyzing task requirements for tool selection");
 
-        let mut analysis = ProjectAnalysis::default();
+        let mut analysis = TaskAnalysis::default();
 
-        // Check for Kubernetes files
-        if self.check_kubernetes_files(project_path).await? {
-            analysis.has_kubernetes = true;
-            analysis.file_patterns_found.push("kubernetes".to_string());
+        // Check for technology keywords in task content
+        if task_content.to_lowercase().contains("kubernetes") ||
+           task_content.to_lowercase().contains("k8s") ||
+           task_content.to_lowercase().contains("deployment") {
+            analysis.needs_kubernetes = true;
+            analysis.technologies_mentioned.push("kubernetes".to_string());
         }
 
-        // Check for database files
-        if self.check_database_files(project_path).await? {
-            analysis.has_database = true;
-            analysis.file_patterns_found.push("database".to_string());
+        // Check for infrastructure keywords
+        if task_content.to_lowercase().contains("terraform") ||
+           task_content.to_lowercase().contains("infrastructure") {
+            analysis.needs_terraform = true;
+            analysis.technologies_mentioned.push("terraform".to_string());
         }
 
-        // Check for CI/CD
-        if self.check_ci_cd_files(project_path).await? {
-            analysis.has_ci_cd = true;
-            analysis.file_patterns_found.push("ci/cd".to_string());
+        // Check for database keywords
+        if task_content.to_lowercase().contains("database") ||
+           task_content.to_lowercase().contains("postgres") ||
+           task_content.to_lowercase().contains("sql") {
+            analysis.needs_database = true;
+            analysis.technologies_mentioned.push("database".to_string());
         }
 
-        // Check for Terraform
-        if self.check_terraform_files(project_path).await? {
-            analysis.has_terraform = true;
-            analysis.file_patterns_found.push("terraform".to_string());
+        // Check for programming language mentions
+        if task_content.to_lowercase().contains("rust") {
+            analysis.languages_mentioned.push("rust".to_string());
         }
 
-        // Detect programming languages
-        analysis.detected_languages = self.detect_languages(project_path).await?;
-
-        log::info!("Project analysis complete: {:?}", analysis);
+        log::info!("Task analysis complete: {:?}", analysis);
         Ok(analysis)
-    }
-
-    async fn check_kubernetes_files(&self, project_path: &Path) -> Result<bool> {
-        let patterns = vec![
-            "**/k8s/**/*.yaml",
-            "**/k8s/**/*.yml",
-            "**/kubernetes/**/*.yaml",
-            "**/kubernetes/**/*.yml",
-            "**/helm/**/*",
-            "**/*deployment*.yaml",
-            "**/*deployment*.yml",
-        ];
-
-        for pattern in patterns {
-            let full_pattern = project_path.join(pattern);
-            for entry in glob::glob(&full_pattern.to_string_lossy())? {
-                if let Ok(path) = entry {
-                    if let Ok(content) = tokio::fs::read_to_string(&path).await {
-                        if content.contains("apiVersion:") &&
-                           (content.contains("kind: Deployment") ||
-                            content.contains("kind: Service") ||
-                            content.contains("kind: ConfigMap")) {
-                            return Ok(true);
-                        }
-                    }
-                }
-            }
-        }
-        Ok(false)
-    }
-
-    async fn check_database_files(&self, project_path: &Path) -> Result<bool> {
-        let indicators = vec![
-            "**/database.yml",
-            "**/database.yaml",
-            "**/*.sql",
-            "**/migrations/**/*",
-            "**/db/migrate/**/*",
-            "**/alembic/**/*",
-            "**/schema.sql",
-            "**/schema.rb",
-            "**/*postgres*.conf",
-            "**/*mysql*.conf",
-            "**/*mongo*.conf",
-        ];
-
-        for pattern in indicators {
-            let full_pattern = project_path.join(pattern);
-            if glob::glob(&full_pattern.to_string_lossy())?.next().is_some() {
-                return Ok(true);
-            }
-        }
-        Ok(false)
-    }
-
-    async fn check_ci_cd_files(&self, project_path: &Path) -> Result<bool> {
-        let ci_files = vec![
-            ".github/workflows",
-            ".gitlab-ci.yml",
-            "Jenkinsfile",
-            ".circleci/config.yml",
-            "azure-pipelines.yml",
-            ".travis.yml",
-            "bitbucket-pipelines.yml",
-        ];
-
-        for file in ci_files {
-            if project_path.join(file).exists() {
-                return Ok(true);
-            }
-        }
-        Ok(false)
-    }
-
-    async fn check_terraform_files(&self, project_path: &Path) -> Result<bool> {
-        let patterns = vec!["**/*.tf", "**/*.tfvars", "**/*.hcl"];
-
-        for pattern in patterns {
-            let full_pattern = project_path.join(pattern);
-            if glob::glob(&full_pattern.to_string_lossy())?.next().is_some() {
-                return Ok(true);
-            }
-        }
-        Ok(false)
-    }
-
-    async fn detect_languages(&self, project_path: &Path) -> Result<Vec<String>> {
-        let mut languages = Vec::new();
-
-        let language_indicators = vec![
-            ("package.json", "javascript"),
-            ("tsconfig.json", "typescript"),
-            ("requirements.txt", "python"),
-            ("setup.py", "python"),
-            ("Pipfile", "python"),
-            ("go.mod", "go"),
-            ("Cargo.toml", "rust"),
-            ("pom.xml", "java"),
-            ("build.gradle", "java"),
-            ("*.csproj", "csharp"),
-            ("composer.json", "php"),
-            ("Gemfile", "ruby"),
-        ];
-
-        for (indicator, language) in language_indicators {
-            if indicator.contains('*') {
-                let pattern = project_path.join(indicator);
-                if glob::glob(&pattern.to_string_lossy())?.next().is_some() {
-                    languages.push(language.to_string());
-                }
-            } else if project_path.join(indicator).exists() {
-                languages.push(language.to_string());
-            }
-        }
-
-        languages.sort();
-        languages.dedup();
-        Ok(languages)
     }
 }
 ```
@@ -313,97 +198,45 @@ impl DocsHandler {
 ### 5. Implement Tool Matching Logic
 ```rust
 impl DocsHandler {
-    /// Match project needs with available tools using pattern matching
-    pub fn match_tools_to_project(
+    /// Match task requirements with available tools
+    pub fn match_tools_to_task(
         &self,
-        analysis: &ProjectAnalysis,
+        analysis: &TaskAnalysis,
         available_tools: &[String]
     ) -> ProjectToolConfig {
         let mut config = ProjectToolConfig::default();
-        let available_set: HashSet<&str> = available_tools.iter().map(|s| s.as_str()).collect();
 
-        // Local tools
+        // Always include filesystem for local file operations
         config.local.push("filesystem".to_string());
-        if analysis.has_ci_cd || !analysis.detected_languages.is_empty() {
-            config.local.push("git".to_string());
-        }
 
-        // Remote tools - use pattern matching, no hardcoding!
-        let mut matched_tools = HashSet::new();
-
-        // Kubernetes tools
-        if analysis.has_kubernetes {
+        // Match based on task requirements
+        if analysis.needs_kubernetes {
             for tool in available_tools {
-                if tool.contains("kubernetes") ||
-                   tool.contains("k8s") ||
-                   tool.contains("helm") ||
-                   tool.contains("kubectl") {
-                    matched_tools.insert(tool.clone());
+                if tool.contains("kubernetes") || tool.contains("k8s") {
+                    config.remote.push(tool.clone());
                 }
             }
         }
 
-        // Database tools
-        if analysis.has_database {
+        if analysis.needs_terraform {
             for tool in available_tools {
-                if tool.contains("postgres") ||
-                   tool.contains("mysql") ||
-                   tool.contains("mongo") ||
-                   tool.contains("redis") ||
-                   tool.contains("sqlite") ||
-                   tool.contains("database") ||
-                   tool.contains("sql") {
-                    matched_tools.insert(tool.clone());
+                if tool.contains("terraform") {
+                    config.remote.push(tool.clone());
                 }
             }
         }
 
-        // CI/CD tools
-        if analysis.has_ci_cd {
+        if analysis.languages_mentioned.contains(&"rust".to_string()) {
             for tool in available_tools {
-                if tool.contains("github") ||
-                   tool.contains("gitlab") ||
-                   tool.contains("jenkins") ||
-                   tool.contains("circleci") ||
-                   tool.contains("travis") {
-                    matched_tools.insert(tool.clone());
+                if tool.contains("rustdocs") {
+                    config.remote.push(tool.clone());
                 }
             }
         }
 
-        // Terraform/IaC tools
-        if analysis.has_terraform {
-            for tool in available_tools {
-                if tool.contains("terraform") ||
-                   tool.contains("aws") ||
-                   tool.contains("azure") ||
-                   tool.contains("gcp") {
-                    matched_tools.insert(tool.clone());
-                }
-            }
-        }
-
-        // Language-specific tools
-        for lang in &analysis.detected_languages {
-            for tool in available_tools {
-                if tool.to_lowercase().contains(lang) {
-                    matched_tools.insert(tool.clone());
-                }
-            }
-        }
-
-        // Universal tools (search, etc)
-        for tool in available_tools {
-            if tool.contains("search") ||
-               tool.contains("brave") ||
-               tool.contains("web") {
-                matched_tools.insert(tool.clone());
-            }
-        }
-
-        // Convert to sorted vector
-        config.remote = matched_tools.into_iter().collect();
+        // Remove duplicates and sort
         config.remote.sort();
+        config.remote.dedup();
 
         log::info!("Matched tools - Local: {:?}, Remote: {:?}",
                    config.local, config.remote);
@@ -416,55 +249,28 @@ impl DocsHandler {
 ### 6. Implement Configuration Storage
 ```rust
 impl DocsHandler {
-    /// Save project configuration for code agents
-    pub async fn save_project_config(
+    /// Save tool configuration in task folder
+    pub async fn save_task_tool_config(
         &self,
-        project_id: &str,
-        config: ProjectConfig
+        task_id: &str,
+        config: ProjectToolConfig
     ) -> Result<()> {
-        log::info!("Saving project configuration for: {}", project_id);
+        log::info!("Saving tool configuration for task: {}", task_id);
 
-        let config_json = serde_json::to_string_pretty(&config)?;
-
-        let cm = ConfigMap {
-            metadata: kube::api::ObjectMeta {
-                name: Some(format!("{}-project-config", project_id)),
-                namespace: Some(self.namespace.clone()),
-                labels: Some([
-                    ("app.kubernetes.io/name".to_string(), "project-config".to_string()),
-                    ("app.kubernetes.io/instance".to_string(), project_id.to_string()),
-                    ("app.kubernetes.io/component".to_string(), "tool-config".to_string()),
-                ].into()),
-                ..Default::default()
-            },
-            data: Some([
-                ("config.json".to_string(), config_json)
-            ].into()),
-            ..Default::default()
+        let tool_config = ToolConfig {
+            tools: config,
+            reasoning: "Based on task requirements".to_string(),
+            generated_at: chrono::Utc::now().to_rfc3339(),
         };
 
-        let configmaps: Api<ConfigMap> = Api::namespaced(
-            self.k8s_client.clone(),
-            &self.namespace
-        );
+        let config_json = serde_json::to_string_pretty(&tool_config)?;
 
-        // Try to create, update if exists
-        match configmaps.create(&Default::default(), &cm).await {
-            Ok(_) => {
-                log::info!("Created new project configuration ConfigMap");
-            }
-            Err(kube::Error::Api(err)) if err.code == 409 => {
-                // Already exists, update it
-                log::info!("Updating existing project configuration ConfigMap");
-                configmaps.replace(
-                    &format!("{}-project-config", project_id),
-                    &Default::default(),
-                    &cm
-                ).await?;
-            }
-            Err(e) => return Err(anyhow!("Failed to save project config: {}", e)),
-        }
+        // Save to task folder
+        let config_path = format!(".taskmaster/docs/task-{}/tools.json", task_id);
+        tokio::fs::create_dir_all(format!(".taskmaster/docs/task-{}", task_id)).await?;
+        tokio::fs::write(&config_path, config_json).await?;
 
+        log::info!("Tool configuration saved to: {}", config_path);
         Ok(())
     }
 }
@@ -473,16 +279,15 @@ impl DocsHandler {
 ### 7. Main Workflow Implementation
 ```rust
 impl DocsHandler {
-    /// Complete tool discovery and configuration workflow
-    pub async fn generate_project_configuration(
+    /// Complete tool discovery and configuration workflow for greenfield projects
+    pub async fn generate_task_tool_configuration(
         &self,
-        project_path: &Path,
-        project_id: &str,
-        docs_run_id: &str
+        task_id: &str,
+        task_content: &str
     ) -> Result<ProjectToolConfig> {
-        log::info!("Starting tool discovery and configuration for project: {}", project_id);
+        log::info!("Starting tool discovery for task: {}", task_id);
 
-        // Step 1: Discover available tools
+        // Step 1: Discover available tools from catalog
         let available_tools = self.discover_available_tools().await?;
         if available_tools.is_empty() {
             log::warn!("No tools discovered from ConfigMap, using minimal defaults");
@@ -492,23 +297,16 @@ impl DocsHandler {
             });
         }
 
-        // Step 2: Analyze project
-        let analysis = self.analyze_project(project_path).await?;
+        // Step 2: Analyze task content
+        let analysis = self.analyze_task(task_content).await?;
 
-        // Step 3: Match tools to project
-        let tool_config = self.match_tools_to_project(&analysis, &available_tools);
+        // Step 3: Match tools to task requirements
+        let tool_config = self.match_tools_to_task(&analysis, &available_tools);
 
-        // Step 4: Save configuration
-        let project_config = ProjectConfig {
-            tools: tool_config.clone(),
-            generated_at: chrono::Utc::now().to_rfc3339(),
-            project_analysis: analysis,
-            docs_run_id: docs_run_id.to_string(),
-        };
+        // Step 4: Save configuration to task folder
+        self.save_task_tool_config(task_id, tool_config.clone()).await?;
 
-        self.save_project_config(project_id, project_config).await?;
-
-        log::info!("Tool discovery and configuration complete for project: {}", project_id);
+        log::info!("Tool discovery complete for task: {}", task_id);
         Ok(tool_config)
     }
 }
@@ -572,4 +370,5 @@ mod tests {
 - [ ] Handles errors gracefully
 - [ ] Well-tested implementation
 
+Proceed with implementing this tool discovery system, ensuring it's robust, maintainable, and follows the zero-hardcoding principle throughout.
 Proceed with implementing this tool discovery system, ensuring it's robust, maintainable, and follows the zero-hardcoding principle throughout.

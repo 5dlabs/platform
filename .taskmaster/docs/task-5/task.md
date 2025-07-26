@@ -963,63 +963,86 @@ Now that the tool catalog ConfigMap is available and mounted, the docs agent wil
    const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
    ```
 
-2. **Analyze the Project**:
-   - Scan project files to detect technologies in use
-   - Identify Kubernetes manifests, database configs, CI/CD pipelines
-   - Detect programming languages and frameworks
-   - Build a project profile
+2. **Analyze the Task** (Greenfield Focus):
+   - Read the task description and requirements
+   - Identify what needs to be built based on the task content
+   - Look for keywords and patterns in the task description
+   - This is primarily for greenfield projects where no code exists yet
 
-3. **Match Tools to Project Needs**:
-   - Use the rich metadata in the catalog (descriptions, categories, use cases)
-   - Match tools based on project characteristics
-   - Example: If K8s files found → recommend kubernetes tools
-   - Example: If database configs found → recommend relevant DB tools
+3. **Match Tools to Task Requirements**:
+   - Use simple keyword matching from task content
+   - Example: Task mentions "Kubernetes deployment" → recommend kubernetes tools
+   - Example: Task mentions "Terraform infrastructure" → recommend terraform tools
+   - Always include filesystem for file operations
 
-4. **Generate Tool Configuration**:
-   - Create an optimal list of local and remote tools
-   - Output as a structured configuration (JSON)
-   - Save with the task documentation
+4. **Generate Simple Tool Configuration**:
+   - Create a minimal tools.json file
+   - Save it in the task documentation folder
+   - Keep it simple - just list the needed tools
+   ```json
+   // .taskmaster/docs/task-001/tools.json
+   {
+     "tools": {
+       "local": ["filesystem"],
+       "remote": ["kubernetes"]
+     },
+     "reasoning": "Task requires creating Kubernetes manifests"
+   }
+   ```
 
-5. **Provide to Code Agent**:
-   - The generated configuration tells the code agent which tools to enable
-   - Code agent uses only the recommended tools, not all 58 available
+5. **Code Agent Integration**:
+   - Code agent receives the tools.json path via environment variable
+   - Simple to implement: `TOOLS_CONFIG=/workspace/.taskmaster/docs/task-001/tools.json`
+   - Code agent reads this file and enables only the specified tools
 
-### Example Docs Agent Workflow
+### Simplified Greenfield Workflow
 
-```
-Project Analysis:
-- Found: kubernetes/*.yaml files
-- Found: postgres/schema.sql
-- Found: .github/workflows/
-- Language: Python (requirements.txt)
+```javascript
+// Docs agent logic for greenfield projects
+async function determineToolsForTask(taskContent) {
+  const tools = {
+    local: ["filesystem"],  // Always needed for file operations
+    remote: []
+  };
 
-Tool Recommendations:
-- Local: ["filesystem"]  // Always included
-- Remote: ["kubernetes", "postgres", "github"]  // Based on analysis
+  // Simple keyword matching from task content
+  if (taskContent.match(/kubernetes|k8s|deployment|pod|service/i)) {
+    tools.remote.push("kubernetes");
+  }
 
-Output Configuration:
-{
-  "tools": {
-    "local": ["filesystem"],
-    "remote": ["kubernetes", "postgres", "github"]
-  },
-  "analysis": {
-    "has_kubernetes": true,
-    "has_database": true,
-    "has_ci_cd": true,
-    "languages": ["python"]
-  },
-  "generated_at": "2025-07-26T18:00:00Z"
+  if (taskContent.match(/terraform|infrastructure|iac/i)) {
+    tools.remote.push("terraform");
+  }
+
+  if (taskContent.match(/rust|cargo|crate/i)) {
+    tools.remote.push("rustdocs");
+  }
+
+  // Save to task folder
+  const toolsPath = `.taskmaster/docs/task-${taskId}/tools.json`;
+  fs.writeFileSync(toolsPath, JSON.stringify({
+    tools,
+    reasoning: "Based on task requirements",
+    generated_at: new Date().toISOString()
+  }, null, 2));
+
+  return tools;
 }
 ```
 
-### Next Steps
+### Key Design Decisions
 
-1. **Docs Agent Implementation** (separate component, not part of orchestrator):
-   - This runs inside the docs agent container
-   - Uses the mounted catalog from `/etc/tool-catalog/tool-catalog.json`
-   - Implements the workflow described above
+1. **Task-Driven**: Tools are selected based on task requirements, not code scanning
+2. **Greenfield First**: Optimized for new projects where no code exists
+3. **Simple Storage**: tools.json saved directly in task folder
+4. **No Overrides/Templates**: Keep it simple - humans can edit if needed
+5. **Easy Integration**: Code agent gets path via environment variable
 
-2. **Downstream Task Updates**:
-   - Task 11 (Tool Validation) may be simplified - catalog is source of truth
-   - Task 6/7 (Code agent configuration) will use the generated configs
+### File Structure
+```
+.taskmaster/docs/task-001/
+├── task.txt              # Task description
+├── prompt.md             # Implementation prompt
+├── acceptance-criteria.md # Success criteria
+└── tools.json            # Simple tool configuration
+```

@@ -33,25 +33,25 @@ The orchestrator and Toolman components are **COMPLETE** ✅. The remaining work
 - [x] **Namespace Isolation**: Works within deployed namespace only
 
 ### 4. Project Analysis *(Docs Agent - Pending)*
-- [ ] **File Detection**: Identifies relevant project files
-- [ ] **Pattern Matching**: Uses glob patterns effectively
-- [ ] **Language Detection**: Recognizes programming languages
-- [ ] **Framework Detection**: Identifies frameworks in use
-- [ ] **Comprehensive Analysis**: Covers K8s, DB, CI/CD, IaC
+- [ ] **Task Analysis**: Analyzes task description for technology keywords
+- [ ] **Pattern Matching**: Uses simple keyword matching effectively
+- [ ] **Technology Detection**: Recognizes mentioned technologies (K8s, Terraform, etc.)
+- [ ] **Language Detection**: Identifies programming languages mentioned in tasks
+- [ ] **Greenfield Focus**: Optimized for new projects without existing code
 
 ### 5. Tool Matching *(Docs Agent - Pending)*
-- [ ] **Pattern-Based**: Uses patterns, not hardcoded names
-- [ ] **Contextual**: Matches based on project needs
+- [ ] **Task-Based**: Matches tools based on task requirements, not code scanning
+- [ ] **Keyword Matching**: Simple but effective keyword-based matching
 - [x] **No Hardcoding**: Zero hardcoded tool names *(achieved in Toolman)*
-- [ ] **Deduplication**: Removes duplicate recommendations
-- [ ] **Sorting**: Returns sorted tool lists
+- [ ] **Always Filesystem**: Always includes filesystem for file operations
+- [ ] **Minimal Set**: Returns only necessary tools, not all available
 
 ### 6. Configuration Storage *(Docs Agent - Pending)*
-- [ ] **ConfigMap Creation**: Creates project-specific ConfigMap
-- [ ] **JSON Format**: Stores configuration as JSON
-- [ ] **Metadata**: Includes timestamps and analysis
-- [ ] **Update Support**: Can update existing configs
-- [ ] **Error Recovery**: Handles storage failures
+- [ ] **Task Folder Storage**: Saves tools.json in task documentation folder
+- [ ] **Simple Format**: Minimal JSON with just tools and reasoning
+- [ ] **No ConfigMap**: Direct file storage, no Kubernetes ConfigMap needed
+- [ ] **Environment Variable**: Code agent gets path via TOOLS_CONFIG env var
+- [ ] **Human Editable**: Simple enough for manual editing if needed
 
 ## Technical Specifications
 
@@ -105,100 +105,72 @@ ConfigMap Read -> Tool Discovery -> Project Analysis -> Tool Matching -> Config 
 ```json
 {
   "tools": {
-    "local": ["filesystem", "git"],
-    "remote": ["github", "kubernetes", "postgres"]
+    "local": ["filesystem"],
+    "remote": ["kubernetes", "terraform"]
   },
-  "generated_at": "2024-01-20T10:30:00Z",
-  "project_analysis": {
-    "has_kubernetes": true,
-    "has_database": true,
-    "has_ci_cd": true,
-    "detected_languages": ["go", "python"],
-    "file_patterns_found": ["kubernetes", "database"]
-  },
-  "docs_run_id": "docs-run-123"
+  "reasoning": "Based on task requirements",
+  "generated_at": "2024-01-20T10:30:00Z"
 }
 ```
 
 ## Test Cases
 
-### Test Case 1: ConfigMap Discovery
+### Test Case 1: Task Analysis for Kubernetes
 ```rust
 #[tokio::test]
-async fn test_configmap_discovery() {
-    // Setup mock ConfigMap
-    let mock_cm = create_mock_configmap(json!({
-        "servers": {
-            "github": {},
-            "kubernetes": {},
-            "postgres": {}
-        }
-    }));
-
-    let handler = DocsHandler::new_with_mock(mock_cm);
-    let tools = handler.discover_available_tools().await.unwrap();
-
-    assert_eq!(tools.len(), 3);
-    assert!(tools.contains(&"github".to_string()));
-    assert!(tools.contains(&"kubernetes".to_string()));
-    assert!(tools.contains(&"postgres".to_string()));
-}
-```
-
-### Test Case 2: Project Analysis - Kubernetes
-```rust
-#[tokio::test]
-async fn test_kubernetes_detection() {
-    let temp_dir = TempDir::new("k8s-project").unwrap();
-
-    // Create K8s files
-    create_dir_all(temp_dir.path().join("k8s")).unwrap();
-    write(
-        temp_dir.path().join("k8s/deployment.yaml"),
-        "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test"
-    ).unwrap();
-
+async fn test_task_analysis_kubernetes() {
     let handler = DocsHandler::new();
-    let analysis = handler.analyze_project(temp_dir.path()).await.unwrap();
+    let task_content = "Create a Kubernetes deployment for the API service with 3 replicas";
 
-    assert!(analysis.has_kubernetes);
-    assert!(analysis.file_patterns_found.contains(&"kubernetes".to_string()));
+    let analysis = handler.analyze_task(task_content).await.unwrap();
+
+    assert!(analysis.needs_kubernetes);
+    assert!(analysis.technologies_mentioned.contains(&"kubernetes".to_string()));
 }
 ```
 
-### Test Case 3: Pattern-Based Tool Matching
+### Test Case 2: Task Analysis for Multiple Technologies
 ```rust
 #[tokio::test]
-async fn test_pattern_matching_no_hardcoding() {
-    let analysis = ProjectAnalysis {
-        has_kubernetes: true,
-        has_database: true,
-        has_ci_cd: true,
-        ..Default::default()
+async fn test_task_analysis_multiple() {
+    let handler = DocsHandler::new();
+    let task_content = "Set up Terraform infrastructure for deploying a Rust microservice to Kubernetes";
+
+    let analysis = handler.analyze_task(task_content).await.unwrap();
+
+    assert!(analysis.needs_kubernetes);
+    assert!(analysis.needs_terraform);
+    assert!(analysis.languages_mentioned.contains(&"rust".to_string()));
+}
+```
+
+### Test Case 3: Tool Matching Based on Task
+```rust
+#[tokio::test]
+async fn test_tool_matching_task_driven() {
+    let handler = DocsHandler::new();
+
+    let analysis = TaskAnalysis {
+        needs_kubernetes: true,
+        needs_terraform: false,
+        needs_database: false,
+        technologies_mentioned: vec!["kubernetes".to_string()],
+        languages_mentioned: vec![],
     };
 
-    // Tools with various naming patterns
     let available = vec![
-        "k8s-manager".to_string(),
-        "kubernetes-client".to_string(),
-        "postgresql-connector".to_string(),
-        "mysql-db".to_string(),
-        "github-actions".to_string(),
-        "gitlab-runner".to_string(),
-        "unmatched-tool".to_string(),
+        "kubernetes".to_string(),
+        "terraform".to_string(),
+        "postgres".to_string(),
+        "rustdocs".to_string(),
     ];
 
-    let handler = DocsHandler::new();
-    let config = handler.match_tools_to_project(&analysis, &available);
+    let config = handler.match_tools_to_task(&analysis, &available);
 
-    // Should match based on patterns
-    assert!(config.remote.iter().any(|t| t.contains("k8s")));
-    assert!(config.remote.iter().any(|t| t.contains("kubernetes")));
-    assert!(config.remote.iter().any(|t| t.contains("postgres")));
-    assert!(config.remote.iter().any(|t| t.contains("mysql")));
-    assert!(config.remote.iter().any(|t| t.contains("github")));
-    assert!(config.remote.iter().any(|t| t.contains("gitlab")));
-    assert!(!config.remote.contains(&"unmatched-tool".to_string()));
+    // Should always include filesystem
+    assert_eq!(config.local, vec!["filesystem"]);
+    // Should only include kubernetes, not other tools
+    assert_eq!(config.remote, vec!["kubernetes"]);
 }
 ```
 
