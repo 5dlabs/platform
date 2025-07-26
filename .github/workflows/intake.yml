@@ -295,54 +295,51 @@ jobs:
           # Create new branch
           git checkout -b "$BRANCH_NAME"
 
-          # Add all project files
-          git add "projects/$PROJECT_NAME/"
-
-          # Remove intake files (they've been processed)
-          git rm -r intake/ || true
+          # Add all generated files in intake directory
+          git add intake/
 
           # Commit changes
-          git commit -m "🚀 Add new project: $PROJECT_NAME
+          git commit -m "🚀 Process project: $PROJECT_NAME
 
           Automated project intake processing:
-          - Created project structure under projects/$PROJECT_NAME
-          - Initialized TaskMaster with Opus model
-          - Generated tasks from PRD (no research, no limits)
-          - Analyzed task complexity (with research)
-          - Expanded tasks with subtasks
-          - Cross-referenced with architecture document
-          - Generated complete task files and directories
+          - Processed PRD and architecture documents in intake/
+          - Initialized TaskMaster with Claude Sonnet
+          - Generated tasks from PRD (no research for speed)
+          - Created task files in intake/docs/task-X/
+          - Cross-referenced with simple API validation
+          - Generated complete TaskMaster structure in intake/
 
-          Project is ready for development workflow."
+          Project processing complete and ready for review."
 
           # Push branch
           git push origin "$BRANCH_NAME"
 
           # Create PR using GitHub CLI
           gh pr create \
-            --title "🚀 New Project: $PROJECT_NAME" \
+            --title "🚀 Process Project: $PROJECT_NAME" \
             --body "## 🎉 Automated Project Intake Complete!
 
-          This PR adds a new project **$PROJECT_NAME** that has been fully processed through our automated intake pipeline.
+          This PR contains the processed results for project **$PROJECT_NAME** through our automated intake pipeline.
 
           ### 📋 What was processed:
           - ✅ PRD document analyzed and parsed
           - ✅ Architecture document integrated
-          - ✅ TaskMaster initialized with Opus model
-          - ✅ Tasks generated (no research limits)
-          - ✅ Complexity analysis completed (with research)
-          - ✅ Tasks expanded with subtasks
-          - ✅ Cross-referenced with architecture for alignment
-          - ✅ Complete file structure generated
+          - ✅ TaskMaster initialized with Claude Sonnet
+          - ✅ Tasks generated (no research for speed)
+          - ✅ Task files created with individual documentation
+          - ✅ Simple API validation completed
+          - ✅ Complete TaskMaster structure generated in intake/
 
-          ### 🏗️ Project Structure Created:
+          ### 🏗️ Generated Structure:
           \`\`\`
-          projects/$PROJECT_NAME/
+          intake/
           ├── .taskmaster/
           │   ├── docs/
           │   │   ├── prd.txt
           │   │   └── architecture.md
-          │   └── tasks.json
+          │   ├── tasks/
+          │   │   └── tasks.json
+          │   └── config.json
           └── docs/
               ├── task-1/
               │   └── task.txt
@@ -353,16 +350,15 @@ jobs:
 
           ### 🎯 Next Steps:
           1. Review the generated tasks for accuracy
-          2. Merge this PR to activate the project
+          2. Copy task structure to your project directory if needed
           3. Begin development using TaskMaster workflows
-          4. Tasks are ready for Claude Code implementation
+          4. Tasks are ready for implementation
 
           ### 🤖 Models Used:
-          - **Task Generation**: claude-opus-4-20250514
-          - **Complexity Analysis**: claude-4-20250514
-          - **Cross-referencing**: claude-code-action
+          - **Task Generation**: Claude Sonnet (via TaskMaster)
+          - **Validation**: Claude Haiku (simple API validation)
 
-          This project is now ready for the development workflow! 🚀" \
+          Project processing complete! 🚀" \
             --head "$BRANCH_NAME" \
             --base main
 
