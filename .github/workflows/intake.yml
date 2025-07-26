@@ -204,14 +204,12 @@ jobs:
             --input=".taskmaster/docs/prd.txt" \
             --num-tasks=50
 
-          # Analyze task complexity (with research for this step)
-          task-master analyze-complexity \
-            --research
+          # Analyze task complexity (no research for faster execution)
+          task-master analyze-complexity
 
           # Expand tasks with subtasks
           task-master expand --all \
-            --force \
-            --research
+            --force
 
           # Generate individual task files
           task-master generate
