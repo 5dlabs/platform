@@ -48,6 +48,21 @@ spec:
               githubUser:
                 type: string
                 description: "GitHub username for authentication and commits"
+              tools:
+                type: object
+                description: "Tool configuration for this run"
+                properties:
+                  local:
+                    type: array
+                    description: "Local MCP tools to enable"
+                    items:
+                      type: string
+                      enum: ["filesystem", "git"]
+                  remote:
+                    type: array
+                    description: "Remote MCP tools via toolman"
+                    items:
+                      type: string
           status:
             type: object
             properties:

@@ -70,12 +70,21 @@ spec:
               githubUser:
                 type: string
                 description: "GitHub username for authentication and commits"
-              localTools:
-                type: string
-                description: "Local MCP tools/servers to enable (comma-separated)"
-              remoteTools:
-                type: string
-                description: "Remote MCP tools/servers to enable (comma-separated)"
+              tools:
+                type: object
+                description: "Tool configuration for this run"
+                properties:
+                  local:
+                    type: array
+                    description: "Local MCP tools to enable"
+                    items:
+                      type: string
+                      enum: ["filesystem", "git"]
+                  remote:
+                    type: array
+                    description: "Remote MCP tools via toolman"
+                    items:
+                      type: string
               contextVersion:
                 type: integer
                 default: 1
