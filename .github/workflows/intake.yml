@@ -267,8 +267,10 @@ jobs:
           # Create new branch
           git checkout -b "$BRANCH_NAME"
 
-          # Add the entire project directory
-          git add "projects/$PROJECT_NAME/"
+          # Add only the essential TaskMaster files (not all the AI config files)
+          git add "projects/$PROJECT_NAME/.taskmaster/docs/"
+          git add "projects/$PROJECT_NAME/.taskmaster/tasks/"
+          git add "projects/$PROJECT_NAME/.taskmaster/config.json"
 
           # Commit changes
           git commit -m "🚀 Process project: $PROJECT_NAME
