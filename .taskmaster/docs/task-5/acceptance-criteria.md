@@ -32,19 +32,19 @@ The orchestrator and Toolman components are **COMPLETE** ✅. The remaining work
 - [x] **Least Privilege**: Only necessary permissions granted
 - [x] **Namespace Isolation**: Works within deployed namespace only
 
-### 4. Project Analysis *(Docs Agent - Pending)*
-- [ ] **Task Analysis**: Analyzes task description for technology keywords
-- [ ] **Pattern Matching**: Uses simple keyword matching effectively
-- [ ] **Technology Detection**: Recognizes mentioned technologies (K8s, Terraform, etc.)
-- [ ] **Language Detection**: Identifies programming languages mentioned in tasks
+### 4. Docs Agent Intelligence *(Prompt Template - Pending)*
+- [ ] **AI-Driven Analysis**: Uses AI to understand task requirements deeply
+- [ ] **Tool Understanding**: AI comprehends tool descriptions and capabilities
+- [ ] **Intelligent Matching**: AI makes thoughtful tool recommendations
+- [ ] **No Code Logic**: All intelligence via prompt template
 - [ ] **Greenfield Focus**: Optimized for new projects without existing code
 
-### 5. Tool Matching *(Docs Agent - Pending)*
-- [ ] **Task-Based**: Matches tools based on task requirements, not code scanning
-- [ ] **Keyword Matching**: Simple but effective keyword-based matching
+### 5. Tool Selection *(AI via Prompt - Pending)*
+- [ ] **Task-Based**: AI analyzes task content, not code files
+- [ ] **Intelligent Selection**: AI understands context, not keywords
 - [x] **No Hardcoding**: Zero hardcoded tool names *(achieved in Toolman)*
-- [ ] **Always Filesystem**: Always includes filesystem for file operations
-- [ ] **Minimal Set**: Returns only necessary tools, not all available
+- [ ] **Always Filesystem**: AI knows to include filesystem for file operations
+- [ ] **Thoughtful Curation**: AI selects only truly needed tools
 
 ### 6. Configuration Storage *(Docs Agent - Pending)*
 - [ ] **Task Folder Storage**: Saves tools.json in task documentation folder
@@ -115,110 +115,46 @@ ConfigMap Read -> Tool Discovery -> Project Analysis -> Tool Matching -> Config 
 
 ## Test Cases
 
-### Test Case 1: Task Analysis for Kubernetes
-```rust
-#[tokio::test]
-async fn test_task_analysis_kubernetes() {
-    let handler = DocsHandler::new();
-    let task_content = "Create a Kubernetes deployment for the API service with 3 replicas";
-
-    let analysis = handler.analyze_task(task_content).await.unwrap();
-
-    assert!(analysis.needs_kubernetes);
-    assert!(analysis.technologies_mentioned.contains(&"kubernetes".to_string()));
-}
+### Test Case 1: ConfigMap Mounting
+```bash
+# Verify the tool catalog is mounted in docs agent pods
+kubectl exec -it <docs-pod> -n orchestrator -- ls -la /etc/tool-catalog/
+# Should see: tool-catalog.json
 ```
 
-### Test Case 2: Task Analysis for Multiple Technologies
-```rust
-#[tokio::test]
-async fn test_task_analysis_multiple() {
-    let handler = DocsHandler::new();
-    let task_content = "Set up Terraform infrastructure for deploying a Rust microservice to Kubernetes";
-
-    let analysis = handler.analyze_task(task_content).await.unwrap();
-
-    assert!(analysis.needs_kubernetes);
-    assert!(analysis.needs_terraform);
-    assert!(analysis.languages_mentioned.contains(&"rust".to_string()));
-}
+### Test Case 2: AI Task Understanding
+```
+Given Task: "Create a Kubernetes deployment for the API service with 3 replicas"
+Expected AI Behavior:
+- Recognizes Kubernetes requirement
+- Recommends kubernetes tools
+- Includes filesystem for file operations
+- Provides clear reasoning
 ```
 
-### Test Case 3: Tool Matching Based on Task
-```rust
-#[tokio::test]
-async fn test_tool_matching_task_driven() {
-    let handler = DocsHandler::new();
-
-    let analysis = TaskAnalysis {
-        needs_kubernetes: true,
-        needs_terraform: false,
-        needs_database: false,
-        technologies_mentioned: vec!["kubernetes".to_string()],
-        languages_mentioned: vec![],
-    };
-
-    let available = vec![
-        "kubernetes".to_string(),
-        "terraform".to_string(),
-        "postgres".to_string(),
-        "rustdocs".to_string(),
-    ];
-
-    let config = handler.match_tools_to_task(&analysis, &available);
-
-    // Should always include filesystem
-    assert_eq!(config.local, vec!["filesystem"]);
-    // Should only include kubernetes, not other tools
-    assert_eq!(config.remote, vec!["kubernetes"]);
-}
+### Test Case 3: AI Multi-Technology Recognition
+```
+Given Task: "Set up Terraform infrastructure for deploying a Rust microservice to Kubernetes"
+Expected AI Behavior:
+- Identifies multiple technologies: Terraform, Kubernetes, Rust
+- Recommends relevant tools for each
+- Explains the connection between technologies
 ```
 
-### Test Case 4: Language Detection
-```rust
-#[tokio::test]
-async fn test_language_detection() {
-    let temp_dir = TempDir::new("multi-lang").unwrap();
-
-    // Create language indicator files
-    write(temp_dir.path().join("package.json"), "{}").unwrap();
-    write(temp_dir.path().join("requirements.txt"), "flask==2.0").unwrap();
-    write(temp_dir.path().join("go.mod"), "module test").unwrap();
-
-    let handler = DocsHandler::new();
-    let analysis = handler.analyze_project(temp_dir.path()).await.unwrap();
-
-    assert!(analysis.detected_languages.contains(&"javascript".to_string()));
-    assert!(analysis.detected_languages.contains(&"python".to_string()));
-    assert!(analysis.detected_languages.contains(&"go".to_string()));
-}
+### Test Case 4: AI Minimal Tool Selection
+```
+Given Task: "Write unit tests for the authentication module"
+Expected AI Behavior:
+- Only recommends filesystem (for reading/writing test files)
+- Doesn't add unnecessary tools
+- Explains why minimal toolset is appropriate
 ```
 
-### Test Case 5: Configuration Storage
-```rust
-#[tokio::test]
-async fn test_config_storage() {
-    let handler = DocsHandler::new();
-    let config = ProjectConfig {
-        tools: ProjectToolConfig {
-            local: vec!["filesystem".to_string()],
-            remote: vec!["github".to_string()],
-        },
-        generated_at: "2024-01-20T10:00:00Z".to_string(),
-        project_analysis: Default::default(),
-        docs_run_id: "test-123".to_string(),
-    };
-
-    // Save config
-    handler.save_project_config("test-project", config.clone()).await.unwrap();
-
-    // Verify ConfigMap created
-    let cm = get_configmap("test-project-project-config").await.unwrap();
-    let stored_json = cm.data.unwrap().get("config.json").unwrap();
-    let stored: ProjectConfig = serde_json::from_str(stored_json).unwrap();
-
-    assert_eq!(stored.tools, config.tools);
-}
+### Test Case 5: Output File Creation
+```bash
+# After docs agent runs, verify output exists
+ls -la .taskmaster/docs/task-001/tools.json
+# Should contain properly formatted JSON with tools and reasoning
 ```
 
 ### Test Case 6: Error Handling

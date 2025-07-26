@@ -997,46 +997,56 @@ Now that the tool catalog ConfigMap is available and mounted, the docs agent wil
 
 ### Simplified Greenfield Workflow
 
-```javascript
-// Docs agent logic for greenfield projects
-async function determineToolsForTask(taskContent) {
-  const tools = {
-    local: ["filesystem"],  // Always needed for file operations
-    remote: []
-  };
+The docs agent uses **AI-driven intelligent tool selection** based on the task description and the available tool catalog. This is NOT simple keyword matching - the AI model analyzes:
+- The task requirements and objectives
+- The available tools and their descriptions
+- The best fit between task needs and tool capabilities
 
-  // Simple keyword matching from task content
-  if (taskContent.match(/kubernetes|k8s|deployment|pod|service/i)) {
-    tools.remote.push("kubernetes");
-  }
-
-  if (taskContent.match(/terraform|infrastructure|iac/i)) {
-    tools.remote.push("terraform");
-  }
-
-  if (taskContent.match(/rust|cargo|crate/i)) {
-    tools.remote.push("rustdocs");
-  }
-
-  // Save to task folder
-  const toolsPath = `.taskmaster/docs/task-${taskId}/tools.json`;
-  fs.writeFileSync(toolsPath, JSON.stringify({
-    tools,
-    reasoning: "Based on task requirements",
-    generated_at: new Date().toISOString()
-  }, null, 2));
-
-  return tools;
-}
-```
+All of this intelligence is handled through the **prompt template**, which instructs the AI to:
+1. Read and understand the tool catalog
+2. Analyze the task deeply
+3. Make intelligent recommendations based on understanding, not patterns
 
 ### Key Design Decisions
 
-1. **Task-Driven**: Tools are selected based on task requirements, not code scanning
-2. **Greenfield First**: Optimized for new projects where no code exists
-3. **Simple Storage**: tools.json saved directly in task folder
-4. **No Overrides/Templates**: Keep it simple - humans can edit if needed
-5. **Easy Integration**: Code agent gets path via environment variable
+1. **AI-Driven**: Intelligent tool selection via prompt engineering
+2. **Prompt-Based**: All logic lives in the docs agent prompt template
+3. **Controller Simplicity**: Orchestrator only mounts the ConfigMap
+4. **Greenfield First**: Optimized for new projects where no code exists
+5. **Simple Storage**: tools.json saved directly in task folder
+
+### What the Orchestrator Does
+
+The orchestrator's responsibility is minimal:
+```rust
+// In orchestrator/core/src/controllers/task_controller/resources.rs
+// Just mount the tool catalog ConfigMap:
+volumes.push(json!({
+    "name": "tool-catalog",
+    "configMap": {
+        "name": "toolman-tool-catalog",
+        "optional": true
+    }
+}));
+volume_mounts.push(json!({
+    "name": "tool-catalog",
+    "mountPath": "/etc/tool-catalog",
+    "readOnly": true
+}));
+```
+
+That's it! Everything else is handled by the AI through the prompt template.
+
+### What the Docs Agent Prompt Template Will Include
+
+The prompt template (handled in Helm chart templates) will instruct the AI to:
+1. Read the tool catalog from `/etc/tool-catalog/tool-catalog.json`
+2. Understand each tool's capabilities, descriptions, and use cases
+3. Analyze the task requirements deeply
+4. Make intelligent tool recommendations based on true understanding
+5. Output a simple `tools.json` to the task folder
+
+No code logic needed - just intelligent prompt engineering.
 
 ### File Structure
 ```
