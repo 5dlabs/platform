@@ -83,4 +83,4 @@ The GitHub Action will:
 
 Ready to submit your project? Just add your files and push! 🚀
 
-<!-- Test trigger for workflow v11 - With validation job and simplified finalization -->
+<!-- Test trigger for workflow v12 - Testing validation approach -->
