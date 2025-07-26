@@ -51,8 +51,8 @@ pub fn generate_templates(
     if task.is_docs() {
         // Generate docs prompt
         templates.insert("prompt.md".to_string(), generate_docs_prompt(task)?);
-        // Generate tool catalog documentation
-        templates.insert("tool-catalog-documentation.md".to_string(), generate_tool_catalog_docs()?);
+        // Generate tool catalog documentation from live ConfigMap
+        templates.insert("tool-catalog-documentation.md".to_string(), generate_tool_catalog_documentation()?);
     } else {
         // Generate code-specific templates
         templates.insert("mcp.json".to_string(), generate_mcp_config(task, config)?);
@@ -542,88 +542,83 @@ fn get_hook_templates(task: &TaskType) -> Result<Vec<(String, String)>> {
     Ok(templates)
 }
 
-/// Generate tool catalog documentation markdown
-fn generate_tool_catalog_docs() -> Result<String> {
-    // TODO: In the future, fetch live data from toolman-tool-catalog ConfigMap
-    // For now, provide a comprehensive static template that covers the structure
-    Ok(r#"# MCP Tool Catalog Documentation
+/// Generate tool catalog documentation from live ConfigMap data
+fn generate_tool_catalog_documentation() -> Result<String> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(false);
 
-This document provides a comprehensive overview of all available MCP tools for task-specific configuration generation.
+    let template = load_template("docs/tool-catalog-documentation.md.hbs")?;
 
-## Available Tools
+    handlebars
+        .register_template_string("tool_catalog", &template)
+        .map_err(|e| {
+            crate::controllers::task_controller::types::Error::ConfigError(format!(
+                "Failed to register tool catalog template: {e}"
+            ))
+        })?;
 
-### Remote Tools (Toolman Proxy)
-These tools are accessible through the Toolman proxy server. Only tool names are needed in client config.
+    // TODO: Fetch live ConfigMap data - for now use mock data for testing
+    let tool_catalog_data = get_tool_catalog_data()?;
 
-**Kubernetes Tools:**
-- `kubernetes_listResources` - List cluster resources by type
-- `kubernetes_getResource` - Get specific resource details
-- `kubernetes_createResource` - Create new cluster resources
-- `kubernetes_getAPIResources` - Get available API resources
+    let data = json!({
+        "tool_catalog": tool_catalog_data
+    });
 
-**Memory Tools:**
-- `memory_create_entities` - Create knowledge graph entities
-- `memory_search_nodes` - Search knowledge graph
-- `memory_read_graph` - Read entire knowledge graph
-
-**Brave Search Tools:**
-- `brave_web_search` - Web search using Brave Search API
-- `brave_local_search` - Local business search
-
-### Local Tools (Filesystem)
-These tools require complete server configuration in client config.
-
-**Filesystem Server:**
-```json
-{
-  "command": "npx",
-  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
-  "workingDirectory": "project_root"
+    handlebars.render("tool_catalog", &data).map_err(|e| {
+        crate::controllers::task_controller::types::Error::ConfigError(format!(
+            "Failed to render tool catalog template: {e}"
+        ))
+    })
 }
-```
 
-**Available Tools:**
-- `read_file` - Read file contents
-- `write_file` - Create or overwrite files
-- `edit_file` - Make line-based edits
-- `list_directory` - List directory contents
-- `create_directory` - Create directories
-- `search_files` - Search for files by pattern
+/// Fetch tool catalog data from ConfigMap
+fn get_tool_catalog_data() -> Result<serde_json::Value> {
+    use tokio::runtime::Runtime;
 
-## Client Configuration Structure
+    // Create a new runtime for the blocking operation
+    let rt = Runtime::new().map_err(|e| {
+        crate::controllers::task_controller::types::Error::ConfigError(format!(
+            "Failed to create tokio runtime: {e}"
+        ))
+    })?;
 
-When generating task-specific configurations, use this structure:
+    rt.block_on(async {
+        use kube::{Api, Client};
+        use k8s_openapi::api::core::v1::ConfigMap;
 
-```json
-{
-  "remoteTools": [
-    "kubernetes_listResources",
-    "memory_create_entities",
-    "brave_web_search"
-  ],
-  "localServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
-      "tools": ["read_file", "write_file", "list_directory"],
-      "workingDirectory": "project_root"
-    }
-  }
-}
-```
+        // Create Kubernetes client
+        let client = Client::try_default().await.map_err(|e| {
+            crate::controllers::task_controller::types::Error::ConfigError(format!(
+                "Failed to create Kubernetes client: {e}"
+            ))
+        })?;
 
-## Key Guidelines
+        // Get the ConfigMap API
+        let configmaps: Api<ConfigMap> = Api::namespaced(client, "orchestrator");
 
-1. **Remote Tools**: Include only specific tool names in `remoteTools` array
-2. **Local Servers**: Include complete server configs with specific `tools` arrays
-3. **Task-Specific**: Only include tools actually needed for the task
-4. **Working Directory**: Use "project_root" as standard working directory
+        // Fetch the tool catalog ConfigMap
+        let configmap = configmaps.get("toolman-tool-catalog").await.map_err(|e| {
+            crate::controllers::task_controller::types::Error::ConfigError(format!(
+                "Failed to fetch toolman-tool-catalog ConfigMap: {e}"
+            ))
+        })?;
 
-## Tool Selection Examples
+        // Extract the tool-catalog.json data
+        let tool_catalog_json = configmap
+            .data
+            .as_ref()
+            .and_then(|data| data.get("tool-catalog.json"))
+            .ok_or_else(|| {
+                crate::controllers::task_controller::types::Error::ConfigError(
+                    "tool-catalog.json not found in ConfigMap".to_string()
+                )
+            })?;
 
-**For research tasks**: Include `brave_web_search` and filesystem tools for documentation
-**For Kubernetes operations**: Include relevant `kubernetes_*` tools
-**For data management**: Include `memory_*` tools for persistent storage
-**For file operations**: Include specific filesystem tools like `read_file`, `write_file`
-"#.to_string())
+        // Parse the JSON
+        serde_json::from_str(tool_catalog_json).map_err(|e| {
+            crate::controllers::task_controller::types::Error::ConfigError(format!(
+                "Failed to parse tool catalog JSON: {e}"
+            ))
+        })
+    })
 }
