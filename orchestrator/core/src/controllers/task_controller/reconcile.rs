@@ -24,7 +24,10 @@ use super::types::{Context, Error, Result, TaskType, CODE_FINALIZER_NAME, DOCS_F
 
 /// Run the task controller for both `DocsRun` and `CodeRun` resources
 pub async fn run_task_controller(client: Client, namespace: String) -> Result<()> {
-    error!("🚀 AGGRESSIVE DEBUG: Starting task controller in namespace: {}", namespace);
+    error!(
+        "🚀 AGGRESSIVE DEBUG: Starting task controller in namespace: {}",
+        namespace
+    );
 
     error!("🔧 AGGRESSIVE DEBUG: About to load controller configuration from mounted file...");
 
@@ -32,11 +35,17 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
     let config = match ControllerConfig::from_mounted_file("/config/config.yaml") {
         Ok(cfg) => {
             error!("✅ AGGRESSIVE DEBUG: Successfully loaded controller configuration from mounted file");
-            error!("🔧 AGGRESSIVE DEBUG: Configuration cleanup enabled = {}", cfg.cleanup.enabled);
+            error!(
+                "🔧 AGGRESSIVE DEBUG: Configuration cleanup enabled = {}",
+                cfg.cleanup.enabled
+            );
 
             // Validate configuration has required fields
             if let Err(validation_error) = cfg.validate() {
-                error!("❌ AGGRESSIVE DEBUG: Configuration validation failed: {}", validation_error);
+                error!(
+                    "❌ AGGRESSIVE DEBUG: Configuration validation failed: {}",
+                    validation_error
+                );
                 return Err(Error::ConfigError(validation_error.to_string()));
             }
             error!("✅ AGGRESSIVE DEBUG: Configuration validation passed");
@@ -52,7 +61,10 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
 
             // Validate default configuration - this should fail if image config is missing
             if let Err(validation_error) = default_config.validate() {
-                error!("❌ AGGRESSIVE DEBUG: Default configuration is invalid: {}", validation_error);
+                error!(
+                    "❌ AGGRESSIVE DEBUG: Default configuration is invalid: {}",
+                    validation_error
+                );
                 return Err(Error::ConfigError(validation_error.to_string()));
             }
             error!("✅ AGGRESSIVE DEBUG: Default configuration validation passed");
@@ -101,13 +113,23 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
 
 /// Reconciliation logic for `DocsRun` resources
 async fn reconcile_docs(docs_run: Arc<DocsRun>, ctx: Arc<Context>) -> Result<Action> {
-    error!("📝 AGGRESSIVE DEBUG: Starting reconcile_docs for: {}", docs_run.metadata.name.as_ref().unwrap_or(&"unnamed".to_string()));
+    error!(
+        "📝 AGGRESSIVE DEBUG: Starting reconcile_docs for: {}",
+        docs_run
+            .metadata
+            .name
+            .as_ref()
+            .unwrap_or(&"unnamed".to_string())
+    );
 
     let task = TaskType::Docs(docs_run.clone());
     error!("🔍 AGGRESSIVE DEBUG: Created task type, calling reconcile_common...");
 
     let result = reconcile_common(task, ctx, DOCS_FINALIZER_NAME).await;
-    error!("🏁 AGGRESSIVE DEBUG: reconcile_common completed with result: {:?}", result.is_ok());
+    error!(
+        "🏁 AGGRESSIVE DEBUG: reconcile_common completed with result: {:?}",
+        result.is_ok()
+    );
 
     result
 }
@@ -124,7 +146,10 @@ async fn reconcile_common(
     ctx: Arc<Context>,
     finalizer_name: &str,
 ) -> Result<Action> {
-    error!("🎯 AGGRESSIVE DEBUG: Starting reconcile_common for: {}", task.name());
+    error!(
+        "🎯 AGGRESSIVE DEBUG: Starting reconcile_common for: {}",
+        task.name()
+    );
 
     let namespace = &ctx.namespace;
     let client = &ctx.client;
@@ -227,8 +252,6 @@ async fn monitor_running_job(task: &TaskType, jobs: &Api<Job>, ctx: &Arc<Context
 
     Ok(())
 }
-
-
 
 /// Error policy for `DocsRun` controller
 fn error_policy_docs(_dr: Arc<DocsRun>, error: &Error, _ctx: Arc<Context>) -> Action {

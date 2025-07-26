@@ -154,13 +154,11 @@ fn handle_orchestrator_tools(
             // Debug output removed to satisfy clippy
 
             // Extract required working directory parameter
-            let working_directory = match params_map
-                .get("working_directory")
-                .and_then(|v| v.as_str())
-            {
-                Some(wd) => wd,
-                None => return Some(Err(anyhow!("working_directory parameter is required"))),
-            };
+            let working_directory =
+                match params_map.get("working_directory").and_then(|v| v.as_str()) {
+                    Some(wd) => wd,
+                    None => return Some(Err(anyhow!("working_directory parameter is required"))),
+                };
 
             // Extract model with default
             let model = params_map
@@ -252,9 +250,7 @@ fn handle_orchestrator_tools(
 
             // Get GitHub user from environment variable (takes precedence) or parameter
             let env_code_user = std::env::var("FDL_DEFAULT_CODE_USER").ok();
-            let github_user = env_code_user
-                .as_deref()
-                .or(github_user);
+            let github_user = env_code_user.as_deref().or(github_user);
 
             let local_tools = params_map.get("local_tools").and_then(|v| v.as_str());
 

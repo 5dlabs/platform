@@ -290,7 +290,10 @@ async fn schedule_job_cleanup(
 
         // Delete the job
         let jobs_api: Api<Job> = Api::namespaced(client.clone(), &namespace);
-        match jobs_api.delete(&job_name, &kube::api::DeleteParams::background()).await {
+        match jobs_api
+            .delete(&job_name, &kube::api::DeleteParams::background())
+            .await
+        {
             Ok(_) => info!("Successfully deleted job: {}", job_name),
             Err(kube::Error::Api(ae)) if ae.code == 404 => {
                 info!("Job {} already deleted", job_name);
@@ -302,7 +305,8 @@ async fn schedule_job_cleanup(
 
         // Delete associated ConfigMap if enabled
         if delete_configmap {
-            let configmaps_api: Api<k8s_openapi::api::core::v1::ConfigMap> = Api::namespaced(client.clone(), &namespace);
+            let configmaps_api: Api<k8s_openapi::api::core::v1::ConfigMap> =
+                Api::namespaced(client.clone(), &namespace);
 
             // Find ConfigMap associated with this job
             let labels_selector = "app=orchestrator".to_string();
@@ -314,7 +318,10 @@ async fn schedule_job_cleanup(
                         if let Some(cm_name) = &cm.metadata.name {
                             // Check if ConfigMap is associated with this job
                             if cm_name.starts_with(&task_name.replace('_', "-")) {
-                                match configmaps_api.delete(cm_name, &kube::api::DeleteParams::default()).await {
+                                match configmaps_api
+                                    .delete(cm_name, &kube::api::DeleteParams::default())
+                                    .await
+                                {
                                     Ok(_) => info!("Successfully deleted ConfigMap: {}", cm_name),
                                     Err(kube::Error::Api(ae)) if ae.code == 404 => {
                                         info!("ConfigMap {} already deleted", cm_name);

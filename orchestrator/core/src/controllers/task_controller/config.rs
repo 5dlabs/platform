@@ -135,7 +135,10 @@ pub struct CleanupConfig {
     pub enabled: bool,
 
     /// Minutes to wait before cleaning up completed (successful) jobs
-    #[serde(rename = "completedJobDelayMinutes", default = "default_completed_delay")]
+    #[serde(
+        rename = "completedJobDelayMinutes",
+        default = "default_completed_delay"
+    )]
     pub completed_job_delay_minutes: u64,
 
     /// Minutes to wait before cleaning up failed jobs

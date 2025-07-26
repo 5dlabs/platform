@@ -578,7 +578,10 @@ pub async fn cleanup_resources(
     let task_label = if let Some(task_id) = task.task_id() {
         format!("task-id={task_id}")
     } else {
-        format!("task-type=docs,github-user={}", sanitize_label_value(task.github_user()))
+        format!(
+            "task-type=docs,github-user={}",
+            sanitize_label_value(task.github_user())
+        )
     };
 
     info!("Cleaning up resources for task: {}", task.name());
