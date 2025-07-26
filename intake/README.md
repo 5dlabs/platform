@@ -83,4 +83,4 @@ The GitHub Action will:
 
 Ready to submit your project? Just add your files and push! 🚀
 
-<!-- Test trigger for workflow v9 - Final test with id-token permission -->
+<!-- Test trigger for workflow v10 - Using GITHUB_TOKEN instead of OIDC -->
