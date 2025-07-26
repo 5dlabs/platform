@@ -63,6 +63,9 @@ jobs:
           entrypoint: /bin/bash
           args: |
             -c "echo '🧪 Testing Claude Code functionality...' && 
+                echo 'Current working directory:' && pwd &&
+                echo 'Workspace contents:' && ls -la /github/workspace &&
+                echo 'Testing simple Claude command...' &&
                 echo 'This is a validation test. Please respond with: VALIDATION_SUCCESS' | claude --prompt-stdin --non-interactive &&
                 echo '✅ Claude Code test completed'"
 
@@ -256,7 +259,11 @@ jobs:
         with:
           entrypoint: /bin/bash
           args: |
-            -c "cd /github/workspace/${{ steps.create-structure.outputs.project_dir }} &&
+            -c "echo 'Container working directory:' && pwd &&
+                echo 'Workspace contents:' && ls -la /github/workspace &&
+                echo 'Project directory: ${{ steps.create-structure.outputs.project_dir }}' &&
+                cd /github/workspace/${{ steps.create-structure.outputs.project_dir }} &&
+                echo 'Project directory contents:' && ls -la &&
                 echo '🤖 Running AI-powered cross-referencing with Claude Code...' &&
                 cat > cross_reference_prompt.txt << 'EOF' &&
                 I need you to cross-reference the generated TaskMaster tasks with the architecture document and finalize the project structure.
