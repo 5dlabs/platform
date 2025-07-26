@@ -419,8 +419,8 @@
       {
         "id": 12,
         "title": "Research Express.js Best Practices",
-        "description": "Research and document current Express.js best practices for error handling and middleware.",
-        "details": "Research current Express.js best practices focusing on:\n1. Error handling patterns\n2. Middleware organization\n3. Request logging\n4. Security best practices\n\nDocument findings in a separate markdown file (docs/best-practices.md) that can be referenced for future improvements to the API.",
+        "description": "Research and document current Express.js best practices for error handling and middleware using web search and save findings to documentation files.",
+        "details": "Use Brave Search to research current Express.js best practices focusing on:\n1. Error handling patterns\n2. Middleware organization\n3. Request logging\n4. Security best practices\n\nSave research findings and create documentation in a separate markdown file (docs/best-practices.md) using filesystem operations. This task requires both web search capabilities and file management operations.",
         "testStrategy": "Review the documentation for completeness and accuracy. Ensure that the documented best practices are relevant to the project and provide valuable insights for potential improvements.",
         "priority": "low",
         "dependencies": [
