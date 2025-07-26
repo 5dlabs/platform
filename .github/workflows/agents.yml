@@ -157,9 +157,100 @@ jobs:
             echo "built=false" >> $GITHUB_OUTPUT
           fi
 
+  # Build Gemini CLI agent
+  build-gemini-cli:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      built: ${{ steps.build.outputs.built }}
+      version: ${{ steps.cli-version.outputs.CLI_VERSION }}
+    steps:
+      - name: Checkout platform repository
+        uses: actions/checkout@v4
+
+      - name: Checkout Gemini CLI repository
+        uses: actions/checkout@v4
+        with:
+          repository: google-gemini/gemini-cli
+          ref: main
+          path: gemini-cli
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: gemini-cli/package-lock.json
+
+      - name: Install dependencies and build packages
+        working-directory: ./gemini-cli
+        run: |
+          npm ci
+          npm run build:packages
+          npm pack -w @google/gemini-cli --pack-destination ./packages/cli/dist
+          npm pack -w @google/gemini-cli-core --pack-destination ./packages/core/dist
+
+      - name: Get CLI version
+        id: cli-version
+        working-directory: ./gemini-cli
+        run: |
+          CLI_VERSION=$(node -p "require('./packages/cli/package.json').version")
+          echo "CLI_VERSION=$CLI_VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Gemini CLI version from source: $CLI_VERSION"
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if Gemini CLI image exists
+        id: gemini-exists
+        run: |
+          echo "🔍 Checking if we have built Gemini CLI version ${{ steps.cli-version.outputs.CLI_VERSION }}"
+          echo "Looking for: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/gemini-cli:${{ steps.cli-version.outputs.CLI_VERSION }}"
+          if docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/gemini-cli:${{ steps.cli-version.outputs.CLI_VERSION }} > /dev/null 2>&1; then
+            echo "✅ We already have this version built, skipping build"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "🏗️ We haven't built this version yet, will build"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.gemini-exists.outputs.exists == 'false' || inputs.force_rebuild == true
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Gemini CLI image
+        id: build
+        if: steps.gemini-exists.outputs.exists == 'false' || inputs.force_rebuild == true
+        uses: docker/build-push-action@v5
+        with:
+          context: ./gemini-cli
+          file: ./gemini-cli/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/gemini-cli:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/gemini-cli:${{ steps.cli-version.outputs.CLI_VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Set build output
+        run: |
+          if [[ "${{ steps.gemini-exists.outputs.exists }}" == "false" || "${{ inputs.force_rebuild }}" == "true" ]]; then
+            echo "built=true" >> $GITHUB_OUTPUT
+          else
+            echo "built=false" >> $GITHUB_OUTPUT
+          fi
+
   # Summary job
   summary:
-    needs: [build-claude-code, build-grok-agent]
+    needs: [build-claude-code, build-grok-agent, build-gemini-cli]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -182,12 +273,20 @@ jobs:
             echo "⏭️ **Grok Agent**: No update needed" >> $GITHUB_STEP_SUMMARY
           fi
 
+          if [[ "${{ needs.build-gemini-cli.outputs.built }}" == "true" ]]; then
+            echo "✅ **Gemini CLI**: Built new version ${{ needs.build-gemini-cli.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⏭️ **Gemini CLI**: No update needed (version ${{ needs.build-gemini-cli.outputs.version }})" >> $GITHUB_STEP_SUMMARY
+          fi
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🏷️ **Available Images**" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/claude-code:latest" >> $GITHUB_STEP_SUMMARY
           echo "${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/claude-code:${{ needs.build-claude-code.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/grok-agent:latest" >> $GITHUB_STEP_SUMMARY
+          echo "${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/gemini-cli:latest" >> $GITHUB_STEP_SUMMARY
+          echo "${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/gemini-cli:${{ needs.build-gemini-cli.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "🔄 **Next run**: Tomorrow at 6 AM UTC (or trigger manually)" >> $GITHUB_STEP_SUMMARY

@@ -96,7 +96,6 @@ curl --proto '=https' --tlsv1.2 -LsSf https://github.com/5dlabs/platform/release
 
 # Verify installation
 fdl --help       # CLI tool for direct API calls
-fdl-mcp --help   # MCP server for Cursor/Claude integration
 ```
 
 **What you get:**
@@ -117,7 +116,6 @@ cargo build --release --bin fdl --bin fdl-mcp
 
 # Verify the builds
 ./target/release/fdl --help       # CLI tool
-./target/release/fdl-mcp --help   # MCP server
 
 # Install to your system (optional)
 cp target/release/fdl /usr/local/bin/
@@ -134,9 +132,6 @@ Analyzes your Task Master project and creates comprehensive documentation.
 ```javascript
 docs({
   working_directory: "_projects/my-app",
-  model: "claude-opus-4-20250514",
-  repository_url: "https://github.com/your-org/your-repo",
-  source_branch: "main",
   github_user: "your-github-username"
 });
 ```
@@ -169,20 +164,16 @@ Deploys an autonomous Claude agent to implement a specific task from your Task M
 task({
   task_id: 5,
   service: "api-server",
-  model: "claude-sonnet-4-20250514",
-  repository_url: "https://github.com/myorg/my-api",
-  github_user: "myusername",
-  working_directory: "_projects/my-api"
+  working_directory: "services/api-server",
+  github_user: "myusername"
 });
 
 // Continue working on a partially completed or failed task
 task({
   task_id: 5,
   service: "api-server",
-  model: "claude-sonnet-4-20250514",
-  repository_url: "https://github.com/myorg/my-api",
+  working_directory: "services/api-server",
   github_user: "myusername",
-  working_directory: "_projects/my-api",
   continue_session: true,
   context_version: 2
 });
@@ -194,6 +185,137 @@ task({
 ✅ Implements the code autonomously
 ✅ Runs tests and validation
 ✅ Submits a GitHub PR with the implementation
+
+## MCP Tool Reference
+
+Complete parameter reference for both MCP tools.
+
+### `docs` Tool Parameters
+
+**Required:**
+- `working_directory` - Working directory containing .taskmaster folder (e.g., `"_projects/simple-api"`)
+
+**Optional:**
+- `github_user` - GitHub username for authentication (uses `FDL_DEFAULT_DOCS_USER` env var if not specified)
+- `model` - Claude model to use (default: `"claude-opus-4-20250514"`)
+
+### `task` Tool Parameters
+
+**Required:**
+- `task_id` - Task ID to implement from tasks.json (integer, minimum 1)
+- `service` - Target service name, creates workspace-{service} PVC (pattern: `^[a-z0-9-]+$`)
+- `working_directory` - Working directory within target repository (e.g., `"services/api-server"`)
+
+**Optional:**
+- `github_user` - GitHub username for authentication (uses `FDL_DEFAULT_CODE_USER` env var if not specified)
+- `model` - Claude model to use (default: `"claude-sonnet-4-20250514"`)
+- `docs_repository_url` - Documentation repository URL (where Task Master definitions come from)
+- `docs_project_directory` - Project directory within docs repository (e.g., `"_projects/simple-api"`)
+- `docs_branch` - Docs branch to use (default: `"main"`)
+- `local_tools` - Comma-separated list of local MCP tools/servers to enable (e.g., `"mcp-server-git,taskmaster"`)
+- `remote_tools` - Comma-separated list of remote MCP tools/servers to enable (e.g., `"api-docs-tool"`)
+- `context_version` - Context version for retry attempts (integer, minimum 1, default: 1)
+- `prompt_modification` - Additional context for retry attempts
+- `continue_session` - Whether to continue a previous session (boolean, default: false)
+- `overwrite_memory` - Whether to overwrite memory before starting (boolean, default: false)
+- `env` - Environment variables to set in the container (object with key-value pairs)
+- `env_from_secrets` - Environment variables from secrets (array of objects with `name`, `secretName`, `secretKey`)
+
+## Template Customization
+
+The platform uses a template system to customize Claude agent behavior, settings, and prompts. Templates are Handlebars (`.hbs`) files that get rendered with task-specific data.
+
+**Model Defaults**: The orchestrator provides server-side model defaults (`claude-opus-4-20250514` for docs, `claude-sonnet-4-20250514` for code tasks) that can be overridden via MCP parameters or CLI arguments.
+
+### Template Architecture
+
+**Docs Tasks**: Generate documentation for Task Master projects
+- **Prompts**: Rendered from `docs/prompt.md.hbs` template into ConfigMap
+- **Settings**: `docs/settings.json.hbs` controls model, permissions, tools
+- **Container Script**: `docs/container.sh.hbs` handles Git workflow and Claude execution
+
+**Code Tasks**: Implement specific Task Master task IDs
+- **Prompts**: Read from docs repository at `{docs_project_directory}/.taskmaster/docs/task-{id}/prompt.md` (or `_projects/{service}/.taskmaster/docs/task-{id}/prompt.md`)
+- **Settings**: `code/settings.json.hbs` controls model, permissions, MCP tools
+- **Container Script**: `code/container.sh.hbs` handles dual-repo workflow and Claude execution
+
+### How to Customize
+
+#### 1. Changing Agent Settings
+
+Edit the settings template files directly:
+```bash
+# For docs generation agents
+vim infra/charts/orchestrator/claude-templates/docs/settings.json.hbs
+
+# For code implementation agents
+vim infra/charts/orchestrator/claude-templates/code/settings.json.hbs
+```
+
+Settings control:
+- Model selection (`claude-opus-4`, `claude-sonnet-4`, etc.)
+- Tool permissions and access
+- MCP tool configuration
+- Enterprise managed settings
+
+See [Claude Code Settings](https://docs.anthropic.com/en/docs/claude-code/settings) for complete configuration options.
+
+#### 2. Updating Prompts
+
+**For docs tasks** (affects all documentation generation):
+```bash
+# Edit the docs prompt template
+vim infra/charts/orchestrator/claude-templates/docs/prompt.md.hbs
+```
+
+**For code tasks** (affects specific task implementation):
+```bash
+# Edit task-specific files in your docs repository
+vim {docs_project_directory}/.taskmaster/docs/task-{id}/prompt.md
+vim {docs_project_directory}/.taskmaster/docs/task-{id}/task.md
+vim {docs_project_directory}/.taskmaster/docs/task-{id}/acceptance-criteria.md
+```
+
+#### 3. Adding Custom Hooks
+
+Hooks are shell scripts that run during agent execution. Add new hook files to the `claude-templates` directory:
+
+```bash
+# Create new hook script (docs example)
+vim infra/charts/orchestrator/claude-templates/docs/hooks/my-custom-hook.sh.hbs
+
+# Create new hook script (code example)
+vim infra/charts/orchestrator/claude-templates/code/hooks/my-custom-hook.sh.hbs
+```
+
+Hook files are automatically discovered and rendered. Ensure the hook name matches any references in your settings templates.
+
+See [Claude Code Hooks Guide](https://docs.anthropic.com/en/docs/claude-code/hooks-guide) for detailed hook configuration and examples.
+
+#### 4. Deploying Template Changes
+
+After editing any template files, redeploy the orchestrator:
+
+```bash
+# Deploy template changes
+helm upgrade orchestrator . -n orchestrator
+
+# Verify ConfigMap was updated
+kubectl get configmap claude-templates-configmap -n orchestrator -o yaml
+```
+
+**Important**: Template changes only affect new agent jobs. Running jobs continue with their original templates.
+
+### Template Variables
+
+Common variables available in templates:
+- `{{task_id}}` - Task ID for code tasks
+- `{{service_name}}` - Target service name
+- `{{github_user}}` - GitHub username
+- `{{repository_url}}` - Target repository URL
+- `{{working_directory}}` - Working directory path
+- `{{model}}` - Claude model name
+- `{{docs_repository_url}}` - Documentation repository URL
 
 ## Best Practices
 

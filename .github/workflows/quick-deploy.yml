@@ -5,8 +5,6 @@ name: Quick Deploy (Test Only)
 # Can be triggered manually with branch selection
 
 on:
-  push:
-    branches: [ 'feature/*' ]
   workflow_dispatch:
     inputs:
       branch:

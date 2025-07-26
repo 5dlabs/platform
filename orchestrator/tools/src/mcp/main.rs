@@ -60,20 +60,6 @@ struct RpcRequest {
     id: Option<Value>,
 }
 
-/// Get the current git branch
-fn get_current_git_branch() -> Result<String> {
-    let output = Command::new("git")
-        .args(["rev-parse", "--abbrev-ref", "HEAD"])
-        .output()
-        .context("Failed to get current git branch")?;
-
-    if !output.status.success() {
-        return Ok("main".to_string());
-    }
-
-    Ok(String::from_utf8(output.stdout)?.trim().to_string())
-}
-
 /// Run the orchestrator CLI command
 fn run_orchestrator_cli(args: &[&str]) -> Result<String> {
     // Use the local build in the same directory as this MCP binary
@@ -182,22 +168,15 @@ fn handle_orchestrator_tools(
                 .and_then(|v| v.as_str())
                 .unwrap_or("claude-opus-4-20250514");
 
-            let repository_url = params_map.get("repository_url").and_then(|v| v.as_str());
-
-            // Get GitHub user from parameter or environment variable
+            // Get GitHub user from environment variable (takes precedence) or parameter
             let env_user = std::env::var("FDL_DEFAULT_DOCS_USER").ok();
-            let github_user = match params_map
-                .get("github_user")
-                .and_then(|v| v.as_str())
-                .or_else(|| env_user.as_deref())
+            let github_user = match env_user
+                .as_deref()
+                .or_else(|| params_map.get("github_user").and_then(|v| v.as_str()))
             {
                 Some(user) => user,
                 None => return Some(Err(anyhow!("github_user parameter is required or FDL_DEFAULT_DOCS_USER environment variable must be set"))),
             };
-
-            // Auto-detect source branch from current git repository
-            let source_branch = get_current_git_branch()
-                .unwrap_or_else(|_| "main".to_string());
 
             // Validate model parameter - allow any model that starts with "claude-"
             if !model.starts_with("claude-") {
@@ -211,12 +190,6 @@ fn handle_orchestrator_tools(
             args.extend(&["--model", model]);
             args.extend(&["--working-directory", working_directory]);
             args.extend(&["--github-user", github_user]);
-            args.extend(&["--source-branch", &source_branch]);
-
-            // Add repository URL if specified
-            if let Some(repo) = repository_url {
-                args.extend(&["--repository-url", repo]);
-            }
 
             // Debug output removed to satisfy clippy
 
@@ -229,8 +202,6 @@ fn handle_orchestrator_tools(
                     "parameters_used": {
                         "model": model,
                         "working_directory": working_directory,
-                        "repository_url": repository_url,
-                        "source_branch": source_branch,
                         "github_user": github_user
                     }
                 }))),
@@ -256,8 +227,6 @@ fn handle_orchestrator_tools(
             };
 
             // Extract optional parameters with defaults
-            let repository_url = params_map.get("repository_url").and_then(|v| v.as_str());
-
             let docs_repository_url = params_map
                 .get("docs_repository_url")
                 .and_then(|v| v.as_str());
@@ -280,6 +249,12 @@ fn handle_orchestrator_tools(
             };
 
             let github_user = params_map.get("github_user").and_then(|v| v.as_str());
+
+            // Get GitHub user from environment variable (takes precedence) or parameter
+            let env_code_user = std::env::var("FDL_DEFAULT_CODE_USER").ok();
+            let github_user = env_code_user
+                .as_deref()
+                .or(github_user);
 
             let local_tools = params_map.get("local_tools").and_then(|v| v.as_str());
 
@@ -339,11 +314,6 @@ fn handle_orchestrator_tools(
 
             // Add model parameter
             args.extend(&["--model", model]);
-
-            // Add repository URL if specified
-            if let Some(repo) = repository_url {
-                args.extend(&["--repository-url", repo]);
-            }
 
             // Add docs repository URL if specified
             if let Some(docs_repo) = docs_repository_url {
@@ -444,7 +414,6 @@ fn handle_orchestrator_tools(
                     "parameters_used": {
                         "task_id": task_id,
                         "service": service,
-                        "repository_url": repository_url,
                         "docs_repository_url": docs_repository_url,
                         "docs_project_directory": docs_project_directory,
                         "working_directory": working_directory,

@@ -26,13 +26,9 @@ fn get_init_docs_schema() -> Value {
                     "description": "Claude model to use (default: 'claude-opus-4-20250514')",
                     "default": "claude-opus-4-20250514"
                 },
-                "repository_url": {
-                    "type": "string",
-                    "description": "Documentation repository URL (auto-detected from current git repo if not specified)"
-                },
                 "github_user": {
                     "type": "string",
-                    "description": "GitHub username for authentication (auto-detected from git config if not specified)"
+                    "description": "GitHub username for authentication (optional if FDL_DEFAULT_DOCS_USER environment variable is set, which takes precedence)"
                 }
             },
             "required": ["working_directory"]
@@ -66,13 +62,9 @@ fn get_submit_implementation_task_schema() -> Value {
                     "description": "Claude model to use (default: 'claude-sonnet-4-20250514')",
                     "default": "claude-sonnet-4-20250514"
                 },
-                "repository_url": {
-                    "type": "string",
-                    "description": "Target project repository URL (where implementation work happens, auto-detected from .git/config if not specified)"
-                },
                 "docs_repository_url": {
                     "type": "string",
-                    "description": "Documentation repository URL (where Task Master definitions come from, auto-detected from current git repo if not specified)"
+                    "description": "Documentation repository URL (where Task Master definitions come from)"
                 },
                 "docs_project_directory": {
                     "type": "string",
@@ -80,7 +72,7 @@ fn get_submit_implementation_task_schema() -> Value {
                 },
                 "github_user": {
                     "type": "string",
-                    "description": "GitHub username for authentication (auto-detected if not specified)"
+                    "description": "GitHub username for authentication (optional if FDL_DEFAULT_CODE_USER environment variable is set, which takes precedence)"
                 },
                 "local_tools": {
                     "type": "string",

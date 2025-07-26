@@ -24,6 +24,8 @@ The 5D Labs Platform is evolving to become the premier AI-driven development pla
 - Pull request monitoring and automated testing
 - Functionality validation before code quality checks
 - Integration with Tasks system for acceptance criteria
+- Live testing in sandboxed Kubernetes environments
+- PR commenting system with detailed test results and acceptance criteria validation
 - Self-healing deployment capabilities
 - Automated PR approval workflow (human-gated merging)
 
@@ -79,6 +81,14 @@ The 5D Labs Platform is evolving to become the premier AI-driven development pla
 - Cost optimization through intelligent prompt management
 - Accuracy improvements via contextual awareness
 - Real-time agent performance monitoring
+
+### AI Supervision & Guidance
+**Intelligent agent oversight and course correction**
+- Supervisory agent system that monitors primary code agents
+- Automated detection of agent confusion or off-track behavior
+- Context-aware feedback and guidance injection
+- Multi-agent coordination for complex problem resolution
+- Intelligent intervention to replace human oversight
 
 ### Advanced Telemetry Stack
 **Comprehensive observability and alerting**
