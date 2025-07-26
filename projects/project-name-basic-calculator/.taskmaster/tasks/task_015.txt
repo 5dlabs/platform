@@ -1,0 +1,37 @@
+# Task ID: 15
+# Title: Handle Operator Button Clicks
+# Status: pending
+# Dependencies: 13
+# Priority: high
+# Description: Implement logic to handle arithmetic operator selection
+# Details:
+Create handleOperator(nextOperator) function: const inputValue = parseFloat(calculator.displayValue); if (calculator.firstOperand === null) { calculator.firstOperand = inputValue; } else if (calculator.operator) { const result = performCalculation(); calculator.displayValue = String(result); calculator.firstOperand = result; } calculator.waitingForOperand = true; calculator.operator = nextOperator; updateDisplay();
+
+# Test Strategy:
+Test operator selection after number input, verify consecutive operator presses, check operator change functionality
+
+# Subtasks:
+## 1. Create handleOperator function structure [pending]
+### Dependencies: None
+### Description: Set up the basic handleOperator function with parameter handling and initial structure
+### Details:
+Create function handleOperator(nextOperator) with proper parameter validation. Set up the function skeleton with comments for each logical section: input value parsing, first operand handling, consecutive operation handling, and state updates. Include error handling structure for invalid operators.
+
+## 2. Implement first operand storage logic [pending]
+### Dependencies: 15.1
+### Description: Add logic to store the first operand when no previous operand exists
+### Details:
+Implement the condition: if (calculator.firstOperand === null) { calculator.firstOperand = inputValue; }. Parse the current display value using parseFloat() and handle edge cases like empty or invalid display values. Ensure proper type conversion and storage in the calculator state object.
+
+## 3. Handle consecutive operations with calculation [pending]
+### Dependencies: 15.1, 15.2
+### Description: Implement logic for when an operator already exists, performing the pending calculation
+### Details:
+Add else if (calculator.operator) block that calls performCalculation(), stores the result in displayValue as a string, and updates firstOperand with the result. Handle potential calculation errors and ensure proper type conversions between numbers and strings for display.
+
+## 4. Manage operator state and display updates [pending]
+### Dependencies: 15.1, 15.2, 15.3
+### Description: Update calculator state flags and refresh the display after operator selection
+### Details:
+Set calculator.waitingForOperand = true to prepare for next number input, store the selected operator in calculator.operator = nextOperator, and call updateDisplay() to reflect any changes. Ensure state consistency and handle rapid operator changes gracefully.
+

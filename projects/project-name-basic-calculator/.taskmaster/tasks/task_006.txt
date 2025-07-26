@@ -1,0 +1,43 @@
+# Task ID: 6
+# Title: Style Display Screen
+# Status: pending
+# Dependencies: 5
+# Priority: medium
+# Description: Create styling for the calculator display screen that shows input and results
+# Details:
+Style .display class: background: #333, color: white, font-size: 2em, padding: 10px, text-align: right, margin-bottom: 10px, min-height: 50px, border-radius: 5px, overflow: hidden, font-family: monospace for better number alignment
+
+# Test Strategy:
+Verify display is visually distinct from buttons, check text alignment is correct, test with long numbers to ensure overflow handling
+
+# Subtasks:
+## 1. Create Display Container Styles [pending]
+### Dependencies: None
+### Description: Apply the base styling to the .display class including background color, text color, and dimensions
+### Details:
+Add CSS rules to .display class: background-color: #333; color: white; min-height: 50px; margin-bottom: 10px; This creates the dark background container with white text and ensures minimum height for the display area.
+
+## 2. Configure Display Typography [pending]
+### Dependencies: 6.1
+### Description: Set up the font properties for optimal number display including size, family, and alignment
+### Details:
+Add typography rules to .display class: font-size: 2em; font-family: 'Courier New', Courier, monospace; text-align: right; The monospace font ensures consistent digit width and right alignment positions numbers correctly for calculator display.
+
+## 3. Add Display Padding and Spacing [pending]
+### Dependencies: 6.2
+### Description: Implement internal padding for proper content spacing within the display area
+### Details:
+Add padding rule to .display class: padding: 10px; This creates consistent spacing between the display content and its borders, ensuring numbers don't touch the edges of the container.
+
+## 4. Style Display Border and Corners [pending]
+### Dependencies: 6.3
+### Description: Apply rounded corners to soften the display appearance and match modern UI design
+### Details:
+Add border styling to .display class: border-radius: 5px; This creates subtle rounded corners that make the display visually appealing and consistent with modern calculator designs.
+
+## 5. Implement Overflow Handling [pending]
+### Dependencies: 6.4
+### Description: Configure overflow behavior to handle long numbers or expressions that exceed display width
+### Details:
+Add overflow rule to .display class: overflow: hidden; This prevents content from spilling outside the display container when numbers are too long, maintaining a clean appearance while ensuring all content stays within bounds.
+

@@ -1,0 +1,43 @@
+# Task ID: 33
+# Title: Create Loading Animation
+# Status: pending
+# Dependencies: 9
+# Priority: low
+# Description: Add subtle loading animation when page first loads
+# Details:
+Create CSS animation: @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } } Apply to calculator with animation: fadeIn 0.5s ease-out
+
+# Test Strategy:
+Verify animation plays on page load, check animation is smooth, ensure no layout shift occurs
+
+# Subtasks:
+## 1. Define CSS Keyframe Animation [pending]
+### Dependencies: None
+### Description: Create the fadeIn keyframe animation in the CSS file that will handle the opacity and transform transitions
+### Details:
+Add the following CSS code to styles.css: @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }. Place this at the top of the CSS file or in a dedicated animations section.
+
+## 2. Apply Animation to Calculator Container [pending]
+### Dependencies: 33.1
+### Description: Add the animation property to the main calculator container element to trigger the fadeIn animation on page load
+### Details:
+Locate the main calculator container selector (likely .calculator or #calculator) and add the CSS property: animation: fadeIn 0.5s ease-out; This will apply the animation with a duration of 0.5 seconds and an ease-out timing function.
+
+## 3. Set Initial Opacity State [pending]
+### Dependencies: 33.2
+### Description: Ensure the calculator starts with opacity 0 to prevent flash of content before animation begins
+### Details:
+Add opacity: 0; to the calculator container's initial CSS rules. Then add animation-fill-mode: forwards; to the animation property to maintain the final animation state (opacity: 1) after completion. The full animation property should be: animation: fadeIn 0.5s ease-out forwards;
+
+## 4. Add Animation Delay for Better UX [pending]
+### Dependencies: 33.3
+### Description: Implement a slight delay before the animation starts to ensure all assets are loaded
+### Details:
+Modify the animation property to include a small delay: animation: fadeIn 0.5s ease-out 0.1s forwards; This adds a 100ms delay before the animation begins, ensuring fonts and other resources are loaded first.
+
+## 5. Optimize for Performance and Accessibility [pending]
+### Dependencies: 33.4
+### Description: Add performance optimizations and respect user preferences for reduced motion
+### Details:
+Add will-change: opacity, transform; to the calculator container before animation to optimize rendering. Also add a media query to respect reduced motion preferences: @media (prefers-reduced-motion: reduce) { .calculator { animation: none; opacity: 1; } }. This ensures users who prefer reduced motion see the calculator immediately without animation.
+

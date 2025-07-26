@@ -1,0 +1,37 @@
+# Task ID: 39
+# Title: Create Documentation
+# Status: pending
+# Dependencies: 38
+# Priority: medium
+# Description: Write comprehensive documentation for the calculator application
+# Details:
+Create README.md with: project description, features list, installation instructions, usage guide, keyboard shortcuts, browser compatibility, known issues. Add inline code comments for complex functions
+
+# Test Strategy:
+Review documentation for completeness, verify all features are documented, check code examples work
+
+# Subtasks:
+## 1. Write comprehensive README with features and setup [pending]
+### Dependencies: None
+### Description: Create README.md file with project overview, complete features list, installation instructions, and setup guide
+### Details:
+Include: project title and description, screenshot/demo link, features list (basic operations, keyboard support, responsive design), prerequisites, installation steps, browser compatibility matrix, project structure overview
+
+## 2. Document keyboard shortcuts and usage [pending]
+### Dependencies: 39.1
+### Description: Create detailed usage guide section documenting all keyboard shortcuts and calculator operations
+### Details:
+Document: number keys (0-9), operators (+, -, *, /), special keys (Enter/= for equals, Escape/C for clear, Backspace for delete), decimal point usage, operation chaining examples, edge cases handling
+
+## 3. Add code comments for complex functions [pending]
+### Dependencies: None
+### Description: Add inline JSDoc comments and explanations for all complex functions and logic in the codebase
+### Details:
+Focus on: calculation logic functions, display update mechanisms, keyboard event handlers, error handling routines, state management methods. Use JSDoc format for function signatures and parameters
+
+## 4. Create troubleshooting section [pending]
+### Dependencies: 39.1, 39.2
+### Description: Write troubleshooting guide covering common issues and their solutions
+### Details:
+Include: common calculation errors and fixes, display issues resolution, keyboard shortcut problems, browser-specific issues, known limitations, FAQ section, how to report bugs/issues
+

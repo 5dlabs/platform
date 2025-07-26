@@ -1,0 +1,31 @@
+# Task ID: 17
+# Title: Implement Equals Functionality
+# Status: pending
+# Dependencies: 16
+# Priority: high
+# Description: Create function to handle equals button and display final result
+# Details:
+Create calculate() function: if (calculator.operator && calculator.firstOperand !== null) { calculator.displayValue = String(performCalculation()); calculator.firstOperand = null; calculator.operator = null; calculator.waitingForOperand = false; updateDisplay(); }
+
+# Test Strategy:
+Test equals after complete expression, test multiple equals presses, verify state is properly reset
+
+# Subtasks:
+## 1. Create calculate function with state validation [pending]
+### Dependencies: None
+### Description: Implement the calculate() function that validates calculator state before performing calculations, checking for valid operator and firstOperand values
+### Details:
+Create calculate() function that first validates: calculator.operator exists, calculator.firstOperand is not null, and current displayValue is valid. Return early if validation fails. Include error handling for edge cases.
+
+## 2. Implement calculation execution and display update [pending]
+### Dependencies: 17.1
+### Description: Execute the calculation using performCalculation() and update the display with the formatted result
+### Details:
+Within calculate() function, call performCalculation() to get result, convert result to string and assign to calculator.displayValue, call updateDisplay() to refresh the UI. Handle potential calculation errors and infinity/NaN results.
+
+## 3. Reset appropriate state variables after calculation [pending]
+### Dependencies: 17.2
+### Description: Clear the operator, firstOperand, and waitingForOperand state after successful calculation completion
+### Details:
+After successful calculation and display update, reset: calculator.firstOperand = null, calculator.operator = null, calculator.waitingForOperand = false. This ensures calculator is ready for new calculations while preserving the result in displayValue.
+

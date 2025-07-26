@@ -1,0 +1,31 @@
+# Task ID: 18
+# Title: Add Decimal Point Support
+# Status: pending
+# Dependencies: 13
+# Priority: medium
+# Description: Implement functionality to input decimal numbers
+# Details:
+Create inputDecimal() function: if (calculator.waitingForOperand) { calculator.displayValue = '0.'; calculator.waitingForOperand = false; return; } if (!calculator.displayValue.includes('.')) { calculator.displayValue += '.'; } updateDisplay();
+
+# Test Strategy:
+Test decimal point adds correctly, verify only one decimal per number, test decimal after operators
+
+# Subtasks:
+## 1. Create inputDecimal function [pending]
+### Dependencies: None
+### Description: Implement the inputDecimal() function that handles decimal point input based on calculator state
+### Details:
+Create function that checks if calculator.waitingForOperand is true, then sets displayValue to '0.' and waitingForOperand to false. Otherwise, append decimal point to displayValue if it doesn't already contain one. Call updateDisplay() at the end.
+
+## 2. Handle decimal point in waiting for operand state [pending]
+### Dependencies: 18.1
+### Description: Implement logic to properly handle decimal input when calculator is waiting for a new operand
+### Details:
+Within inputDecimal(), add conditional logic: if (calculator.waitingForOperand) { calculator.displayValue = '0.'; calculator.waitingForOperand = false; return; }. This ensures that pressing decimal after an operator starts a new number beginning with '0.'
+
+## 3. Prevent multiple decimal points in same number [pending]
+### Dependencies: 18.1, 18.2
+### Description: Add validation to ensure only one decimal point can be added per number
+### Details:
+Implement check using if (!calculator.displayValue.includes('.')) before appending decimal point. This prevents users from entering invalid numbers like '12.34.56'. Test with various input sequences to ensure decimal point is only added when valid.
+

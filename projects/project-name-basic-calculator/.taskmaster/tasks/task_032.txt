@@ -1,0 +1,43 @@
+# Task ID: 32
+# Title: Add History Feature
+# Status: pending
+# Dependencies: 17
+# Priority: low
+# Description: Implement a calculation history that shows recent operations
+# Details:
+Create history array to store last 5 calculations. After each calculation, push string like '5 + 3 = 8' to history. Create collapsible history panel below calculator
+
+# Test Strategy:
+Verify history stores calculations correctly, test history limit of 5 items, ensure history persists until page reload
+
+# Subtasks:
+## 1. Create history data structure and storage [pending]
+### Dependencies: None
+### Description: Set up the data structure to store calculation history with a maximum of 5 items
+### Details:
+Create a history array in the calculator object to store calculation strings. Implement a maxHistoryItems constant set to 5. Add methods for adding items to history and managing the array size limit
+
+## 2. Capture calculations in history format [pending]
+### Dependencies: 32.1
+### Description: Implement logic to capture and format calculations when equals is pressed
+### Details:
+Modify the equals operation to create a history entry string in format 'operand1 operator operand2 = result'. Push the formatted string to the history array after successful calculation. Ensure array doesn't exceed 5 items by removing oldest entries
+
+## 3. Build history UI panel [pending]
+### Dependencies: 32.1
+### Description: Create the HTML and CSS for the collapsible history panel below the calculator
+### Details:
+Add a history container div below the calculator with a header showing 'History' and a toggle button. Create a list element to display history items. Style the panel to match calculator design with smooth collapse/expand transitions
+
+## 4. Implement show/hide functionality [pending]
+### Dependencies: 32.3
+### Description: Add JavaScript to control the visibility of the history panel
+### Details:
+Create toggleHistory() function to show/hide the history panel. Add event listener to toggle button. Implement smooth CSS transitions for expanding/collapsing. Store visibility state in a variable to maintain state during session
+
+## 5. Add history item limit and management [pending]
+### Dependencies: 32.2, 32.3, 32.4
+### Description: Implement history rendering and ensure proper management of the 5-item limit
+### Details:
+Create renderHistory() function to update the UI when history changes. Display history items in reverse chronological order (newest first). Add visual indication when history is full. Test that history persists until page reload
+

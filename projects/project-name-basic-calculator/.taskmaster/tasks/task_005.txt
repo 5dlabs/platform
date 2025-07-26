@@ -1,0 +1,43 @@
+# Task ID: 5
+# Title: Style Calculator Container
+# Status: pending
+# Dependencies: 4
+# Priority: medium
+# Description: Apply styling to the main calculator container for a modern, clean appearance
+# Details:
+Style .calculator class: max-width: 400px, margin: 50px auto, padding: 20px, background: #f0f0f0, border-radius: 10px, box-shadow: 0 0 20px rgba(0,0,0,0.1). Center on page using flexbox on body element
+
+# Test Strategy:
+Visual inspection to ensure calculator is centered, check computed styles match specifications, test on different screen sizes
+
+# Subtasks:
+## 1. Set up body element flexbox styling [pending]
+### Dependencies: None
+### Description: Configure the body element to use flexbox for centering the calculator container on the page
+### Details:
+Add CSS rules to the body element: display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 0; This will create a full viewport height container that centers its content both horizontally and vertically
+
+## 2. Apply calculator container dimensions and spacing [pending]
+### Dependencies: None
+### Description: Set the width constraints and spacing properties for the .calculator class
+### Details:
+Add CSS rules to .calculator class: max-width: 400px; margin: 50px auto; padding: 20px; The max-width ensures the calculator doesn't exceed 400px on larger screens, margin provides spacing from viewport edges, and padding creates internal spacing for content
+
+## 3. Style calculator background and appearance [pending]
+### Dependencies: None
+### Description: Apply the background color and visual styling to make the calculator container visually appealing
+### Details:
+Add CSS rules to .calculator class: background: #f0f0f0; This light gray background provides a subtle, modern appearance that contrasts well with the page background and button elements
+
+## 4. Add border radius for rounded corners [pending]
+### Dependencies: None
+### Description: Apply border radius to create smooth, rounded corners on the calculator container
+### Details:
+Add CSS rule to .calculator class: border-radius: 10px; This creates uniformly rounded corners with a 10px radius, giving the calculator a modern, polished appearance
+
+## 5. Apply box shadow for depth effect [pending]
+### Dependencies: 5.1, 5.2, 5.3, 5.4
+### Description: Add a subtle shadow to create visual depth and make the calculator appear elevated from the page
+### Details:
+Add CSS rule to .calculator class: box-shadow: 0 0 20px rgba(0,0,0,0.1); This creates a soft, diffused shadow with 20px blur radius and 10% opacity black color, providing a subtle depth effect without being too prominent
+

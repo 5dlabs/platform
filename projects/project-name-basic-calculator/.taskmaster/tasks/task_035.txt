@@ -1,0 +1,37 @@
+# Task ID: 35
+# Title: Add Theme Switcher
+# Status: pending
+# Dependencies: 9
+# Priority: low
+# Description: Implement light/dark theme toggle for the calculator
+# Details:
+Create theme toggle button, add data-theme attribute to body. Define CSS variables for both themes. Light theme: --bg-color: #f0f0f0; Dark theme: --bg-color: #1a1a1a. Store preference in localStorage
+
+# Test Strategy:
+Test theme switches correctly, verify all colors update, check localStorage persistence
+
+# Subtasks:
+## 1. Define CSS Variables for Themes [pending]
+### Dependencies: None
+### Description: Create CSS custom properties for light and dark theme color schemes
+### Details:
+Define root CSS variables for both themes. Light theme: --bg-color: #f0f0f0, --text-color: #333, --button-bg: #fff, --button-hover: #e0e0e0. Dark theme: --bg-color: #1a1a1a, --text-color: #fff, --button-bg: #2a2a2a, --button-hover: #3a3a3a. Use [data-theme] attribute selector
+
+## 2. Create Theme Toggle UI Component [pending]
+### Dependencies: 35.1
+### Description: Build a toggle button/switch for theme selection
+### Details:
+Create toggle button element with sun/moon icons or light/dark text. Position in calculator header or corner. Add appropriate ARIA labels for accessibility. Style toggle to match calculator design
+
+## 3. Implement Theme Switching Logic [pending]
+### Dependencies: 35.2
+### Description: Add JavaScript functionality to handle theme changes
+### Details:
+Create toggleTheme() function to switch data-theme attribute on body element. Add event listener to toggle button. Ensure smooth transition between themes. Update toggle button appearance based on active theme
+
+## 4. Add localStorage Persistence [pending]
+### Dependencies: 35.3
+### Description: Save and restore user's theme preference
+### Details:
+Save theme preference to localStorage on change. Check localStorage on page load and apply saved theme. Set default theme if no preference exists. Handle localStorage errors gracefully
+

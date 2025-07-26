@@ -1,0 +1,37 @@
+# Task ID: 21
+# Title: Add Keyboard Support
+# Status: pending
+# Dependencies: 17
+# Priority: medium
+# Description: Implement keyboard input for numbers and operations
+# Details:
+Add keydown event listener: document.addEventListener('keydown', (event) => { if (event.key >= '0' && event.key <= '9') inputDigit(event.key); if (event.key === '.') inputDecimal(); if (event.key === '+' || event.key === '-' || event.key === '*' || event.key === '/') handleOperator(event.key); if (event.key === 'Enter' || event.key === '=') calculate(); if (event.key === 'Escape' || event.key === 'c' || event.key === 'C') clear(); });
+
+# Test Strategy:
+Test all number keys work, verify operators work via keyboard, test Enter for equals, test Escape/C for clear
+
+# Subtasks:
+## 1. Add keydown event listener with key detection [pending]
+### Dependencies: None
+### Description: Set up the main keyboard event listener on the document to capture all keypress events and implement basic key detection logic
+### Details:
+Create a keydown event listener on document level that captures keyboard input. Implement initial event handler structure with console logging for debugging. Ensure event propagation is handled correctly and preventDefault() is called where needed to avoid browser default behaviors
+
+## 2. Map number keys to digit input [pending]
+### Dependencies: 21.1
+### Description: Implement keyboard mapping for numeric keys (0-9) and decimal point to trigger the existing inputDigit and inputDecimal functions
+### Details:
+Within the event listener, detect number keys (0-9) using event.key and call inputDigit(event.key). Also map the period/dot key to call inputDecimal(). Test both main keyboard numbers and numpad numbers work correctly
+
+## 3. Map operator keys to operations [pending]
+### Dependencies: 21.1
+### Description: Connect keyboard operator keys (+, -, *, /) to the handleOperator function for arithmetic operations
+### Details:
+Detect operator keys using event.key and map them to handleOperator(event.key). Ensure both main keyboard and numpad operators work. Handle the equals key (= or Enter) to trigger calculate() function
+
+## 4. Handle special keys (Enter, Escape, Delete) [pending]
+### Dependencies: 21.1
+### Description: Implement keyboard shortcuts for special calculator functions like clear, equals, and backspace operations
+### Details:
+Map Enter key to calculate(), Escape/C/c keys to clear(), and Delete/Backspace to remove last digit. Consider adding support for keyboard shortcuts like Ctrl+C for copy result. Test all special keys work as expected
+

@@ -1,0 +1,37 @@
+# Task ID: 4
+# Title: Create CSS File Structure
+# Status: pending
+# Dependencies: 2
+# Priority: high
+# Description: Set up the main CSS file with reset styles and CSS custom properties for theming
+# Details:
+Create styles.css, add CSS reset or normalize.css, define CSS variables for colors (--primary-color, --secondary-color, --text-color, --bg-color), fonts (--font-family), and spacing (--spacing-unit). Set box-sizing: border-box globally, establish base font size and line height
+
+# Test Strategy:
+Verify CSS file is linked correctly in HTML, check that reset styles are applied, confirm CSS variables are defined and accessible
+
+# Subtasks:
+## 1. Create styles.css and add CSS reset/normalize [pending]
+### Dependencies: None
+### Description: Create the main CSS file and implement a CSS reset or normalize.css to ensure consistent styling across browsers
+### Details:
+Create styles.css in the project root. Add either a custom CSS reset (targeting margin, padding, box-sizing) or include normalize.css. Include reset for common elements like body, h1-h6, p, ul, ol, button, input. Ensure the CSS file is properly linked in the HTML head section
+
+## 2. Define CSS custom properties for colors and typography [pending]
+### Dependencies: 4.1
+### Description: Set up CSS variables for consistent theming throughout the application
+### Details:
+Define custom properties in :root selector including: --primary-color, --secondary-color, --text-color, --bg-color for colors; --font-family for typography; --spacing-unit for consistent spacing. Consider adding variations like --text-color-light, --bg-color-dark for different states
+
+## 3. Set up global styles and box-sizing [pending]
+### Dependencies: 4.2
+### Description: Establish fundamental global styles including box-sizing and base typography
+### Details:
+Apply box-sizing: border-box to all elements using *, *::before, *::after selector. Set base font-size (16px or 1rem) and line-height (1.5-1.6) on body. Define default font-family using CSS variable. Set default text and background colors using defined variables
+
+## 4. Establish base layout utilities [pending]
+### Dependencies: 4.3
+### Description: Create reusable utility classes for common layout patterns
+### Details:
+Create utility classes for: .container (max-width and centering), .flex (display: flex with common variations), .grid (basic grid setup), spacing utilities (.m-1, .p-1, etc. using --spacing-unit), .sr-only for screen reader text. Include responsive considerations where applicable
+
