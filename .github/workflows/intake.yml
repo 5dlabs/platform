@@ -120,10 +120,11 @@ jobs:
         run: |
           echo "🚀 Initializing TaskMaster and generating tasks"
 
-          # Initialize TaskMaster with Opus model
-          task-master init \
-            --model="claude-opus-4-20250514" \
-            --working-directory="$(pwd)"
+          # Initialize TaskMaster project
+          task-master init --yes
+
+          # Set the main model to Opus
+          task-master models --set-main "claude-opus-4-20250514"
 
           # Parse PRD with no research and no task limit
           task-master parse-prd \
