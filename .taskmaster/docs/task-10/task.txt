@@ -12,7 +12,7 @@ Update mcp.json.hbs:
     {{#if (or (and tools tools.remote.length) (and project_config project_config.tools.remote.length))}}
     "toolman": {
       "transport": "http",
-      "url": "http://toolman-service.orchestrator.svc.cluster.local:3000/mcp",
+      "url": "http://toolman.mcp.svc.cluster.local:3000/mcp",
       "headers": {
         "X-Agent-ID": "{{agent_id}}",
         "X-Run-ID": "{{run_id}}",
@@ -25,6 +25,7 @@ Update mcp.json.hbs:
 ```
 
 Note: Headers are optional but useful for tracking which agent made requests
+Note: Toolman is deployed in the 'mcp' namespace and accessible at http://toolman.mcp.svc.cluster.local:3000
 
 # Test Strategy:
 Test template with and without remote tools. Verify toolman is only included when remote tools are specified. Test header interpolation works correctly

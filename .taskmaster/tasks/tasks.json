@@ -4,18 +4,18 @@
       {
         "id": 1,
         "title": "Create Toolman Helm Chart Structure",
-        "description": "Review and customize the existing Toolman Helm chart located at toolman/charts/toolman/ for deployment to our Kubernetes cluster",
-        "status": "pending",
+        "description": "Deploy the existing Toolman Helm chart located at toolman/charts/toolman/ to the orchestrator namespace in our Kubernetes cluster",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "details": "The Toolman project already includes a complete Helm chart at `toolman/charts/toolman/` with the following features:\n- Complete deployment configuration\n- ConfigMap for server definitions (toolman-config)\n- Service exposure on port 3000\n- Support for stdio, SSE, and HTTP transport types\n- Pre-configured servers: brave-search, memory, terraform, kubernetes, solana, rustdocs, reddit\n- PVC for persistence\n\nTasks:\n1. Review the existing chart structure and configuration\n2. Analyze values.yaml for customization options\n3. Review pre-configured MCP servers in the ConfigMap\n4. Identify any platform-specific customizations needed\n5. Test deployment with default values\n6. Document any required value overrides for our environment",
-        "testStrategy": "Run `helm lint toolman/charts/toolman/` to validate the existing chart. Deploy to a test namespace using `helm install toolman-test toolman/charts/toolman/ --dry-run --debug` to verify template rendering. Perform actual deployment to test namespace and verify all resources are created correctly. Check that pre-configured MCP servers are accessible.",
+        "details": "The Toolman project includes a complete and fully developed Helm chart at `toolman/charts/toolman/` with the following features:\n- Complete deployment configuration with all necessary templates (deployment, service, configmap, pvc)\n- ConfigMap for server definitions (toolman-config)\n- Service exposure on port 3000\n- Support for stdio, SSE, and HTTP transport types\n- Pre-configured servers: brave-search, memory, terraform, kubernetes, solana, rustdocs, reddit\n- PVC for persistence\n- Security context and init containers configured\n- Image repository: ghcr.io/5dlabs/toolman\n\nCurrent State:\n- Helm chart is fully developed and ready for deployment\n- Orchestrator namespace exists but only contains the orchestrator deployment\n- Toolman has NOT been deployed yet\n\nTasks:\n1. Verify the ghcr.io/5dlabs/toolman image exists and is accessible\n2. Configure image pull secrets if needed (e.g., ghcr-secret)\n3. Review and validate the existing Helm chart configuration\n4. Deploy the chart to the orchestrator namespace\n5. Verify all resources are created and running correctly\n6. Test connectivity to the pre-configured MCP servers",
+        "testStrategy": "Run `helm lint toolman/charts/toolman/` to validate the chart. Check image availability with `docker pull ghcr.io/5dlabs/toolman` or equivalent. Deploy using `helm install toolman toolman/charts/toolman/ -n orchestrator --dry-run --debug` first to verify template rendering. Then perform actual deployment with `helm install toolman toolman/charts/toolman/ -n orchestrator`. Verify all pods are running with `kubectl get pods -n orchestrator`. Test service connectivity on port 3000. Verify ConfigMap contains all 7 pre-configured MCP servers.",
         "subtasks": [
           {
             "id": 1,
             "title": "",
-            "description": "Review existing Helm chart structure at toolman/charts/toolman/",
-            "status": "pending",
+            "description": "Verify ghcr.io/5dlabs/toolman image accessibility",
+            "status": "done",
             "dependencies": [],
             "details": "",
             "testStrategy": ""
@@ -23,8 +23,8 @@
           {
             "id": 2,
             "title": "",
-            "description": "Analyze values.yaml and identify customization points",
-            "status": "pending",
+            "description": "Configure image pull secrets if required for ghcr.io",
+            "status": "done",
             "dependencies": [],
             "details": "",
             "testStrategy": ""
@@ -32,8 +32,8 @@
           {
             "id": 3,
             "title": "",
-            "description": "Review ConfigMap with pre-configured MCP servers",
-            "status": "pending",
+            "description": "Validate Helm chart with helm lint",
+            "status": "done",
             "dependencies": [],
             "details": "",
             "testStrategy": ""
@@ -41,8 +41,8 @@
           {
             "id": 4,
             "title": "",
-            "description": "Test deployment with helm dry-run",
-            "status": "pending",
+            "description": "Deploy Helm chart to orchestrator namespace with dry-run",
+            "status": "done",
             "dependencies": [],
             "details": "",
             "testStrategy": ""
@@ -50,8 +50,8 @@
           {
             "id": 5,
             "title": "",
-            "description": "Deploy to test namespace and verify functionality",
-            "status": "pending",
+            "description": "Perform actual deployment to orchestrator namespace",
+            "status": "done",
             "dependencies": [],
             "details": "",
             "testStrategy": ""
@@ -59,8 +59,8 @@
           {
             "id": 6,
             "title": "",
-            "description": "Document any required customizations for our platform",
-            "status": "pending",
+            "description": "Verify all resources are running and test MCP server connectivity",
+            "status": "done",
             "dependencies": [],
             "details": "",
             "testStrategy": ""
@@ -71,7 +71,7 @@
         "id": 2,
         "title": "Implement Toolman Kubernetes Deployment",
         "description": "Review and customize the existing Kubernetes deployment manifest for Toolman to ensure it meets our specific requirements",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           1
         ],
@@ -83,7 +83,7 @@
             "id": 1,
             "title": "Review existing deployment manifest",
             "description": "Analyze the current deployment.yaml to understand all configured features",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "details": "",
             "testStrategy": ""
@@ -92,7 +92,7 @@
             "id": 2,
             "title": "Validate ConfigMap integration",
             "description": "Ensure the deployment properly mounts and references the servers-config ConfigMap from task 16",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "details": "",
             "testStrategy": ""
@@ -101,7 +101,7 @@
             "id": 3,
             "title": "Assess resource requirements",
             "description": "Determine appropriate CPU/memory limits based on expected MCP server load",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "details": "",
             "testStrategy": ""
@@ -110,7 +110,7 @@
             "id": 4,
             "title": "Test deployment in development",
             "description": "Deploy and verify all features work correctly including volume mounts and environment variables",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "details": "",
             "testStrategy": ""
@@ -119,7 +119,7 @@
             "id": 5,
             "title": "Document any customizations",
             "description": "Update values.yaml with our specific requirements and document any changes made",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "details": "",
             "testStrategy": ""
@@ -190,15 +190,61 @@
       {
         "id": 5,
         "title": "Implement Docs Agent Tool Discovery",
-        "description": "Add functionality to docs agent to read Toolman ConfigMap and discover available MCP tools during documentation generation",
-        "details": "Add tool discovery to docs agent:\n```rust\nuse k8s_openapi::api::core::v1::ConfigMap;\nuse kube::{Api, Client};\n\n#[derive(Debug, Deserialize)]\nstruct ToolmanConfig {\n    servers: HashMap<String, serde_json::Value>,\n}\n\nasync fn discover_available_tools(client: Client) -> Result<Vec<String>> {\n    let configmaps: Api<ConfigMap> = Api::namespaced(client, \"orchestrator\");\n    let cm = configmaps.get(\"toolman-servers-config\").await?;\n    \n    let config_json = cm.data\n        .and_then(|d| d.get(\"servers-config.json\"))\n        .ok_or(\"Missing servers-config.json\")?;\n    \n    let config: ToolmanConfig = serde_json::from_str(config_json)?;\n    Ok(config.servers.keys().cloned().collect())\n}\n\nasync fn analyze_project_and_recommend_tools(\n    project_path: &Path,\n    available_tools: &[String]\n) -> Result<ProjectToolConfig> {\n    let mut recommended_tools = ProjectToolConfig::default();\n    \n    // Check for various file patterns\n    if has_kubernetes_files(project_path).await? && available_tools.contains(&\"kubernetes\".to_string()) {\n        recommended_tools.remote.push(\"kubernetes\".to_string());\n    }\n    \n    if has_postgres_config(project_path).await? && available_tools.contains(&\"postgres\".to_string()) {\n        recommended_tools.remote.push(\"postgres\".to_string());\n    }\n    \n    // Always include filesystem for local development\n    recommended_tools.local.push(\"filesystem\".to_string());\n    \n    Ok(recommended_tools)\n}\n```",
-        "testStrategy": "Mock Kubernetes client to return test ConfigMap. Verify tool discovery correctly parses available tools. Test project analysis with various file patterns. Ensure recommendations only include available tools",
-        "priority": "high",
+        "description": "Add functionality to docs agent to read Toolman tool catalog ConfigMap and discover available MCP tools with detailed metadata during documentation generation",
+        "status": "pending",
         "dependencies": [
           3
         ],
-        "status": "pending",
-        "subtasks": []
+        "priority": "high",
+        "details": "Create and maintain a tool catalog ConfigMap, then use it in docs agent:\n\n## Step 1: Add RBAC Configuration to Helm Chart\n```yaml\n# toolman/charts/toolman/templates/role.yaml\napiVersion: rbac.authorization.k8s.io/v1\nkind: Role\nmetadata:\n  name: {{ include \"toolman.fullname\" . }}\n  namespace: {{ .Values.namespace | default .Release.Namespace }}\nrules:\n- apiGroups: [\"\"]\n  resources: [\"configmaps\"]\n  verbs: [\"get\", \"list\", \"watch\"]\n- apiGroups: [\"\"]\n  resources: [\"configmaps\"]\n  resourceNames: [\"toolman-tool-catalog\"]\n  verbs: [\"create\", \"update\", \"patch\"]\n\n# toolman/charts/toolman/templates/rolebinding.yaml\napiVersion: rbac.authorization.k8s.io/v1\nkind: RoleBinding\nmetadata:\n  name: {{ include \"toolman.fullname\" . }}\n  namespace: {{ .Values.namespace | default .Release.Namespace }}\nroleRef:\n  apiGroup: rbac.authorization.k8s.io\n  kind: Role\n  name: {{ include \"toolman.fullname\" . }}\nsubjects:\n- kind: ServiceAccount\n  name: {{ include \"toolman.serviceAccountName\" . }}\n  namespace: {{ .Values.namespace | default .Release.Namespace }}\n```\n\n## Step 2: Create Tool Catalog Population Logic\n```rust\nuse k8s_openapi::api::core::v1::ConfigMap;\nuse kube::{Api, Client, api::{PostParams, PatchParams, Patch}};\nuse serde_json::json;\n\n#[derive(Debug, Serialize, Deserialize)]\nstruct ToolCatalogEntry {\n    name: String,\n    category: String,\n    description: String,\n    transport: String,\n    use_cases: Vec<String>,\n    metadata: Option<serde_json::Value>,\n}\n\n#[derive(Debug, Serialize, Deserialize)]\nstruct ToolCatalog {\n    local: Vec<ToolCatalogEntry>,\n    remote: Vec<ToolCatalogEntry>,\n    last_updated: String,\n}\n\nasync fn create_or_update_tool_catalog(client: Client) -> Result<()> {\n    let configmaps: Api<ConfigMap> = Api::namespaced(client.clone(), \"mcp\");\n    \n    // Discover tools from server configs\n    let servers_cm = configmaps.get(\"toolman-servers-config\").await?;\n    let config_json = servers_cm.data\n        .and_then(|d| d.get(\"servers-config.json\"))\n        .ok_or(\"Missing servers-config.json\")?;\n    \n    let servers: HashMap<String, serde_json::Value> = serde_json::from_str(config_json)?;\n    \n    // Build catalog with detailed metadata\n    let mut catalog = ToolCatalog {\n        local: vec![\n            ToolCatalogEntry {\n                name: \"filesystem\".to_string(),\n                category: \"local\".to_string(),\n                description: \"Access and manipulate local files and directories\".to_string(),\n                transport: \"stdio\".to_string(),\n                use_cases: vec![\n                    \"Reading and writing files\".to_string(),\n                    \"Creating directory structures\".to_string(),\n                    \"File searching and pattern matching\".to_string(),\n                ],\n                metadata: None,\n            },\n            ToolCatalogEntry {\n                name: \"git\".to_string(),\n                category: \"local\".to_string(),\n                description: \"Git version control operations\".to_string(),\n                transport: \"stdio\".to_string(),\n                use_cases: vec![\n                    \"Repository management\".to_string(),\n                    \"Branch operations\".to_string(),\n                    \"Commit history analysis\".to_string(),\n                ],\n                metadata: None,\n            },\n        ],\n        remote: vec![],\n        last_updated: chrono::Utc::now().to_rfc3339(),\n    };\n    \n    // Populate remote tools from discovered servers\n    for (name, config) in servers {\n        // Query each MCP server for tool metadata if possible\n        let entry = ToolCatalogEntry {\n            name: name.clone(),\n            category: \"remote\".to_string(),\n            description: extract_description(&config).unwrap_or_default(),\n            transport: config[\"transport\"].as_str().unwrap_or(\"stdio\").to_string(),\n            use_cases: extract_use_cases(&config).unwrap_or_default(),\n            metadata: Some(config.clone()),\n        };\n        catalog.remote.push(entry);\n    }\n    \n    // Create or update the catalog ConfigMap\n    let catalog_json = serde_json::to_string_pretty(&catalog)?;\n    let cm = ConfigMap {\n        metadata: ObjectMeta {\n            name: Some(\"toolman-tool-catalog\".to_string()),\n            namespace: Some(\"mcp\".to_string()),\n            ..Default::default()\n        },\n        data: Some([(\"catalog.json\".to_string(), catalog_json)].into()),\n        ..Default::default()\n    };\n    \n    match configmaps.get(\"toolman-tool-catalog\").await {\n        Ok(_) => {\n            // Update existing\n            let patch = Patch::Merge(json!({\n                \"data\": {\n                    \"catalog.json\": serde_json::to_string_pretty(&catalog)?\n                }\n            }));\n            configmaps.patch(\"toolman-tool-catalog\", &PatchParams::default(), &patch).await?;\n        }\n        Err(_) => {\n            // Create new\n            configmaps.create(&PostParams::default(), &cm).await?;\n        }\n    }\n    \n    Ok(())\n}\n```\n\n## Step 3: Update Docs Agent to Use Tool Catalog\n```rust\nasync fn discover_available_tools_from_catalog(client: Client) -> Result<ToolCatalog> {\n    let configmaps: Api<ConfigMap> = Api::namespaced(client, \"mcp\");\n    let cm = configmaps.get(\"toolman-tool-catalog\").await?;\n    \n    let catalog_json = cm.data\n        .and_then(|d| d.get(\"catalog.json\"))\n        .ok_or(\"Missing catalog.json in tool catalog\")?;\n    \n    let catalog: ToolCatalog = serde_json::from_str(catalog_json)?;\n    Ok(catalog)\n}\n\nasync fn analyze_project_and_recommend_tools(\n    project_path: &Path,\n    catalog: &ToolCatalog\n) -> Result<ProjectToolConfig> {\n    let mut recommended_tools = ProjectToolConfig::default();\n    \n    // Check for various file patterns and match with available tools\n    if has_kubernetes_files(project_path).await? {\n        if let Some(k8s_tool) = catalog.remote.iter().find(|t| t.name == \"kubernetes\") {\n            recommended_tools.remote.push(\"kubernetes\".to_string());\n        }\n    }\n    \n    if has_postgres_config(project_path).await? {\n        if let Some(pg_tool) = catalog.remote.iter().find(|t| t.name == \"postgres\") {\n            recommended_tools.remote.push(\"postgres\".to_string());\n        }\n    }\n    \n    // Always include filesystem for local development\n    recommended_tools.local.push(\"filesystem\".to_string());\n    \n    Ok(recommended_tools)\n}\n```\n\nNote: The Toolman service is available at http://toolman.mcp.svc.cluster.local:3000 for direct API calls if needed.",
+        "testStrategy": "1. Test RBAC configuration: Verify Role and RoleBinding are created correctly, test Toolman can read all ConfigMaps and write to toolman-tool-catalog specifically\n2. Mock Kubernetes client to test catalog creation/update logic\n3. Test catalog population with various server configurations\n4. Verify docs agent correctly reads from tool catalog instead of server configs\n5. Test project analysis uses catalog metadata for recommendations\n6. Ensure catalog updates work on Toolman startup\n7. Test error handling when catalog is missing or malformed",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create RBAC templates for Toolman Helm chart",
+            "description": "Add role.yaml and rolebinding.yaml templates to allow Toolman to read ConfigMaps and write to toolman-tool-catalog",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement tool catalog creation and population logic",
+            "description": "Create functions to build and maintain the toolman-tool-catalog ConfigMap with detailed tool metadata",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Update Toolman startup to populate catalog",
+            "description": "Modify Toolman's main initialization to call create_or_update_tool_catalog on startup",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Update docs agent to read from tool catalog",
+            "description": "Replace direct server config parsing with catalog-based tool discovery in docs agent",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Add catalog metadata extraction utilities",
+            "description": "Implement helper functions to extract descriptions and use cases from MCP server configurations",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 6,
@@ -335,7 +381,7 @@
     ],
     "metadata": {
       "created": "2025-07-26T07:14:51.223Z",
-      "updated": "2025-07-26T07:15:27.787Z",
+      "updated": "2025-07-26T14:56:32.427Z",
       "description": "Tasks for master context"
     }
   }

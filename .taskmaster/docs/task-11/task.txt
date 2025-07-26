@@ -5,6 +5,8 @@
 # Priority: medium
 # Description: Add validation logic to verify user-specified tools exist in the toolman ConfigMap before processing
 # Details:
+Note: Toolman is deployed in the 'mcp' namespace. The discover_available_tools function (from Task 5) reads the ConfigMap from mcp namespace at http://toolman.mcp.svc.cluster.local:3000
+
 Add validation for user overrides:
 ```rust
 async fn validate_user_tools(
@@ -13,17 +15,17 @@ async fn validate_user_tools(
 ) -> Result<()> {
     // Local tools have fixed set
     const VALID_LOCAL_TOOLS: &[&str] = &["filesystem", "git"];
-    
+
     for local_tool in &tools.local {
         if !VALID_LOCAL_TOOLS.contains(&local_tool.as_str()) {
             return Err(anyhow!("Invalid local tool: {}", local_tool));
         }
     }
-    
+
     // Remote tools must exist in toolman config
     if !tools.remote.is_empty() {
         let available_tools = discover_available_tools(k8s_client).await?;
-        
+
         for remote_tool in &tools.remote {
             if !available_tools.contains(remote_tool) {
                 return Err(anyhow!(
@@ -34,7 +36,7 @@ async fn validate_user_tools(
             }
         }
     }
-    
+
     Ok(())
 }
 

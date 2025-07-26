@@ -1,5 +1,6 @@
 use anyhow::Result;
 use common::models::{CodeRequest, DocsRequest};
+use std::path::PathBuf;
 
 use crate::api::ApiClient;
 use crate::docs_generator::DocsGenerator;
@@ -90,14 +91,23 @@ async fn handle_docs_command(
 ) -> Result<()> {
     output.info("Initializing documentation generator...");
 
+    // Debug: Log the received working_directory
+    eprintln!("CLI: Received working_directory: {:?}", working_directory);
+
     // Do local file preparation and get git info (used as fallbacks)
     let (detected_repo_url, detected_working_dir, detected_source_branch, _generated_docs_branch) =
         DocsGenerator::prepare_for_submission(working_directory)?;
+
+    // Debug: Log what was detected
+    eprintln!("CLI: Detected working_dir: '{}'", detected_working_dir);
 
     // Use provided parameters or fall back to auto-detected values
     let final_repo_url = repository_url.unwrap_or(&detected_repo_url);
     let final_working_dir = working_directory.unwrap_or(&detected_working_dir);
     let final_source_branch = source_branch.unwrap_or(&detected_source_branch);
+
+    // Debug: Log the final value being sent to server
+    eprintln!("CLI: Final working_dir to send to server: '{}'", final_working_dir);
 
     // Create documentation generation request
     let request = DocsRequest {
@@ -348,4 +358,40 @@ fn parse_env_from_secrets(
     }
 
     Ok(secrets)
+}
+
+/// Handle analyze command
+pub fn handle_analyze_command(
+    output: String,
+    format: String,
+    working_directory: Option<String>,
+    include_source: bool,
+) -> Result<()> {
+    use crate::analyzer::CodebaseAnalyzer;
+
+    let work_dir = working_directory
+        .map(PathBuf::from)
+        .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current directory"));
+
+    let analyzer = CodebaseAnalyzer::new(work_dir, include_source);
+    let analysis = analyzer.analyze()?;
+
+    match format.as_str() {
+        "json" => {
+            let json_output = serde_json::to_string_pretty(&analysis)?;
+            std::fs::write(&output, json_output)?;
+            println!("✅ Codebase analysis written to: {} (JSON format)", output);
+        }
+        "single" => {
+            let markdown_output = analyzer.generate_single_markdown(&analysis)?;
+            std::fs::write(&output, markdown_output)?;
+            println!("✅ Codebase analysis written to: {} (Single Markdown)", output);
+        }
+        "modular" | _ => {
+            analyzer.generate_modular_markdown(&analysis, &output)?;
+            println!("✅ Modular codebase analysis written to: {}/", output);
+        }
+    }
+
+    Ok(())
 }

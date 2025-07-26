@@ -18,11 +18,11 @@
 
 //! Orchestrator CLI - Simplified with just docs and code task submission
 
+mod analyzer;
 mod api;
 mod commands;
 mod docs_generator;
 mod output;
-
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
@@ -53,6 +53,24 @@ enum Commands {
     Task {
         #[command(subcommand)]
         command: TaskCommands,
+    },
+    /// Analyze codebase and generate documentation for Task Master PRD
+    Analyze {
+        /// Output directory (default: docs/codebase-analysis)
+        #[arg(short, long, default_value = "docs/codebase-analysis")]
+        output: String,
+
+        /// Output format: modular, single, json (default: modular)
+        #[arg(short, long, default_value = "modular")]
+        format: String,
+
+        /// Working directory to analyze (default: current directory)
+        #[arg(short, long)]
+        working_directory: Option<String>,
+
+        /// Include full source code (default: true)
+        #[arg(long, default_value = "true")]
+        include_source: bool,
     },
 }
 
@@ -163,6 +181,9 @@ async fn main() -> Result<()> {
     match cli.command {
         Commands::Task { command } => {
             commands::handle_task_command(command, &cli.api_url, &cli.output).await?;
+        }
+        Commands::Analyze { output, format, working_directory, include_source } => {
+            commands::handle_analyze_command(output, format, working_directory, include_source)?;
         }
     }
 

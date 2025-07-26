@@ -60,7 +60,10 @@ impl DocsGenerator {
     }
 
     fn get_working_directory(working_directory: Option<&str>) -> Result<String> {
+        eprintln!("DocsGenerator: get_working_directory called with: {:?}", working_directory);
+
         if let Some(wd) = working_directory {
+            eprintln!("DocsGenerator: Returning provided working_directory: '{}'", wd);
             return Ok(wd.to_string());
         }
 
@@ -79,11 +82,14 @@ impl DocsGenerator {
             .to_string_lossy()
             .to_string();
 
-        Ok(if rel_path.is_empty() {
+        let result = if rel_path.is_empty() {
             ".".to_string()
         } else {
             rel_path
-        })
+        };
+
+        eprintln!("DocsGenerator: Auto-detected working_directory: '{}'", result);
+        Ok(result)
     }
 
     fn get_current_branch() -> Result<String> {

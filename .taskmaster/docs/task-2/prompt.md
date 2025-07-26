@@ -1,105 +1,137 @@
-# Autonomous Agent Prompt: Configure Toolman Kubernetes Deployment
+# Autonomous Agent Prompt: Analyze and Optimize Toolman Deployment
 
 ## Context
-You are tasked with reviewing and customizing the Toolman Kubernetes deployment manifest located at `toolman/charts/toolman/templates/deployment.yaml`. This deployment is critical for running the Toolman HTTP proxy that enables Claude agents to access MCP tools. You must ensure it's production-ready for our orchestrator environment.
+You are tasked with analyzing the existing Toolman Kubernetes deployment manifest located at `toolman/charts/toolman/templates/deployment.yaml`. This deployment is part of the Helm chart that hasn't been deployed yet. Your goal is to ensure the deployment configuration is production-ready and optimized for our orchestrator environment.
+
+## Current Situation
+- **Deployment Status**: Exists as a template but NOT deployed
+- **Location**: `toolman/charts/toolman/templates/deployment.yaml`
+- **Features**: Complete configuration including containers, volumes, security contexts, probes
+- **Dependency**: Will be deployed as part of Task 1 (Helm chart deployment)
 
 ## Your Mission
-Analyze the existing deployment manifest, validate all configurations, and prepare it for production use with appropriate customizations for resource management, security, and high availability.
+Thoroughly analyze the deployment manifest, validate its production readiness, and document any necessary value overrides to ensure optimal performance and security when deployed.
 
 ## Detailed Instructions
 
-### 1. Initial Deployment Review
+### 1. Initial Deployment Analysis
 ```bash
 # Navigate to the deployment template
 cd toolman/charts/toolman/templates/
 
-# Read the deployment manifest
+# Read the entire deployment manifest
 cat deployment.yaml
 
-# Analyze the structure and note:
-# - Container definitions
-# - Volume configurations  
-# - Security contexts
-# - Environment variables
-# - Health check configurations
+# Analyze template variables
+grep -n "{{" deployment.yaml | head -20
+
+# Check default values that affect deployment
+cd ../
+grep -A 5 -B 5 "replicaCount\|resources\|image\|security" values.yaml
 ```
 
-### 2. Container Configuration Analysis
-Focus on these critical areas:
+### 2. Container Configuration Review
+Examine these critical areas:
 
-**Main Container:**
-- Image specification and tag strategy
-- Port configuration (should be 3000)
-- Command and args (if any)
-- Working directory settings
+**Main Container Analysis:**
+```bash
+# Extract container configuration
+yq eval '.spec.template.spec.containers' deployment.yaml
 
-**Init Container:**
-- Purpose and necessity
-- Permission setup commands
-- Volume initialization
+# Review:
+# - Image and tag configuration
+# - Port specifications
+# - Environment variables
+# - Volume mounts
+# - Security context
+# - Resource limits
+```
+
+**Init Container Review:**
+```bash
+# Check init containers
+yq eval '.spec.template.spec.initContainers' deployment.yaml
+
+# Understand:
+# - Purpose of each init container
+# - Permission setup requirements
+# - Dependencies created
+```
 
 **Sidecar Containers:**
-- Docker-in-Docker sidecar purpose
-- When it's needed (Docker-based MCP servers)
-- Security implications
-
-### 3. Volume Mount Verification
-Ensure proper volume configuration:
-```yaml
-# Critical volumes to verify:
-# 1. ConfigMap volume for MCP server definitions
-- name: config
-  configMap:
-    name: toolman-servers-config
-    
-# 2. Persistent storage (if enabled)
-- name: data
-  persistentVolumeClaim:
-    claimName: {{ include "toolman.fullname" . }}
-    
-# 3. Temp directory
-- name: tmp
-  emptyDir: {}
-  
-# 4. Docker socket (if DinD enabled)
-- name: docker-socket
-  emptyDir: {}
-```
-
-### 4. Environment Variable Configuration
-Validate and document all environment variables:
-- `PORT`: Should be set to "3000"
-- `PROJECT_DIR`: Data directory path
-- `RUST_LOG`: Logging level configuration
-- Any secret references
-- Additional platform-specific variables
-
-### 5. Security Context Review
-```yaml
-# Verify security settings:
-securityContext:
-  runAsUser: 1001      # Non-root user
-  runAsGroup: 2375     # Specific group
-  fsGroup: 2375        # File system group
-  runAsNonRoot: true   # Enforce non-root
-  capabilities:
-    drop:
-    - ALL              # Drop all capabilities
-```
-
-### 6. Resource Requirements Testing
 ```bash
-# Create test deployment with different resource configs
-# Test 1: Minimal resources
-resources:
-  requests:
-    cpu: 100m
-    memory: 256Mi
-  limits:
-    cpu: 500m
-    memory: 512Mi
+# Look for Docker-in-Docker or other sidecars
+grep -A 20 "dind\|sidecar" deployment.yaml
 
-# Test 2: Production resources
+# Assess:
+# - When sidecars are enabled
+# - Security implications
+# - Resource requirements
+```
+
+### 3. Volume Configuration Assessment
+```yaml
+# Identify all volume types:
+# 1. ConfigMap volumes (MCP server definitions)
+# 2. PersistentVolumeClaim (data storage)
+# 3. EmptyDir (temporary storage)
+# 4. HostPath/Docker socket (if DinD enabled)
+
+# For each volume, verify:
+# - Mount paths are correct
+# - Permissions are appropriate
+# - No sensitive data exposure
+```
+
+### 4. Security Context Evaluation
+```bash
+# Extract security contexts
+yq eval '.spec.template.spec.securityContext' deployment.yaml
+yq eval '.spec.template.spec.containers[0].securityContext' deployment.yaml
+
+# Verify:
+# - Non-root user (UID 1001)
+# - Appropriate group (GID 2375)
+# - Dropped capabilities
+# - Read-only root filesystem where possible
+# - No unnecessary privileges
+```
+
+### 5. Production Readiness Assessment
+Create a comprehensive analysis:
+
+**High Availability:**
+- Current replica count configuration
+- Update strategy settings
+- Pod disruption budget support
+- Anti-affinity rule recommendations
+
+**Resource Management:**
+- Default resource requests/limits
+- Recommendations for production
+- Horizontal Pod Autoscaling readiness
+
+**Health Checks:**
+- Liveness probe configuration
+- Readiness probe configuration
+- Probe timing appropriateness
+- Failure threshold settings
+
+### 6. Create Production Values Override
+Based on your analysis, create `toolman-production-values.yaml`:
+
+```yaml
+# Production overrides for toolman deployment
+replicaCount: 3  # HA requirement
+
+image:
+  repository: ghcr.io/5dlabs/toolman
+  tag: "v1.0.0"  # Specific version, not latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: ghcr-secret
+
 resources:
   requests:
     cpu: 500m
@@ -108,179 +140,154 @@ resources:
     cpu: 2000m
     memory: 2Gi
 
-# Monitor performance under load
-# Document optimal settings
-```
+# Health check tuning
+livenessProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
 
-### 7. High Availability Configuration
-Implement production-ready HA settings:
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
 
-```yaml
-# 1. Replica count (minimum 2-3)
-replicas: {{ .Values.replicaCount | default 3 }}
-
-# 2. Pod disruption budget
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: toolman-pdb
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: toolman
-
-# 3. Anti-affinity rules
+# HA configuration
 affinity:
   podAntiAffinity:
     preferredDuringSchedulingIgnoredDuringExecution:
     - weight: 100
       podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - toolman
         topologyKey: kubernetes.io/hostname
+
+# PDB for production
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
 ```
 
-### 8. Health Check Optimization
-```yaml
-# Validate and tune health checks:
-livenessProbe:
-  httpGet:
-    path: /health
-    port: http
-  initialDelaySeconds: 30
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 3
-  
-readinessProbe:
-  httpGet:
-    path: /ready
-    port: http
-  initialDelaySeconds: 5
-  periodSeconds: 5
-  timeoutSeconds: 3
-  successThreshold: 1
-  failureThreshold: 3
-```
-
-### 9. ConfigMap Integration Testing
+### 7. Template Rendering Validation
 ```bash
-# Deploy test instance
-helm install toolman-test ./toolman/charts/toolman/ -n test
+# Test template rendering with production values
+helm template toolman ./toolman/charts/toolman/ \
+  --namespace orchestrator \
+  -f toolman-production-values.yaml > rendered.yaml
 
-# Verify ConfigMap mounting
-kubectl exec -n test deployment/toolman-test -- ls -la /config/
-kubectl exec -n test deployment/toolman-test -- cat /config/servers-config.json
+# Extract and review the deployment
+yq eval 'select(.kind == "Deployment")' rendered.yaml > deployment-rendered.yaml
 
-# Test MCP server accessibility
-curl http://toolman-test:3000/mcp/servers
+# Validate the rendered deployment
+kubectl --dry-run=client apply -f deployment-rendered.yaml
 ```
 
-### 10. Production Customization Document
-Create a comprehensive customization guide including:
+### 8. Security Scanning
+```bash
+# If available, run security scanners
+# Example with kubesec
+kubesec scan deployment-rendered.yaml
 
-**values-production.yaml:**
-```yaml
-# Toolman Production Values
-namespace: orchestrator
-replicaCount: 3
-
-image:
-  repository: ghcr.io/5dlabs/toolman
-  tag: "v1.0.0"  # Use specific version
-  pullPolicy: IfNotPresent
-
-resources:
-  requests:
-    cpu: 500m
-    memory: 512Mi
-  limits:
-    cpu: 2000m
-    memory: 2Gi
-
-service:
-  type: ClusterIP
-  port: 3000
-
-persistence:
-  enabled: true
-  size: 20Gi
-  storageClass: "fast-ssd"
-
-# Monitoring
-metrics:
-  enabled: true
-  path: /metrics
-  port: 9090
-
-# Logging
-logLevel: "info"
-
-# Node affinity for dedicated nodes
-nodeSelector:
-  node-role: "tools"
+# Check for:
+# - Privileged containers
+# - Host network/PID/IPC usage
+# - Unsafe capabilities
+# - Writable root filesystem
 ```
+
+### 9. Documentation Creation
+Create a comprehensive analysis document including:
+
+1. **Current Configuration Summary**
+   - Container specifications
+   - Volume mounts
+   - Security settings
+   - Resource allocations
+
+2. **Production Recommendations**
+   - Required value overrides
+   - Security enhancements
+   - Performance optimizations
+   - HA configurations
+
+3. **Risk Assessment**
+   - Identified security concerns
+   - Resource constraint risks
+   - Availability considerations
+
+4. **Deployment Checklist**
+   - Pre-deployment validations
+   - Required secrets/configs
+   - Monitoring setup
+   - Rollback procedures
 
 ## Testing Requirements
 
-### 1. Functional Tests
-- [ ] Deployment creates all pods successfully
-- [ ] Pods reach ready state within 60 seconds
-- [ ] ConfigMap is properly mounted
-- [ ] Environment variables are set correctly
-- [ ] Service endpoints are populated
+### 1. Template Validation
+```bash
+# Lint with production values
+helm lint ./toolman/charts/toolman/ -f toolman-production-values.yaml
 
-### 2. Load Tests
-- [ ] Deploy with production resources
-- [ ] Simulate concurrent MCP requests
-- [ ] Monitor CPU and memory usage
-- [ ] Verify no OOM kills or restarts
-- [ ] Check response times remain acceptable
+# Dry run deployment
+helm install toolman ./toolman/charts/toolman/ \
+  --namespace orchestrator \
+  --dry-run --debug \
+  -f toolman-production-values.yaml
+```
 
-### 3. Resilience Tests
-- [ ] Kill a pod and verify recovery
-- [ ] Update ConfigMap and verify reload
-- [ ] Simulate node failure
-- [ ] Test rolling update process
+### 2. Configuration Validation
+- Verify all template variables resolve correctly
+- Ensure no hardcoded values that should be configurable
+- Validate label and annotation consistency
+- Check resource naming conventions
 
-### 4. Security Tests
-- [ ] Verify non-root execution
-- [ ] Check no privileged access (except DinD if needed)
-- [ ] Validate network policies
-- [ ] Ensure secrets are not exposed
+### 3. Security Validation
+- Confirm non-root execution
+- Verify minimal required privileges
+- Validate network policies compatibility
+- Check secret handling
 
 ## Deliverables
 
 1. **Deployment Analysis Report**
-   - Current configuration assessment
-   - Security findings
-   - Performance considerations
-   - HA readiness evaluation
+   - Complete review of existing deployment.yaml
+   - Security findings and recommendations
+   - Performance optimization suggestions
+   - HA readiness assessment
 
-2. **Customization Guide**
-   - Production values.yaml
-   - Environment-specific overrides
-   - Scaling recommendations
-   - Monitoring integration
+2. **Production Values File**
+   - toolman-production-values.yaml
+   - Documented rationale for each override
+   - Environment-specific configurations
 
-3. **Test Results**
-   - Functional test outcomes
-   - Load test metrics
-   - Resilience test results
-   - Security scan report
+3. **Validation Results**
+   - Template rendering output
+   - Security scan results
+   - Dry-run test outcomes
 
-4. **Operational Runbook**
-   - Deployment procedures
-   - Upgrade processes
-   - Troubleshooting guide
-   - Monitoring setup
+4. **Operational Guide**
+   - How deployment integrates with Helm chart
+   - Monitoring recommendations
+   - Troubleshooting common issues
+   - Update procedures
 
 ## Success Metrics
-- Zero deployment failures
-- Pod startup time < 30 seconds
-- Zero security violations
-- Resource usage within limits
-- 99.9% uptime target
-- Successful ConfigMap integration
-- All health checks passing
+- Zero security violations identified
+- All production requirements addressed
+- Template renders without errors
+- Resource allocations optimized
+- HA configurations validated
+- Documentation comprehensive
 
-Proceed with the deployment review and provide detailed findings for each section. Focus on production readiness while maintaining operational simplicity.
+## Important Notes
+- The deployment is part of the Helm chart - don't modify it directly
+- Focus on value overrides rather than template changes
+- Consider this analysis will inform Task 1 deployment
+- Document any concerns for the platform team
+
+Proceed with the analysis and provide detailed findings for each section.

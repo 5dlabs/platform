@@ -12,21 +12,36 @@ This document defines the acceptance criteria for implementing tool discovery fu
 - [ ] **Error Handling**: Gracefully handles missing/invalid ConfigMap
 - [ ] **Logging**: Logs discovery process and results
 
-### 2. Project Analysis
+### 2. Tool Catalog ConfigMap
+- [ ] **Catalog Creation**: Creates `toolman-tool-catalog` ConfigMap in mcp namespace
+- [ ] **Local Tools**: Includes filesystem and git tool definitions
+- [ ] **Remote Tools**: Populates with discovered tool information
+- [ ] **Tool Metadata**: Includes descriptions, categories, and use cases
+- [ ] **Auto-Update**: Updates catalog on Toolman startup
+- [ ] **RBAC Permissions**: Has proper permissions to create/update ConfigMap
+
+### 3. RBAC Configuration
+- [ ] **Role Created**: Role with ConfigMap read/write permissions
+- [ ] **RoleBinding Created**: Binds role to Toolman ServiceAccount
+- [ ] **Helm Chart Updated**: Includes role.yaml and rolebinding.yaml templates
+- [ ] **Values Updated**: rbac.create flag added to values.yaml
+- [ ] **Least Privilege**: Only necessary permissions granted
+
+### 4. Project Analysis
 - [ ] **File Detection**: Identifies relevant project files
 - [ ] **Pattern Matching**: Uses glob patterns effectively
 - [ ] **Language Detection**: Recognizes programming languages
 - [ ] **Framework Detection**: Identifies frameworks in use
 - [ ] **Comprehensive Analysis**: Covers K8s, DB, CI/CD, IaC
 
-### 3. Tool Matching
+### 5. Tool Matching
 - [ ] **Pattern-Based**: Uses patterns, not hardcoded names
 - [ ] **Contextual**: Matches based on project needs
 - [ ] **No Hardcoding**: Zero hardcoded tool names
 - [ ] **Deduplication**: Removes duplicate recommendations
 - [ ] **Sorting**: Returns sorted tool lists
 
-### 4. Configuration Storage
+### 6. Configuration Storage
 - [ ] **ConfigMap Creation**: Creates project-specific ConfigMap
 - [ ] **JSON Format**: Stores configuration as JSON
 - [ ] **Metadata**: Includes timestamps and analysis
@@ -84,10 +99,10 @@ async fn test_configmap_discovery() {
             "postgres": {}
         }
     }));
-    
+
     let handler = DocsHandler::new_with_mock(mock_cm);
     let tools = handler.discover_available_tools().await.unwrap();
-    
+
     assert_eq!(tools.len(), 3);
     assert!(tools.contains(&"github".to_string()));
     assert!(tools.contains(&"kubernetes".to_string()));
@@ -100,17 +115,17 @@ async fn test_configmap_discovery() {
 #[tokio::test]
 async fn test_kubernetes_detection() {
     let temp_dir = TempDir::new("k8s-project").unwrap();
-    
+
     // Create K8s files
     create_dir_all(temp_dir.path().join("k8s")).unwrap();
     write(
         temp_dir.path().join("k8s/deployment.yaml"),
         "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test"
     ).unwrap();
-    
+
     let handler = DocsHandler::new();
     let analysis = handler.analyze_project(temp_dir.path()).await.unwrap();
-    
+
     assert!(analysis.has_kubernetes);
     assert!(analysis.file_patterns_found.contains(&"kubernetes".to_string()));
 }
@@ -126,7 +141,7 @@ async fn test_pattern_matching_no_hardcoding() {
         has_ci_cd: true,
         ..Default::default()
     };
-    
+
     // Tools with various naming patterns
     let available = vec![
         "k8s-manager".to_string(),
@@ -137,10 +152,10 @@ async fn test_pattern_matching_no_hardcoding() {
         "gitlab-runner".to_string(),
         "unmatched-tool".to_string(),
     ];
-    
+
     let handler = DocsHandler::new();
     let config = handler.match_tools_to_project(&analysis, &available);
-    
+
     // Should match based on patterns
     assert!(config.remote.iter().any(|t| t.contains("k8s")));
     assert!(config.remote.iter().any(|t| t.contains("kubernetes")));
@@ -157,15 +172,15 @@ async fn test_pattern_matching_no_hardcoding() {
 #[tokio::test]
 async fn test_language_detection() {
     let temp_dir = TempDir::new("multi-lang").unwrap();
-    
+
     // Create language indicator files
     write(temp_dir.path().join("package.json"), "{}").unwrap();
     write(temp_dir.path().join("requirements.txt"), "flask==2.0").unwrap();
     write(temp_dir.path().join("go.mod"), "module test").unwrap();
-    
+
     let handler = DocsHandler::new();
     let analysis = handler.analyze_project(temp_dir.path()).await.unwrap();
-    
+
     assert!(analysis.detected_languages.contains(&"javascript".to_string()));
     assert!(analysis.detected_languages.contains(&"python".to_string()));
     assert!(analysis.detected_languages.contains(&"go".to_string()));
@@ -186,15 +201,15 @@ async fn test_config_storage() {
         project_analysis: Default::default(),
         docs_run_id: "test-123".to_string(),
     };
-    
+
     // Save config
     handler.save_project_config("test-project", config.clone()).await.unwrap();
-    
+
     // Verify ConfigMap created
     let cm = get_configmap("test-project-project-config").await.unwrap();
     let stored_json = cm.data.unwrap().get("config.json").unwrap();
     let stored: ProjectConfig = serde_json::from_str(stored_json).unwrap();
-    
+
     assert_eq!(stored.tools, config.tools);
 }
 ```
@@ -204,7 +219,7 @@ async fn test_config_storage() {
 #[tokio::test]
 async fn test_missing_configmap_handling() {
     let handler = DocsHandler::new_with_missing_cm();
-    
+
     // Should not panic, return empty list
     let tools = handler.discover_available_tools().await.unwrap();
     assert_eq!(tools.len(), 0);
@@ -214,7 +229,7 @@ async fn test_missing_configmap_handling() {
 async fn test_invalid_json_handling() {
     let mock_cm = create_mock_configmap_with_invalid_json();
     let handler = DocsHandler::new_with_mock(mock_cm);
-    
+
     // Should handle gracefully
     let tools = handler.discover_available_tools().await.unwrap();
     assert_eq!(tools.len(), 0);
@@ -230,19 +245,19 @@ async fn test_complete_workflow() {
     let handler = setup_handler_with_tools(vec![
         "kubernetes", "postgres", "github"
     ]).await;
-    
+
     // Execute workflow
     let config = handler.generate_project_configuration(
         temp_dir.path(),
         "test-project",
         "docs-run-456"
     ).await.unwrap();
-    
+
     // Verify results
     assert!(config.local.contains(&"filesystem".to_string()));
     assert!(config.remote.contains(&"kubernetes".to_string()));
     assert!(config.remote.contains(&"postgres".to_string()));
-    
+
     // Verify saved configuration
     let saved = get_saved_config("test-project").await.unwrap();
     assert_eq!(saved.docs_run_id, "docs-run-456");

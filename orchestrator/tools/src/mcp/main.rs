@@ -160,6 +160,9 @@ fn handle_orchestrator_tools(
                     None => return Some(Err(anyhow!("working_directory parameter is required"))),
                 };
 
+            // Debug: Log the received working_directory
+            eprintln!("MCP: Received working_directory from client: '{}'", working_directory);
+
             // Extract model with default
             let model = params_map
                 .get("model")
@@ -189,7 +192,8 @@ fn handle_orchestrator_tools(
             args.extend(&["--working-directory", working_directory]);
             args.extend(&["--github-user", github_user]);
 
-            // Debug output removed to satisfy clippy
+            // Debug: Log the CLI arguments
+            eprintln!("MCP: Calling CLI with args: {:?}", args);
 
             // Execute the CLI command
             match run_orchestrator_cli(&args) {

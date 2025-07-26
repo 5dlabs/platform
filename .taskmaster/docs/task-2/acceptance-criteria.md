@@ -1,285 +1,178 @@
-# Acceptance Criteria: Task 2 - Implement Toolman Kubernetes Deployment
+# Acceptance Criteria: Task 2 - Analyze and Optimize Toolman Deployment
 
 ## Overview
-This document defines the acceptance criteria for successfully implementing and customizing the Toolman Kubernetes deployment for production use in our orchestrator environment.
+This document defines the acceptance criteria for successfully analyzing the existing Toolman Kubernetes deployment manifest and preparing production-ready configurations for when it's deployed via the Helm chart.
 
-## Core Requirements
+## Current State
+- **Deployment Location**: `toolman/charts/toolman/templates/deployment.yaml`
+- **Status**: Exists as Helm template, NOT deployed
+- **Dependencies**: Will be deployed as part of Task 1 (Helm chart installation)
 
-### 1. Deployment Configuration
-- [ ] **Manifest Review Complete**: All aspects of deployment.yaml analyzed
-- [ ] **Container Specs Validated**: Image, ports, commands configured correctly
-- [ ] **Volume Mounts Verified**: All required volumes properly mounted
-- [ ] **Environment Variables Set**: All required env vars configured
-- [ ] **Security Context Applied**: Non-root user, proper permissions
-- [ ] **Resource Limits Defined**: CPU and memory requests/limits set
+## Analysis Requirements
 
-### 2. High Availability Setup
-- [ ] **Replica Count**: Minimum 2 replicas configured
-- [ ] **Anti-Affinity Rules**: Pods distributed across nodes
-- [ ] **Pod Disruption Budget**: PDB configured for maintenance
-- [ ] **Rolling Updates**: Update strategy properly configured
-- [ ] **Graceful Shutdown**: PreStop hooks implemented
+### 1. Deployment Template Analysis
+- [ ] **Template Review Complete**: Full analysis of deployment.yaml
+- [ ] **Variable Mapping**: All Helm template variables documented
+- [ ] **Default Values Identified**: Default configurations from values.yaml noted
+- [ ] **Feature Assessment**: All deployment features cataloged
 
-### 3. Integration Points
-- [ ] **ConfigMap Integration**: toolman-servers-config properly mounted
-- [ ] **Service Matching**: Labels match service selectors
-- [ ] **Namespace Alignment**: Deploys to orchestrator namespace
-- [ ] **DNS Resolution**: Pod DNS names resolvable
+### 2. Container Configuration Review
+- [ ] **Main Container**: Image, ports, env vars, volumes analyzed
+- [ ] **Init Container**: Purpose and configuration understood
+- [ ] **Sidecar Containers**: Docker-in-Docker requirements assessed
+- [ ] **Security Contexts**: All security settings reviewed
 
-## Technical Specifications
+### 3. Production Readiness Assessment
+- [ ] **Resource Analysis**: Default CPU/memory settings evaluated
+- [ ] **HA Capabilities**: Replica and affinity options reviewed
+- [ ] **Health Checks**: Probe configurations assessed
+- [ ] **Volume Mounts**: All volumes and mounts validated
 
-### 1. Container Configuration
+### 4. Security Evaluation
+- [ ] **User Context**: Non-root execution verified (UID 1001)
+- [ ] **Capabilities**: Dropped capabilities confirmed
+- [ ] **Privileges**: No unnecessary privileges identified
+- [ ] **Secret Handling**: Secure secret references validated
+
+## Configuration Deliverables
+
+### 1. Production Values File
 ```yaml
-# Required container settings:
-containers:
-- name: toolman
-  image: ghcr.io/5dlabs/toolman:v1.0.0  # Specific version, not latest
-  ports:
-  - containerPort: 3000
-    name: http
-    protocol: TCP
-  env:
-  - name: PORT
-    value: "3000"
-  - name: PROJECT_DIR
-    value: "/data/projects"
-  - name: RUST_LOG
-    value: "info"
+# toolman-production-values.yaml must include:
+- replicaCount: 3 (minimum for HA)
+- image:
+    tag: specific version (not latest)
+    pullPolicy: IfNotPresent
+- resources:
+    requests: production-appropriate
+    limits: prevent resource exhaustion
+- affinity: pod anti-affinity rules
+- podDisruptionBudget: for maintenance windows
 ```
 
-### 2. Volume Configuration
-```yaml
-# Required volumes:
-volumes:
-- name: config
-  configMap:
-    name: toolman-servers-config
-    items:
-    - key: servers-config.json
-      path: servers-config.json
-- name: data
-  persistentVolumeClaim:
-    claimName: toolman-data
-- name: tmp
-  emptyDir: {}
-```
+### 2. Template Rendering Validation
+- [ ] **Helm Template**: Renders without errors
+- [ ] **Production Values**: Applied correctly in rendering
+- [ ] **Resource Validation**: kubectl dry-run passes
+- [ ] **No Hardcoding**: All values properly parameterized
 
-### 3. Security Configuration
-```yaml
-# Required security context:
-securityContext:
-  runAsUser: 1001
-  runAsGroup: 2375
-  fsGroup: 2375
-  runAsNonRoot: true
-  capabilities:
-    drop:
-    - ALL
-```
+### 3. Security Recommendations
+- [ ] **Non-Root Verified**: Containers run as user 1001
+- [ ] **Minimal Privileges**: Only required capabilities
+- [ ] **Network Policies**: Compatible configurations
+- [ ] **Secret Management**: No exposed credentials
 
-### 4. Resource Configuration
-```yaml
-# Minimum production resources:
-resources:
-  requests:
-    cpu: 500m
-    memory: 512Mi
-  limits:
-    cpu: 2000m
-    memory: 2Gi
-```
+## Test Scenarios
 
-### 5. Health Checks
-```yaml
-# Required probes:
-livenessProbe:
-  httpGet:
-    path: /health
-    port: http
-  initialDelaySeconds: 30
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 3
-  
-readinessProbe:
-  httpGet:
-    path: /ready
-    port: http
-  initialDelaySeconds: 5
-  periodSeconds: 5
-  timeoutSeconds: 3
-  failureThreshold: 3
-```
-
-## Test Cases
-
-### Test Case 1: Basic Deployment
+### Scenario 1: Template Validation
 ```bash
-# Deploy toolman
+# Lint the chart
+helm lint ./toolman/charts/toolman/
+
+# Lint with production values
+helm lint ./toolman/charts/toolman/ -f toolman-production-values.yaml
+
+# Expected: No errors or warnings
+```
+
+### Scenario 2: Dry Run Testing
+```bash
+# Test deployment with production values
 helm install toolman ./toolman/charts/toolman/ \
-  -n orchestrator \
-  -f production-values.yaml
+  --namespace orchestrator \
+  --dry-run --debug \
+  -f toolman-production-values.yaml
 
-# Verify deployment
-kubectl get deployment toolman -n orchestrator
-
-# Expected:
-# - Deployment shows READY 3/3
-# - No restart counts
-# - All pods running
+# Expected: Complete YAML output, no errors
 ```
 
-### Test Case 2: ConfigMap Mount Verification
+### Scenario 3: Resource Rendering
 ```bash
-# Check ConfigMap mounting
-kubectl exec -n orchestrator deployment/toolman -- \
-  cat /config/servers-config.json | jq .
+# Render and extract deployment
+helm template toolman ./toolman/charts/toolman/ \
+  -f toolman-production-values.yaml | \
+  yq eval 'select(.kind == "Deployment")' > deployment.yaml
 
-# Expected:
-# - Valid JSON output
-# - Contains MCP server definitions
-# - File permissions allow reading
+# Validate rendered deployment
+kubectl apply --dry-run=client -f deployment.yaml
+
+# Expected: deployment.apps/toolman created (dry run)
 ```
 
-### Test Case 3: Resource Usage Validation
+### Scenario 4: Security Validation
 ```bash
-# Monitor resource usage
-kubectl top pod -n orchestrator -l app.kubernetes.io/name=toolman
+# Extract security contexts from rendered deployment
+yq eval '.spec.template.spec.securityContext' deployment.yaml
+yq eval '.spec.template.spec.containers[0].securityContext' deployment.yaml
 
 # Expected:
-# - CPU usage < 80% of limit
-# - Memory usage < 80% of limit
-# - No OOMKilled events
+# - runAsUser: 1001
+# - runAsNonRoot: true
+# - No privileged: true
 ```
-
-### Test Case 4: High Availability Testing
-```bash
-# Delete a pod
-kubectl delete pod -n orchestrator -l app.kubernetes.io/name=toolman | head -1
-
-# Watch recovery
-kubectl get pods -n orchestrator -l app.kubernetes.io/name=toolman -w
-
-# Expected:
-# - New pod created within 30 seconds
-# - Service remains available
-# - No downtime for other pods
-```
-
-### Test Case 5: Health Check Validation
-```bash
-# Test liveness endpoint
-kubectl exec -n orchestrator deployment/toolman -- \
-  curl -s localhost:3000/health
-
-# Test readiness endpoint  
-kubectl exec -n orchestrator deployment/toolman -- \
-  curl -s localhost:3000/ready
-
-# Expected:
-# - HTTP 200 responses
-# - Fast response times (<1s)
-```
-
-### Test Case 6: Docker Sidecar (if enabled)
-```bash
-# If Docker-in-Docker is enabled
-kubectl exec -n orchestrator deployment/toolman -c dind -- \
-  docker version
-
-# Expected:
-# - Docker daemon running
-# - Can execute docker commands
-```
-
-## Performance Criteria
-
-### 1. Startup Performance
-- [ ] **Pod Startup**: < 30 seconds to ready state
-- [ ] **Init Container**: Completes in < 10 seconds
-- [ ] **Health Checks**: Pass within 2 attempts
-
-### 2. Runtime Performance
-- [ ] **CPU Usage**: Average < 50% of request
-- [ ] **Memory Usage**: Stable, no leaks
-- [ ] **Response Time**: Health checks < 100ms
-
-### 3. Reliability
-- [ ] **Pod Stability**: No restarts in 24 hours
-- [ ] **Recovery Time**: < 60 seconds after failure
-- [ ] **Update Time**: Rolling update < 5 minutes
-
-## Security Checklist
-
-- [ ] **Non-Root User**: Containers run as UID 1001
-- [ ] **No Privileged Mode**: Except DinD if required
-- [ ] **Capabilities Dropped**: All capabilities removed
-- [ ] **Read-Only Root**: Where applicable
-- [ ] **Network Policies**: Compatible with deployment
-- [ ] **Secret Management**: No hardcoded secrets
 
 ## Documentation Requirements
 
-### 1. Deployment Guide
-- [ ] **Prerequisites**: Listed and verified
-- [ ] **Step-by-Step**: Clear deployment instructions
-- [ ] **Customization**: How to modify for environments
+### 1. Deployment Analysis Report
+- [ ] **Current Configuration**: Complete feature inventory
+- [ ] **Template Structure**: How values map to deployment
+- [ ] **Integration Points**: ConfigMap, Service, PVC connections
+- [ ] **Recommendations**: Production optimization suggestions
+
+### 2. Production Configuration Guide
+- [ ] **Values Override**: Complete production values.yaml
+- [ ] **Rationale**: Explanation for each override
+- [ ] **Environment Variations**: Dev vs staging vs production
+- [ ] **Scaling Guidelines**: When to adjust resources/replicas
+
+### 3. Security Assessment
+- [ ] **Current Security**: Existing security configurations
+- [ ] **Compliance**: Meets security requirements
+- [ ] **Risks**: Any identified security concerns
+- [ ] **Mitigations**: Recommended security enhancements
+
+### 4. Operational Readiness
+- [ ] **Health Monitoring**: Probe configuration adequacy
+- [ ] **Resource Sizing**: Recommendations for different loads
+- [ ] **Update Strategy**: Rolling update configuration
 - [ ] **Troubleshooting**: Common issues and solutions
-
-### 2. Configuration Reference
-- [ ] **Environment Variables**: All vars documented
-- [ ] **Volume Mounts**: Purpose of each volume
-- [ ] **Resource Sizing**: Recommendations provided
-- [ ] **Security Context**: Rationale explained
-
-### 3. Operational Procedures
-- [ ] **Health Monitoring**: How to check health
-- [ ] **Log Analysis**: Where to find logs
-- [ ] **Scaling Guide**: When and how to scale
-- [ ] **Update Process**: Safe update procedures
 
 ## Definition of Done
 
-✅ **Deployment Validated**
-- Manifest thoroughly reviewed and understood
-- All features tested and working
+✅ **Analysis Complete**
+- Deployment template thoroughly reviewed
+- All features and configurations documented
+- Security assessment performed
+- Production recommendations provided
+
+✅ **Configuration Ready**
+- Production values file created
+- Template rendering validated
 - Security requirements met
-- Resource limits appropriate
+- Resource allocations optimized
 
-✅ **Integration Verified**
-- ConfigMap properly mounted
-- Service discovery working
-- Network connectivity confirmed
-- DNS resolution functional
-
-✅ **High Availability Confirmed**
-- Multiple replicas running
-- Anti-affinity rules active
-- Pod disruptions handled gracefully
-- Zero-downtime updates possible
-
-✅ **Testing Complete**
-- All test cases passing
-- Load testing performed
-- Failure scenarios tested
+✅ **Validation Passed**
+- Helm lint successful
+- Dry run tests pass
 - Security scans clean
+- No hardcoded values
 
 ✅ **Documentation Delivered**
-- Deployment guide complete
-- Configuration reference ready
-- Operational runbook created
-- Customization examples provided
+- Analysis report complete
+- Production guide written
+- Security assessment documented
+- Operational procedures defined
 
-## Sign-off Requirements
+## Sign-off Criteria
 
-- [ ] **Technical Review**: Deployment configuration approved
-- [ ] **Security Review**: Security settings validated
-- [ ] **Performance Review**: Resource usage acceptable
-- [ ] **Integration Test**: End-to-end flow working
-- [ ] **Documentation Review**: All guides complete and accurate
+- [ ] **Technical Review**: Analysis findings reviewed
+- [ ] **Security Review**: Security configurations approved
+- [ ] **Production Readiness**: Values file validated
+- [ ] **Documentation Review**: All guides complete
+- [ ] **Integration Verified**: Works with Helm chart
 
 ## Notes
-- This deployment is critical for the entire MCP tool integration
-- Ensure backward compatibility with existing configs
-- Consider future scaling requirements
-- Document any deviations from standard patterns
+- This analysis informs Task 1 deployment
+- Focus on value overrides, not template modifications
+- Document any blockers for production deployment
+- Ensure recommendations are actionable

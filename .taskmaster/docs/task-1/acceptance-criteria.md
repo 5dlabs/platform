@@ -1,167 +1,196 @@
-# Acceptance Criteria: Task 1 - Create Toolman Helm Chart Structure
+# Acceptance Criteria: Task 1 - Deploy Toolman Helm Chart
 
 ## Overview
-This document defines the acceptance criteria for successfully completing the review and customization of the Toolman Helm chart for our orchestrator environment.
+This document defines the acceptance criteria for successfully deploying the existing Toolman Helm chart to the orchestrator namespace in our Kubernetes cluster.
 
-## Functional Requirements
+## Current State
+- **Chart Location**: `toolman/charts/toolman/` (fully developed and ready)
+- **Deployment Status**: NOT deployed
+- **Target Namespace**: orchestrator (exists, contains only orchestrator deployment)
+- **Image**: ghcr.io/5dlabs/toolman
 
-### 1. Chart Validation
-- [ ] **Helm Lint Success**: Chart must pass `helm lint` without any errors
+## Deployment Requirements
+
+### 1. Pre-Deployment Validation
+- [ ] **Image Accessibility**: Verify ghcr.io/5dlabs/toolman image can be pulled
+- [ ] **Authentication Setup**: ghcr-secret configured if required
+- [ ] **Namespace Ready**: orchestrator namespace exists and is accessible
+- [ ] **Helm Lint Success**: Chart passes `helm lint` without errors
 - [ ] **Dry Run Success**: `helm install --dry-run` completes without errors
-- [ ] **Template Generation**: All Kubernetes resources generate correctly
-- [ ] **API Version Compatibility**: All resources use Kubernetes APIs compatible with our cluster version
 
-### 2. Configuration Review
-- [ ] **Complete Values Documentation**: All configurable values in values.yaml are documented
-- [ ] **Default Values Verified**: Default values are appropriate for our use case
-- [ ] **Required Overrides Identified**: Platform-specific overrides are clearly identified
-- [ ] **MCP Server Configuration**: Pre-configured MCP servers are reviewed and understood
+### 2. Successful Deployment
+- [ ] **Helm Install**: Chart deploys without errors using `helm install`
+- [ ] **All Pods Running**: Deployment creates pods that reach Running state
+- [ ] **No Restarts**: Pods remain stable without restart loops
+- [ ] **Resources Created**: All expected Kubernetes resources are created
+- [ ] **PVC Bound**: If persistence enabled, PVC is successfully bound
 
-### 3. Template Analysis
-- [ ] **Deployment Template**: Container specs, volumes, and security contexts reviewed
-- [ ] **Service Template**: Port 3000 exposure confirmed
-- [ ] **ConfigMap Template**: MCP server definition structure documented
-- [ ] **PVC Template**: Persistence requirements understood
-- [ ] **Security Contexts**: Non-root user execution verified
+### 3. Service Availability
+- [ ] **Service Created**: toolman service exists in orchestrator namespace
+- [ ] **Endpoints Populated**: Service has active endpoints
+- [ ] **Internal Access**: Service accessible at toolman.orchestrator.svc.cluster.local:3000
+- [ ] **Port 3000 Open**: Service correctly exposes port 3000
 
-### 4. Custom Configuration
-- [ ] **Custom Values File**: Created with orchestrator-specific settings
-- [ ] **Namespace Configuration**: Set to 'orchestrator'
-- [ ] **Resource Limits**: Appropriate CPU and memory limits defined
-- [ ] **Replica Count**: Set to 2 or more for high availability
-- [ ] **Image Configuration**: Correct repository and tag specified
+### 4. Health Verification
+- [ ] **Health Endpoint**: GET /health returns successful response
+- [ ] **Ready Endpoint**: GET /ready returns successful response
+- [ ] **No Error Logs**: Pod logs show no critical errors
+- [ ] **MCP Servers Loaded**: Logs confirm MCP server initialization
 
-## Technical Requirements
+## Technical Validation
 
-### 1. Kubernetes Resources
-```yaml
+### 1. Resource Verification
+```bash
 # Expected resources after deployment:
-- Deployment: toolman (2+ replicas)
-- Service: toolman-service (ClusterIP, port 3000)
-- ConfigMap: toolman-config (MCP server definitions)
-- PVC: toolman-storage (if persistence enabled)
+kubectl get all -n orchestrator -l app.kubernetes.io/name=toolman
+
+# Should show:
+- deployment.apps/toolman (READY)
+- service/toolman (ClusterIP on port 3000)
+- pods with status Running
+- replicaset managed by deployment
 ```
 
-### 2. Network Configuration
-- [ ] **Service Type**: ClusterIP for internal access
-- [ ] **Port Exposure**: Port 3000 accessible within cluster
-- [ ] **Service Name**: Accessible as 'toolman-service'
-- [ ] **DNS Resolution**: Full FQDN works: toolman-service.orchestrator.svc.cluster.local
+### 2. ConfigMap Validation
+```bash
+# Verify ConfigMap exists
+kubectl get configmap -n orchestrator | grep toolman
 
-### 3. Security Configuration
-- [ ] **Non-Root User**: Container runs as non-root (UID 1001)
-- [ ] **Read-Only Root**: Root filesystem is read-only where possible
-- [ ] **Security Context**: Proper security contexts applied
-- [ ] **RBAC**: Required RBAC resources identified (if any)
+# Expected ConfigMaps:
+- toolman-config or toolman-servers-config
+
+# Verify MCP servers configured
+kubectl get configmap toolman-config -n orchestrator -o yaml
+
+# Should contain all 7 pre-configured servers:
+- brave-search
+- memory
+- terraform
+- kubernetes
+- solana
+- rustdocs
+- reddit
+```
+
+### 3. Network Connectivity Tests
+```bash
+# Internal cluster test
+kubectl run test-pod --rm -it --image=curlimages/curl -n orchestrator -- \
+  curl http://toolman:3000/health
+
+# Expected: HTTP 200 OK
+
+# Full FQDN test
+kubectl run test-pod --rm -it --image=curlimages/curl -n orchestrator -- \
+  curl http://toolman.orchestrator.svc.cluster.local:3000/ready
+
+# Expected: HTTP 200 OK
+```
+
+### 4. MCP Server Endpoint Test
+```bash
+# List available MCP servers
+kubectl run test-pod --rm -it --image=curlimages/curl -n orchestrator -- \
+  curl http://toolman:3000/mcp/servers
+
+# Expected: JSON response listing available MCP servers
+```
 
 ## Test Scenarios
 
-### Scenario 1: Basic Deployment Test
+### Scenario 1: Basic Deployment
 ```bash
-# Test deployment to isolated namespace
-kubectl create namespace toolman-test
-helm install toolman ./toolman/charts/toolman/ -n toolman-test
+# Deploy with minimal configuration
+helm install toolman ./toolman/charts/toolman/ -n orchestrator
 
-# Verify all resources created
-kubectl get all -n toolman-test
+# Verify deployment
+kubectl rollout status deployment/toolman -n orchestrator
 
-# Expected output:
-# - Deployment running with 2/2 replicas
-# - Service created and endpoints populated
-# - ConfigMap present with server definitions
+# Expected: deployment "toolman" successfully rolled out
 ```
 
-### Scenario 2: Custom Values Test
+### Scenario 2: Deployment with Image Pull Secret
 ```bash
-# Deploy with custom values
+# Deploy with ghcr-secret
 helm install toolman ./toolman/charts/toolman/ \
-  -n toolman-test \
-  -f custom-values.yaml
+  -n orchestrator \
+  --set imagePullSecrets[0].name=ghcr-secret
 
-# Verify customizations applied
-kubectl get deployment toolman -n toolman-test -o yaml | grep -E "(replicas|image:|cpu:|memory:)"
+# Verify secret is used
+kubectl get deployment toolman -n orchestrator -o yaml | grep imagePullSecrets -A 2
 ```
 
-### Scenario 3: Service Connectivity Test
+### Scenario 3: Service Access Verification
 ```bash
-# Test internal service connectivity
-kubectl run test-pod --rm -it --image=curlimages/curl -n toolman-test -- \
-  curl -v http://toolman-service:3000/health
+# Port forward for local testing
+kubectl port-forward -n orchestrator svc/toolman 3000:3000
 
-# Expected: HTTP 200 response
+# Test endpoints locally
+curl http://localhost:3000/health
+curl http://localhost:3000/ready
+curl http://localhost:3000/mcp/servers
 ```
 
-### Scenario 4: MCP Server Accessibility Test
+### Scenario 4: Pod Stability Check
 ```bash
-# Verify MCP servers are configured
-kubectl get configmap toolman-config -n toolman-test -o yaml
+# Monitor pod stability for 5 minutes
+kubectl get pods -n orchestrator -l app.kubernetes.io/name=toolman -w
 
-# Expected: servers-config.json contains all pre-configured servers
-# - brave-search
-# - kubernetes
-# - memory
-# - terraform
-# - etc.
+# Expected: No restarts, status remains Running
 ```
 
 ## Documentation Deliverables
 
-### 1. Chart Analysis Document
-- [ ] **Structure Overview**: Complete file listing and purpose
-- [ ] **Configuration Options**: All values.yaml parameters explained
-- [ ] **Template Details**: Key templates and their functions
-- [ ] **Customization Guide**: How to modify for different environments
+### 1. Deployment Record
+- [ ] **Exact Command**: Document the helm install command used
+- [ ] **Values Used**: Any custom values or overrides applied
+- [ ] **Secrets Created**: List of any secrets configured
+- [ ] **Timestamp**: When deployment was completed
 
-### 2. Platform Integration Guide
-- [ ] **Custom Values File**: Complete custom-values.yaml for orchestrator
-- [ ] **Deployment Commands**: Step-by-step deployment instructions
-- [ ] **Verification Steps**: How to confirm successful deployment
-- [ ] **Troubleshooting**: Common issues and solutions
+### 2. Verification Results
+- [ ] **Resource List**: Output of kubectl get all for toolman resources
+- [ ] **Health Check Results**: Successful health/ready endpoint responses
+- [ ] **MCP Server List**: Available servers from /mcp/servers endpoint
+- [ ] **Log Excerpts**: Key log entries showing successful startup
 
-### 3. MCP Server Configuration Guide
-- [ ] **Server Format**: How to add new MCP servers
-- [ ] **Transport Types**: Examples for stdio, SSE, and HTTP
-- [ ] **Environment Variables**: Required secrets and configs
-- [ ] **Testing Servers**: How to verify MCP server connectivity
+### 3. Access Information
+- [ ] **Service URL**: Internal cluster URL for toolman service
+- [ ] **Port Information**: Confirmed port 3000 accessibility
+- [ ] **DNS Names**: All valid DNS names for accessing the service
+- [ ] **Integration Points**: How other services can connect to toolman
 
 ## Definition of Done
 
-✅ **Chart Review Complete**
-- All files in toolman/charts/toolman/ have been reviewed
-- values.yaml fully understood and documented
-- All templates analyzed for compatibility
+✅ **Deployment Complete**
+- Helm chart successfully installed to orchestrator namespace
+- All pods running and healthy
+- No errors in deployment process
 
-✅ **Validation Passed**
-- helm lint passes without errors
-- helm install --dry-run succeeds
-- Test deployment to isolated namespace successful
+✅ **Service Operational**
+- Service endpoints active and responding
+- Health checks passing
+- MCP server endpoint functional
 
-✅ **Customization Ready**
-- custom-values.yaml created for orchestrator environment
-- All platform-specific requirements addressed
-- Resource limits and security contexts configured
+✅ **Verification Passed**
+- All test scenarios completed successfully
+- No pod restarts or errors in logs
+- Service accessible from within cluster
 
 ✅ **Documentation Complete**
-- Chart analysis document created
-- Platform integration guide written
-- MCP server configuration guide prepared
-
-✅ **Testing Verified**
-- All test scenarios pass successfully
-- Service connectivity confirmed
-- MCP servers accessible
-- Resource usage within limits
+- Deployment commands recorded
+- Verification results documented
+- Access information provided
 
 ## Sign-off Criteria
 
-- [ ] **Technical Review**: Chart modifications reviewed by platform team
-- [ ] **Security Review**: Security contexts and RBAC approved
-- [ ] **Documentation Review**: All guides reviewed for completeness
-- [ ] **Deployment Test**: Successful test deployment with custom values
-- [ ] **Performance Check**: Resource usage acceptable under load
+- [ ] **Deployment Success**: Chart deployed without manual intervention
+- [ ] **Service Health**: All health endpoints responding correctly
+- [ ] **Stability Confirmed**: Pods running stable for at least 30 minutes
+- [ ] **Access Verified**: Service accessible from test pods
+- [ ] **MCP Servers Ready**: /mcp/servers endpoint returns expected servers
 
 ## Notes
-- This chart review forms the foundation for Tasks 2, 3, and 13
-- Any issues discovered should be documented for resolution
-- The chart should remain as close to upstream as possible
-- Customizations should be done via values, not template modifications
+- Image authentication may be required for ghcr.io
+- Focus is on deployment, not chart modification
+- Document any issues encountered for future reference
+- This deployment enables subsequent MCP tool integration tasks

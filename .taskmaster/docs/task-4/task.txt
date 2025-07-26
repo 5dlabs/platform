@@ -1,6 +1,6 @@
 # Task ID: 4
 # Title: Update Platform CRDs for Tool Specifications
-# Status: pending
+# Status: done
 # Dependencies: None
 # Priority: high
 # Description: Modify CodeRun and DocsRun Custom Resource Definitions to accept tool specifications with local and remote tool lists
@@ -39,6 +39,13 @@ spec:
 ```
 
 Similar update for DocsRun CRD. Note: The enum for local tools is acceptable since these are built into the platform, but remote tools should NOT have an enum as they're dynamic
+
+## Completion Summary:
+- ✅ Updated CodeRun CRD: Replaced localTools/remoteTools string fields with structured tools object
+- ✅ Updated DocsRun CRD: Added tools field with same structure
+- ✅ Applied both CRDs to cluster successfully
+- ✅ Tested validation: Enum correctly rejects invalid local tools
+- ✅ Remote tools have no enum constraint as they are dynamically discovered
 
 # Test Strategy:
 Apply updated CRDs to cluster. Create test CodeRun/DocsRun resources with tool specifications. Verify kubectl accepts the new fields and validation works correctly

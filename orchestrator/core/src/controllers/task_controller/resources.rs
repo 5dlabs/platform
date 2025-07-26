@@ -206,6 +206,20 @@ fn build_job_spec(
         "mountPath": "/config"
     }));
 
+    // Tool catalog ConfigMap (for tool discovery)
+    volumes.push(json!({
+        "name": "tool-catalog",
+        "configMap": {
+            "name": "toolman-tool-catalog",
+            "optional": true  // Don't fail if it doesn't exist yet
+        }
+    }));
+    volume_mounts.push(json!({
+        "name": "tool-catalog",
+        "mountPath": "/etc/tool-catalog",
+        "readOnly": true
+    }));
+
     // Workspace volume (only for code tasks)
     if !task.is_docs() {
         let service_name = task.service_name();

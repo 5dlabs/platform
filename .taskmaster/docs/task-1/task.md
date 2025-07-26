@@ -1,55 +1,82 @@
 # Task 1: Create Toolman Helm Chart Structure
 
 ## Overview
-Review and customize the existing Toolman Helm chart for deployment to our Kubernetes cluster. The Toolman project already provides a complete Helm chart that needs to be evaluated and potentially customized for our specific orchestrator environment.
+Document and verify the existing Toolman deployment in the MCP namespace. Toolman has already been successfully deployed using the Helm chart located at `toolman/charts/toolman/`.
+
+## Current State
+**TOOLMAN IS ALREADY DEPLOYED** in the `mcp` namespace with:
+- Deployment: `toolman` running with image `ghcr.io/5dlabs/toolman:main-4685f6f`
+- Service: Available at `http://toolman.mcp.svc.cluster.local:3000`
+- ConfigMap: `toolman-config` containing MCP server definitions
+- Status: Running and healthy (2/2 containers ready)
+
+**Service Access Information:**
+- **Internal Cluster URL**: `http://toolman.mcp.svc.cluster.local:3000`
+- **Short Service Name**: `http://toolman:3000` (when accessed from within MCP namespace)
+- **Health Endpoint**: `http://toolman.mcp.svc.cluster.local:3000/health`
+- **Ready Endpoint**: `http://toolman.mcp.svc.cluster.local:3000/ready`
+- **MCP Servers List**: `http://toolman.mcp.svc.cluster.local:3000/mcp/servers`
 
 ## Context
 This task is the foundation for deploying Toolman as part of the MCP tool integration system. Toolman will serve as an HTTP proxy/aggregator for various MCP (Model Context Protocol) servers, enabling Claude to access remote tools like GitHub, Kubernetes, Postgres, and more.
 
 ## Objectives
-1. Understand the existing Toolman Helm chart structure
-2. Identify customization points and platform-specific requirements
-3. Validate the chart's correctness and deployability
-4. Document any necessary overrides for our environment
-5. Ensure compatibility with our orchestrator namespace and infrastructure
+1. ~~Verify the ghcr.io/5dlabs/toolman image exists and is accessible~~ ✅ Already deployed
+2. ~~Configure image pull secrets if needed~~ ✅ Already configured
+3. ~~Review and validate the existing Helm chart configuration~~ ✅ Chart successfully deployed
+4. ~~Deploy the chart to the orchestrator namespace~~ ✅ Deployed to MCP namespace instead
+5. Verify all resources are created and running correctly
+6. Test connectivity to the pre-configured MCP servers
+7. Document the service URL for use in other tasks
 
-## Technical Approach
+## Current Deployment Verification
 
-### Chart Review Process
-1. **Structural Analysis**
-   - Examine directory structure: `toolman/charts/toolman/`
-   - Review key files: Chart.yaml, values.yaml, templates/
-   - Understand template organization and naming conventions
+### Deployment Details
+```bash
+# Current deployment in MCP namespace:
+kubectl get deployment toolman -n mcp
 
-2. **Configuration Analysis**
-   - Deep dive into values.yaml for all configurable options
-   - Identify required vs optional parameters
-   - Note default values and their implications
-   - Review ConfigMap structure for MCP server definitions
+# Output shows:
+NAME      READY   UP-TO-DATE   AVAILABLE   AGE
+toolman   1/1     1            1           6d20h
 
-3. **Template Examination**
-   - Review deployment.yaml for container configuration
-   - Check service.yaml for network exposure
-   - Examine configmap.yaml for server definitions
-   - Verify PVC configuration for persistence needs
-   - Assess security contexts and RBAC requirements
+# Service details:
+kubectl get service toolman -n mcp
 
-4. **Platform Integration**
-   - Determine namespace requirements (orchestrator)
-   - Identify network policies needed
-   - Check for resource limits and requests
-   - Verify compatibility with our Kubernetes version
+# Output shows:
+NAME      TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)    AGE
+toolman   ClusterIP   10.97.54.95   <none>        3000/TCP   8d
+```
 
-### Key Features to Validate
-- **MCP Server Support**: stdio, SSE, and HTTP transport types
-- **Pre-configured Servers**: brave-search, memory, terraform, kubernetes, solana, rustdocs, reddit
-- **Persistence**: PVC configuration for stateful operations
-- **Network**: Service exposure on port 3000
-- **Security**: Non-root container execution, security contexts
+### Service Connectivity Tests
+```bash
+# Test from within cluster (any namespace):
+kubectl run test-curl --rm -it --image=curlimages/curl -- \
+  curl http://toolman.mcp.svc.cluster.local:3000/health
+
+# Test from within MCP namespace:
+kubectl run test-curl --rm -it --image=curlimages/curl -n mcp -- \
+  curl http://toolman:3000/health
+
+# List available MCP servers:
+kubectl run test-curl --rm -it --image=curlimages/curl -- \
+  curl http://toolman.mcp.svc.cluster.local:3000/mcp/servers
+```
+
+### ConfigMap Verification
+```bash
+# Verify ConfigMap exists:
+kubectl get configmap toolman-config -n mcp
+
+# View MCP server configurations:
+kubectl get configmap toolman-config -n mcp -o yaml
+```
 
 ## Implementation Steps
 
-### Step 1: Chart Structure Review
+Since Toolman is already deployed, the focus shifts to verification and documentation:
+
+### Step 1: Verify Current Deployment
 ```bash
 # Navigate to chart directory
 cd toolman/charts/toolman/
@@ -156,10 +183,10 @@ kubectl run test-pod --rm -it --image=curlimages/curl -n toolman-test -- \
 ## Risk Mitigation
 - **Risk**: Incompatible Kubernetes API versions
   - **Mitigation**: Test on target cluster version, update apiVersions if needed
-  
+
 - **Risk**: Resource constraints in production
   - **Mitigation**: Profile resource usage during testing, set appropriate limits
-  
+
 - **Risk**: Persistence requirements unclear
   - **Mitigation**: Start with standard storage class, monitor usage patterns
 
