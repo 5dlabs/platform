@@ -169,18 +169,18 @@ jobs:
         id: create-structure
         run: |
           PROJECT_NAME="${{ steps.extract-name.outputs.project_name }}"
-          PROJECT_DIR="projects/$PROJECT_NAME"
+          PROJECT_DIR="intake"
 
-          echo "🏗️ Creating project structure at: $PROJECT_DIR"
+          echo "🏗️ Setting up TaskMaster in intake directory"
 
-          # Create directory structure
+          # Create TaskMaster directory structure in intake
           mkdir -p "$PROJECT_DIR/.taskmaster/docs"
 
-          # Move files to appropriate locations
+          # Copy files to appropriate locations in intake
           cp "${{ steps.detect-files.outputs.prd_file }}" "$PROJECT_DIR/.taskmaster/docs/prd.txt"
           cp "${{ steps.detect-files.outputs.arch_file }}" "$PROJECT_DIR/.taskmaster/docs/architecture.md"
 
-          echo "✅ Project structure created"
+          echo "✅ TaskMaster structure created in intake"
           echo "project_dir=$PROJECT_DIR" >> $GITHUB_OUTPUT
 
       - name: Initialize TaskMaster and generate tasks
