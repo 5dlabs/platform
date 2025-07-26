@@ -56,7 +56,7 @@ jobs:
 
       - name: Test Claude Code functionality
         id: test-claude
-        uses: docker://ghcr.io/5dlabs/claude-code:latest
+        uses: docker://ghcr.io/5dlabs/platform/claude-code:1.0.61
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         with:
@@ -250,7 +250,7 @@ jobs:
           ls -la docs/ || echo "No docs directory created"
 
       - name: Cross-reference with architecture (AI-powered)
-        uses: docker://ghcr.io/5dlabs/claude-code:latest
+        uses: docker://ghcr.io/5dlabs/platform/claude-code:1.0.61
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         with:
