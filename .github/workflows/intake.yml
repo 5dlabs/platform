@@ -17,7 +17,6 @@ jobs:
     
     steps:
       - name: Validate workflow requirements
-        id: validation
         run: |
           echo "🔍 Validating workflow requirements..."
           
@@ -72,6 +71,7 @@ jobs:
           echo "✅ Claude Code test completed"
 
       - name: Validation complete
+        id: validation
         run: |
           echo "✅ Claude Code agent mode test passed"
           echo "✅ Workflow validation complete"
