@@ -83,4 +83,4 @@ The GitHub Action will:
 
 Ready to submit your project? Just add your files and push! 🚀
 
-<!-- Test trigger for workflow v21 - Testing Claude Code permissions fix -->
+<!-- Test trigger for workflow v22 - Testing npm-installed Claude Code -->
