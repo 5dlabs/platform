@@ -1,0 +1,59 @@
+# Task ID: 3
+# Title: Create Toolman Service and ConfigMap Templates
+# Status: pending
+# Dependencies: 2
+# Priority: high
+# Description: Review and customize existing Kubernetes Service and ConfigMap templates for MCP server configurations
+# Details:
+The Helm chart already includes complete templates that need to be reviewed and understood:
+
+1. **Service Template** (toolman/charts/toolman/templates/service.yaml):
+   - Already configured to expose port 3000
+   - Uses standard Helm template functions for naming and labels
+   - Verify selector matches deployment labels
+
+2. **ConfigMap Template** (toolman/charts/toolman/templates/configmap.yaml):
+   - Generates servers-config.json from .Values.mcpServers
+   - Supports all MCP transport types: stdio, SSE, HTTP
+   - Review JSON generation logic and formatting
+
+3. **Values Configuration**:
+   Review existing example servers in values.yaml:
+   - brave-search (stdio transport)
+   - kubernetes (stdio transport)
+   - solana (stdio transport)
+   - memory, terraform, reddit (various transports)
+
+4. **Customization Tasks**:
+   - Understand how to add new MCP servers via values.yaml
+   - Document the structure required for each transport type
+   - Test ConfigMap generation with custom server configurations
+
+# Test Strategy:
+Verify existing Service template exposes port 3000 correctly. Test ConfigMap template generation with current server configurations. Add test configurations to values.yaml and verify JSON output is valid. Ensure all transport types (stdio, SSE, HTTP) are properly supported
+
+# Subtasks:
+## 1. Review existing Service template [pending]
+### Dependencies: None
+### Description: Examine toolman/charts/toolman/templates/service.yaml and verify port 3000 configuration
+### Details:
+
+
+## 2. Review existing ConfigMap template [pending]
+### Dependencies: None
+### Description: Analyze toolman/charts/toolman/templates/configmap.yaml and understand JSON generation logic
+### Details:
+
+
+## 3. Document MCP server configuration format [pending]
+### Dependencies: None
+### Description: Create documentation for each transport type (stdio, SSE, HTTP) with examples from existing servers
+### Details:
+
+
+## 4. Test custom server additions [pending]
+### Dependencies: None
+### Description: Add test MCP server configurations to values.yaml and verify ConfigMap generation
+### Details:
+
+

@@ -1,0 +1,63 @@
+# Task ID: 1
+# Title: Create Toolman Helm Chart Structure
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Review and customize the existing Toolman Helm chart located at toolman/charts/toolman/ for deployment to our Kubernetes cluster
+# Details:
+The Toolman project already includes a complete Helm chart at `toolman/charts/toolman/` with the following features:
+- Complete deployment configuration
+- ConfigMap for server definitions (toolman-config)
+- Service exposure on port 3000
+- Support for stdio, SSE, and HTTP transport types
+- Pre-configured servers: brave-search, memory, terraform, kubernetes, solana, rustdocs, reddit
+- PVC for persistence
+
+Tasks:
+1. Review the existing chart structure and configuration
+2. Analyze values.yaml for customization options
+3. Review pre-configured MCP servers in the ConfigMap
+4. Identify any platform-specific customizations needed
+5. Test deployment with default values
+6. Document any required value overrides for our environment
+
+# Test Strategy:
+Run `helm lint toolman/charts/toolman/` to validate the existing chart. Deploy to a test namespace using `helm install toolman-test toolman/charts/toolman/ --dry-run --debug` to verify template rendering. Perform actual deployment to test namespace and verify all resources are created correctly. Check that pre-configured MCP servers are accessible.
+
+# Subtasks:
+## 1.  [pending]
+### Dependencies: None
+### Description: Review existing Helm chart structure at toolman/charts/toolman/
+### Details:
+
+
+## 2.  [pending]
+### Dependencies: None
+### Description: Analyze values.yaml and identify customization points
+### Details:
+
+
+## 3.  [pending]
+### Dependencies: None
+### Description: Review ConfigMap with pre-configured MCP servers
+### Details:
+
+
+## 4.  [pending]
+### Dependencies: None
+### Description: Test deployment with helm dry-run
+### Details:
+
+
+## 5.  [pending]
+### Dependencies: None
+### Description: Deploy to test namespace and verify functionality
+### Details:
+
+
+## 6.  [pending]
+### Dependencies: None
+### Description: Document any required customizations for our platform
+### Details:
+
+

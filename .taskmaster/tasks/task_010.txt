@@ -1,0 +1,30 @@
+# Task ID: 10
+# Title: Update mcp.json Template for Toolman Integration
+# Status: pending
+# Dependencies: 8
+# Priority: high
+# Description: Modify the mcp.json Handlebars template to conditionally include toolman service when remote tools are requested
+# Details:
+Update mcp.json.hbs:
+```handlebars
+{
+  "mcpServers": {
+    {{#if (or (and tools tools.remote.length) (and project_config project_config.tools.remote.length))}}
+    "toolman": {
+      "transport": "http",
+      "url": "http://toolman-service.orchestrator.svc.cluster.local:3000/mcp",
+      "headers": {
+        "X-Agent-ID": "{{agent_id}}",
+        "X-Run-ID": "{{run_id}}",
+        "X-Project-ID": "{{project_id}}"
+      }
+    }
+    {{/if}}
+  }
+}
+```
+
+Note: Headers are optional but useful for tracking which agent made requests
+
+# Test Strategy:
+Test template with and without remote tools. Verify toolman is only included when remote tools are specified. Test header interpolation works correctly

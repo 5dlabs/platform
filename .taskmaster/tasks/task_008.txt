@@ -1,0 +1,43 @@
+# Task ID: 8
+# Title: Create Handlebars Helper for Tool Inclusion
+# Status: pending
+# Dependencies: None
+# Priority: medium
+# Description: Implement a custom Handlebars helper to check if a tool is included in the tool list for conditional rendering in templates
+# Details:
+Implement includes helper:
+```rust
+use handlebars::{Context, Handlebars, Helper, HelperResult, Output, RenderContext};
+
+fn includes_helper(
+    h: &Helper,
+    _: &Handlebars,
+    _: &Context,
+    _: &mut RenderContext,
+    out: &mut dyn Output,
+) -> HelperResult {
+    let array = h.param(0)
+        .and_then(|v| v.value().as_array())
+        .ok_or_else(|| handlebars::RenderError::new("First parameter must be an array"))?;
+    
+    let search_value = h.param(1)
+        .and_then(|v| v.value().as_str())
+        .ok_or_else(|| handlebars::RenderError::new("Second parameter must be a string"))?;
+    
+    let contains = array.iter()
+        .any(|v| v.as_str() == Some(search_value));
+    
+    out.write(&contains.to_string())?;
+    Ok(())
+}
+
+// Register helper
+fn setup_handlebars() -> Handlebars<'static> {
+    let mut handlebars = Handlebars::new();
+    handlebars.register_helper("includes", Box::new(includes_helper));
+    handlebars
+}
+```
+
+# Test Strategy:
+Unit test helper with various array inputs. Test with empty arrays, missing values, and type mismatches. Verify helper works correctly in template context

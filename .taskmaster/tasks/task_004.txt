@@ -1,0 +1,44 @@
+# Task ID: 4
+# Title: Update Platform CRDs for Tool Specifications
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Modify CodeRun and DocsRun Custom Resource Definitions to accept tool specifications with local and remote tool lists
+# Details:
+Update CRD schemas to include tools field:
+```yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: coderuns.platform.5dlabs.com
+spec:
+  # ... existing spec ...
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            properties:
+              # ... existing properties ...
+              tools:
+                type: object
+                description: "Tool configuration for this run"
+                properties:
+                  local:
+                    type: array
+                    description: "Local MCP tools to enable"
+                    items:
+                      type: string
+                      enum: ["filesystem", "git"]
+                  remote:
+                    type: array
+                    description: "Remote MCP tools via toolman"
+                    items:
+                      type: string
+```
+
+Similar update for DocsRun CRD. Note: The enum for local tools is acceptable since these are built into the platform, but remote tools should NOT have an enum as they're dynamic
+
+# Test Strategy:
+Apply updated CRDs to cluster. Create test CodeRun/DocsRun resources with tool specifications. Verify kubectl accepts the new fields and validation works correctly

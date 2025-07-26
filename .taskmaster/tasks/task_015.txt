@@ -1,0 +1,75 @@
+# Task ID: 15
+# Title: Implement End-to-End Integration Tests
+# Status: pending
+# Dependencies: 12, 13
+# Priority: high
+# Description: Create comprehensive integration tests that verify the complete flow from user request to Claude configuration with specific tools
+# Details:
+Create integration test suite:
+```rust
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
+    
+    #[tokio::test]
+    async fn test_docs_agent_tool_discovery() {
+        // Setup test environment
+        let test_env = setup_test_k8s_env().await;
+        
+        // Create test ConfigMap with tools
+        create_test_toolman_config(&test_env, vec![
+            ("postgres", json!({"transport": "stdio", "command": "mcp-postgres"})),
+            ("kubernetes", json!({"transport": "stdio", "command": "mcp-k8s"})),
+        ]).await;
+        
+        // Run docs agent
+        let docs_result = run_docs_agent(&test_env, "test-project").await;
+        assert!(docs_result.is_ok());
+        
+        // Verify saved configuration
+        let saved_config = load_project_config("test-project", &test_env.storage).await.unwrap();
+        assert!(saved_config.is_some());
+        assert!(saved_config.unwrap().tools.remote.contains(&"postgres".to_string()));
+    }
+    
+    #[tokio::test]
+    async fn test_user_tool_override() {
+        let test_env = setup_test_k8s_env().await;
+        
+        // Create CodeRun with specific tools
+        let code_run = create_test_code_run("test-run", Some(ProjectToolConfig {
+            local: vec!["filesystem".to_string()],
+            remote: vec!["brave-search".to_string()],
+        }));
+        
+        // Process through orchestrator
+        let result = process_code_run(&test_env, &code_run).await;
+        assert!(result.is_ok());
+        
+        // Verify generated configs
+        let configs = result.unwrap();
+        let client_config: serde_json::Value = serde_json::from_str(&configs.client_config).unwrap();
+        
+        assert_eq!(client_config["remoteTools"], json!(["brave-search"]));
+        assert!(client_config["localServers"]["filesystem"].is_object());
+        assert!(client_config["localServers"]["git"].is_null());
+    }
+    
+    #[tokio::test]
+    async fn test_invalid_tool_validation() {
+        let test_env = setup_test_k8s_env().await;
+        
+        let code_run = create_test_code_run("test-run", Some(ProjectToolConfig {
+            local: vec!["invalid-local-tool".to_string()],
+            remote: vec!["non-existent-tool".to_string()],
+        }));
+        
+        let result = process_code_run(&test_env, &code_run).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Invalid local tool"));
+    }
+}
+```
+
+# Test Strategy:
+Run full test suite in CI/CD pipeline. Test with real Kubernetes cluster in staging. Verify all paths work correctly. Monitor for flaky tests and fix race conditions

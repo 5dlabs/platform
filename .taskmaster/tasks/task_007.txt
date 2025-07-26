@@ -1,0 +1,50 @@
+# Task ID: 7
+# Title: Update Code Agent to Load Saved Configuration
+# Status: pending
+# Dependencies: 6
+# Priority: high
+# Description: Modify code agent to load tool configuration generated during docs phase instead of using hardcoded defaults
+# Details:
+Update code agent configuration loading:
+```rust
+async fn load_project_config(
+    project_id: &str,
+    storage: &Storage
+) -> Result<Option<ProjectConfig>> {
+    let config_path = format!("projects/{}/client-config.json", project_id);
+    
+    match storage.read(&config_path).await {
+        Ok(data) => {
+            let config: ProjectConfig = serde_json::from_slice(&data)?;
+            Ok(Some(config))
+        },
+        Err(_) => Ok(None), // No saved config, will use defaults or user override
+    }
+}
+
+// In code agent initialization:
+async fn initialize_agent(ctx: CodeContext) -> Result<AgentConfig> {
+    let mut agent_config = AgentConfig::default();
+    
+    // Check for user-specified tools first (override)
+    if let Some(tools) = &ctx.run_spec.tools {
+        agent_config.tools = tools.clone();
+    } else {
+        // Load configuration from docs phase
+        if let Some(project_config) = load_project_config(&ctx.project_id, &ctx.storage).await? {
+            agent_config.tools = project_config.tools;
+        } else {
+            // Fallback to minimal defaults if no config exists
+            agent_config.tools = ProjectToolConfig {
+                local: vec!["filesystem".to_string()],
+                remote: vec![],
+            };
+        }
+    }
+    
+    Ok(agent_config)
+}
+```
+
+# Test Strategy:
+Test loading existing configuration. Verify fallback behavior when no config exists. Test user override takes precedence. Ensure proper error handling for corrupted configs

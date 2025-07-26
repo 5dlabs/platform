@@ -1,0 +1,61 @@
+# Task ID: 6
+# Title: Generate and Save Tool Configuration in Docs Phase
+# Status: pending
+# Dependencies: 5
+# Priority: high
+# Description: Implement logic to generate optimal tool configuration during docs generation and save it for code agents to consume
+# Details:
+Extend docs agent to save configuration:
+```rust
+#[derive(Debug, Serialize, Deserialize)]
+struct ProjectConfig {
+    tools: ProjectToolConfig,
+    generated_at: DateTime<Utc>,
+    docs_run_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ProjectToolConfig {
+    local: Vec<String>,
+    remote: Vec<String>,
+}
+
+async fn save_project_config(
+    project_id: &str,
+    config: ProjectConfig,
+    storage: &Storage
+) -> Result<()> {
+    let config_path = format!("projects/{}/client-config.json", project_id);
+    let config_json = serde_json::to_string_pretty(&config)?;
+    storage.write(&config_path, config_json.as_bytes()).await?;
+    Ok(())
+}
+
+// In main docs generation flow:
+async fn generate_docs(ctx: DocsContext) -> Result<()> {
+    // Existing docs generation...
+    
+    // Discover available tools
+    let available_tools = discover_available_tools(ctx.k8s_client.clone()).await?;
+    
+    // Analyze project and recommend tools
+    let tool_config = analyze_project_and_recommend_tools(
+        &ctx.project_path,
+        &available_tools
+    ).await?;
+    
+    // Save configuration for code agents
+    let project_config = ProjectConfig {
+        tools: tool_config,
+        generated_at: Utc::now(),
+        docs_run_id: ctx.run_id.clone(),
+    };
+    
+    save_project_config(&ctx.project_id, project_config, &ctx.storage).await?;
+    
+    // Continue with docs generation...
+}
+```
+
+# Test Strategy:
+Verify configuration is saved to correct location. Test loading saved configuration. Ensure format is compatible with code agent expectations. Test with various tool combinations

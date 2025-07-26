@@ -1,0 +1,60 @@
+# Task ID: 12
+# Title: Update Orchestrator Template Context
+# Status: pending
+# Dependencies: 7, 11
+# Priority: high
+# Description: Modify orchestrator to pass tool configurations and project config to Handlebars templates
+# Details:
+Update template context building:
+```rust
+#[derive(Serialize)]
+struct TemplateContext {
+    // Existing fields...
+    tools: Option<ProjectToolConfig>,
+    project_config: Option<ProjectConfig>,
+    agent_id: String,
+    run_id: String,
+    project_id: String,
+}
+
+async fn build_template_context(
+    code_run: &CodeRun,
+    storage: &Storage
+) -> Result<TemplateContext> {
+    let mut context = TemplateContext {
+        // ... existing fields ...
+        tools: code_run.spec.tools.clone(),
+        project_config: None,
+        agent_id: format!("agent-{}", code_run.metadata.uid.as_ref().unwrap()),
+        run_id: code_run.metadata.name.as_ref().unwrap().clone(),
+        project_id: code_run.spec.project_id.clone(),
+    };
+    
+    // Load project config if no user override
+    if context.tools.is_none() {
+        context.project_config = load_project_config(
+            &code_run.spec.project_id,
+            storage
+        ).await?;
+    }
+    
+    Ok(context)
+}
+
+// Update template rendering
+async fn render_agent_configs(
+    templates: &Handlebars,
+    context: &TemplateContext
+) -> Result<AgentConfigs> {
+    let client_config = templates.render("client-config.json", context)?;
+    let mcp_config = templates.render("mcp.json", context)?;
+    
+    Ok(AgentConfigs {
+        client_config,
+        mcp_config,
+    })
+}
+```
+
+# Test Strategy:
+Test context building with various scenarios. Verify templates receive correct data. Test precedence of user tools over project config. Ensure all required fields are populated

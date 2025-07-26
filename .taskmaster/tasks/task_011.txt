@@ -1,0 +1,52 @@
+# Task ID: 11
+# Title: Implement Tool Validation in Orchestrator
+# Status: pending
+# Dependencies: 5
+# Priority: medium
+# Description: Add validation logic to verify user-specified tools exist in the toolman ConfigMap before processing
+# Details:
+Add validation for user overrides:
+```rust
+async fn validate_user_tools(
+    tools: &ProjectToolConfig,
+    k8s_client: Client
+) -> Result<()> {
+    // Local tools have fixed set
+    const VALID_LOCAL_TOOLS: &[&str] = &["filesystem", "git"];
+    
+    for local_tool in &tools.local {
+        if !VALID_LOCAL_TOOLS.contains(&local_tool.as_str()) {
+            return Err(anyhow!("Invalid local tool: {}", local_tool));
+        }
+    }
+    
+    // Remote tools must exist in toolman config
+    if !tools.remote.is_empty() {
+        let available_tools = discover_available_tools(k8s_client).await?;
+        
+        for remote_tool in &tools.remote {
+            if !available_tools.contains(remote_tool) {
+                return Err(anyhow!(
+                    "Remote tool '{}' not found in toolman configuration. Available tools: {:?}",
+                    remote_tool,
+                    available_tools
+                ));
+            }
+        }
+    }
+    
+    Ok(())
+}
+
+// In orchestrator handler:
+if let Some(tools) = &code_run.spec.tools {
+    validate_user_tools(tools, ctx.k8s_client.clone()).await
+        .map_err(|e| {
+            // Update CodeRun status with validation error
+            e
+        })?;
+}
+```
+
+# Test Strategy:
+Test with valid and invalid tool names. Verify error messages are helpful. Test validation passes for empty tool lists. Mock toolman ConfigMap for testing

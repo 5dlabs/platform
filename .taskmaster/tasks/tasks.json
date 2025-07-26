@@ -1,0 +1,342 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Create Toolman Helm Chart Structure",
+        "description": "Review and customize the existing Toolman Helm chart located at toolman/charts/toolman/ for deployment to our Kubernetes cluster",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "details": "The Toolman project already includes a complete Helm chart at `toolman/charts/toolman/` with the following features:\n- Complete deployment configuration\n- ConfigMap for server definitions (toolman-config)\n- Service exposure on port 3000\n- Support for stdio, SSE, and HTTP transport types\n- Pre-configured servers: brave-search, memory, terraform, kubernetes, solana, rustdocs, reddit\n- PVC for persistence\n\nTasks:\n1. Review the existing chart structure and configuration\n2. Analyze values.yaml for customization options\n3. Review pre-configured MCP servers in the ConfigMap\n4. Identify any platform-specific customizations needed\n5. Test deployment with default values\n6. Document any required value overrides for our environment",
+        "testStrategy": "Run `helm lint toolman/charts/toolman/` to validate the existing chart. Deploy to a test namespace using `helm install toolman-test toolman/charts/toolman/ --dry-run --debug` to verify template rendering. Perform actual deployment to test namespace and verify all resources are created correctly. Check that pre-configured MCP servers are accessible.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "",
+            "description": "Review existing Helm chart structure at toolman/charts/toolman/",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "",
+            "description": "Analyze values.yaml and identify customization points",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "",
+            "description": "Review ConfigMap with pre-configured MCP servers",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "",
+            "description": "Test deployment with helm dry-run",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "",
+            "description": "Deploy to test namespace and verify functionality",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "",
+            "description": "Document any required customizations for our platform",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Implement Toolman Kubernetes Deployment",
+        "description": "Review and customize the existing Kubernetes deployment manifest for Toolman to ensure it meets our specific requirements",
+        "status": "pending",
+        "dependencies": [
+          1
+        ],
+        "priority": "high",
+        "details": "The deployment manifest already exists at toolman/charts/toolman/templates/deployment.yaml with comprehensive configuration including:\n\n**Current Features:**\n- Image configuration using ghcr.io/5dlabs/toolman\n- Resource limits and requests (configurable via values.yaml)\n- Volume mounts for config, tmp, docker socket, and persistent storage\n- Security context with non-root user (UID 1001, GID 2375)\n- Environment variables (PORT, PROJECT_DIR, RUST_LOG) via direct env and secretRef\n- Docker-in-Docker sidecar container for MCP servers requiring Docker\n- Init container for setting up directories with proper permissions\n- Support for liveness and readiness probes\n\n**Review Areas:**\n1. Verify resource limits are appropriate for our workload\n2. Ensure volume mounts align with our ConfigMap structure from task 16\n3. Check if additional environment variables are needed\n4. Review security context settings for production use\n5. Validate Docker-in-Docker sidecar configuration if needed\n6. Ensure proper integration with the servers-config ConfigMap\n\n**Potential Customizations:**\n- Adjust resource requests/limits based on expected load\n- Add specific environment variables for our use case\n- Configure appropriate health check endpoints\n- Set up proper node affinity/anti-affinity rules\n- Review and adjust security policies",
+        "testStrategy": "Deploy to test namespace using existing manifest. Verify pod starts successfully with all volume mounts working. Check environment variables are properly injected from both direct env and secretRefs. Test Docker sidecar functionality if MCP servers require it. Validate resource consumption under load",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Review existing deployment manifest",
+            "description": "Analyze the current deployment.yaml to understand all configured features",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Validate ConfigMap integration",
+            "description": "Ensure the deployment properly mounts and references the servers-config ConfigMap from task 16",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Assess resource requirements",
+            "description": "Determine appropriate CPU/memory limits based on expected MCP server load",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Test deployment in development",
+            "description": "Deploy and verify all features work correctly including volume mounts and environment variables",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Document any customizations",
+            "description": "Update values.yaml with our specific requirements and document any changes made",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Create Toolman Service and ConfigMap Templates",
+        "description": "Review and customize existing Kubernetes Service and ConfigMap templates for MCP server configurations",
+        "status": "pending",
+        "dependencies": [
+          2
+        ],
+        "priority": "high",
+        "details": "The Helm chart already includes complete templates that need to be reviewed and understood:\n\n1. **Service Template** (toolman/charts/toolman/templates/service.yaml):\n   - Already configured to expose port 3000\n   - Uses standard Helm template functions for naming and labels\n   - Verify selector matches deployment labels\n\n2. **ConfigMap Template** (toolman/charts/toolman/templates/configmap.yaml):\n   - Generates servers-config.json from .Values.mcpServers\n   - Supports all MCP transport types: stdio, SSE, HTTP\n   - Review JSON generation logic and formatting\n\n3. **Values Configuration**:\n   Review existing example servers in values.yaml:\n   - brave-search (stdio transport)\n   - kubernetes (stdio transport)\n   - solana (stdio transport)\n   - memory, terraform, reddit (various transports)\n\n4. **Customization Tasks**:\n   - Understand how to add new MCP servers via values.yaml\n   - Document the structure required for each transport type\n   - Test ConfigMap generation with custom server configurations",
+        "testStrategy": "Verify existing Service template exposes port 3000 correctly. Test ConfigMap template generation with current server configurations. Add test configurations to values.yaml and verify JSON output is valid. Ensure all transport types (stdio, SSE, HTTP) are properly supported",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Review existing Service template",
+            "description": "Examine toolman/charts/toolman/templates/service.yaml and verify port 3000 configuration",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Review existing ConfigMap template",
+            "description": "Analyze toolman/charts/toolman/templates/configmap.yaml and understand JSON generation logic",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Document MCP server configuration format",
+            "description": "Create documentation for each transport type (stdio, SSE, HTTP) with examples from existing servers",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Test custom server additions",
+            "description": "Add test MCP server configurations to values.yaml and verify ConfigMap generation",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Update Platform CRDs for Tool Specifications",
+        "description": "Modify CodeRun and DocsRun Custom Resource Definitions to accept tool specifications with local and remote tool lists",
+        "details": "Update CRD schemas to include tools field:\n```yaml\napiVersion: apiextensions.k8s.io/v1\nkind: CustomResourceDefinition\nmetadata:\n  name: coderuns.platform.5dlabs.com\nspec:\n  # ... existing spec ...\n  versions:\n  - name: v1\n    schema:\n      openAPIV3Schema:\n        properties:\n          spec:\n            properties:\n              # ... existing properties ...\n              tools:\n                type: object\n                description: \"Tool configuration for this run\"\n                properties:\n                  local:\n                    type: array\n                    description: \"Local MCP tools to enable\"\n                    items:\n                      type: string\n                      enum: [\"filesystem\", \"git\"]\n                  remote:\n                    type: array\n                    description: \"Remote MCP tools via toolman\"\n                    items:\n                      type: string\n```\n\nSimilar update for DocsRun CRD. Note: The enum for local tools is acceptable since these are built into the platform, but remote tools should NOT have an enum as they're dynamic",
+        "testStrategy": "Apply updated CRDs to cluster. Create test CodeRun/DocsRun resources with tool specifications. Verify kubectl accepts the new fields and validation works correctly",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Implement Docs Agent Tool Discovery",
+        "description": "Add functionality to docs agent to read Toolman ConfigMap and discover available MCP tools during documentation generation",
+        "details": "Add tool discovery to docs agent:\n```rust\nuse k8s_openapi::api::core::v1::ConfigMap;\nuse kube::{Api, Client};\n\n#[derive(Debug, Deserialize)]\nstruct ToolmanConfig {\n    servers: HashMap<String, serde_json::Value>,\n}\n\nasync fn discover_available_tools(client: Client) -> Result<Vec<String>> {\n    let configmaps: Api<ConfigMap> = Api::namespaced(client, \"orchestrator\");\n    let cm = configmaps.get(\"toolman-servers-config\").await?;\n    \n    let config_json = cm.data\n        .and_then(|d| d.get(\"servers-config.json\"))\n        .ok_or(\"Missing servers-config.json\")?;\n    \n    let config: ToolmanConfig = serde_json::from_str(config_json)?;\n    Ok(config.servers.keys().cloned().collect())\n}\n\nasync fn analyze_project_and_recommend_tools(\n    project_path: &Path,\n    available_tools: &[String]\n) -> Result<ProjectToolConfig> {\n    let mut recommended_tools = ProjectToolConfig::default();\n    \n    // Check for various file patterns\n    if has_kubernetes_files(project_path).await? && available_tools.contains(&\"kubernetes\".to_string()) {\n        recommended_tools.remote.push(\"kubernetes\".to_string());\n    }\n    \n    if has_postgres_config(project_path).await? && available_tools.contains(&\"postgres\".to_string()) {\n        recommended_tools.remote.push(\"postgres\".to_string());\n    }\n    \n    // Always include filesystem for local development\n    recommended_tools.local.push(\"filesystem\".to_string());\n    \n    Ok(recommended_tools)\n}\n```",
+        "testStrategy": "Mock Kubernetes client to return test ConfigMap. Verify tool discovery correctly parses available tools. Test project analysis with various file patterns. Ensure recommendations only include available tools",
+        "priority": "high",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Generate and Save Tool Configuration in Docs Phase",
+        "description": "Implement logic to generate optimal tool configuration during docs generation and save it for code agents to consume",
+        "details": "Extend docs agent to save configuration:\n```rust\n#[derive(Debug, Serialize, Deserialize)]\nstruct ProjectConfig {\n    tools: ProjectToolConfig,\n    generated_at: DateTime<Utc>,\n    docs_run_id: String,\n}\n\n#[derive(Debug, Serialize, Deserialize)]\nstruct ProjectToolConfig {\n    local: Vec<String>,\n    remote: Vec<String>,\n}\n\nasync fn save_project_config(\n    project_id: &str,\n    config: ProjectConfig,\n    storage: &Storage\n) -> Result<()> {\n    let config_path = format!(\"projects/{}/client-config.json\", project_id);\n    let config_json = serde_json::to_string_pretty(&config)?;\n    storage.write(&config_path, config_json.as_bytes()).await?;\n    Ok(())\n}\n\n// In main docs generation flow:\nasync fn generate_docs(ctx: DocsContext) -> Result<()> {\n    // Existing docs generation...\n    \n    // Discover available tools\n    let available_tools = discover_available_tools(ctx.k8s_client.clone()).await?;\n    \n    // Analyze project and recommend tools\n    let tool_config = analyze_project_and_recommend_tools(\n        &ctx.project_path,\n        &available_tools\n    ).await?;\n    \n    // Save configuration for code agents\n    let project_config = ProjectConfig {\n        tools: tool_config,\n        generated_at: Utc::now(),\n        docs_run_id: ctx.run_id.clone(),\n    };\n    \n    save_project_config(&ctx.project_id, project_config, &ctx.storage).await?;\n    \n    // Continue with docs generation...\n}\n```",
+        "testStrategy": "Verify configuration is saved to correct location. Test loading saved configuration. Ensure format is compatible with code agent expectations. Test with various tool combinations",
+        "priority": "high",
+        "dependencies": [
+          5
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Update Code Agent to Load Saved Configuration",
+        "description": "Modify code agent to load tool configuration generated during docs phase instead of using hardcoded defaults",
+        "details": "Update code agent configuration loading:\n```rust\nasync fn load_project_config(\n    project_id: &str,\n    storage: &Storage\n) -> Result<Option<ProjectConfig>> {\n    let config_path = format!(\"projects/{}/client-config.json\", project_id);\n    \n    match storage.read(&config_path).await {\n        Ok(data) => {\n            let config: ProjectConfig = serde_json::from_slice(&data)?;\n            Ok(Some(config))\n        },\n        Err(_) => Ok(None), // No saved config, will use defaults or user override\n    }\n}\n\n// In code agent initialization:\nasync fn initialize_agent(ctx: CodeContext) -> Result<AgentConfig> {\n    let mut agent_config = AgentConfig::default();\n    \n    // Check for user-specified tools first (override)\n    if let Some(tools) = &ctx.run_spec.tools {\n        agent_config.tools = tools.clone();\n    } else {\n        // Load configuration from docs phase\n        if let Some(project_config) = load_project_config(&ctx.project_id, &ctx.storage).await? {\n            agent_config.tools = project_config.tools;\n        } else {\n            // Fallback to minimal defaults if no config exists\n            agent_config.tools = ProjectToolConfig {\n                local: vec![\"filesystem\".to_string()],\n                remote: vec![],\n            };\n        }\n    }\n    \n    Ok(agent_config)\n}\n```",
+        "testStrategy": "Test loading existing configuration. Verify fallback behavior when no config exists. Test user override takes precedence. Ensure proper error handling for corrupted configs",
+        "priority": "high",
+        "dependencies": [
+          6
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Create Handlebars Helper for Tool Inclusion",
+        "description": "Implement a custom Handlebars helper to check if a tool is included in the tool list for conditional rendering in templates",
+        "details": "Implement includes helper:\n```rust\nuse handlebars::{Context, Handlebars, Helper, HelperResult, Output, RenderContext};\n\nfn includes_helper(\n    h: &Helper,\n    _: &Handlebars,\n    _: &Context,\n    _: &mut RenderContext,\n    out: &mut dyn Output,\n) -> HelperResult {\n    let array = h.param(0)\n        .and_then(|v| v.value().as_array())\n        .ok_or_else(|| handlebars::RenderError::new(\"First parameter must be an array\"))?;\n    \n    let search_value = h.param(1)\n        .and_then(|v| v.value().as_str())\n        .ok_or_else(|| handlebars::RenderError::new(\"Second parameter must be a string\"))?;\n    \n    let contains = array.iter()\n        .any(|v| v.as_str() == Some(search_value));\n    \n    out.write(&contains.to_string())?;\n    Ok(())\n}\n\n// Register helper\nfn setup_handlebars() -> Handlebars<'static> {\n    let mut handlebars = Handlebars::new();\n    handlebars.register_helper(\"includes\", Box::new(includes_helper));\n    handlebars\n}\n```",
+        "testStrategy": "Unit test helper with various array inputs. Test with empty arrays, missing values, and type mismatches. Verify helper works correctly in template context",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Update client-config.json Template",
+        "description": "Modify the Handlebars template for client-config.json to support both user-specified tools and docs-generated configurations",
+        "details": "Update client-config.json.hbs:\n```handlebars\n{\n  {{#if tools}}\n  {{!-- User specified exact tools (override) --}}\n  \"remoteTools\": [\n    {{#each tools.remote}}\n    \"{{this}}\"{{#unless @last}},{{/unless}}\n    {{/each}}\n  ],\n  \"localServers\": {\n    {{#if (includes tools.local \"filesystem\")}}\n    \"filesystem\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@modelcontextprotocol/server-filesystem\", \"/workspace\"],\n      \"env\": {\n        \"ALLOWED_DIRECTORIES\": \"/workspace\"\n      },\n      \"tools\": [\"*\"],\n      \"workingDirectory\": \"project_root\"\n    }{{#if (includes tools.local \"git\")}},{{/if}}\n    {{/if}}\n    {{#if (includes tools.local \"git\")}}\n    \"git\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@modelcontextprotocol/server-git\"],\n      \"tools\": [\"*\"],\n      \"workingDirectory\": \"project_root\"\n    }\n    {{/if}}\n  }\n  {{else if project_config}}\n  {{!-- Use configuration generated by docs agent --}}\n  \"remoteTools\": [\n    {{#each project_config.tools.remote}}\n    \"{{this}}\"{{#unless @last}},{{/unless}}\n    {{/each}}\n  ],\n  \"localServers\": {\n    {{#if (includes project_config.tools.local \"filesystem\")}}\n    \"filesystem\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@modelcontextprotocol/server-filesystem\", \"/workspace\"],\n      \"env\": {\n        \"ALLOWED_DIRECTORIES\": \"/workspace\"\n      },\n      \"tools\": [\"*\"],\n      \"workingDirectory\": \"project_root\"\n    }{{#if (includes project_config.tools.local \"git\")}},{{/if}}\n    {{/if}}\n    {{#if (includes project_config.tools.local \"git\")}}\n    \"git\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@modelcontextprotocol/server-git\"],\n      \"tools\": [\"*\"],\n      \"workingDirectory\": \"project_root\"\n    }\n    {{/if}}\n  }\n  {{else}}\n  {{!-- Fallback minimal configuration --}}\n  \"remoteTools\": [],\n  \"localServers\": {\n    \"filesystem\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@modelcontextprotocol/server-filesystem\", \"/workspace\"],\n      \"env\": {\n        \"ALLOWED_DIRECTORIES\": \"/workspace\"\n      },\n      \"tools\": [\"*\"],\n      \"workingDirectory\": \"project_root\"\n    }\n  }\n  {{/if}}\n}\n```",
+        "testStrategy": "Test template rendering with user-specified tools, project config, and fallback scenarios. Verify JSON output is valid. Test various tool combinations including empty lists",
+        "priority": "high",
+        "dependencies": [
+          8
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Update mcp.json Template for Toolman Integration",
+        "description": "Modify the mcp.json Handlebars template to conditionally include toolman service when remote tools are requested",
+        "details": "Update mcp.json.hbs:\n```handlebars\n{\n  \"mcpServers\": {\n    {{#if (or (and tools tools.remote.length) (and project_config project_config.tools.remote.length))}}\n    \"toolman\": {\n      \"transport\": \"http\",\n      \"url\": \"http://toolman-service.orchestrator.svc.cluster.local:3000/mcp\",\n      \"headers\": {\n        \"X-Agent-ID\": \"{{agent_id}}\",\n        \"X-Run-ID\": \"{{run_id}}\",\n        \"X-Project-ID\": \"{{project_id}}\"\n      }\n    }\n    {{/if}}\n  }\n}\n```\n\nNote: Headers are optional but useful for tracking which agent made requests",
+        "testStrategy": "Test template with and without remote tools. Verify toolman is only included when remote tools are specified. Test header interpolation works correctly",
+        "priority": "high",
+        "dependencies": [
+          8
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Implement Tool Validation in Orchestrator",
+        "description": "Add validation logic to verify user-specified tools exist in the toolman ConfigMap before processing",
+        "details": "Add validation for user overrides:\n```rust\nasync fn validate_user_tools(\n    tools: &ProjectToolConfig,\n    k8s_client: Client\n) -> Result<()> {\n    // Local tools have fixed set\n    const VALID_LOCAL_TOOLS: &[&str] = &[\"filesystem\", \"git\"];\n    \n    for local_tool in &tools.local {\n        if !VALID_LOCAL_TOOLS.contains(&local_tool.as_str()) {\n            return Err(anyhow!(\"Invalid local tool: {}\", local_tool));\n        }\n    }\n    \n    // Remote tools must exist in toolman config\n    if !tools.remote.is_empty() {\n        let available_tools = discover_available_tools(k8s_client).await?;\n        \n        for remote_tool in &tools.remote {\n            if !available_tools.contains(remote_tool) {\n                return Err(anyhow!(\n                    \"Remote tool '{}' not found in toolman configuration. Available tools: {:?}\",\n                    remote_tool,\n                    available_tools\n                ));\n            }\n        }\n    }\n    \n    Ok(())\n}\n\n// In orchestrator handler:\nif let Some(tools) = &code_run.spec.tools {\n    validate_user_tools(tools, ctx.k8s_client.clone()).await\n        .map_err(|e| {\n            // Update CodeRun status with validation error\n            e\n        })?;\n}\n```",
+        "testStrategy": "Test with valid and invalid tool names. Verify error messages are helpful. Test validation passes for empty tool lists. Mock toolman ConfigMap for testing",
+        "priority": "medium",
+        "dependencies": [
+          5
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Update Orchestrator Template Context",
+        "description": "Modify orchestrator to pass tool configurations and project config to Handlebars templates",
+        "details": "Update template context building:\n```rust\n#[derive(Serialize)]\nstruct TemplateContext {\n    // Existing fields...\n    tools: Option<ProjectToolConfig>,\n    project_config: Option<ProjectConfig>,\n    agent_id: String,\n    run_id: String,\n    project_id: String,\n}\n\nasync fn build_template_context(\n    code_run: &CodeRun,\n    storage: &Storage\n) -> Result<TemplateContext> {\n    let mut context = TemplateContext {\n        // ... existing fields ...\n        tools: code_run.spec.tools.clone(),\n        project_config: None,\n        agent_id: format!(\"agent-{}\", code_run.metadata.uid.as_ref().unwrap()),\n        run_id: code_run.metadata.name.as_ref().unwrap().clone(),\n        project_id: code_run.spec.project_id.clone(),\n    };\n    \n    // Load project config if no user override\n    if context.tools.is_none() {\n        context.project_config = load_project_config(\n            &code_run.spec.project_id,\n            storage\n        ).await?;\n    }\n    \n    Ok(context)\n}\n\n// Update template rendering\nasync fn render_agent_configs(\n    templates: &Handlebars,\n    context: &TemplateContext\n) -> Result<AgentConfigs> {\n    let client_config = templates.render(\"client-config.json\", context)?;\n    let mcp_config = templates.render(\"mcp.json\", context)?;\n    \n    Ok(AgentConfigs {\n        client_config,\n        mcp_config,\n    })\n}\n```",
+        "testStrategy": "Test context building with various scenarios. Verify templates receive correct data. Test precedence of user tools over project config. Ensure all required fields are populated",
+        "priority": "high",
+        "dependencies": [
+          7,
+          11
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 13,
+        "title": "Deploy and Test Toolman Service",
+        "description": "Deploy toolman to the Kubernetes cluster using the existing Helm chart and verify it's accessible from within the cluster",
+        "status": "pending",
+        "dependencies": [
+          1,
+          2,
+          3
+        ],
+        "priority": "high",
+        "details": "Deployment steps:\n```bash\n# Create values override file for orchestrator deployment\ncat > toolman-values.yaml <<EOF\nnamespace: orchestrator\nimage:\n  repository: your-registry/toolman\n  tag: latest\n# Add any custom configuration here\nEOF\n\n# Deploy using the existing Helm chart\nhelm install toolman ./toolman/charts/toolman/ \\\n  --namespace orchestrator \\\n  --create-namespace \\\n  -f toolman-values.yaml\n\n# Verify deployment\nkubectl get pods -n orchestrator -l app.kubernetes.io/name=toolman\nkubectl logs -n orchestrator -l app.kubernetes.io/name=toolman\n\n# Test health and readiness endpoints\nkubectl run test-pod --rm -it --image=curlimages/curl -- \\\n  curl http://toolman-service.orchestrator.svc.cluster.local:3000/health\n\nkubectl run test-pod --rm -it --image=curlimages/curl -- \\\n  curl http://toolman-service.orchestrator.svc.cluster.local:3000/ready\n\n# Test MCP server proxy functionality\nkubectl run test-pod --rm -it --image=curlimages/curl -- \\\n  curl -X POST http://toolman-service.orchestrator.svc.cluster.local:3000/mcp \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"method\": \"tools/list\", \"params\": {}}'\n\n# Verify MCP servers are accessible through the proxy\nkubectl exec -n orchestrator deployment/toolman -- \\\n  curl -X POST localhost:3000/mcp/servers \\\n  -H \"Content-Type: application/json\"\n```",
+        "testStrategy": "Verify pod is running and healthy. Test /health and /ready endpoints respond with appropriate status codes. Test MCP proxy endpoint returns expected tool list. Verify MCP servers configured in ConfigMap are accessible through the proxy. Confirm service is reachable at http://toolman-service.orchestrator.svc.cluster.local:3000",
+        "subtasks": []
+      },
+      {
+        "id": 14,
+        "title": "Create Tool Administration Documentation",
+        "description": "Write comprehensive documentation for platform administrators on how to add, remove, and manage MCP tools via the toolman ConfigMap",
+        "details": "Create docs/admin/tool-management.md:\n```markdown\n# Tool Administration Guide\n\n## Adding New MCP Tools\n\n1. Edit the toolman ConfigMap:\n```bash\nkubectl edit configmap toolman-servers-config -n orchestrator\n```\n\n2. Add new server configuration:\n```json\n{\n  \"servers\": {\n    \"existing-tool\": { ... },\n    \"new-tool-name\": {\n      \"transport\": \"stdio\",\n      \"command\": \"mcp-server-new-tool\",\n      \"args\": [\"--arg1\", \"value1\"],\n      \"env\": {\n        \"API_KEY\": \"${NEW_TOOL_API_KEY}\"\n      }\n    }\n  }\n}\n```\n\n3. Restart toolman to pick up changes:\n```bash\nkubectl rollout restart deployment toolman -n orchestrator\n```\n\n## Viewing Available Tools\n\n```bash\n# List all configured tools\nkubectl get configmap toolman-servers-config -n orchestrator -o json | \\\n  jq '.data[\"servers-config.json\"]' | jq -r '. | fromjson | .servers | keys[]'\n```\n\n## Tool Naming Conventions\n\n- Use lowercase with hyphens: `brave-search`, `kubernetes-client`\n- Be descriptive but concise\n- Avoid version numbers in names\n\n## Troubleshooting\n\n### Tool Not Available\n1. Check ConfigMap is updated\n2. Verify toolman pod restarted\n3. Check toolman logs for errors\n\n### Tool Errors\n1. Check tool-specific logs in toolman\n2. Verify credentials/environment variables\n3. Test tool command manually\n```",
+        "testStrategy": "Follow documentation to add a test tool. Verify tool appears in discovery. Test removal process. Ensure documentation is clear and complete",
+        "priority": "medium",
+        "dependencies": [
+          13
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 15,
+        "title": "Implement End-to-End Integration Tests",
+        "description": "Create comprehensive integration tests that verify the complete flow from user request to Claude configuration with specific tools",
+        "details": "Create integration test suite:\n```rust\n#[cfg(test)]\nmod integration_tests {\n    use super::*;\n    \n    #[tokio::test]\n    async fn test_docs_agent_tool_discovery() {\n        // Setup test environment\n        let test_env = setup_test_k8s_env().await;\n        \n        // Create test ConfigMap with tools\n        create_test_toolman_config(&test_env, vec![\n            (\"postgres\", json!({\"transport\": \"stdio\", \"command\": \"mcp-postgres\"})),\n            (\"kubernetes\", json!({\"transport\": \"stdio\", \"command\": \"mcp-k8s\"})),\n        ]).await;\n        \n        // Run docs agent\n        let docs_result = run_docs_agent(&test_env, \"test-project\").await;\n        assert!(docs_result.is_ok());\n        \n        // Verify saved configuration\n        let saved_config = load_project_config(\"test-project\", &test_env.storage).await.unwrap();\n        assert!(saved_config.is_some());\n        assert!(saved_config.unwrap().tools.remote.contains(&\"postgres\".to_string()));\n    }\n    \n    #[tokio::test]\n    async fn test_user_tool_override() {\n        let test_env = setup_test_k8s_env().await;\n        \n        // Create CodeRun with specific tools\n        let code_run = create_test_code_run(\"test-run\", Some(ProjectToolConfig {\n            local: vec![\"filesystem\".to_string()],\n            remote: vec![\"brave-search\".to_string()],\n        }));\n        \n        // Process through orchestrator\n        let result = process_code_run(&test_env, &code_run).await;\n        assert!(result.is_ok());\n        \n        // Verify generated configs\n        let configs = result.unwrap();\n        let client_config: serde_json::Value = serde_json::from_str(&configs.client_config).unwrap();\n        \n        assert_eq!(client_config[\"remoteTools\"], json!([\"brave-search\"]));\n        assert!(client_config[\"localServers\"][\"filesystem\"].is_object());\n        assert!(client_config[\"localServers\"][\"git\"].is_null());\n    }\n    \n    #[tokio::test]\n    async fn test_invalid_tool_validation() {\n        let test_env = setup_test_k8s_env().await;\n        \n        let code_run = create_test_code_run(\"test-run\", Some(ProjectToolConfig {\n            local: vec![\"invalid-local-tool\".to_string()],\n            remote: vec![\"non-existent-tool\".to_string()],\n        }));\n        \n        let result = process_code_run(&test_env, &code_run).await;\n        assert!(result.is_err());\n        assert!(result.unwrap_err().to_string().contains(\"Invalid local tool\"));\n    }\n}\n```",
+        "testStrategy": "Run full test suite in CI/CD pipeline. Test with real Kubernetes cluster in staging. Verify all paths work correctly. Monitor for flaky tests and fix race conditions",
+        "priority": "high",
+        "dependencies": [
+          12,
+          13
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-26T07:14:51.223Z",
+      "updated": "2025-07-26T07:15:27.787Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
