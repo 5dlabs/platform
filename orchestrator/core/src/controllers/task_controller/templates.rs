@@ -557,8 +557,8 @@ fn generate_tool_catalog_documentation() -> Result<String> {
             ))
         })?;
 
-    // TODO: Fetch live ConfigMap data - for now use mock data for testing
-    let tool_catalog_data = get_tool_catalog_data()?;
+    // For now use mock data - TODO: Pass ConfigMap data from caller
+    let tool_catalog_data = get_mock_tool_catalog_data();
 
     let data = json!({
         "tool_catalog": tool_catalog_data
@@ -571,54 +571,61 @@ fn generate_tool_catalog_documentation() -> Result<String> {
     })
 }
 
-/// Fetch tool catalog data from ConfigMap
-fn get_tool_catalog_data() -> Result<serde_json::Value> {
-    use tokio::runtime::Runtime;
-
-    // Create a new runtime for the blocking operation
-    let rt = Runtime::new().map_err(|e| {
-        crate::controllers::task_controller::types::Error::ConfigError(format!(
-            "Failed to create tokio runtime: {e}"
-        ))
-    })?;
-
-    rt.block_on(async {
-        use kube::{Api, Client};
-        use k8s_openapi::api::core::v1::ConfigMap;
-
-        // Create Kubernetes client
-        let client = Client::try_default().await.map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
-                "Failed to create Kubernetes client: {e}"
-            ))
-        })?;
-
-        // Get the ConfigMap API
-        let configmaps: Api<ConfigMap> = Api::namespaced(client, "orchestrator");
-
-        // Fetch the tool catalog ConfigMap
-        let configmap = configmaps.get("toolman-tool-catalog").await.map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
-                "Failed to fetch toolman-tool-catalog ConfigMap: {e}"
-            ))
-        })?;
-
-        // Extract the tool-catalog.json data
-        let tool_catalog_json = configmap
-            .data
-            .as_ref()
-            .and_then(|data| data.get("tool-catalog.json"))
-            .ok_or_else(|| {
-                crate::controllers::task_controller::types::Error::ConfigError(
-                    "tool-catalog.json not found in ConfigMap".to_string()
-                )
-            })?;
-
-        // Parse the JSON
-        serde_json::from_str(tool_catalog_json).map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
-                "Failed to parse tool catalog JSON: {e}"
-            ))
-        })
+/// Get mock tool catalog data (temporary fallback)
+fn get_mock_tool_catalog_data() -> serde_json::Value {
+    json!({
+        "last_updated": "2025-07-26T23:20:00.000000000+00:00",
+        "remote": {
+            "kubernetes": {
+                "description": "Kubernetes cluster operations",
+                "tools": [
+                    {
+                        "name": "kubernetes_listResources",
+                        "description": "List cluster resources by type",
+                        "category": "cluster-ops"
+                    },
+                    {
+                        "name": "kubernetes_getResource",
+                        "description": "Get specific resource details",
+                        "category": "cluster-ops"
+                    }
+                ]
+            },
+            "brave-search": {
+                "description": "Web search using Brave Search API",
+                "tools": [
+                    {
+                        "name": "brave_web_search",
+                        "description": "Performs a web search using the Brave Search API",
+                        "category": "search"
+                    }
+                ]
+            }
+        },
+        "local": {
+            "filesystem": {
+                "description": "File system operations for reading, writing, and managing files",
+                "command": "npx",
+                "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+                "working_directory": "project_root",
+                "tools": [
+                    {
+                        "name": "read_file",
+                        "description": "Read file contents",
+                        "category": "file-ops"
+                    },
+                    {
+                        "name": "write_file",
+                        "description": "Create or overwrite files",
+                        "category": "file-ops"
+                    },
+                    {
+                        "name": "list_directory",
+                        "description": "List directory contents",
+                        "category": "file-ops"
+                    }
+                ]
+            }
+        }
     })
 }
