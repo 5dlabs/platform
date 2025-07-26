@@ -1,0 +1,37 @@
+# Task ID: 16
+# Title: Create Calculation Engine
+# Status: pending
+# Dependencies: 15
+# Priority: high
+# Description: Implement the core calculation logic for all arithmetic operations
+# Details:
+Create performCalculation() function: const inputValue = parseFloat(calculator.displayValue); const firstOperand = calculator.firstOperand; if (firstOperand === null || calculator.operator === null) return inputValue; switch(calculator.operator) { case '+': return firstOperand + inputValue; case '-': return firstOperand - inputValue; case '*': return firstOperand * inputValue; case '/': return firstOperand / inputValue; default: return inputValue; }
+
+# Test Strategy:
+Test each operation with positive numbers, negative numbers, decimals, and edge cases like division by zero
+
+# Subtasks:
+## 1. Create performCalculation function framework [pending]
+### Dependencies: None
+### Description: Set up the basic structure of the performCalculation function with proper parameter handling and return type
+### Details:
+Create the function signature: function performCalculation() { const inputValue = parseFloat(calculator.displayValue); const firstOperand = calculator.firstOperand; // Function body to be implemented }. Ensure function is properly scoped and accessible to other calculator functions
+
+## 2. Implement basic arithmetic operations [pending]
+### Dependencies: 16.1
+### Description: Add switch statement logic to handle all four basic arithmetic operations (+, -, *, /)
+### Details:
+Implement switch statement: switch(calculator.operator) { case '+': return firstOperand + inputValue; case '-': return firstOperand - inputValue; case '*': return firstOperand * inputValue; case '/': return firstOperand / inputValue; default: return inputValue; }
+
+## 3. Add input validation and null checks [pending]
+### Dependencies: 16.1
+### Description: Implement validation logic to check for null operands and operators before performing calculations
+### Details:
+Add validation: if (firstOperand === null || calculator.operator === null) return inputValue; Also validate that inputValue is a valid number using isNaN() check
+
+## 4. Handle edge cases and return values [pending]
+### Dependencies: 16.2, 16.3
+### Description: Implement special handling for edge cases like division by zero, very large numbers, and ensure proper return values
+### Details:
+Add division by zero check: if (calculator.operator === '/' && inputValue === 0) return 'Error'; Handle Infinity and -Infinity results. Ensure all paths return appropriate values
+

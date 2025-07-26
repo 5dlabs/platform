@@ -1,0 +1,37 @@
+# Task ID: 30
+# Title: Add Accessibility Features
+# Status: pending
+# Dependencies: 21
+# Priority: medium
+# Description: Implement ARIA labels and keyboard navigation improvements
+# Details:
+Add ARIA labels: aria-label='Calculator display' for display, aria-label='Number 5' for buttons. Add role='application' to calculator container. Ensure focus states are visible. Add tabindex for keyboard navigation
+
+# Test Strategy:
+Test with screen reader, verify all buttons are announced correctly, test keyboard-only navigation
+
+# Subtasks:
+## 1. Add ARIA Labels to Interactive Elements [pending]
+### Dependencies: None
+### Description: Implement comprehensive ARIA labeling for all calculator buttons, display, and container elements to ensure screen readers can properly identify each component
+### Details:
+Add aria-label to display element with dynamic value updates. Label all number buttons (e.g., aria-label='Number 5'), operator buttons (aria-label='Plus'), and function buttons (aria-label='Clear'). Add role='application' to calculator container. Include aria-live='polite' on display for calculation updates
+
+## 2. Implement Focus Management System [pending]
+### Dependencies: 30.1
+### Description: Create a robust focus management system that handles focus states visually and programmatically, ensuring users can track their position in the calculator
+### Details:
+Add visible focus indicators with CSS outline or box-shadow. Implement focus trap within calculator container. Handle focus restoration after operations. Ensure focus moves logically between elements. Add :focus-visible styles for keyboard users only
+
+## 3. Enable Complete Keyboard Navigation [pending]
+### Dependencies: 30.2
+### Description: Implement full keyboard support allowing users to operate the calculator entirely without a mouse, including number input, operations, and navigation
+### Details:
+Add tabindex='0' to all interactive elements in logical order. Implement keyboard event listeners for number keys (0-9), operators (+, -, *, /), Enter for equals, Escape for clear. Enable arrow key navigation between buttons. Ensure Tab/Shift+Tab cycles through all controls
+
+## 4. Screen Reader Testing and Validation [pending]
+### Dependencies: 30.1, 30.2, 30.3
+### Description: Thoroughly test the calculator with multiple screen readers to ensure all accessibility features work correctly and provide a good user experience
+### Details:
+Test with NVDA, JAWS, and VoiceOver. Verify all buttons announce correctly with meaningful labels. Ensure calculation results are announced. Test navigation flow makes sense. Validate ARIA implementation with accessibility tools. Document any screen reader-specific adjustments needed
+

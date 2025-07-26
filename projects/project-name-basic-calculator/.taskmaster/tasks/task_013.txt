@@ -1,0 +1,31 @@
+# Task ID: 13
+# Title: Handle Number Button Clicks
+# Status: pending
+# Dependencies: 12
+# Priority: high
+# Description: Implement logic to handle number input (0-9) and update display
+# Details:
+Create inputDigit(digit) function: if (calculator.waitingForOperand) { calculator.displayValue = digit; calculator.waitingForOperand = false; } else { calculator.displayValue = calculator.displayValue === '0' ? digit : calculator.displayValue + digit; } updateDisplay();
+
+# Test Strategy:
+Test entering single digit replaces initial 0, test multiple digits concatenate, verify leading zeros are handled correctly
+
+# Subtasks:
+## 1. Create inputDigit function with basic concatenation [pending]
+### Dependencies: None
+### Description: Implement the core inputDigit(digit) function that handles basic number concatenation when adding digits to the display
+### Details:
+Create function inputDigit(digit) that concatenates the digit parameter to calculator.displayValue. Initially implement simple concatenation logic: calculator.displayValue = calculator.displayValue + digit. This establishes the basic function structure before adding state handling
+
+## 2. Handle waiting for operand state [pending]
+### Dependencies: 13.1
+### Description: Add logic to handle the waitingForOperand state when a new number should replace the current display value
+### Details:
+Modify inputDigit function to check if (calculator.waitingForOperand). When true, set calculator.displayValue = digit and calculator.waitingForOperand = false to replace the display with the new digit. When false, use the concatenation logic from subtask 13.1
+
+## 3. Implement proper handling of leading zeros and display updates [pending]
+### Dependencies: 13.2
+### Description: Add logic to prevent multiple leading zeros and ensure display updates after each digit input
+### Details:
+Update the concatenation logic to check if calculator.displayValue === '0'. If true, replace with the new digit instead of concatenating. This prevents '00123' scenarios. Add updateDisplay() call at the end of inputDigit function to refresh the display element with the new value
+

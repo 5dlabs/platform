@@ -1,0 +1,43 @@
+# Task ID: 8
+# Title: Style Calculator Buttons
+# Status: pending
+# Dependencies: 7
+# Priority: medium
+# Description: Apply consistent styling to all calculator buttons with hover and active states
+# Details:
+Style .btn class: padding: 20px, font-size: 1.2em, border: none, border-radius: 5px, cursor: pointer, background: #e0e0e0, transition: all 0.2s. Add hover state: background: #d0d0d0, transform: translateY(-2px). Add active state: transform: translateY(0)
+
+# Test Strategy:
+Test all button states (normal, hover, active), verify transitions are smooth, check cursor changes on hover
+
+# Subtasks:
+## 1. Define Base Button Styles [pending]
+### Dependencies: None
+### Description: Create the foundational CSS rules for the .btn class with basic styling properties
+### Details:
+In the CSS file, add the .btn class selector and define these properties: padding: 20px; font-size: 1.2em; border: none; border-radius: 5px; cursor: pointer; background: #e0e0e0; transition: all 0.2s; This establishes the default appearance for all calculator buttons with smooth transition effects.
+
+## 2. Implement Button Hover State [pending]
+### Dependencies: 8.1
+### Description: Add CSS rules for button hover effects including background color change and upward translation
+### Details:
+Create the .btn:hover selector and add: background: #d0d0d0; transform: translateY(-2px); This creates a subtle lift effect when users hover over buttons, providing visual feedback. The darker background color (#d0d0d0) creates contrast from the default state.
+
+## 3. Add Button Active State [pending]
+### Dependencies: 8.2
+### Description: Define CSS rules for the active (pressed) state to provide tactile feedback
+### Details:
+Add the .btn:active selector with: transform: translateY(0); This resets the vertical position when a button is clicked, creating a press-down effect. Combined with the transition property from the base styles, this creates smooth button press animation.
+
+## 4. Style Special Button Types [pending]
+### Dependencies: 8.3
+### Description: Apply distinct styling to operator, equals, and clear buttons for better visual hierarchy
+### Details:
+Add specific styles for button types: .btn.operator { background: #ff9500; color: white; } .btn.operator:hover { background: #e08600; } .btn.equals { background: #4CAF50; color: white; } .btn.equals:hover { background: #45a049; } .btn.clear { background: #f44336; color: white; } .btn.clear:hover { background: #da190b; }
+
+## 5. Ensure Cross-Browser Compatibility [pending]
+### Dependencies: 8.4
+### Description: Add vendor prefixes and fallbacks to ensure consistent button styling across different browsers
+### Details:
+Add vendor prefixes for transform property: -webkit-transform for Safari/Chrome, -moz-transform for Firefox, -ms-transform for IE. Also add box-sizing: border-box to .btn class to ensure consistent sizing. Consider adding -webkit-appearance: none to remove default button styling on iOS devices.
+

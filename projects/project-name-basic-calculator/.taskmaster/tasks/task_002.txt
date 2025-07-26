@@ -1,0 +1,31 @@
+# Task ID: 2
+# Title: Create HTML Structure
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Build the basic HTML skeleton for the calculator application with semantic markup
+# Details:
+Create index.html with DOCTYPE, meta tags for viewport and charset UTF-8, title 'Basic Calculator', link to CSS file, and script tag for JavaScript. Structure: <div class='calculator'> containing <div class='display'> for screen and <div class='buttons'> for button grid. Use semantic HTML5 elements where appropriate
+
+# Test Strategy:
+Validate HTML using W3C validator, ensure all required elements are present, check that file loads without errors in browser
+
+# Subtasks:
+## 1. Create HTML5 boilerplate with meta tags [pending]
+### Dependencies: None
+### Description: Set up the basic HTML5 document structure with DOCTYPE, head section, and essential meta tags
+### Details:
+Create index.html file with <!DOCTYPE html>, <html lang='en'>, <head> section containing <meta charset='UTF-8'>, <meta name='viewport' content='width=device-width, initial-scale=1.0'>, and <title>Basic Calculator</title>. Include empty <body> section for content
+
+## 2. Add calculator container structure [pending]
+### Dependencies: 2.1
+### Description: Build the main calculator container with display and buttons sections using semantic HTML
+### Details:
+Within the <body>, create <div class='calculator'> as the main container. Inside, add <div class='display' id='display'>0</div> for the calculator screen showing initial value of 0, and <div class='buttons' id='buttons'></div> as the container for the button grid that will be populated later
+
+## 3. Link CSS and JavaScript files [pending]
+### Dependencies: 2.1
+### Description: Add references to external CSS and JavaScript files in the HTML document
+### Details:
+In the <head> section, add <link rel='stylesheet' href='styles.css'> to link the CSS file. Before the closing </body> tag, add <script src='script.js'></script> to link the JavaScript file, ensuring DOM is loaded before script execution
+

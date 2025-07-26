@@ -1,0 +1,37 @@
+# Task ID: 34
+# Title: Implement Sound Effects
+# Status: pending
+# Dependencies: 27
+# Priority: low
+# Description: Add optional sound feedback for button presses
+# Details:
+Create simple click sound using Web Audio API or audio file. Add toggle button for sound on/off. Store preference in localStorage. Play sound on button click if enabled
+
+# Test Strategy:
+Test sound plays on button press, verify toggle works, check localStorage persistence
+
+# Subtasks:
+## 1. Create or Source Button Click Sound [pending]
+### Dependencies: None
+### Description: Create a simple click sound using Web Audio API or source an appropriate audio file for button feedback
+### Details:
+Either generate a short click sound programmatically using Web Audio API (oscillator with envelope) or find/create a subtle click sound file (WAV/MP3, <50KB). Sound should be pleasant and non-intrusive, approximately 50-100ms duration
+
+## 2. Implement Audio Playback System [pending]
+### Dependencies: 34.1
+### Description: Create audio management module to handle sound loading and playback functionality
+### Details:
+Create audioManager object with methods: init() to load/prepare audio, playClick() to trigger sound playback. If using Web Audio API, create audio context and buffer. If using audio file, create Audio element and handle loading. Ensure proper error handling for audio context restrictions
+
+## 3. Add Sound Toggle UI and State Management [pending]
+### Dependencies: 34.2
+### Description: Implement UI control for enabling/disabling sound effects with proper state management
+### Details:
+Add sound toggle button/icon to UI (speaker icon with on/off states). Add soundEnabled property to calculator state (default: true). Create toggleSound() function to switch state. Update button click handlers to check soundEnabled before playing. Style toggle button to match calculator design
+
+## 4. Integrate localStorage for Preference Persistence [pending]
+### Dependencies: 34.3
+### Description: Implement localStorage integration to save and restore user's sound preference across sessions
+### Details:
+On toggleSound(), save preference: localStorage.setItem('calculatorSoundEnabled', soundEnabled). On calculator init, load preference: soundEnabled = localStorage.getItem('calculatorSoundEnabled') !== 'false'. Handle localStorage errors gracefully. Test persistence across page reloads and browser sessions
+

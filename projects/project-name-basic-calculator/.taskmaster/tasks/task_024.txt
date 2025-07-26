@@ -1,0 +1,43 @@
+# Task ID: 24
+# Title: Test Clear Functionality
+# Status: pending
+# Dependencies: 22
+# Priority: medium
+# Description: Write tests to verify clear button resets calculator state properly
+# Details:
+Test cases: clear after number input, clear during operation, clear after result. Verify all state variables reset: displayValue = '0', firstOperand = null, operator = null, waitingForOperand = false
+
+# Test Strategy:
+Run clear tests in various calculator states, verify complete state reset each time
+
+# Subtasks:
+## 1. Set Up Test Environment and Helper Functions [pending]
+### Dependencies: None
+### Description: Create test file structure and helper functions to simulate calculator state and button clicks
+### Details:
+Create test file 'calculator.test.js'. Set up helper functions: createCalculator() to initialize calculator object with default state, simulateButtonClick(button) to trigger button actions, and getCalculatorState() to retrieve current state values (displayValue, firstOperand, operator, waitingForOperand)
+
+## 2. Test Clear After Number Input [pending]
+### Dependencies: 24.1
+### Description: Write test case to verify clear button works correctly after entering numbers
+### Details:
+Test scenario: Input sequence of numbers (e.g., '123'), then press clear. Assert that displayValue returns to '0', firstOperand is null, operator is null, and waitingForOperand is false. Include edge cases like single digit and maximum length numbers
+
+## 3. Test Clear During Operation [pending]
+### Dependencies: 24.1
+### Description: Write test case to verify clear button resets state when pressed in the middle of an operation
+### Details:
+Test scenarios: 1) Enter number, select operator, then clear - verify all state resets. 2) Enter first number, operator, second number, then clear - verify complete reset. 3) Chain operations (5 + 3 * 2) and clear at various points. Assert all state variables reset to initial values
+
+## 4. Test Clear After Result [pending]
+### Dependencies: 24.1
+### Description: Write test case to verify clear button works correctly after calculation is complete
+### Details:
+Test scenario: Complete a calculation (e.g., 5 + 3 = 8), then press clear. Verify displayValue resets to '0' and all operation state is cleared. Also test clear after multiple consecutive calculations and after pressing equals multiple times
+
+## 5. Test Edge Cases and State Verification [pending]
+### Dependencies: 24.2, 24.3, 24.4
+### Description: Write comprehensive tests for edge cases and verify complete state reset
+### Details:
+Test edge cases: 1) Multiple clear button presses - ensure idempotent behavior. 2) Clear after error states (division by zero). 3) Clear with decimal numbers. 4) Clear after very large calculations. Create assertion helper to verify all four state variables (displayValue='0', firstOperand=null, operator=null, waitingForOperand=false) in a single call
+

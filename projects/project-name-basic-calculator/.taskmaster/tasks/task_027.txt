@@ -1,0 +1,43 @@
+# Task ID: 27
+# Title: Add Visual Feedback for Button Presses
+# Status: pending
+# Dependencies: 21
+# Priority: low
+# Description: Implement visual feedback when buttons are pressed via keyboard or mouse
+# Details:
+Add active class on button press: button.classList.add('active'); setTimeout(() => button.classList.remove('active'), 100); Style .btn.active with transform: scale(0.95) and different background color
+
+# Test Strategy:
+Verify visual feedback on mouse click, test keyboard press triggers same feedback, check timing feels responsive
+
+# Subtasks:
+## 1. Create CSS styles for button active state [pending]
+### Dependencies: None
+### Description: Define the .btn.active CSS class with transform scale and background color changes for visual feedback
+### Details:
+Add to CSS file: .btn.active { transform: scale(0.95); background-color: #c0c0c0; transition: transform 0.1s ease-out, background-color 0.1s ease-out; }. This creates a subtle press-down effect with a darker background color. Ensure the transition duration matches the JavaScript timeout for smooth animation.
+
+## 2. Implement mouse click visual feedback handler [pending]
+### Dependencies: 27.1
+### Description: Add event listeners to all calculator buttons to apply the active class on mousedown and remove it after 100ms
+### Details:
+Select all buttons with document.querySelectorAll('.btn') and add mousedown event listener to each. In the handler: event.target.classList.add('active'); setTimeout(() => event.target.classList.remove('active'), 100);. This provides immediate visual feedback when clicking buttons.
+
+## 3. Implement keyboard press visual feedback handler [pending]
+### Dependencies: 27.1
+### Description: Add keyboard event listeners to trigger visual feedback when calculator keys are pressed via keyboard
+### Details:
+Add keydown event listener to document. Map keyboard keys to calculator buttons (0-9, +, -, *, /, Enter for =, etc.). When a mapped key is pressed, find the corresponding button element and apply the active class: button.classList.add('active'); setTimeout(() => button.classList.remove('active'), 100);
+
+## 4. Prevent visual feedback conflicts [pending]
+### Dependencies: 27.2, 27.3
+### Description: Ensure multiple rapid clicks or key presses don't cause visual glitches by clearing existing timeouts
+### Details:
+Store timeout IDs in a Map or WeakMap keyed by button element. Before adding active class, check if a timeout exists for that button and clear it. After setting new timeout, store its ID. This prevents the active class from being removed too early during rapid interactions: if (buttonTimeouts.has(button)) clearTimeout(buttonTimeouts.get(button)); button.classList.add('active'); const timeoutId = setTimeout(() => { button.classList.remove('active'); buttonTimeouts.delete(button); }, 100); buttonTimeouts.set(button, timeoutId);
+
+## 5. Add touch device support for visual feedback [pending]
+### Dependencies: 27.2
+### Description: Implement touchstart event handling to ensure visual feedback works properly on mobile devices
+### Details:
+Add touchstart event listeners alongside mousedown listeners. Prevent default touch behavior to avoid delays: event.preventDefault(); event.target.classList.add('active'); setTimeout(() => event.target.classList.remove('active'), 100);. Consider adding touch-action: manipulation CSS to buttons to improve touch responsiveness.
+

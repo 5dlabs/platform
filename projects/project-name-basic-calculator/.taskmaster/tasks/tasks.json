@@ -1,0 +1,2815 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Setup Project Repository",
+        "description": "Initialize a new Git repository and create the basic project structure for the calculator web application",
+        "details": "Create a new directory 'basic-calculator', initialize Git with 'git init', create .gitignore file with common web development exclusions (node_modules/, .DS_Store, etc.), create README.md with project overview, and establish folder structure: /src for source files, /tests for test files, /assets for images/icons if needed",
+        "testStrategy": "Verify repository is initialized correctly by checking .git folder exists, ensure .gitignore is properly configured, and confirm folder structure matches requirements",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create project directory and initialize Git",
+            "description": "Create the 'basic-calculator' directory and initialize it as a Git repository",
+            "dependencies": [],
+            "details": "Create a new directory named 'basic-calculator' using mkdir command, navigate into it with cd command, and run 'git init' to initialize the repository. Verify the .git folder is created successfully.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Create and configure .gitignore file",
+            "description": "Create a .gitignore file with appropriate exclusions for web development",
+            "dependencies": [
+              "1.1"
+            ],
+            "details": "Create .gitignore file in the root directory and add common exclusions: node_modules/, .DS_Store, *.log, dist/, .env, .vscode/, *.swp, *.swo, coverage/, and any other IDE-specific files. Ensure the file is properly formatted with one pattern per line.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Create initial README.md with project structure",
+            "description": "Create README.md file with project overview and structure documentation",
+            "dependencies": [
+              "1.1"
+            ],
+            "details": "Create README.md with: project title 'Basic Calculator Web Application', brief description, project structure outline, setup instructions placeholder, and sections for features, technologies used, and contribution guidelines. Use proper Markdown formatting.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Set up folder structure for source, tests, and assets",
+            "description": "Create the directory structure for organizing project files",
+            "dependencies": [
+              "1.1"
+            ],
+            "details": "Create three main directories: /src for source files (HTML, CSS, JS), /tests for test files, and /assets for images/icons. Within /src, consider creating subdirectories for /css, /js if needed. Create placeholder .gitkeep files in empty directories to ensure they're tracked by Git.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Create HTML Structure",
+        "description": "Build the basic HTML skeleton for the calculator application with semantic markup",
+        "details": "Create index.html with DOCTYPE, meta tags for viewport and charset UTF-8, title 'Basic Calculator', link to CSS file, and script tag for JavaScript. Structure: <div class='calculator'> containing <div class='display'> for screen and <div class='buttons'> for button grid. Use semantic HTML5 elements where appropriate",
+        "testStrategy": "Validate HTML using W3C validator, ensure all required elements are present, check that file loads without errors in browser",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create HTML5 boilerplate with meta tags",
+            "description": "Set up the basic HTML5 document structure with DOCTYPE, head section, and essential meta tags",
+            "dependencies": [],
+            "details": "Create index.html file with <!DOCTYPE html>, <html lang='en'>, <head> section containing <meta charset='UTF-8'>, <meta name='viewport' content='width=device-width, initial-scale=1.0'>, and <title>Basic Calculator</title>. Include empty <body> section for content",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Add calculator container structure",
+            "description": "Build the main calculator container with display and buttons sections using semantic HTML",
+            "dependencies": [
+              "2.1"
+            ],
+            "details": "Within the <body>, create <div class='calculator'> as the main container. Inside, add <div class='display' id='display'>0</div> for the calculator screen showing initial value of 0, and <div class='buttons' id='buttons'></div> as the container for the button grid that will be populated later",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Link CSS and JavaScript files",
+            "description": "Add references to external CSS and JavaScript files in the HTML document",
+            "dependencies": [
+              "2.1"
+            ],
+            "details": "In the <head> section, add <link rel='stylesheet' href='styles.css'> to link the CSS file. Before the closing </body> tag, add <script src='script.js'></script> to link the JavaScript file, ensuring DOM is loaded before script execution",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Design Calculator Layout Grid",
+        "description": "Create the HTML structure for calculator buttons using CSS Grid or Flexbox-friendly markup",
+        "details": "Add button elements inside buttons container: numbers 0-9, operators (+, -, *, /), equals (=), and clear (C). Structure: <button class='btn number' data-value='7'>7</button> for numbers, <button class='btn operator' data-value='+'>+</button> for operators, <button class='btn equals'>=</button>, <button class='btn clear'>C</button>. Total 16 buttons in 4x4 grid layout",
+        "testStrategy": "Verify all 16 buttons are present in HTML, check data attributes are correctly assigned, ensure button text matches intended function",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create number buttons (0-9) with proper data attributes",
+            "description": "Generate HTML button elements for all numeric digits with appropriate classes and data-value attributes",
+            "dependencies": [],
+            "details": "Create 10 button elements for digits 0-9. Each button should follow the pattern: <button class='btn number' data-value='[digit]'>[digit]</button>. Arrange logically with 7-8-9 on top row, 4-5-6 on second row, 1-2-3 on third row, and 0 spanning bottom row position",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Add operator buttons (+, -, *, /)",
+            "description": "Create HTML button elements for all mathematical operators with proper classes and data attributes",
+            "dependencies": [],
+            "details": "Create 4 button elements for operators: addition (+), subtraction (-), multiplication (*), and division (/). Each button should follow the pattern: <button class='btn operator' data-value='[operator]'>[operator]</button>. Position these in the rightmost column of the grid",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Add special buttons (equals, clear)",
+            "description": "Create HTML button elements for equals and clear functions with appropriate classes",
+            "dependencies": [],
+            "details": "Create 2 special function buttons: <button class='btn equals'>=</button> for calculation execution and <button class='btn clear'>C</button> for clearing the display. Position clear button in top-left and equals in bottom-right of the grid",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Structure buttons in semantic 4x4 grid layout",
+            "description": "Organize all 16 buttons within the buttons container in a logical 4x4 grid arrangement",
+            "dependencies": [
+              "3.1",
+              "3.2",
+              "3.3"
+            ],
+            "details": "Arrange buttons in the .buttons container div in this order: Row 1: [C, 7, 8, 9, /], Row 2: [empty, 4, 5, 6, *], Row 3: [empty, 1, 2, 3, -], Row 4: [0 (spanning 2 columns), empty, =, +]. Ensure proper HTML structure that will work with CSS Grid or Flexbox styling",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Create CSS File Structure",
+        "description": "Set up the main CSS file with reset styles and CSS custom properties for theming",
+        "details": "Create styles.css, add CSS reset or normalize.css, define CSS variables for colors (--primary-color, --secondary-color, --text-color, --bg-color), fonts (--font-family), and spacing (--spacing-unit). Set box-sizing: border-box globally, establish base font size and line height",
+        "testStrategy": "Verify CSS file is linked correctly in HTML, check that reset styles are applied, confirm CSS variables are defined and accessible",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create styles.css and add CSS reset/normalize",
+            "description": "Create the main CSS file and implement a CSS reset or normalize.css to ensure consistent styling across browsers",
+            "dependencies": [],
+            "details": "Create styles.css in the project root. Add either a custom CSS reset (targeting margin, padding, box-sizing) or include normalize.css. Include reset for common elements like body, h1-h6, p, ul, ol, button, input. Ensure the CSS file is properly linked in the HTML head section",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Define CSS custom properties for colors and typography",
+            "description": "Set up CSS variables for consistent theming throughout the application",
+            "dependencies": [
+              "4.1"
+            ],
+            "details": "Define custom properties in :root selector including: --primary-color, --secondary-color, --text-color, --bg-color for colors; --font-family for typography; --spacing-unit for consistent spacing. Consider adding variations like --text-color-light, --bg-color-dark for different states",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Set up global styles and box-sizing",
+            "description": "Establish fundamental global styles including box-sizing and base typography",
+            "dependencies": [
+              "4.2"
+            ],
+            "details": "Apply box-sizing: border-box to all elements using *, *::before, *::after selector. Set base font-size (16px or 1rem) and line-height (1.5-1.6) on body. Define default font-family using CSS variable. Set default text and background colors using defined variables",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Establish base layout utilities",
+            "description": "Create reusable utility classes for common layout patterns",
+            "dependencies": [
+              "4.3"
+            ],
+            "details": "Create utility classes for: .container (max-width and centering), .flex (display: flex with common variations), .grid (basic grid setup), spacing utilities (.m-1, .p-1, etc. using --spacing-unit), .sr-only for screen reader text. Include responsive considerations where applicable",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Style Calculator Container",
+        "description": "Apply styling to the main calculator container for a modern, clean appearance",
+        "details": "Style .calculator class: max-width: 400px, margin: 50px auto, padding: 20px, background: #f0f0f0, border-radius: 10px, box-shadow: 0 0 20px rgba(0,0,0,0.1). Center on page using flexbox on body element",
+        "testStrategy": "Visual inspection to ensure calculator is centered, check computed styles match specifications, test on different screen sizes",
+        "priority": "medium",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set up body element flexbox styling",
+            "description": "Configure the body element to use flexbox for centering the calculator container on the page",
+            "dependencies": [],
+            "details": "Add CSS rules to the body element: display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 0; This will create a full viewport height container that centers its content both horizontally and vertically",
+            "status": "pending",
+            "testStrategy": "Verify body element has flexbox properties applied, check that calculator is centered both horizontally and vertically in the viewport, test on different screen sizes to ensure centering remains consistent"
+          },
+          {
+            "id": 2,
+            "title": "Apply calculator container dimensions and spacing",
+            "description": "Set the width constraints and spacing properties for the .calculator class",
+            "dependencies": [],
+            "details": "Add CSS rules to .calculator class: max-width: 400px; margin: 50px auto; padding: 20px; The max-width ensures the calculator doesn't exceed 400px on larger screens, margin provides spacing from viewport edges, and padding creates internal spacing for content",
+            "status": "pending",
+            "testStrategy": "Measure computed width to ensure it doesn't exceed 400px, verify 50px margin is applied on all sides, check that 20px padding is present inside the container"
+          },
+          {
+            "id": 3,
+            "title": "Style calculator background and appearance",
+            "description": "Apply the background color and visual styling to make the calculator container visually appealing",
+            "dependencies": [],
+            "details": "Add CSS rules to .calculator class: background: #f0f0f0; This light gray background provides a subtle, modern appearance that contrasts well with the page background and button elements",
+            "status": "pending",
+            "testStrategy": "Verify background color is exactly #f0f0f0 using browser developer tools, ensure color provides sufficient contrast with child elements"
+          },
+          {
+            "id": 4,
+            "title": "Add border radius for rounded corners",
+            "description": "Apply border radius to create smooth, rounded corners on the calculator container",
+            "dependencies": [],
+            "details": "Add CSS rule to .calculator class: border-radius: 10px; This creates uniformly rounded corners with a 10px radius, giving the calculator a modern, polished appearance",
+            "status": "pending",
+            "testStrategy": "Inspect computed styles to verify 10px border-radius is applied to all corners, visually confirm corners appear smoothly rounded without pixelation"
+          },
+          {
+            "id": 5,
+            "title": "Apply box shadow for depth effect",
+            "description": "Add a subtle shadow to create visual depth and make the calculator appear elevated from the page",
+            "dependencies": [
+              "5.1",
+              "5.2",
+              "5.3",
+              "5.4"
+            ],
+            "details": "Add CSS rule to .calculator class: box-shadow: 0 0 20px rgba(0,0,0,0.1); This creates a soft, diffused shadow with 20px blur radius and 10% opacity black color, providing a subtle depth effect without being too prominent",
+            "status": "pending",
+            "testStrategy": "Verify box-shadow property is correctly applied with all values, check shadow appearance in different lighting conditions, ensure shadow doesn't interfere with surrounding elements"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Style Display Screen",
+        "description": "Create styling for the calculator display screen that shows input and results",
+        "details": "Style .display class: background: #333, color: white, font-size: 2em, padding: 10px, text-align: right, margin-bottom: 10px, min-height: 50px, border-radius: 5px, overflow: hidden, font-family: monospace for better number alignment",
+        "testStrategy": "Verify display is visually distinct from buttons, check text alignment is correct, test with long numbers to ensure overflow handling",
+        "priority": "medium",
+        "dependencies": [
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create Display Container Styles",
+            "description": "Apply the base styling to the .display class including background color, text color, and dimensions",
+            "dependencies": [],
+            "details": "Add CSS rules to .display class: background-color: #333; color: white; min-height: 50px; margin-bottom: 10px; This creates the dark background container with white text and ensures minimum height for the display area.",
+            "status": "pending",
+            "testStrategy": "Verify the display has a dark gray (#333) background, white text color is applied, and the container maintains a minimum height of 50px even when empty"
+          },
+          {
+            "id": 2,
+            "title": "Configure Display Typography",
+            "description": "Set up the font properties for optimal number display including size, family, and alignment",
+            "dependencies": [
+              "6.1"
+            ],
+            "details": "Add typography rules to .display class: font-size: 2em; font-family: 'Courier New', Courier, monospace; text-align: right; The monospace font ensures consistent digit width and right alignment positions numbers correctly for calculator display.",
+            "status": "pending",
+            "testStrategy": "Test that numbers align properly to the right, verify monospace font renders all digits with equal width, check font size scales appropriately with different viewport sizes"
+          },
+          {
+            "id": 3,
+            "title": "Add Display Padding and Spacing",
+            "description": "Implement internal padding for proper content spacing within the display area",
+            "dependencies": [
+              "6.2"
+            ],
+            "details": "Add padding rule to .display class: padding: 10px; This creates consistent spacing between the display content and its borders, ensuring numbers don't touch the edges of the container.",
+            "status": "pending",
+            "testStrategy": "Verify 10px padding is applied on all sides, check that long numbers maintain proper spacing from edges, ensure padding doesn't cause layout shifts"
+          },
+          {
+            "id": 4,
+            "title": "Style Display Border and Corners",
+            "description": "Apply rounded corners to soften the display appearance and match modern UI design",
+            "dependencies": [
+              "6.3"
+            ],
+            "details": "Add border styling to .display class: border-radius: 5px; This creates subtle rounded corners that make the display visually appealing and consistent with modern calculator designs.",
+            "status": "pending",
+            "testStrategy": "Confirm 5px border radius is applied to all corners, verify corners render smoothly without pixelation, check that border radius doesn't interfere with text display"
+          },
+          {
+            "id": 5,
+            "title": "Implement Overflow Handling",
+            "description": "Configure overflow behavior to handle long numbers or expressions that exceed display width",
+            "dependencies": [
+              "6.4"
+            ],
+            "details": "Add overflow rule to .display class: overflow: hidden; This prevents content from spilling outside the display container when numbers are too long, maintaining a clean appearance while ensuring all content stays within bounds.",
+            "status": "pending",
+            "testStrategy": "Test with very long numbers to verify they don't overflow outside container, check that overflow hidden doesn't cut off content unexpectedly, verify horizontal scrolling is disabled"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Implement Button Grid Layout",
+        "description": "Use CSS Grid to create a 4x4 button layout for the calculator",
+        "details": "Style .buttons container: display: grid, grid-template-columns: repeat(4, 1fr), gap: 10px. This creates equal-width columns with consistent spacing between buttons",
+        "testStrategy": "Verify buttons are arranged in 4x4 grid, check spacing is consistent, ensure grid is responsive",
+        "priority": "medium",
+        "dependencies": [
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create Basic Grid Container Structure",
+            "description": "Set up the .buttons container element with CSS Grid display property and define the basic grid structure",
+            "dependencies": [],
+            "details": "Add CSS rule for .buttons container: display: grid; grid-template-columns: repeat(4, 1fr); This establishes the grid context and creates 4 equal-width columns that will automatically adjust to the container width",
+            "status": "pending",
+            "testStrategy": "Inspect element to verify grid display is applied and 4 columns are created with equal widths"
+          },
+          {
+            "id": 2,
+            "title": "Add Grid Gap Spacing",
+            "description": "Implement consistent spacing between grid items using the gap property",
+            "dependencies": [
+              "7.1"
+            ],
+            "details": "Update .buttons CSS to include: gap: 10px; This creates uniform 10px spacing between all buttons both horizontally and vertically, replacing the need for individual margins",
+            "status": "pending",
+            "testStrategy": "Measure spacing between buttons to confirm 10px gap, verify no double margins at edges"
+          },
+          {
+            "id": 3,
+            "title": "Configure Grid Auto-Flow and Alignment",
+            "description": "Set grid auto-flow behavior and ensure proper alignment of grid items",
+            "dependencies": [
+              "7.2"
+            ],
+            "details": "Add to .buttons CSS: grid-auto-flow: row; align-items: stretch; justify-items: stretch; This ensures buttons fill from left to right, row by row, and stretch to fill their grid cells completely",
+            "status": "pending",
+            "testStrategy": "Verify buttons flow left-to-right in rows, check that buttons expand to fill grid cells"
+          },
+          {
+            "id": 4,
+            "title": "Handle Special Button Spans",
+            "description": "Implement CSS for buttons that need to span multiple grid cells (like equals or zero button)",
+            "dependencies": [
+              "7.3"
+            ],
+            "details": "Add CSS classes for special buttons: .button-wide { grid-column: span 2; } for buttons that should take up 2 columns. Apply to zero button or equals button as needed in the layout",
+            "status": "pending",
+            "testStrategy": "Verify wide buttons span exactly 2 columns, ensure grid layout remains intact with spanning elements"
+          },
+          {
+            "id": 5,
+            "title": "Add Responsive Grid Adjustments",
+            "description": "Ensure the grid layout remains functional and visually appealing on different screen sizes",
+            "dependencies": [
+              "7.4"
+            ],
+            "details": "Add media query for smaller screens: @media (max-width: 400px) { .buttons { gap: 5px; } } This reduces spacing on small screens. Also ensure grid container has appropriate max-width and padding for optimal display",
+            "status": "pending",
+            "testStrategy": "Test layout on various screen sizes, verify buttons remain clickable and properly spaced on mobile devices"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Style Calculator Buttons",
+        "description": "Apply consistent styling to all calculator buttons with hover and active states",
+        "details": "Style .btn class: padding: 20px, font-size: 1.2em, border: none, border-radius: 5px, cursor: pointer, background: #e0e0e0, transition: all 0.2s. Add hover state: background: #d0d0d0, transform: translateY(-2px). Add active state: transform: translateY(0)",
+        "testStrategy": "Test all button states (normal, hover, active), verify transitions are smooth, check cursor changes on hover",
+        "priority": "medium",
+        "dependencies": [
+          7
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define Base Button Styles",
+            "description": "Create the foundational CSS rules for the .btn class with basic styling properties",
+            "dependencies": [],
+            "details": "In the CSS file, add the .btn class selector and define these properties: padding: 20px; font-size: 1.2em; border: none; border-radius: 5px; cursor: pointer; background: #e0e0e0; transition: all 0.2s; This establishes the default appearance for all calculator buttons with smooth transition effects.",
+            "status": "pending",
+            "testStrategy": "Inspect a button element in browser dev tools to verify all base styles are applied correctly, check that cursor changes to pointer on hover"
+          },
+          {
+            "id": 2,
+            "title": "Implement Button Hover State",
+            "description": "Add CSS rules for button hover effects including background color change and upward translation",
+            "dependencies": [
+              "8.1"
+            ],
+            "details": "Create the .btn:hover selector and add: background: #d0d0d0; transform: translateY(-2px); This creates a subtle lift effect when users hover over buttons, providing visual feedback. The darker background color (#d0d0d0) creates contrast from the default state.",
+            "status": "pending",
+            "testStrategy": "Hover over each button type and verify the background color changes to #d0d0d0 and the button moves up 2 pixels smoothly"
+          },
+          {
+            "id": 3,
+            "title": "Add Button Active State",
+            "description": "Define CSS rules for the active (pressed) state to provide tactile feedback",
+            "dependencies": [
+              "8.2"
+            ],
+            "details": "Add the .btn:active selector with: transform: translateY(0); This resets the vertical position when a button is clicked, creating a press-down effect. Combined with the transition property from the base styles, this creates smooth button press animation.",
+            "status": "pending",
+            "testStrategy": "Click and hold each button to verify it returns to original position (translateY(0)), ensure the transition is smooth and responsive"
+          },
+          {
+            "id": 4,
+            "title": "Style Special Button Types",
+            "description": "Apply distinct styling to operator, equals, and clear buttons for better visual hierarchy",
+            "dependencies": [
+              "8.3"
+            ],
+            "details": "Add specific styles for button types: .btn.operator { background: #ff9500; color: white; } .btn.operator:hover { background: #e08600; } .btn.equals { background: #4CAF50; color: white; } .btn.equals:hover { background: #45a049; } .btn.clear { background: #f44336; color: white; } .btn.clear:hover { background: #da190b; }",
+            "status": "pending",
+            "testStrategy": "Verify each button type has its distinct color, check hover states work correctly for special buttons, ensure text is readable with white color on colored backgrounds"
+          },
+          {
+            "id": 5,
+            "title": "Ensure Cross-Browser Compatibility",
+            "description": "Add vendor prefixes and fallbacks to ensure consistent button styling across different browsers",
+            "dependencies": [
+              "8.4"
+            ],
+            "details": "Add vendor prefixes for transform property: -webkit-transform for Safari/Chrome, -moz-transform for Firefox, -ms-transform for IE. Also add box-sizing: border-box to .btn class to ensure consistent sizing. Consider adding -webkit-appearance: none to remove default button styling on iOS devices.",
+            "status": "pending",
+            "testStrategy": "Test button appearance and interactions in Chrome, Firefox, Safari, and Edge browsers, verify transitions work smoothly in all browsers"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Differentiate Button Types Visually",
+        "description": "Apply distinct styling to number buttons, operator buttons, equals, and clear buttons",
+        "details": "Style .btn.number: background: #fff. Style .btn.operator: background: #ff9800, color: white. Style .btn.equals: background: #4caf50, color: white, grid-column: span 2. Style .btn.clear: background: #f44336, color: white, grid-column: span 2",
+        "testStrategy": "Visually verify each button type has distinct appearance, check color contrast meets accessibility standards",
+        "priority": "low",
+        "dependencies": [
+          8
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Style Number Buttons",
+            "description": "Apply white background styling to all number buttons (0-9) to make them visually distinct",
+            "dependencies": [],
+            "details": "Add CSS rule for .btn.number class: background-color: #fff; color: #333; border: 1px solid #ddd; transition: background-color 0.2s ease. This creates clean white buttons with dark text for optimal readability",
+            "status": "pending",
+            "testStrategy": "Verify all number buttons (0-9) have white background, check text contrast ratio meets WCAG AA standards (4.5:1), test hover states work correctly"
+          },
+          {
+            "id": 2,
+            "title": "Style Operator Buttons",
+            "description": "Apply orange background with white text to operator buttons (+, -, *, /) for clear visual differentiation",
+            "dependencies": [],
+            "details": "Add CSS rule for .btn.operator class: background-color: #ff9800; color: white; border: none; font-weight: bold; transition: background-color 0.2s ease. Add hover state with darker orange (#f57c00) for better user feedback",
+            "status": "pending",
+            "testStrategy": "Verify all operator buttons have orange background, ensure white text is clearly visible, test color contrast meets WCAG standards, check hover effects work"
+          },
+          {
+            "id": 3,
+            "title": "Style Equals Button",
+            "description": "Apply green background styling to equals button and make it span two grid columns for prominence",
+            "dependencies": [],
+            "details": "Add CSS rule for .btn.equals class: background-color: #4caf50; color: white; grid-column: span 2; border: none; font-weight: bold; font-size: 1.2em; transition: background-color 0.2s ease. Add hover state with darker green (#388e3c)",
+            "status": "pending",
+            "testStrategy": "Verify equals button has green background and spans 2 columns, check button alignment in grid, test that spanning doesn't break layout on different screen sizes"
+          },
+          {
+            "id": 4,
+            "title": "Style Clear Button",
+            "description": "Apply red background styling to clear button and make it span two grid columns for easy access",
+            "dependencies": [],
+            "details": "Add CSS rule for .btn.clear class: background-color: #f44336; color: white; grid-column: span 2; border: none; font-weight: bold; transition: background-color 0.2s ease. Add hover state with darker red (#d32f2f) for visual feedback",
+            "status": "pending",
+            "testStrategy": "Verify clear button has red background and spans 2 columns, ensure button is easily distinguishable as a destructive action, test grid layout remains intact"
+          },
+          {
+            "id": 5,
+            "title": "Add Button Active States and Transitions",
+            "description": "Implement active states and smooth transitions for all button types to enhance user interaction feedback",
+            "dependencies": [
+              "9.1",
+              "9.2",
+              "9.3",
+              "9.4"
+            ],
+            "details": "Add general button transitions and active states: .btn { cursor: pointer; transition: all 0.2s ease; } .btn:active { transform: scale(0.95); } .btn.number:hover { background-color: #f5f5f5; } .btn:focus { outline: 2px solid #2196f3; outline-offset: 2px; } for accessibility",
+            "status": "pending",
+            "testStrategy": "Test all button types have smooth hover transitions, verify active state provides tactile feedback, ensure focus states are visible for keyboard navigation"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Create JavaScript File Structure",
+        "description": "Set up the main JavaScript file with initial structure and strict mode",
+        "details": "Create script.js, add 'use strict' directive, create main calculator object or class structure. Initial structure: const calculator = { displayValue: '0', firstOperand: null, waitingForOperand: false, operator: null }",
+        "testStrategy": "Verify JavaScript file loads without errors, check strict mode is enabled, confirm initial object structure is created",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create script.js with strict mode and basic structure",
+            "description": "Create the main JavaScript file with proper strict mode declaration and basic file structure including comments and initial setup",
+            "dependencies": [],
+            "details": "Create script.js file in project root. Add 'use strict'; at the top. Include file header comment with description, author, and date. Set up basic IIFE (Immediately Invoked Function Expression) pattern to avoid global scope pollution: (function() { 'use strict'; // Calculator code here })();",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Define calculator state object with initial values",
+            "description": "Create the main calculator object with all necessary properties to track calculator state and initial default values",
+            "dependencies": [
+              "10.1"
+            ],
+            "details": "Inside the IIFE, define const calculator = { displayValue: '0', firstOperand: null, waitingForOperand: false, operator: null, memory: 0 }; Add comments explaining each property's purpose. Ensure object is properly structured for future method additions",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Set up basic initialization and DOM ready handling",
+            "description": "Implement DOM content loaded event listener and basic initialization function to ensure code runs after HTML is fully loaded",
+            "dependencies": [
+              "10.2"
+            ],
+            "details": "Add document.addEventListener('DOMContentLoaded', init); Create init() function that will contain all initialization logic. Add console.log to verify script loads successfully. Set up basic error handling with try-catch block in init function",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Implement Display Update Function",
+        "description": "Create a function to update the calculator display with current value",
+        "details": "Create updateDisplay() function: const display = document.querySelector('.display'); display.textContent = calculator.displayValue; Call this function on page load to show initial '0'",
+        "testStrategy": "Verify display shows '0' on page load, test updating displayValue and calling updateDisplay() shows new value",
+        "priority": "high",
+        "dependencies": [
+          10
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create updateDisplay Function",
+            "description": "Implement the core updateDisplay() function that retrieves the display element and updates its content with the current calculator display value",
+            "dependencies": [],
+            "details": "function updateDisplay() {\n  const display = document.querySelector('.display');\n  display.textContent = calculator.displayValue;\n}\n\nThis function should be defined in the global scope or as part of the calculator module to be accessible throughout the application.",
+            "status": "pending",
+            "testStrategy": "Create unit test to verify function correctly updates DOM element with calculator.displayValue, test with various values including '0', negative numbers, and decimals"
+          },
+          {
+            "id": 2,
+            "title": "Initialize Display on Page Load",
+            "description": "Set up event listener for DOMContentLoaded to call updateDisplay() when the page loads, ensuring the display shows the initial '0' value",
+            "dependencies": [
+              "11.1"
+            ],
+            "details": "document.addEventListener('DOMContentLoaded', () => {\n  updateDisplay();\n});\n\nEnsure calculator.displayValue is initialized to '0' before this runs. This guarantees the display shows '0' when the calculator first loads.",
+            "status": "pending",
+            "testStrategy": "Test that display shows '0' immediately after page load, verify DOMContentLoaded event properly triggers updateDisplay()"
+          },
+          {
+            "id": 3,
+            "title": "Add Error Handling to updateDisplay",
+            "description": "Enhance updateDisplay() function with error handling to gracefully handle cases where the display element is not found or displayValue is invalid",
+            "dependencies": [
+              "11.1"
+            ],
+            "details": "function updateDisplay() {\n  const display = document.querySelector('.display');\n  if (!display) {\n    console.error('Display element not found');\n    return;\n  }\n  \n  const value = calculator.displayValue || '0';\n  display.textContent = value;\n}\n\nThis ensures the function doesn't throw errors if DOM structure changes or if displayValue is undefined.",
+            "status": "pending",
+            "testStrategy": "Test function behavior when display element is missing, test with null/undefined displayValue, verify appropriate fallback to '0'"
+          },
+          {
+            "id": 4,
+            "title": "Integrate Display Length Validation",
+            "description": "Add validation to updateDisplay() to handle display overflow by limiting the number of characters shown on the display",
+            "dependencies": [
+              "11.3"
+            ],
+            "details": "function updateDisplay() {\n  const display = document.querySelector('.display');\n  if (!display) {\n    console.error('Display element not found');\n    return;\n  }\n  \n  let value = calculator.displayValue || '0';\n  \n  // Limit display to 12 characters to prevent overflow\n  if (value.length > 12) {\n    value = value.substring(0, 12);\n  }\n  \n  display.textContent = value;\n}\n\nThis prevents the display from showing values that exceed the visual capacity of the calculator display.",
+            "status": "pending",
+            "testStrategy": "Test with strings longer than 12 characters, verify truncation works correctly, ensure decimal points and negative signs are handled properly in character count"
+          },
+          {
+            "id": 5,
+            "title": "Create Display Update Documentation",
+            "description": "Document the updateDisplay() function usage, including when it should be called and how it interacts with other calculator functions",
+            "dependencies": [
+              "11.4"
+            ],
+            "details": "/**\n * Updates the calculator display with the current displayValue\n * Should be called:\n * - On page load (initial display)\n * - After number input\n * - After operator selection\n * - After calculation completion\n * - After clear operation\n * \n * @function updateDisplay\n * @returns {void}\n */\n\nInclude inline comments explaining the error handling and length validation logic. Document that this function is a dependency for all user interaction handlers.",
+            "status": "pending",
+            "testStrategy": "Review documentation for completeness and accuracy, ensure all use cases are covered, verify code examples match actual implementation"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Add Event Listeners to Buttons",
+        "description": "Set up click event listeners for all calculator buttons",
+        "details": "Use event delegation on buttons container: document.querySelector('.buttons').addEventListener('click', (event) => { if (!event.target.matches('button')) return; // Handle button click based on class }). This is more efficient than individual listeners",
+        "testStrategy": "Click each button and verify event is captured, check that non-button clicks are ignored, test event.target properties",
+        "priority": "high",
+        "dependencies": [
+          11
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set up event delegation on button container",
+            "description": "Implement event delegation by attaching a single click event listener to the buttons container element",
+            "dependencies": [],
+            "details": "Add event listener to .buttons container using document.querySelector('.buttons').addEventListener('click', handleButtonClick). This approach is more efficient than adding individual listeners to each button and automatically handles dynamically added buttons",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Create button click handler with type detection",
+            "description": "Implement the main event handler function that detects button types and extracts relevant data",
+            "dependencies": [
+              "12.1"
+            ],
+            "details": "Create handleButtonClick function that: 1) Checks if clicked element is a button using event.target.matches('button'), 2) Extracts button type from classes (number, operator, equals, clear), 3) Gets button value from textContent or data attributes, 4) Prevents handling of non-button clicks",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Route clicks to appropriate handler functions",
+            "description": "Implement routing logic to call specific handler functions based on button type",
+            "dependencies": [
+              "12.2"
+            ],
+            "details": "Inside handleButtonClick, use switch statement or if-else chain to route to appropriate handlers: handleNumberClick() for numbers, handleOperatorClick() for operators, handleEqualsClick() for equals, handleClearClick() for clear. Pass relevant data (button value, event) to each handler",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Handle Number Button Clicks",
+        "description": "Implement logic to handle number input (0-9) and update display",
+        "details": "Create inputDigit(digit) function: if (calculator.waitingForOperand) { calculator.displayValue = digit; calculator.waitingForOperand = false; } else { calculator.displayValue = calculator.displayValue === '0' ? digit : calculator.displayValue + digit; } updateDisplay();",
+        "testStrategy": "Test entering single digit replaces initial 0, test multiple digits concatenate, verify leading zeros are handled correctly",
+        "priority": "high",
+        "dependencies": [
+          12
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create inputDigit function with basic concatenation",
+            "description": "Implement the core inputDigit(digit) function that handles basic number concatenation when adding digits to the display",
+            "dependencies": [],
+            "details": "Create function inputDigit(digit) that concatenates the digit parameter to calculator.displayValue. Initially implement simple concatenation logic: calculator.displayValue = calculator.displayValue + digit. This establishes the basic function structure before adding state handling",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Handle waiting for operand state",
+            "description": "Add logic to handle the waitingForOperand state when a new number should replace the current display value",
+            "dependencies": [
+              "13.1"
+            ],
+            "details": "Modify inputDigit function to check if (calculator.waitingForOperand). When true, set calculator.displayValue = digit and calculator.waitingForOperand = false to replace the display with the new digit. When false, use the concatenation logic from subtask 13.1",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement proper handling of leading zeros and display updates",
+            "description": "Add logic to prevent multiple leading zeros and ensure display updates after each digit input",
+            "dependencies": [
+              "13.2"
+            ],
+            "details": "Update the concatenation logic to check if calculator.displayValue === '0'. If true, replace with the new digit instead of concatenating. This prevents '00123' scenarios. Add updateDisplay() call at the end of inputDigit function to refresh the display element with the new value",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "Implement Clear Functionality",
+        "description": "Create function to clear calculator state and reset display",
+        "details": "Create clear() function: calculator.displayValue = '0'; calculator.firstOperand = null; calculator.waitingForOperand = false; calculator.operator = null; updateDisplay();",
+        "testStrategy": "Test clear button resets display to 0, verify all calculator properties are reset, test clear during various calculation states",
+        "priority": "high",
+        "dependencies": [
+          12
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define Calculator State Structure",
+            "description": "Create and initialize the calculator object with all necessary state properties",
+            "dependencies": [],
+            "details": "Define calculator object with properties: displayValue: '0', firstOperand: null, waitingForOperand: false, operator: null. This establishes the state structure that the clear function will reset to.",
+            "status": "pending",
+            "testStrategy": "Verify calculator object exists with all required properties initialized to correct default values"
+          },
+          {
+            "id": 2,
+            "title": "Create Clear Function Definition",
+            "description": "Implement the clear() function that resets all calculator state properties",
+            "dependencies": [
+              "14.1"
+            ],
+            "details": "Create function clear() { calculator.displayValue = '0'; calculator.firstOperand = null; calculator.waitingForOperand = false; calculator.operator = null; }. This function should be accessible globally or as a method of the calculator object.",
+            "status": "pending",
+            "testStrategy": "Test that calling clear() properly resets each property to its initial state"
+          },
+          {
+            "id": 3,
+            "title": "Integrate Display Update Call",
+            "description": "Add updateDisplay() call to the clear function to refresh the UI",
+            "dependencies": [
+              "14.2"
+            ],
+            "details": "Modify clear() function to include updateDisplay() call at the end: function clear() { calculator.displayValue = '0'; calculator.firstOperand = null; calculator.waitingForOperand = false; calculator.operator = null; updateDisplay(); }. This ensures the display reflects the cleared state.",
+            "status": "pending",
+            "testStrategy": "Verify that display shows '0' after clear() is called"
+          },
+          {
+            "id": 4,
+            "title": "Add Clear Button Event Handler",
+            "description": "Connect the clear function to the calculator's clear button (C or AC)",
+            "dependencies": [
+              "14.3"
+            ],
+            "details": "Add event listener to clear button: document.querySelector('.clear-button').addEventListener('click', clear); or integrate into existing button click handler system. Ensure the button selector matches your HTML structure.",
+            "status": "pending",
+            "testStrategy": "Test clicking clear button triggers the clear function and resets display"
+          },
+          {
+            "id": 5,
+            "title": "Handle Clear During Active Calculations",
+            "description": "Test and ensure clear function works correctly in all calculator states",
+            "dependencies": [
+              "14.4"
+            ],
+            "details": "Verify clear() works correctly when called: during number input, after operator selection, during second operand input, after equals, and after errors. Add any additional state cleanup if needed for edge cases.",
+            "status": "pending",
+            "testStrategy": "Test clear functionality in various states: mid-calculation (5 + C), after operator (5 + C), after equals (5 + 3 = C), and verify calculator returns to initial state ready for new calculations"
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "Handle Operator Button Clicks",
+        "description": "Implement logic to handle arithmetic operator selection",
+        "details": "Create handleOperator(nextOperator) function: const inputValue = parseFloat(calculator.displayValue); if (calculator.firstOperand === null) { calculator.firstOperand = inputValue; } else if (calculator.operator) { const result = performCalculation(); calculator.displayValue = String(result); calculator.firstOperand = result; } calculator.waitingForOperand = true; calculator.operator = nextOperator; updateDisplay();",
+        "testStrategy": "Test operator selection after number input, verify consecutive operator presses, check operator change functionality",
+        "priority": "high",
+        "dependencies": [
+          13
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create handleOperator function structure",
+            "description": "Set up the basic handleOperator function with parameter handling and initial structure",
+            "dependencies": [],
+            "details": "Create function handleOperator(nextOperator) with proper parameter validation. Set up the function skeleton with comments for each logical section: input value parsing, first operand handling, consecutive operation handling, and state updates. Include error handling structure for invalid operators.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement first operand storage logic",
+            "description": "Add logic to store the first operand when no previous operand exists",
+            "dependencies": [
+              "15.1"
+            ],
+            "details": "Implement the condition: if (calculator.firstOperand === null) { calculator.firstOperand = inputValue; }. Parse the current display value using parseFloat() and handle edge cases like empty or invalid display values. Ensure proper type conversion and storage in the calculator state object.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Handle consecutive operations with calculation",
+            "description": "Implement logic for when an operator already exists, performing the pending calculation",
+            "dependencies": [
+              "15.1",
+              "15.2"
+            ],
+            "details": "Add else if (calculator.operator) block that calls performCalculation(), stores the result in displayValue as a string, and updates firstOperand with the result. Handle potential calculation errors and ensure proper type conversions between numbers and strings for display.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Manage operator state and display updates",
+            "description": "Update calculator state flags and refresh the display after operator selection",
+            "dependencies": [
+              "15.1",
+              "15.2",
+              "15.3"
+            ],
+            "details": "Set calculator.waitingForOperand = true to prepare for next number input, store the selected operator in calculator.operator = nextOperator, and call updateDisplay() to reflect any changes. Ensure state consistency and handle rapid operator changes gracefully.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "title": "Create Calculation Engine",
+        "description": "Implement the core calculation logic for all arithmetic operations",
+        "details": "Create performCalculation() function: const inputValue = parseFloat(calculator.displayValue); const firstOperand = calculator.firstOperand; if (firstOperand === null || calculator.operator === null) return inputValue; switch(calculator.operator) { case '+': return firstOperand + inputValue; case '-': return firstOperand - inputValue; case '*': return firstOperand * inputValue; case '/': return firstOperand / inputValue; default: return inputValue; }",
+        "testStrategy": "Test each operation with positive numbers, negative numbers, decimals, and edge cases like division by zero",
+        "priority": "high",
+        "dependencies": [
+          15
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create performCalculation function framework",
+            "description": "Set up the basic structure of the performCalculation function with proper parameter handling and return type",
+            "dependencies": [],
+            "details": "Create the function signature: function performCalculation() { const inputValue = parseFloat(calculator.displayValue); const firstOperand = calculator.firstOperand; // Function body to be implemented }. Ensure function is properly scoped and accessible to other calculator functions",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement basic arithmetic operations",
+            "description": "Add switch statement logic to handle all four basic arithmetic operations (+, -, *, /)",
+            "dependencies": [
+              "16.1"
+            ],
+            "details": "Implement switch statement: switch(calculator.operator) { case '+': return firstOperand + inputValue; case '-': return firstOperand - inputValue; case '*': return firstOperand * inputValue; case '/': return firstOperand / inputValue; default: return inputValue; }",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Add input validation and null checks",
+            "description": "Implement validation logic to check for null operands and operators before performing calculations",
+            "dependencies": [
+              "16.1"
+            ],
+            "details": "Add validation: if (firstOperand === null || calculator.operator === null) return inputValue; Also validate that inputValue is a valid number using isNaN() check",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Handle edge cases and return values",
+            "description": "Implement special handling for edge cases like division by zero, very large numbers, and ensure proper return values",
+            "dependencies": [
+              "16.2",
+              "16.3"
+            ],
+            "details": "Add division by zero check: if (calculator.operator === '/' && inputValue === 0) return 'Error'; Handle Infinity and -Infinity results. Ensure all paths return appropriate values",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "title": "Implement Equals Functionality",
+        "description": "Create function to handle equals button and display final result",
+        "details": "Create calculate() function: if (calculator.operator && calculator.firstOperand !== null) { calculator.displayValue = String(performCalculation()); calculator.firstOperand = null; calculator.operator = null; calculator.waitingForOperand = false; updateDisplay(); }",
+        "testStrategy": "Test equals after complete expression, test multiple equals presses, verify state is properly reset",
+        "priority": "high",
+        "dependencies": [
+          16
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create calculate function with state validation",
+            "description": "Implement the calculate() function that validates calculator state before performing calculations, checking for valid operator and firstOperand values",
+            "dependencies": [],
+            "details": "Create calculate() function that first validates: calculator.operator exists, calculator.firstOperand is not null, and current displayValue is valid. Return early if validation fails. Include error handling for edge cases.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement calculation execution and display update",
+            "description": "Execute the calculation using performCalculation() and update the display with the formatted result",
+            "dependencies": [
+              "17.1"
+            ],
+            "details": "Within calculate() function, call performCalculation() to get result, convert result to string and assign to calculator.displayValue, call updateDisplay() to refresh the UI. Handle potential calculation errors and infinity/NaN results.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Reset appropriate state variables after calculation",
+            "description": "Clear the operator, firstOperand, and waitingForOperand state after successful calculation completion",
+            "dependencies": [
+              "17.2"
+            ],
+            "details": "After successful calculation and display update, reset: calculator.firstOperand = null, calculator.operator = null, calculator.waitingForOperand = false. This ensures calculator is ready for new calculations while preserving the result in displayValue.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 18,
+        "title": "Add Decimal Point Support",
+        "description": "Implement functionality to input decimal numbers",
+        "details": "Create inputDecimal() function: if (calculator.waitingForOperand) { calculator.displayValue = '0.'; calculator.waitingForOperand = false; return; } if (!calculator.displayValue.includes('.')) { calculator.displayValue += '.'; } updateDisplay();",
+        "testStrategy": "Test decimal point adds correctly, verify only one decimal per number, test decimal after operators",
+        "priority": "medium",
+        "dependencies": [
+          13
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create inputDecimal function",
+            "description": "Implement the inputDecimal() function that handles decimal point input based on calculator state",
+            "dependencies": [],
+            "details": "Create function that checks if calculator.waitingForOperand is true, then sets displayValue to '0.' and waitingForOperand to false. Otherwise, append decimal point to displayValue if it doesn't already contain one. Call updateDisplay() at the end.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Handle decimal point in waiting for operand state",
+            "description": "Implement logic to properly handle decimal input when calculator is waiting for a new operand",
+            "dependencies": [
+              "18.1"
+            ],
+            "details": "Within inputDecimal(), add conditional logic: if (calculator.waitingForOperand) { calculator.displayValue = '0.'; calculator.waitingForOperand = false; return; }. This ensures that pressing decimal after an operator starts a new number beginning with '0.'",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Prevent multiple decimal points in same number",
+            "description": "Add validation to ensure only one decimal point can be added per number",
+            "dependencies": [
+              "18.1",
+              "18.2"
+            ],
+            "details": "Implement check using if (!calculator.displayValue.includes('.')) before appending decimal point. This prevents users from entering invalid numbers like '12.34.56'. Test with various input sequences to ensure decimal point is only added when valid.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 19,
+        "title": "Handle Division by Zero",
+        "description": "Implement error handling for division by zero cases",
+        "details": "In performCalculation(), add check for division: case '/': return inputValue === 0 ? 'Error' : firstOperand / inputValue; Also handle 'Error' state in other functions to prevent further calculations",
+        "testStrategy": "Test dividing by zero shows 'Error', verify calculator state after error, test recovery from error state",
+        "priority": "medium",
+        "dependencies": [
+          16
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add division by zero check in performCalculation",
+            "description": "Modify the performCalculation function to detect division by zero and return 'Error' instead of Infinity",
+            "dependencies": [],
+            "details": "In the performCalculation() function, update the division case to: case '/': return inputValue === 0 ? 'Error' : firstOperand / inputValue;. This will check if the divisor (inputValue) is zero before performing the division operation.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Update display to show error message",
+            "description": "Modify the updateDisplay function to properly handle and display the 'Error' state",
+            "dependencies": [
+              "19.1"
+            ],
+            "details": "Ensure updateDisplay() can handle the 'Error' string value in calculator.displayValue. The display element should show 'Error' text clearly to the user when division by zero occurs.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Handle error state in subsequent operations",
+            "description": "Implement error state handling in inputDigit, handleOperator, and other calculator functions to prevent operations when in error state",
+            "dependencies": [
+              "19.1",
+              "19.2"
+            ],
+            "details": "Add checks at the beginning of inputDigit(), handleOperator(), and other operation functions to detect if calculator.displayValue === 'Error'. If true, either reset the calculator state or prevent further operations until the calculator is cleared. This prevents cascading errors and ensures proper recovery.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 20,
+        "title": "Implement Responsive Design",
+        "description": "Add media queries to ensure calculator works on mobile devices",
+        "details": "Add media queries: @media (max-width: 480px) { .calculator { margin: 20px; max-width: 100%; } .btn { padding: 15px; font-size: 1em; } .display { font-size: 1.5em; } }",
+        "testStrategy": "Test on various screen sizes (320px, 375px, 768px, 1024px), verify touch targets are adequate on mobile",
+        "priority": "medium",
+        "dependencies": [
+          9
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add mobile breakpoint media queries",
+            "description": "Implement CSS media queries for common mobile breakpoints to ensure calculator adapts to different screen sizes",
+            "dependencies": [],
+            "details": "Add media queries for key breakpoints: @media (max-width: 480px) for mobile phones, @media (max-width: 768px) for tablets. Include styles to adjust calculator container width, margins, and overall layout structure. Ensure calculator remains centered and properly sized on all devices.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Adjust calculator sizing and spacing for small screens",
+            "description": "Modify calculator dimensions, button sizes, and spacing to optimize for mobile viewing and interaction",
+            "dependencies": [
+              "20.1"
+            ],
+            "details": "Within mobile media queries, adjust: .calculator { margin: 20px; max-width: 100%; }, .btn { padding: 15px; font-size: 1em; }, .display { font-size: 1.5em; padding: 15px; }. Ensure grid gap is appropriate for smaller screens and all elements scale proportionally.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Ensure touch targets meet accessibility standards",
+            "description": "Verify and adjust button sizes to meet minimum touch target requirements for mobile accessibility",
+            "dependencies": [
+              "20.2"
+            ],
+            "details": "Ensure all interactive elements meet WCAG 2.1 guidelines with minimum 44x44px touch targets. Test button spacing to prevent accidental taps. Add appropriate padding and margins between buttons. Verify functionality on actual mobile devices or using browser dev tools at 320px, 375px, and 414px widths.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 21,
+        "title": "Add Keyboard Support",
+        "description": "Implement keyboard input for numbers and operations",
+        "details": "Add keydown event listener: document.addEventListener('keydown', (event) => { if (event.key >= '0' && event.key <= '9') inputDigit(event.key); if (event.key === '.') inputDecimal(); if (event.key === '+' || event.key === '-' || event.key === '*' || event.key === '/') handleOperator(event.key); if (event.key === 'Enter' || event.key === '=') calculate(); if (event.key === 'Escape' || event.key === 'c' || event.key === 'C') clear(); });",
+        "testStrategy": "Test all number keys work, verify operators work via keyboard, test Enter for equals, test Escape/C for clear",
+        "priority": "medium",
+        "dependencies": [
+          17
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add keydown event listener with key detection",
+            "description": "Set up the main keyboard event listener on the document to capture all keypress events and implement basic key detection logic",
+            "dependencies": [],
+            "details": "Create a keydown event listener on document level that captures keyboard input. Implement initial event handler structure with console logging for debugging. Ensure event propagation is handled correctly and preventDefault() is called where needed to avoid browser default behaviors",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Map number keys to digit input",
+            "description": "Implement keyboard mapping for numeric keys (0-9) and decimal point to trigger the existing inputDigit and inputDecimal functions",
+            "dependencies": [
+              "21.1"
+            ],
+            "details": "Within the event listener, detect number keys (0-9) using event.key and call inputDigit(event.key). Also map the period/dot key to call inputDecimal(). Test both main keyboard numbers and numpad numbers work correctly",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Map operator keys to operations",
+            "description": "Connect keyboard operator keys (+, -, *, /) to the handleOperator function for arithmetic operations",
+            "dependencies": [
+              "21.1"
+            ],
+            "details": "Detect operator keys using event.key and map them to handleOperator(event.key). Ensure both main keyboard and numpad operators work. Handle the equals key (= or Enter) to trigger calculate() function",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Handle special keys (Enter, Escape, Delete)",
+            "description": "Implement keyboard shortcuts for special calculator functions like clear, equals, and backspace operations",
+            "dependencies": [
+              "21.1"
+            ],
+            "details": "Map Enter key to calculate(), Escape/C/c keys to clear(), and Delete/Backspace to remove last digit. Consider adding support for keyboard shortcuts like Ctrl+C for copy result. Test all special keys work as expected",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 22,
+        "title": "Create Unit Test Structure",
+        "description": "Set up basic unit testing framework for calculator functions",
+        "details": "Create tests/calculator.test.js file. If using vanilla JS, create simple test runner or use lightweight framework like QUnit. Structure: test('addition', () => { calculator.clear(); inputDigit('5'); handleOperator('+'); inputDigit('3'); calculate(); assert.equal(calculator.displayValue, '8'); });",
+        "testStrategy": "Verify test file runs without errors, ensure test runner is configured correctly, run sample test successfully",
+        "priority": "high",
+        "dependencies": [
+          17
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create test directory and file structure",
+            "description": "Set up the tests directory with proper file organization for unit tests",
+            "dependencies": [],
+            "details": "Create tests/ directory at project root. Inside, create calculator.test.js for calculator function tests. Add test-utils.js for shared test utilities. Create index.html as test runner page if using browser-based testing. Ensure proper file naming conventions are followed.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Choose and configure test runner",
+            "description": "Select and set up QUnit or create a custom lightweight test runner for the project",
+            "dependencies": [
+              "22.1"
+            ],
+            "details": "If using QUnit: download qunit.js and qunit.css, add to tests directory, configure test runner HTML. If custom: create simple assert functions, test runner logic, and result reporting. Include setup/teardown capabilities for test isolation.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Create test utilities and helpers",
+            "description": "Develop reusable test helper functions for common calculator testing scenarios",
+            "dependencies": [
+              "22.2"
+            ],
+            "details": "Create helper functions: simulateButtonClick(value), assertDisplay(expected), resetCalculator(), performCalculation(expression). Add assertion helpers for comparing calculator state. Include utilities for simulating user input sequences.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Write first example test",
+            "description": "Create and run a basic addition test to verify the testing framework is working correctly",
+            "dependencies": [
+              "22.3"
+            ],
+            "details": "Implement test: 'test addition 5 + 3 = 8'. Use calculator.clear(), inputDigit('5'), handleOperator('+'), inputDigit('3'), calculate(). Assert displayValue equals '8'. Run test and ensure it passes, demonstrating the test framework is properly configured.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 23,
+        "title": "Write Tests for Basic Operations",
+        "description": "Create comprehensive unit tests for addition, subtraction, multiplication, and division",
+        "details": "Write tests for each operation: test('2 + 3 = 5'), test('10 - 4 = 6'), test('3 * 4 = 12'), test('15 / 3 = 5'). Include edge cases: negative numbers, decimals, large numbers",
+        "testStrategy": "Run all arithmetic tests, verify 100% pass rate, check edge cases are covered",
+        "priority": "high",
+        "dependencies": [
+          22
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Write Addition Tests with Various Inputs",
+            "description": "Create comprehensive test suite for addition operation covering positive numbers, negative numbers, decimals, and edge cases",
+            "dependencies": [],
+            "details": "Implement tests: test('2 + 3 = 5'), test('-5 + 3 = -2'), test('0.1 + 0.2 = 0.3'), test('999999 + 1 = 1000000'), test('0 + 0 = 0'). Include tests for adding multiple numbers in sequence and verify decimal precision handling",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Create Subtraction Tests Including Negative Results",
+            "description": "Develop test cases for subtraction operation with focus on negative results and boundary conditions",
+            "dependencies": [],
+            "details": "Write tests: test('10 - 4 = 6'), test('5 - 10 = -5'), test('-5 - 3 = -8'), test('0.5 - 0.3 = 0.2'), test('0 - 100 = -100'). Include tests for subtracting from negative numbers and consecutive subtractions",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Add Multiplication Tests with Decimals",
+            "description": "Create multiplication test suite with emphasis on decimal operations and precision",
+            "dependencies": [],
+            "details": "Implement tests: test('3 * 4 = 12'), test('0.1 * 0.2 = 0.02'), test('-5 * 3 = -15'), test('2.5 * 4 = 10'), test('0 * 999 = 0'). Add tests for very small decimals and verify floating-point precision handling",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Division Tests with Edge Cases",
+            "description": "Write division tests covering normal operations and critical edge cases like division by zero",
+            "dependencies": [],
+            "details": "Create tests: test('15 / 3 = 5'), test('10 / 4 = 2.5'), test('-20 / 5 = -4'), test('1 / 3 = 0.333...'), test('5 / 0 = Error'). Include tests for dividing zero, very small numbers, and ensure proper error handling for division by zero",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 24,
+        "title": "Test Clear Functionality",
+        "description": "Write tests to verify clear button resets calculator state properly",
+        "details": "Test cases: clear after number input, clear during operation, clear after result. Verify all state variables reset: displayValue = '0', firstOperand = null, operator = null, waitingForOperand = false",
+        "testStrategy": "Run clear tests in various calculator states, verify complete state reset each time",
+        "priority": "medium",
+        "dependencies": [
+          22
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set Up Test Environment and Helper Functions",
+            "description": "Create test file structure and helper functions to simulate calculator state and button clicks",
+            "dependencies": [],
+            "details": "Create test file 'calculator.test.js'. Set up helper functions: createCalculator() to initialize calculator object with default state, simulateButtonClick(button) to trigger button actions, and getCalculatorState() to retrieve current state values (displayValue, firstOperand, operator, waitingForOperand)",
+            "status": "pending",
+            "testStrategy": "Verify helper functions correctly initialize and retrieve calculator state"
+          },
+          {
+            "id": 2,
+            "title": "Test Clear After Number Input",
+            "description": "Write test case to verify clear button works correctly after entering numbers",
+            "dependencies": [
+              "24.1"
+            ],
+            "details": "Test scenario: Input sequence of numbers (e.g., '123'), then press clear. Assert that displayValue returns to '0', firstOperand is null, operator is null, and waitingForOperand is false. Include edge cases like single digit and maximum length numbers",
+            "status": "pending",
+            "testStrategy": "Use multiple number input scenarios including single digit, multiple digits, and decimal numbers"
+          },
+          {
+            "id": 3,
+            "title": "Test Clear During Operation",
+            "description": "Write test case to verify clear button resets state when pressed in the middle of an operation",
+            "dependencies": [
+              "24.1"
+            ],
+            "details": "Test scenarios: 1) Enter number, select operator, then clear - verify all state resets. 2) Enter first number, operator, second number, then clear - verify complete reset. 3) Chain operations (5 + 3 * 2) and clear at various points. Assert all state variables reset to initial values",
+            "status": "pending",
+            "testStrategy": "Test clear at each stage of operation: after first operand, after operator selection, after second operand"
+          },
+          {
+            "id": 4,
+            "title": "Test Clear After Result",
+            "description": "Write test case to verify clear button works correctly after calculation is complete",
+            "dependencies": [
+              "24.1"
+            ],
+            "details": "Test scenario: Complete a calculation (e.g., 5 + 3 = 8), then press clear. Verify displayValue resets to '0' and all operation state is cleared. Also test clear after multiple consecutive calculations and after pressing equals multiple times",
+            "status": "pending",
+            "testStrategy": "Include various calculation types (addition, subtraction, multiplication, division) before clearing"
+          },
+          {
+            "id": 5,
+            "title": "Test Edge Cases and State Verification",
+            "description": "Write comprehensive tests for edge cases and verify complete state reset",
+            "dependencies": [
+              "24.2",
+              "24.3",
+              "24.4"
+            ],
+            "details": "Test edge cases: 1) Multiple clear button presses - ensure idempotent behavior. 2) Clear after error states (division by zero). 3) Clear with decimal numbers. 4) Clear after very large calculations. Create assertion helper to verify all four state variables (displayValue='0', firstOperand=null, operator=null, waitingForOperand=false) in a single call",
+            "status": "pending",
+            "testStrategy": "Run parameterized tests with various calculator states, use snapshot testing for state verification"
+          }
+        ]
+      },
+      {
+        "id": 25,
+        "title": "Test Edge Cases",
+        "description": "Create tests for edge cases and error conditions",
+        "details": "Test cases: division by zero returns 'Error', multiple decimal points ignored, very large numbers, very small numbers, pressing equals without complete expression, consecutive operator presses",
+        "testStrategy": "Document all edge cases, write test for each, verify expected behavior matches actual",
+        "priority": "medium",
+        "dependencies": [
+          23
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Test Division by Zero Handling",
+            "description": "Create comprehensive tests for all division by zero scenarios",
+            "dependencies": [],
+            "details": "Test cases: direct division (5/0), chained operations (10+5/0), zero divided by zero (0/0), division by zero in complex expressions ((10+5)/(3-3)). Verify 'Error' is displayed and calculator state is properly reset",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Test Decimal Point Edge Cases",
+            "description": "Test all edge cases related to decimal point handling",
+            "dependencies": [],
+            "details": "Test cases: multiple decimal points in single number (3.14.159), decimal at start (.5), decimal at end (42.), empty decimal (just .), decimal in both operands (3.14 + 2.71), switching operators after decimal input",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Test Very Large and Small Numbers",
+            "description": "Test calculator behavior with extreme number values",
+            "dependencies": [],
+            "details": "Test cases: maximum JavaScript number (Number.MAX_VALUE), minimum positive number (Number.MIN_VALUE), scientific notation display, overflow scenarios, underflow scenarios, very long decimal places, negative extreme values",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Test Incomplete Expression Handling",
+            "description": "Test calculator behavior when equals is pressed with incomplete expressions",
+            "dependencies": [],
+            "details": "Test cases: equals after single number, equals after operator (5+), equals with no input, equals after decimal point (5.), multiple equals presses, equals after clear, operator followed immediately by equals",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Test Rapid Operation Sequences",
+            "description": "Test calculator stability under rapid user input sequences",
+            "dependencies": [
+              "25.1",
+              "25.2",
+              "25.3",
+              "25.4"
+            ],
+            "details": "Test cases: rapid number entry, quick operator switching, fast clear and number entry, rapid equals pressing, alternating operators and numbers quickly, stress test with 50+ rapid operations, memory leak detection during rapid use",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 26,
+        "title": "Implement Number Formatting",
+        "description": "Add formatting for large numbers and decimal precision",
+        "details": "Create formatNumber(num) function: if (num.toString().length > 12) return parseFloat(num).toExponential(6); return parseFloat(num.toPrecision(12)).toString(); Apply to display updates",
+        "testStrategy": "Test with very large numbers, verify scientific notation works, test decimal precision limits",
+        "priority": "low",
+        "dependencies": [
+          17
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create formatNumber function with length checking",
+            "description": "Implement the formatNumber function that checks number length and applies appropriate formatting rules",
+            "dependencies": [],
+            "details": "Create function formatNumber(num) that: 1) Converts input to string and checks length, 2) If length > 12, returns parseFloat(num).toExponential(6), 3) Otherwise returns parseFloat(num.toPrecision(12)).toString(), 4) Handle edge cases like NaN, Infinity, and very small numbers",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement scientific notation for large numbers",
+            "description": "Add logic to automatically convert large numbers to scientific notation format",
+            "dependencies": [
+              "26.1"
+            ],
+            "details": "Enhance formatNumber to: 1) Detect when numbers exceed display capacity (length > 12), 2) Convert to exponential notation with 6 decimal places, 3) Handle negative numbers correctly, 4) Ensure scientific notation displays properly for very large and very small numbers",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Apply formatting to all display updates",
+            "description": "Integrate formatNumber function into all calculator display update operations",
+            "dependencies": [
+              "26.1",
+              "26.2"
+            ],
+            "details": "Update all display operations: 1) Modify updateDisplay() to use formatNumber(calculator.displayValue), 2) Apply formatting in calculate() function results, 3) Update digit input handling to format intermediate results, 4) Ensure formatting is applied after all mathematical operations",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 27,
+        "title": "Add Visual Feedback for Button Presses",
+        "description": "Implement visual feedback when buttons are pressed via keyboard or mouse",
+        "details": "Add active class on button press: button.classList.add('active'); setTimeout(() => button.classList.remove('active'), 100); Style .btn.active with transform: scale(0.95) and different background color",
+        "testStrategy": "Verify visual feedback on mouse click, test keyboard press triggers same feedback, check timing feels responsive",
+        "priority": "low",
+        "dependencies": [
+          21
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create CSS styles for button active state",
+            "description": "Define the .btn.active CSS class with transform scale and background color changes for visual feedback",
+            "dependencies": [],
+            "details": "Add to CSS file: .btn.active { transform: scale(0.95); background-color: #c0c0c0; transition: transform 0.1s ease-out, background-color 0.1s ease-out; }. This creates a subtle press-down effect with a darker background color. Ensure the transition duration matches the JavaScript timeout for smooth animation.",
+            "status": "pending",
+            "testStrategy": "Manually add the active class to a button in browser DevTools and verify the visual changes appear correctly"
+          },
+          {
+            "id": 2,
+            "title": "Implement mouse click visual feedback handler",
+            "description": "Add event listeners to all calculator buttons to apply the active class on mousedown and remove it after 100ms",
+            "dependencies": [
+              "27.1"
+            ],
+            "details": "Select all buttons with document.querySelectorAll('.btn') and add mousedown event listener to each. In the handler: event.target.classList.add('active'); setTimeout(() => event.target.classList.remove('active'), 100);. This provides immediate visual feedback when clicking buttons.",
+            "status": "pending",
+            "testStrategy": "Click various calculator buttons and verify they show the scale-down effect and background color change for approximately 100ms"
+          },
+          {
+            "id": 3,
+            "title": "Implement keyboard press visual feedback handler",
+            "description": "Add keyboard event listeners to trigger visual feedback when calculator keys are pressed via keyboard",
+            "dependencies": [
+              "27.1"
+            ],
+            "details": "Add keydown event listener to document. Map keyboard keys to calculator buttons (0-9, +, -, *, /, Enter for =, etc.). When a mapped key is pressed, find the corresponding button element and apply the active class: button.classList.add('active'); setTimeout(() => button.classList.remove('active'), 100);",
+            "status": "pending",
+            "testStrategy": "Press number keys and operator keys on keyboard, verify corresponding buttons show visual feedback matching mouse clicks"
+          },
+          {
+            "id": 4,
+            "title": "Prevent visual feedback conflicts",
+            "description": "Ensure multiple rapid clicks or key presses don't cause visual glitches by clearing existing timeouts",
+            "dependencies": [
+              "27.2",
+              "27.3"
+            ],
+            "details": "Store timeout IDs in a Map or WeakMap keyed by button element. Before adding active class, check if a timeout exists for that button and clear it. After setting new timeout, store its ID. This prevents the active class from being removed too early during rapid interactions: if (buttonTimeouts.has(button)) clearTimeout(buttonTimeouts.get(button)); button.classList.add('active'); const timeoutId = setTimeout(() => { button.classList.remove('active'); buttonTimeouts.delete(button); }, 100); buttonTimeouts.set(button, timeoutId);",
+            "status": "pending",
+            "testStrategy": "Rapidly click the same button multiple times and verify the visual feedback doesn't flicker or get stuck in active state"
+          },
+          {
+            "id": 5,
+            "title": "Add touch device support for visual feedback",
+            "description": "Implement touchstart event handling to ensure visual feedback works properly on mobile devices",
+            "dependencies": [
+              "27.2"
+            ],
+            "details": "Add touchstart event listeners alongside mousedown listeners. Prevent default touch behavior to avoid delays: event.preventDefault(); event.target.classList.add('active'); setTimeout(() => event.target.classList.remove('active'), 100);. Consider adding touch-action: manipulation CSS to buttons to improve touch responsiveness.",
+            "status": "pending",
+            "testStrategy": "Test on mobile device or using browser's device emulation mode, verify buttons show visual feedback immediately on touch without delay"
+          }
+        ]
+      },
+      {
+        "id": 28,
+        "title": "Create Browser Compatibility Tests",
+        "description": "Set up manual test checklist for browser compatibility",
+        "details": "Create compatibility checklist: Chrome (latest), Firefox (latest), Safari (latest), Edge (latest), Mobile Chrome, Mobile Safari. Test items: layout renders correctly, all operations work, keyboard input works, responsive design works",
+        "testStrategy": "Manually test on each browser, document any issues found, verify core functionality works across all browsers",
+        "priority": "high",
+        "dependencies": [
+          21
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create detailed test checklist for each browser",
+            "description": "Develop comprehensive test checklists covering all functionality for each target browser (Chrome, Firefox, Safari, Edge, Mobile Chrome, Mobile Safari)",
+            "dependencies": [],
+            "details": "Create structured checklist with test cases for: basic arithmetic operations, advanced functions (sqrt, percentage), keyboard input functionality, display updates and formatting, error handling, responsive design breakpoints, CSS rendering, JavaScript compatibility, memory/clear operations. Format as spreadsheet or markdown table with columns for test case, expected result, actual result, pass/fail status",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Set up testing environment for desktop browsers",
+            "description": "Configure testing setup for Chrome, Firefox, Safari, and Edge browsers on desktop platforms",
+            "dependencies": [
+              "28.1"
+            ],
+            "details": "Install latest stable versions of Chrome, Firefox, Edge on Windows/Mac. Set up Safari on macOS. Configure browser developer tools for testing. Create browser profiles specifically for testing. Document version numbers of each browser. Set up local server environment for consistent testing. Prepare test data sets for consistency across browsers",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Configure mobile browser testing approach",
+            "description": "Establish testing methodology for Mobile Chrome and Mobile Safari including device selection and testing tools",
+            "dependencies": [
+              "28.1"
+            ],
+            "details": "Set up mobile testing using: Chrome DevTools device emulation for initial tests, BrowserStack or similar for real device testing, physical devices if available (iOS and Android). Configure responsive design mode in desktop browsers. Document mobile-specific test cases including touch interactions, viewport sizes, orientation changes. Create mobile testing checklist focusing on touch events, viewport meta tag, responsive layout",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 29,
+        "title": "Optimize Performance",
+        "description": "Review and optimize JavaScript for better performance",
+        "details": "Minimize DOM queries by caching elements, use const where possible, remove unnecessary function calls, consider debouncing rapid button clicks if needed. Profile using browser dev tools",
+        "testStrategy": "Use browser performance profiler, measure initial load time, test rapid button clicking performance",
+        "priority": "low",
+        "dependencies": [
+          27
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Profile and Identify Performance Bottlenecks",
+            "description": "Use browser developer tools to profile current application performance and identify specific bottlenecks",
+            "dependencies": [],
+            "details": "Use Chrome DevTools Performance tab to record runtime performance during typical user interactions. Analyze flame charts to identify slow functions, measure JavaScript execution time, check for layout thrashing, and document findings. Focus on calculator operations, theme switching, and any DOM manipulation bottlenecks.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Optimize DOM Queries and Event Handling",
+            "description": "Refactor code to minimize DOM queries and optimize event handling patterns",
+            "dependencies": [
+              "29.1"
+            ],
+            "details": "Cache frequently accessed DOM elements at initialization, replace multiple querySelector calls with stored references, implement event delegation for calculator buttons instead of individual listeners, add debouncing for rapid button clicks if performance profiling shows it's needed. Store theme toggle and display elements as constants.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Performance Best Practices",
+            "description": "Apply JavaScript performance optimizations and verify improvements",
+            "dependencies": [
+              "29.2"
+            ],
+            "details": "Replace var with const/let throughout codebase, optimize calculation functions to avoid unnecessary operations, remove any console.log statements, minimize function calls in loops, use requestAnimationFrame for any animations. Run performance profiler again to measure improvements and ensure at least 20% reduction in script execution time.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 30,
+        "title": "Add Accessibility Features",
+        "description": "Implement ARIA labels and keyboard navigation improvements",
+        "details": "Add ARIA labels: aria-label='Calculator display' for display, aria-label='Number 5' for buttons. Add role='application' to calculator container. Ensure focus states are visible. Add tabindex for keyboard navigation",
+        "testStrategy": "Test with screen reader, verify all buttons are announced correctly, test keyboard-only navigation",
+        "priority": "medium",
+        "dependencies": [
+          21
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add ARIA Labels to Interactive Elements",
+            "description": "Implement comprehensive ARIA labeling for all calculator buttons, display, and container elements to ensure screen readers can properly identify each component",
+            "dependencies": [],
+            "details": "Add aria-label to display element with dynamic value updates. Label all number buttons (e.g., aria-label='Number 5'), operator buttons (aria-label='Plus'), and function buttons (aria-label='Clear'). Add role='application' to calculator container. Include aria-live='polite' on display for calculation updates",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Focus Management System",
+            "description": "Create a robust focus management system that handles focus states visually and programmatically, ensuring users can track their position in the calculator",
+            "dependencies": [
+              "30.1"
+            ],
+            "details": "Add visible focus indicators with CSS outline or box-shadow. Implement focus trap within calculator container. Handle focus restoration after operations. Ensure focus moves logically between elements. Add :focus-visible styles for keyboard users only",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Enable Complete Keyboard Navigation",
+            "description": "Implement full keyboard support allowing users to operate the calculator entirely without a mouse, including number input, operations, and navigation",
+            "dependencies": [
+              "30.2"
+            ],
+            "details": "Add tabindex='0' to all interactive elements in logical order. Implement keyboard event listeners for number keys (0-9), operators (+, -, *, /), Enter for equals, Escape for clear. Enable arrow key navigation between buttons. Ensure Tab/Shift+Tab cycles through all controls",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Screen Reader Testing and Validation",
+            "description": "Thoroughly test the calculator with multiple screen readers to ensure all accessibility features work correctly and provide a good user experience",
+            "dependencies": [
+              "30.1",
+              "30.2",
+              "30.3"
+            ],
+            "details": "Test with NVDA, JAWS, and VoiceOver. Verify all buttons announce correctly with meaningful labels. Ensure calculation results are announced. Test navigation flow makes sense. Validate ARIA implementation with accessibility tools. Document any screen reader-specific adjustments needed",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 31,
+        "title": "Implement Memory Functions",
+        "description": "Add memory storage capabilities (M+, M-, MR, MC) to calculator",
+        "details": "Add memory variable to calculator object: memory: 0. Implement functions: memoryAdd() { memory += parseFloat(displayValue) }, memoryClear() { memory = 0 }, memoryRecall() { displayValue = String(memory); updateDisplay() }",
+        "testStrategy": "Test memory operations maintain value across calculations, verify memory clear works, test memory recall",
+        "priority": "low",
+        "dependencies": [
+          17
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add memory storage to calculator state",
+            "description": "Extend the calculator object to include a memory property initialized to 0",
+            "dependencies": [],
+            "details": "Add 'memory: 0' property to the calculator object initialization. This will serve as the persistent storage for memory operations throughout the calculator's lifecycle",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement memory add (M+) function",
+            "description": "Create memoryAdd() function that adds current display value to memory",
+            "dependencies": [
+              "31.1"
+            ],
+            "details": "Implement memoryAdd() { calculator.memory += parseFloat(calculator.displayValue) }. Handle edge cases like invalid display values. Add M+ button to UI and connect event listener",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Create memory subtract (M-) function",
+            "description": "Implement memorySubtract() function that subtracts current display value from memory",
+            "dependencies": [
+              "31.1"
+            ],
+            "details": "Implement memorySubtract() { calculator.memory -= parseFloat(calculator.displayValue) }. Handle edge cases and NaN values. Add M- button to UI and wire up event handling",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Add memory recall (MR) function",
+            "description": "Create memoryRecall() function to display stored memory value",
+            "dependencies": [
+              "31.1"
+            ],
+            "details": "Implement memoryRecall() { calculator.displayValue = String(calculator.memory); updateDisplay() }. Ensure proper state management when recalling memory during calculations",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement memory clear (MC) with UI updates",
+            "description": "Create memoryClear() function and update UI to show memory status",
+            "dependencies": [
+              "31.1",
+              "31.2",
+              "31.3",
+              "31.4"
+            ],
+            "details": "Implement memoryClear() { calculator.memory = 0 }. Add MC button and optionally add visual indicator (like 'M' display) when memory contains a value. Test all memory functions work together correctly",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 32,
+        "title": "Add History Feature",
+        "description": "Implement a calculation history that shows recent operations",
+        "details": "Create history array to store last 5 calculations. After each calculation, push string like '5 + 3 = 8' to history. Create collapsible history panel below calculator",
+        "testStrategy": "Verify history stores calculations correctly, test history limit of 5 items, ensure history persists until page reload",
+        "priority": "low",
+        "dependencies": [
+          17
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create history data structure and storage",
+            "description": "Set up the data structure to store calculation history with a maximum of 5 items",
+            "dependencies": [],
+            "details": "Create a history array in the calculator object to store calculation strings. Implement a maxHistoryItems constant set to 5. Add methods for adding items to history and managing the array size limit",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Capture calculations in history format",
+            "description": "Implement logic to capture and format calculations when equals is pressed",
+            "dependencies": [
+              "32.1"
+            ],
+            "details": "Modify the equals operation to create a history entry string in format 'operand1 operator operand2 = result'. Push the formatted string to the history array after successful calculation. Ensure array doesn't exceed 5 items by removing oldest entries",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Build history UI panel",
+            "description": "Create the HTML and CSS for the collapsible history panel below the calculator",
+            "dependencies": [
+              "32.1"
+            ],
+            "details": "Add a history container div below the calculator with a header showing 'History' and a toggle button. Create a list element to display history items. Style the panel to match calculator design with smooth collapse/expand transitions",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement show/hide functionality",
+            "description": "Add JavaScript to control the visibility of the history panel",
+            "dependencies": [
+              "32.3"
+            ],
+            "details": "Create toggleHistory() function to show/hide the history panel. Add event listener to toggle button. Implement smooth CSS transitions for expanding/collapsing. Store visibility state in a variable to maintain state during session",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Add history item limit and management",
+            "description": "Implement history rendering and ensure proper management of the 5-item limit",
+            "dependencies": [
+              "32.2",
+              "32.3",
+              "32.4"
+            ],
+            "details": "Create renderHistory() function to update the UI when history changes. Display history items in reverse chronological order (newest first). Add visual indication when history is full. Test that history persists until page reload",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 33,
+        "title": "Create Loading Animation",
+        "description": "Add subtle loading animation when page first loads",
+        "details": "Create CSS animation: @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } } Apply to calculator with animation: fadeIn 0.5s ease-out",
+        "testStrategy": "Verify animation plays on page load, check animation is smooth, ensure no layout shift occurs",
+        "priority": "low",
+        "dependencies": [
+          9
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define CSS Keyframe Animation",
+            "description": "Create the fadeIn keyframe animation in the CSS file that will handle the opacity and transform transitions",
+            "dependencies": [],
+            "details": "Add the following CSS code to styles.css: @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }. Place this at the top of the CSS file or in a dedicated animations section.",
+            "status": "pending",
+            "testStrategy": "Verify the @keyframes rule is properly defined in the CSS file and follows correct syntax"
+          },
+          {
+            "id": 2,
+            "title": "Apply Animation to Calculator Container",
+            "description": "Add the animation property to the main calculator container element to trigger the fadeIn animation on page load",
+            "dependencies": [
+              "33.1"
+            ],
+            "details": "Locate the main calculator container selector (likely .calculator or #calculator) and add the CSS property: animation: fadeIn 0.5s ease-out; This will apply the animation with a duration of 0.5 seconds and an ease-out timing function.",
+            "status": "pending",
+            "testStrategy": "Inspect the calculator element in browser dev tools to confirm animation property is applied correctly"
+          },
+          {
+            "id": 3,
+            "title": "Set Initial Opacity State",
+            "description": "Ensure the calculator starts with opacity 0 to prevent flash of content before animation begins",
+            "dependencies": [
+              "33.2"
+            ],
+            "details": "Add opacity: 0; to the calculator container's initial CSS rules. Then add animation-fill-mode: forwards; to the animation property to maintain the final animation state (opacity: 1) after completion. The full animation property should be: animation: fadeIn 0.5s ease-out forwards;",
+            "status": "pending",
+            "testStrategy": "Refresh the page and verify calculator starts invisible and fades in smoothly without flickering"
+          },
+          {
+            "id": 4,
+            "title": "Add Animation Delay for Better UX",
+            "description": "Implement a slight delay before the animation starts to ensure all assets are loaded",
+            "dependencies": [
+              "33.3"
+            ],
+            "details": "Modify the animation property to include a small delay: animation: fadeIn 0.5s ease-out 0.1s forwards; This adds a 100ms delay before the animation begins, ensuring fonts and other resources are loaded first.",
+            "status": "pending",
+            "testStrategy": "Test on slower connections to ensure animation doesn't start before content is ready"
+          },
+          {
+            "id": 5,
+            "title": "Optimize for Performance and Accessibility",
+            "description": "Add performance optimizations and respect user preferences for reduced motion",
+            "dependencies": [
+              "33.4"
+            ],
+            "details": "Add will-change: opacity, transform; to the calculator container before animation to optimize rendering. Also add a media query to respect reduced motion preferences: @media (prefers-reduced-motion: reduce) { .calculator { animation: none; opacity: 1; } }. This ensures users who prefer reduced motion see the calculator immediately without animation.",
+            "status": "pending",
+            "testStrategy": "Test with prefers-reduced-motion enabled in browser/OS settings to verify animation is disabled, check performance metrics to ensure smooth 60fps animation"
+          }
+        ]
+      },
+      {
+        "id": 34,
+        "title": "Implement Sound Effects",
+        "description": "Add optional sound feedback for button presses",
+        "details": "Create simple click sound using Web Audio API or audio file. Add toggle button for sound on/off. Store preference in localStorage. Play sound on button click if enabled",
+        "testStrategy": "Test sound plays on button press, verify toggle works, check localStorage persistence",
+        "priority": "low",
+        "dependencies": [
+          27
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create or Source Button Click Sound",
+            "description": "Create a simple click sound using Web Audio API or source an appropriate audio file for button feedback",
+            "dependencies": [],
+            "details": "Either generate a short click sound programmatically using Web Audio API (oscillator with envelope) or find/create a subtle click sound file (WAV/MP3, <50KB). Sound should be pleasant and non-intrusive, approximately 50-100ms duration",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Audio Playback System",
+            "description": "Create audio management module to handle sound loading and playback functionality",
+            "dependencies": [
+              "34.1"
+            ],
+            "details": "Create audioManager object with methods: init() to load/prepare audio, playClick() to trigger sound playback. If using Web Audio API, create audio context and buffer. If using audio file, create Audio element and handle loading. Ensure proper error handling for audio context restrictions",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Add Sound Toggle UI and State Management",
+            "description": "Implement UI control for enabling/disabling sound effects with proper state management",
+            "dependencies": [
+              "34.2"
+            ],
+            "details": "Add sound toggle button/icon to UI (speaker icon with on/off states). Add soundEnabled property to calculator state (default: true). Create toggleSound() function to switch state. Update button click handlers to check soundEnabled before playing. Style toggle button to match calculator design",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Integrate localStorage for Preference Persistence",
+            "description": "Implement localStorage integration to save and restore user's sound preference across sessions",
+            "dependencies": [
+              "34.3"
+            ],
+            "details": "On toggleSound(), save preference: localStorage.setItem('calculatorSoundEnabled', soundEnabled). On calculator init, load preference: soundEnabled = localStorage.getItem('calculatorSoundEnabled') !== 'false'. Handle localStorage errors gracefully. Test persistence across page reloads and browser sessions",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 35,
+        "title": "Add Theme Switcher",
+        "description": "Implement light/dark theme toggle for the calculator",
+        "details": "Create theme toggle button, add data-theme attribute to body. Define CSS variables for both themes. Light theme: --bg-color: #f0f0f0; Dark theme: --bg-color: #1a1a1a. Store preference in localStorage",
+        "testStrategy": "Test theme switches correctly, verify all colors update, check localStorage persistence",
+        "priority": "low",
+        "dependencies": [
+          9
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define CSS Variables for Themes",
+            "description": "Create CSS custom properties for light and dark theme color schemes",
+            "dependencies": [],
+            "details": "Define root CSS variables for both themes. Light theme: --bg-color: #f0f0f0, --text-color: #333, --button-bg: #fff, --button-hover: #e0e0e0. Dark theme: --bg-color: #1a1a1a, --text-color: #fff, --button-bg: #2a2a2a, --button-hover: #3a3a3a. Use [data-theme] attribute selector",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Create Theme Toggle UI Component",
+            "description": "Build a toggle button/switch for theme selection",
+            "dependencies": [
+              "35.1"
+            ],
+            "details": "Create toggle button element with sun/moon icons or light/dark text. Position in calculator header or corner. Add appropriate ARIA labels for accessibility. Style toggle to match calculator design",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Theme Switching Logic",
+            "description": "Add JavaScript functionality to handle theme changes",
+            "dependencies": [
+              "35.2"
+            ],
+            "details": "Create toggleTheme() function to switch data-theme attribute on body element. Add event listener to toggle button. Ensure smooth transition between themes. Update toggle button appearance based on active theme",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Add localStorage Persistence",
+            "description": "Save and restore user's theme preference",
+            "dependencies": [
+              "35.3"
+            ],
+            "details": "Save theme preference to localStorage on change. Check localStorage on page load and apply saved theme. Set default theme if no preference exists. Handle localStorage errors gracefully",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 36,
+        "title": "Create Error Handling System",
+        "description": "Implement comprehensive error handling for edge cases",
+        "details": "Create error handler function that catches: overflow (numbers too large), underflow (numbers too small), invalid operations. Display user-friendly error messages. Add try-catch blocks around calculations",
+        "testStrategy": "Test various error conditions, verify error messages are clear, ensure calculator recovers gracefully",
+        "priority": "medium",
+        "dependencies": [
+          19
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define Error Types and Messages",
+            "description": "Create comprehensive error type definitions and corresponding user-friendly messages",
+            "dependencies": [],
+            "details": "Define error types: OVERFLOW_ERROR (numbers exceed safe range), UNDERFLOW_ERROR (numbers too small), DIVISION_BY_ZERO, INVALID_OPERATION (e.g., sqrt of negative), INVALID_INPUT. Create error message map with clear, non-technical messages like 'Number too large to display' instead of 'Overflow error'. Store in errorMessages object",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Try-Catch Blocks in Calculation Functions",
+            "description": "Add error handling to all calculation and operation functions",
+            "dependencies": [
+              "36.1"
+            ],
+            "details": "Wrap calculate(), performOperation(), and input handling functions in try-catch blocks. Check for Number.MAX_SAFE_INTEGER and Number.MIN_SAFE_INTEGER boundaries. Validate operations before execution (e.g., check for negative numbers before sqrt). Throw custom errors with defined error types",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Create User-Friendly Error Display System",
+            "description": "Implement visual error notification system that doesn't disrupt user flow",
+            "dependencies": [
+              "36.1",
+              "36.2"
+            ],
+            "details": "Create error display element below calculator display. Style with subtle red background and clear icon. Implement showError(message) and clearError() functions. Add fade-in/fade-out animations. Auto-dismiss errors after 3 seconds. Ensure errors don't shift calculator layout",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Add Error Recovery Mechanisms",
+            "description": "Implement graceful recovery from errors to maintain calculator usability",
+            "dependencies": [
+              "36.2",
+              "36.3"
+            ],
+            "details": "Create resetToLastValidState() function to restore calculator before error. Implement partial clear on error (keep first operand if valid). Add 'Retry' option for recoverable errors. Log errors to console for debugging. Ensure calculator remains functional after any error",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 37,
+        "title": "Add Copy Result Feature",
+        "description": "Implement ability to copy calculation result to clipboard",
+        "details": "Add copy button or double-click on display to copy. Use navigator.clipboard.writeText(calculator.displayValue). Show brief 'Copied!' message. Handle clipboard API permissions",
+        "testStrategy": "Test copy functionality works, verify clipboard contains correct value, test permission handling",
+        "priority": "low",
+        "dependencies": [
+          17
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add copy trigger mechanism",
+            "description": "Implement button or double-click event to trigger copy functionality",
+            "dependencies": [],
+            "details": "Add a copy button icon next to the display or implement double-click event listener on the display element. Button should have aria-label='Copy result' for accessibility. Position button appropriately without disrupting calculator layout.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement clipboard API with fallback",
+            "description": "Create copy function using modern clipboard API with legacy fallback",
+            "dependencies": [
+              "37.1"
+            ],
+            "details": "Implement copyToClipboard() function that uses navigator.clipboard.writeText() when available. Add fallback using document.execCommand('copy') for older browsers. Handle promise rejection and permission errors gracefully. Ensure the correct display value is copied.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Add visual feedback for copy action",
+            "description": "Show temporary notification when copy is successful or fails",
+            "dependencies": [
+              "37.2"
+            ],
+            "details": "Create a small toast notification or inline message that appears briefly (2 seconds) showing 'Copied!' on success or 'Copy failed' on error. Style feedback to be non-intrusive. Add CSS transitions for smooth appearance/disappearance. Position feedback near the display area.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 38,
+        "title": "Implement Percentage Calculation",
+        "description": "Add percentage button and calculation functionality",
+        "details": "Add % button to layout. Implement percentage logic: if operator exists, calculate percentage of first operand (e.g., 50 + 10% = 55). Otherwise convert to decimal (50% = 0.5)",
+        "testStrategy": "Test percentage in various contexts, verify correct calculation method is used, test edge cases",
+        "priority": "low",
+        "dependencies": [
+          16
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add percentage button to calculator UI",
+            "description": "Add a '%' button to the calculator layout in the appropriate position, typically near the operators or special functions",
+            "dependencies": [],
+            "details": "Modify the HTML to include a button element with class 'percentage' and text content '%'. Position it logically in the calculator grid layout, ensuring consistent styling with other buttons. Add appropriate event listener to handle percentage button clicks.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement core percentage calculation logic",
+            "description": "Create the main percentage calculation function that handles the mathematical conversion and computation",
+            "dependencies": [
+              "38.1"
+            ],
+            "details": "Implement handlePercentage() function in calculator object. If operator exists and firstOperand is set, calculate percentage of firstOperand (e.g., for '50 + 10%', calculate 10% of 50 = 5). If no operator exists, convert current value to decimal (e.g., '50%' becomes 0.5). Update displayValue with the result.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Handle percentage in different calculation contexts",
+            "description": "Ensure percentage works correctly with all operators and in various calculation states",
+            "dependencies": [
+              "38.2"
+            ],
+            "details": "Extend percentage logic to handle: addition (100 + 10% = 110), subtraction (100 - 10% = 90), multiplication (100 × 10% = 10), division (100 ÷ 10% = 1000). Handle edge cases like pressing % multiple times, percentage after equals, and percentage as first input. Ensure proper state management and display updates.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Add comprehensive tests for percentage calculations",
+            "description": "Create test suite covering all percentage calculation scenarios and edge cases",
+            "dependencies": [
+              "38.3"
+            ],
+            "details": "Write tests for: standalone percentage conversion (50% = 0.5), percentage with each operator, chained percentage operations, percentage after equals, multiple percentage presses, percentage with zero and negative numbers, percentage with decimal values. Verify correct calculation method is applied based on context.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 39,
+        "title": "Create Documentation",
+        "description": "Write comprehensive documentation for the calculator application",
+        "details": "Create README.md with: project description, features list, installation instructions, usage guide, keyboard shortcuts, browser compatibility, known issues. Add inline code comments for complex functions",
+        "testStrategy": "Review documentation for completeness, verify all features are documented, check code examples work",
+        "priority": "medium",
+        "dependencies": [
+          38
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Write comprehensive README with features and setup",
+            "description": "Create README.md file with project overview, complete features list, installation instructions, and setup guide",
+            "dependencies": [],
+            "details": "Include: project title and description, screenshot/demo link, features list (basic operations, keyboard support, responsive design), prerequisites, installation steps, browser compatibility matrix, project structure overview",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Document keyboard shortcuts and usage",
+            "description": "Create detailed usage guide section documenting all keyboard shortcuts and calculator operations",
+            "dependencies": [
+              "39.1"
+            ],
+            "details": "Document: number keys (0-9), operators (+, -, *, /), special keys (Enter/= for equals, Escape/C for clear, Backspace for delete), decimal point usage, operation chaining examples, edge cases handling",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Add code comments for complex functions",
+            "description": "Add inline JSDoc comments and explanations for all complex functions and logic in the codebase",
+            "dependencies": [],
+            "details": "Focus on: calculation logic functions, display update mechanisms, keyboard event handlers, error handling routines, state management methods. Use JSDoc format for function signatures and parameters",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Create troubleshooting section",
+            "description": "Write troubleshooting guide covering common issues and their solutions",
+            "dependencies": [
+              "39.1",
+              "39.2"
+            ],
+            "details": "Include: common calculation errors and fixes, display issues resolution, keyboard shortcut problems, browser-specific issues, known limitations, FAQ section, how to report bugs/issues",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 40,
+        "title": "Optimize CSS for Production",
+        "description": "Minify and optimize CSS for production deployment",
+        "details": "Remove unused CSS, combine similar rules, minify CSS file. Consider using CSS custom properties for all colors and sizes. Remove any commented code. Use CSS autoprefixer for browser compatibility",
+        "testStrategy": "Compare file size before/after optimization, verify visual appearance unchanged, test in multiple browsers",
+        "priority": "medium",
+        "dependencies": [
+          35
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Audit and Remove Unused CSS Rules",
+            "description": "Analyze CSS file to identify and remove any unused selectors, rules, and declarations",
+            "dependencies": [],
+            "details": "Use browser DevTools Coverage tab to identify unused CSS. Remove any rules not applied to elements, delete commented-out code, remove vendor prefixes that will be added by autoprefixer. Check for duplicate declarations and remove redundant rules.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Consolidate and Optimize Selectors",
+            "description": "Combine similar rules, optimize selector specificity, and implement CSS custom properties",
+            "dependencies": [
+              "40.1"
+            ],
+            "details": "Group selectors with identical properties, simplify overly specific selectors, convert all color values and repeated sizes to CSS custom properties defined in :root. Combine media queries where possible. Ensure selector performance by avoiding universal selectors and deep nesting.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Minify CSS and Add Autoprefixer",
+            "description": "Process CSS through minification and autoprefixer tools for production deployment",
+            "dependencies": [
+              "40.2"
+            ],
+            "details": "Use CSS minifier (cssnano or clean-css) to remove whitespace, shorten color values, and optimize code. Run autoprefixer to add vendor prefixes for browser compatibility. Generate source map for debugging. Compare file size before and after optimization.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 41,
+        "title": "Optimize JavaScript for Production",
+        "description": "Minify and optimize JavaScript for production deployment",
+        "details": "Minify JavaScript using tool like Terser or UglifyJS. Remove console.log statements, remove commented code, optimize function calls. Consider using ES6 modules if appropriate",
+        "testStrategy": "Verify minified code works identically to original, check file size reduction, test all functionality",
+        "priority": "medium",
+        "dependencies": [
+          38
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Remove Debug Code and Console Statements",
+            "description": "Clean up JavaScript code by removing all console.log statements, debug code, and commented-out code blocks",
+            "dependencies": [],
+            "details": "Search through all JavaScript files for console.log, console.error, console.warn, and other console methods. Remove or comment them out for production. Remove any debug flags, test data, or development-only code. Clean up commented code that is no longer needed. Consider using a tool like babel-plugin-transform-remove-console for automated removal",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Set Up JavaScript Minification Process",
+            "description": "Configure and implement a minification tool like Terser or UglifyJS to compress JavaScript files",
+            "dependencies": [
+              "41.1"
+            ],
+            "details": "Install Terser via npm (npm install terser --save-dev). Create a build script in package.json or a separate build file. Configure minification options: mangle variable names, compress code, remove whitespace, preserve necessary comments (licenses). Set up source maps for debugging if needed. Test the minification process and verify output",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Optimize Function Calls and Reduce Code Redundancy",
+            "description": "Review and refactor JavaScript code to eliminate redundant function calls, optimize loops, and improve overall efficiency",
+            "dependencies": [
+              "41.1"
+            ],
+            "details": "Cache DOM queries to avoid repeated lookups. Combine similar functions where possible. Use const/let appropriately instead of var. Optimize event handlers by using event delegation where applicable. Remove duplicate code by creating reusable functions. Consider implementing debouncing for rapid button clicks. Review and optimize any loops or recursive functions",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 42,
+        "title": "Add Meta Tags for SEO",
+        "description": "Implement proper meta tags for search engine optimization",
+        "details": "Add meta tags: description, keywords, author, og:title, og:description, og:image for social sharing. Add favicon.ico. Ensure title is descriptive",
+        "testStrategy": "Use SEO checker tools, verify meta tags render correctly, test social media preview",
+        "priority": "low",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create and Add Basic Meta Tags",
+            "description": "Add essential meta tags including description, keywords, and author to the HTML head section",
+            "dependencies": [],
+            "details": "In the HTML head section, add: <meta name=\"description\" content=\"A simple, responsive calculator for basic arithmetic operations\">. Add <meta name=\"keywords\" content=\"calculator, online calculator, math, arithmetic, addition, subtraction, multiplication, division\">. Add <meta name=\"author\" content=\"Your Name or Company\">. Ensure the page title tag is descriptive: <title>Online Calculator - Simple & Responsive Math Calculator</title>",
+            "status": "pending",
+            "testStrategy": "View page source to verify meta tags are present, use browser developer tools to inspect head section, validate HTML markup"
+          },
+          {
+            "id": 2,
+            "title": "Implement Open Graph Meta Tags",
+            "description": "Add Open Graph protocol meta tags for enhanced social media sharing",
+            "dependencies": [],
+            "details": "Add Open Graph meta tags to head section: <meta property=\"og:title\" content=\"Online Calculator - Simple & Responsive\">. Add <meta property=\"og:description\" content=\"Free online calculator for quick math calculations. Features basic arithmetic operations with a clean, user-friendly interface.\">. Add <meta property=\"og:type\" content=\"website\">. Add <meta property=\"og:url\" content=\"https://yourdomain.com/calculator\">",
+            "status": "pending",
+            "testStrategy": "Use Facebook Sharing Debugger to test Open Graph tags, verify preview appears correctly on social platforms, test sharing on multiple social networks"
+          },
+          {
+            "id": 3,
+            "title": "Create and Add Open Graph Image",
+            "description": "Design and implement an Open Graph image for social media previews",
+            "dependencies": [
+              "42.2"
+            ],
+            "details": "Create a 1200x630px image showing the calculator interface or a calculator-themed graphic. Save as og-image.jpg or og-image.png in the project root or images folder. Add meta tag: <meta property=\"og:image\" content=\"https://yourdomain.com/og-image.jpg\">. Add supporting tags: <meta property=\"og:image:width\" content=\"1200\"> and <meta property=\"og:image:height\" content=\"630\">. Ensure image is optimized for web (under 300KB)",
+            "status": "pending",
+            "testStrategy": "Test image loading with absolute URL, verify dimensions are correct, use social media preview tools to confirm image displays properly"
+          },
+          {
+            "id": 4,
+            "title": "Create and Add Favicon",
+            "description": "Design and implement favicon.ico file for browser tab identification",
+            "dependencies": [],
+            "details": "Create a 16x16 and 32x32 pixel icon representing a calculator or mathematical symbol. Generate favicon.ico file containing both sizes using an online favicon generator or image editing software. Place favicon.ico in the project root directory. Add link tag in head: <link rel=\"icon\" type=\"image/x-icon\" href=\"/favicon.ico\">. Consider adding additional favicon formats: <link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/favicon-32x32.png\">",
+            "status": "pending",
+            "testStrategy": "Clear browser cache and reload to see favicon, test in multiple browsers, verify favicon appears in browser tabs and bookmarks"
+          },
+          {
+            "id": 5,
+            "title": "Add Additional SEO Meta Tags",
+            "description": "Implement supplementary meta tags for enhanced SEO and browser compatibility",
+            "dependencies": [
+              "42.1",
+              "42.2",
+              "42.3",
+              "42.4"
+            ],
+            "details": "Add viewport meta tag if not present: <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">. Add charset declaration: <meta charset=\"UTF-8\">. Add robots meta tag: <meta name=\"robots\" content=\"index, follow\">. Add canonical URL: <link rel=\"canonical\" href=\"https://yourdomain.com/calculator\">. Add Twitter Card tags: <meta name=\"twitter:card\" content=\"summary_large_image\">, <meta name=\"twitter:title\" content=\"Online Calculator\">, <meta name=\"twitter:description\" content=\"Free online calculator for quick math calculations\">",
+            "status": "pending",
+            "testStrategy": "Use SEO analysis tools like Google's Rich Results Test, validate all meta tags with W3C validator, test mobile responsiveness with viewport tag"
+          }
+        ]
+      },
+      {
+        "id": 43,
+        "title": "Implement PWA Features",
+        "description": "Add Progressive Web App capabilities for offline use",
+        "details": "Create manifest.json with app name, icons, theme colors. Implement basic service worker for offline functionality. Cache static assets (HTML, CSS, JS)",
+        "testStrategy": "Test offline functionality, verify manifest is valid, check PWA installation works",
+        "priority": "low",
+        "dependencies": [
+          41
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create manifest.json with app metadata",
+            "description": "Create a manifest.json file in the project root with all required PWA metadata including app name, short name, description, start URL, display mode, theme color, and background color",
+            "dependencies": [],
+            "details": "Create manifest.json with: name: 'Calculator PWA', short_name: 'Calculator', description: 'A simple calculator app', start_url: '/', display: 'standalone', theme_color: '#000000', background_color: '#ffffff'. Link manifest in index.html with <link rel='manifest' href='/manifest.json'>",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Design and add app icons",
+            "description": "Create app icons in multiple sizes (192x192, 512x512) for PWA installation and add them to the manifest.json file",
+            "dependencies": [
+              "43.1"
+            ],
+            "details": "Design calculator icon in SVG format, export to PNG in sizes: 192x192 and 512x512. Add icons array to manifest.json with src, sizes, and type properties. Store icons in /icons directory",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement basic service worker",
+            "description": "Create a service worker file with basic lifecycle events (install, activate, fetch) and register it in the main application",
+            "dependencies": [
+              "43.1"
+            ],
+            "details": "Create sw.js file with install event listener for caching, activate event for cleanup, and fetch event for serving cached content. Register service worker in main JS file with navigator.serviceWorker.register('/sw.js')",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Set up offline caching strategy",
+            "description": "Implement cache-first strategy for static assets and configure which files to cache during service worker installation",
+            "dependencies": [
+              "43.3"
+            ],
+            "details": "Define CACHE_NAME and urlsToCache array including index.html, styles.css, script.js. In install event, use caches.open() and cache.addAll(). In fetch event, implement caches.match() to serve cached responses when available",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Test installation and offline functionality",
+            "description": "Thoroughly test PWA installation process on different devices and verify offline functionality works correctly",
+            "dependencies": [
+              "43.1",
+              "43.2",
+              "43.3",
+              "43.4"
+            ],
+            "details": "Test manifest validation using Chrome DevTools Application tab. Verify 'Add to Home Screen' prompt appears. Test offline mode by disabling network and confirming app loads from cache. Check icons display correctly on home screen",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 44,
+        "title": "Create Deployment Script",
+        "description": "Set up automated deployment process",
+        "details": "Create build script that: minifies assets, copies files to dist/ folder, generates source maps. Consider using GitHub Pages or Netlify for hosting. Add deployment instructions to README",
+        "testStrategy": "Run build script and verify output, test deployment process, ensure deployed version works correctly",
+        "priority": "medium",
+        "dependencies": [
+          41
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create build script for asset optimization",
+            "description": "Develop a build script that minifies CSS/JS files, optimizes images, and generates source maps for debugging",
+            "dependencies": [],
+            "details": "Create build.js script using Node.js. Implement CSS minification using clean-css, JavaScript minification using terser, and generate source maps. Include file size reporting before/after optimization. Add npm scripts for easy execution",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Set up dist folder structure and file copying",
+            "description": "Configure the build process to create a dist/ folder with proper structure and copy all necessary files",
+            "dependencies": [
+              "44.1"
+            ],
+            "details": "Create dist/ folder structure: dist/css/, dist/js/, dist/images/. Copy index.html, minified assets, and other static files. Ensure relative paths are maintained. Update HTML references to point to minified files. Add dist/ to .gitignore",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Configure deployment target (GitHub Pages/Netlify)",
+            "description": "Set up and configure the chosen deployment platform with automated deployment from the dist/ folder",
+            "dependencies": [
+              "44.2"
+            ],
+            "details": "For GitHub Pages: create gh-pages branch, configure repository settings, add deployment script. For Netlify: create netlify.toml configuration, set build command and publish directory. Test deployment process with sample build",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Document deployment process",
+            "description": "Create comprehensive deployment documentation including step-by-step instructions and troubleshooting guide",
+            "dependencies": [
+              "44.3"
+            ],
+            "details": "Add deployment section to README.md with: build command usage, deployment steps, environment requirements, common issues and solutions. Include example commands and expected output. Document rollback procedure if needed",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 45,
+        "title": "Perform Security Audit",
+        "description": "Review code for security vulnerabilities",
+        "details": "Check for: XSS vulnerabilities (sanitize any user input), ensure no eval() usage, verify HTTPS usage in production, add Content Security Policy headers if needed",
+        "testStrategy": "Run security scanning tools, attempt XSS attacks, verify CSP headers work correctly",
+        "priority": "medium",
+        "dependencies": [
+          41
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Scan for XSS vulnerabilities",
+            "description": "Perform comprehensive XSS vulnerability scanning across all user input points and display outputs",
+            "dependencies": [],
+            "details": "Review all places where user input is accepted (calculator display, button clicks). Check for proper input sanitization. Verify innerHTML usage is safe. Test with malicious input patterns like <script>alert('XSS')</script>. Use automated XSS scanning tools if available",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Review code for security best practices",
+            "description": "Audit JavaScript code for common security issues and best practices compliance",
+            "dependencies": [
+              "45.1"
+            ],
+            "details": "Check for eval() or Function() constructor usage. Verify no dynamic code execution. Review event handlers for security. Ensure proper input validation. Check for exposed sensitive data. Verify HTTPS usage in production environment. Review third-party dependencies for known vulnerabilities",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement security headers",
+            "description": "Add Content Security Policy and other security headers to enhance application security",
+            "dependencies": [
+              "45.2"
+            ],
+            "details": "Implement Content-Security-Policy header to prevent XSS attacks. Add X-Content-Type-Options: nosniff. Include X-Frame-Options: DENY to prevent clickjacking. Set Referrer-Policy for privacy. Test headers using browser developer tools and online security header analyzers",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 46,
+        "title": "Add Performance Monitoring",
+        "description": "Implement basic performance metrics tracking",
+        "details": "Add performance marks for key operations: page load, first interaction, calculation time. Log to console in development. Consider integrating with analytics service for production",
+        "testStrategy": "Verify performance marks are recorded, check timing data is accurate, ensure no performance impact",
+        "priority": "low",
+        "dependencies": [
+          44
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add performance marks for key operations",
+            "description": "Instrument the code with performance marks to measure page load, first interaction, and calculation time",
+            "dependencies": [],
+            "details": "Use Performance API to add marks: performance.mark('page-load-start') at DOM ready, performance.mark('first-interaction') on first button click, performance.mark('calculation-start') and performance.mark('calculation-end') around evaluate() function. Use performance.measure() to calculate durations between marks",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Create performance logging system",
+            "description": "Implement a logging system to capture and display performance metrics in development mode",
+            "dependencies": [
+              "46.1"
+            ],
+            "details": "Create a performanceLogger object with methods to log timing data. In development mode, use console.table() to display metrics. Include: page load time, time to first interaction, average calculation time, and number of calculations performed. Store metrics in localStorage for session analysis",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Consider analytics integration for production",
+            "description": "Plan and implement optional analytics service integration for production performance monitoring",
+            "dependencies": [
+              "46.2"
+            ],
+            "details": "Research lightweight analytics options (Google Analytics, Simple Analytics, or custom solution). Create abstraction layer for analytics calls. Send custom events for: page load performance, calculation frequency, error rates. Ensure analytics code is conditionally loaded only in production environment",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 47,
+        "title": "Create User Testing Plan",
+        "description": "Develop plan for user acceptance testing",
+        "details": "Create test scenarios for real users: basic calculations, complex operations, error cases. Prepare feedback form. Identify 5-10 test users. Document common issues found",
+        "testStrategy": "Conduct user tests with diverse group, collect feedback systematically, prioritize issues found",
+        "priority": "high",
+        "dependencies": [
+          39
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define Test Scenarios and Tasks",
+            "description": "Create comprehensive test scenarios covering all calculator functionality including basic operations, complex calculations, edge cases, and error handling",
+            "dependencies": [],
+            "details": "Develop test scenarios for: basic arithmetic (addition, subtraction, multiplication, division), decimal operations, percentage calculations, clear/reset functions, keyboard input, consecutive operations, division by zero, overflow handling, negative numbers, and memory functions if applicable. Create step-by-step test tasks with expected outcomes for each scenario",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Create Feedback Collection Forms",
+            "description": "Design and implement structured feedback forms to systematically collect user testing data, observations, and improvement suggestions",
+            "dependencies": [
+              "47.1"
+            ],
+            "details": "Create forms including: pre-test questionnaire (user demographics, calculator usage experience), task completion checklist, usability rating scales (1-5 for ease of use, clarity, responsiveness), open-ended feedback sections for issues encountered, feature requests, and general comments. Include sections for observer notes and time-on-task measurements",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Recruit Diverse Test Users",
+            "description": "Identify and recruit 5-10 test users with varying technical backgrounds, ages, and calculator usage patterns to ensure comprehensive testing coverage",
+            "dependencies": [],
+            "details": "Target user profiles: novice computer users, experienced calculator users, mobile device users, keyboard-heavy users, accessibility needs users. Create recruitment criteria, send invitations with testing schedule options, confirm participation and collect basic demographic information. Ensure mix of technical and non-technical users",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Prepare Testing Environment and Materials",
+            "description": "Set up controlled testing environment with necessary equipment, materials, and documentation to ensure consistent and effective user testing sessions",
+            "dependencies": [
+              "47.1",
+              "47.2",
+              "47.3"
+            ],
+            "details": "Prepare testing setup: multiple devices (desktop, laptop, tablet, mobile), different browsers (Chrome, Firefox, Safari, Edge), screen recording software, printed test scenarios and forms, consent forms for recording, quiet testing space. Create testing protocol document with introduction script, task instructions, and debrief questions. Prepare backup calculator instance",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 48,
+        "title": "Implement Feedback Changes",
+        "description": "Address issues discovered during user testing",
+        "details": "Review user feedback, prioritize changes by impact and effort. Common issues might include: button size on mobile, unclear error messages, missing features. Implement high-priority fixes",
+        "testStrategy": "Verify each reported issue is addressed, re-test with users if possible, ensure no regressions",
+        "priority": "high",
+        "dependencies": [
+          47
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Analyze and Categorize User Feedback",
+            "description": "Review all user feedback from testing sessions and organize it into categories such as UI/UX issues, functionality bugs, missing features, and performance concerns",
+            "dependencies": [],
+            "details": "Create a feedback tracking document with columns for: issue description, category (UI/UX, functionality, feature request, performance), severity (critical, high, medium, low), affected component, and user count. Review all feedback and populate the tracking document systematically",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Prioritize Issues by Impact and Effort",
+            "description": "Evaluate each categorized issue based on user impact and implementation effort to create a prioritized fix list",
+            "dependencies": [
+              "48.1"
+            ],
+            "details": "Use an impact/effort matrix to score each issue. Impact factors: number of users affected, severity of issue, business value. Effort factors: code complexity, testing requirements, potential for regression. Create ordered list with high-impact/low-effort items first",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement High-Priority Fixes",
+            "description": "Code and test solutions for the top-priority issues identified in the prioritization phase",
+            "dependencies": [
+              "48.2"
+            ],
+            "details": "Start with top 5-10 issues from priority list. For each fix: create a branch, implement solution, test thoroughly including edge cases, ensure no regressions in existing functionality. Common fixes might include: adjusting button sizes for mobile, clarifying error messages, fixing calculation bugs",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Verify Fixes Address Reported Issues",
+            "description": "Validate that implemented fixes successfully resolve the original user-reported problems without introducing new issues",
+            "dependencies": [
+              "48.3"
+            ],
+            "details": "For each implemented fix: reproduce the original issue to confirm it existed, apply the fix and verify issue is resolved, test related functionality for regressions, document the fix and testing results. If possible, have original reporters verify the fixes meet their needs",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 49,
+        "title": "Final Testing and QA",
+        "description": "Perform comprehensive final testing before deployment",
+        "details": "Run through complete test suite: unit tests, browser compatibility, responsive design, accessibility, performance. Create final test report. Fix any critical issues found",
+        "testStrategy": "Execute all test plans, document results, achieve 100% pass rate for critical functionality",
+        "priority": "high",
+        "dependencies": [
+          48
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Execute Complete Unit Test Suite",
+            "description": "Run all unit tests for calculator functionality including basic operations, edge cases, and error handling",
+            "dependencies": [],
+            "details": "Execute full test suite covering: arithmetic operations (+, -, *, /), decimal calculations, negative numbers, division by zero, maximum input length, clear functionality, consecutive operations. Document test results with pass/fail status for each test case. Ensure 100% pass rate for critical functionality",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Perform Browser Compatibility Testing",
+            "description": "Test calculator functionality across all major browsers and versions",
+            "dependencies": [
+              "49.1"
+            ],
+            "details": "Test on Chrome (latest 2 versions), Firefox (latest 2 versions), Safari (latest 2 versions), Edge (latest 2 versions), and mobile browsers (iOS Safari, Chrome Android). Verify all features work correctly: button clicks, display updates, calculations, keyboard input. Document any browser-specific issues or inconsistencies",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Test Responsive Design on All Devices",
+            "description": "Verify calculator displays and functions correctly across all screen sizes and devices",
+            "dependencies": [
+              "49.1"
+            ],
+            "details": "Test on mobile phones (320px-480px), tablets (768px-1024px), laptops (1024px-1440px), and desktop monitors (1440px+). Check portrait and landscape orientations. Verify button sizes are touch-friendly on mobile, layout adapts smoothly, text remains readable, no horizontal scrolling occurs. Use browser dev tools and real devices where available",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Verify Accessibility Compliance",
+            "description": "Ensure calculator meets WCAG 2.1 AA accessibility standards",
+            "dependencies": [
+              "49.1"
+            ],
+            "details": "Run automated accessibility tests (axe DevTools, WAVE). Test keyboard navigation (Tab order, Enter/Space activation). Verify screen reader compatibility (NVDA, JAWS, VoiceOver). Check color contrast ratios (4.5:1 for normal text, 3:1 for large text). Ensure all interactive elements have proper labels and ARIA attributes. Test with keyboard-only navigation",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Create Final Test Report",
+            "description": "Compile comprehensive test results and recommendations document",
+            "dependencies": [
+              "49.1",
+              "49.2",
+              "49.3",
+              "49.4"
+            ],
+            "details": "Document all test results including: unit test coverage percentage and results, browser compatibility matrix, responsive design test outcomes, accessibility audit findings. List all issues found with severity levels (critical, major, minor). Include screenshots of any visual issues. Provide recommendations for fixes and future improvements. Create executive summary with go/no-go deployment recommendation",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 50,
+        "title": "Deploy to Production",
+        "description": "Deploy the calculator application to production environment",
+        "details": "Run deployment script, verify all files uploaded correctly, test production URL, ensure HTTPS is working. Monitor for any errors in first 24 hours. Create release notes documenting features and known issues",
+        "testStrategy": "Verify production deployment matches local version, test all functionality on live site, monitor error logs",
+        "priority": "high",
+        "dependencies": [
+          49
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Execute deployment script and verify build",
+            "description": "Run the final build and deployment script to push the calculator application to the production environment",
+            "dependencies": [],
+            "details": "Execute the deployment script created in task 44. Ensure all assets are properly minified, source maps are generated, and files are correctly copied to the dist/ folder. Verify the build process completes without errors and check that all necessary files (HTML, CSS, JavaScript) are included in the deployment package. Confirm HTTPS configuration is properly set up.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Verify production deployment completeness",
+            "description": "Confirm all files have been successfully uploaded to the production server and are accessible",
+            "dependencies": [
+              "50.1"
+            ],
+            "details": "Check that all files from the dist/ folder are properly uploaded to the production environment. Verify the production URL is accessible and returns the correct content. Ensure all assets (CSS, JavaScript) are loading correctly with proper MIME types. Confirm that the file structure matches the expected deployment configuration and that no files are missing.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Test all calculator functionality on live site",
+            "description": "Perform comprehensive testing of all calculator features in the production environment",
+            "dependencies": [
+              "50.2"
+            ],
+            "details": "Test all calculator operations including: basic arithmetic (addition, subtraction, multiplication, division), decimal number handling, clear functionality, consecutive operations, edge cases (division by zero, very large numbers). Verify the UI displays correctly across different browsers and devices. Ensure all buttons are responsive and the display updates properly. Compare functionality with the local development version to ensure parity.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Monitor deployment and create release notes",
+            "description": "Set up monitoring for the first 24 hours and document the release",
+            "dependencies": [
+              "50.3"
+            ],
+            "details": "Set up error monitoring and logging to track any issues in the first 24 hours after deployment. Monitor server logs, JavaScript console errors, and user feedback channels. Create comprehensive release notes documenting: implemented features (basic calculator operations, responsive design), known limitations, deployment date and version, any configuration changes. Document the production URL and update the README with the live site link.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-26T20:33:42.391Z",
+      "updated": "2025-07-26T20:33:42.391Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

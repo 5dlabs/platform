@@ -1,0 +1,31 @@
+# Task ID: 20
+# Title: Implement Responsive Design
+# Status: pending
+# Dependencies: 9
+# Priority: medium
+# Description: Add media queries to ensure calculator works on mobile devices
+# Details:
+Add media queries: @media (max-width: 480px) { .calculator { margin: 20px; max-width: 100%; } .btn { padding: 15px; font-size: 1em; } .display { font-size: 1.5em; } }
+
+# Test Strategy:
+Test on various screen sizes (320px, 375px, 768px, 1024px), verify touch targets are adequate on mobile
+
+# Subtasks:
+## 1. Add mobile breakpoint media queries [pending]
+### Dependencies: None
+### Description: Implement CSS media queries for common mobile breakpoints to ensure calculator adapts to different screen sizes
+### Details:
+Add media queries for key breakpoints: @media (max-width: 480px) for mobile phones, @media (max-width: 768px) for tablets. Include styles to adjust calculator container width, margins, and overall layout structure. Ensure calculator remains centered and properly sized on all devices.
+
+## 2. Adjust calculator sizing and spacing for small screens [pending]
+### Dependencies: 20.1
+### Description: Modify calculator dimensions, button sizes, and spacing to optimize for mobile viewing and interaction
+### Details:
+Within mobile media queries, adjust: .calculator { margin: 20px; max-width: 100%; }, .btn { padding: 15px; font-size: 1em; }, .display { font-size: 1.5em; padding: 15px; }. Ensure grid gap is appropriate for smaller screens and all elements scale proportionally.
+
+## 3. Ensure touch targets meet accessibility standards [pending]
+### Dependencies: 20.2
+### Description: Verify and adjust button sizes to meet minimum touch target requirements for mobile accessibility
+### Details:
+Ensure all interactive elements meet WCAG 2.1 guidelines with minimum 44x44px touch targets. Test button spacing to prevent accidental taps. Add appropriate padding and margins between buttons. Verify functionality on actual mobile devices or using browser dev tools at 320px, 375px, and 414px widths.
+

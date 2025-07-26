@@ -1,0 +1,43 @@
+# Task ID: 31
+# Title: Implement Memory Functions
+# Status: pending
+# Dependencies: 17
+# Priority: low
+# Description: Add memory storage capabilities (M+, M-, MR, MC) to calculator
+# Details:
+Add memory variable to calculator object: memory: 0. Implement functions: memoryAdd() { memory += parseFloat(displayValue) }, memoryClear() { memory = 0 }, memoryRecall() { displayValue = String(memory); updateDisplay() }
+
+# Test Strategy:
+Test memory operations maintain value across calculations, verify memory clear works, test memory recall
+
+# Subtasks:
+## 1. Add memory storage to calculator state [pending]
+### Dependencies: None
+### Description: Extend the calculator object to include a memory property initialized to 0
+### Details:
+Add 'memory: 0' property to the calculator object initialization. This will serve as the persistent storage for memory operations throughout the calculator's lifecycle
+
+## 2. Implement memory add (M+) function [pending]
+### Dependencies: 31.1
+### Description: Create memoryAdd() function that adds current display value to memory
+### Details:
+Implement memoryAdd() { calculator.memory += parseFloat(calculator.displayValue) }. Handle edge cases like invalid display values. Add M+ button to UI and connect event listener
+
+## 3. Create memory subtract (M-) function [pending]
+### Dependencies: 31.1
+### Description: Implement memorySubtract() function that subtracts current display value from memory
+### Details:
+Implement memorySubtract() { calculator.memory -= parseFloat(calculator.displayValue) }. Handle edge cases and NaN values. Add M- button to UI and wire up event handling
+
+## 4. Add memory recall (MR) function [pending]
+### Dependencies: 31.1
+### Description: Create memoryRecall() function to display stored memory value
+### Details:
+Implement memoryRecall() { calculator.displayValue = String(calculator.memory); updateDisplay() }. Ensure proper state management when recalling memory during calculations
+
+## 5. Implement memory clear (MC) with UI updates [pending]
+### Dependencies: 31.1, 31.2, 31.3, 31.4
+### Description: Create memoryClear() function and update UI to show memory status
+### Details:
+Implement memoryClear() { calculator.memory = 0 }. Add MC button and optionally add visual indicator (like 'M' display) when memory contains a value. Test all memory functions work together correctly
+

@@ -1,0 +1,37 @@
+# Task ID: 38
+# Title: Implement Percentage Calculation
+# Status: pending
+# Dependencies: 16
+# Priority: low
+# Description: Add percentage button and calculation functionality
+# Details:
+Add % button to layout. Implement percentage logic: if operator exists, calculate percentage of first operand (e.g., 50 + 10% = 55). Otherwise convert to decimal (50% = 0.5)
+
+# Test Strategy:
+Test percentage in various contexts, verify correct calculation method is used, test edge cases
+
+# Subtasks:
+## 1. Add percentage button to calculator UI [pending]
+### Dependencies: None
+### Description: Add a '%' button to the calculator layout in the appropriate position, typically near the operators or special functions
+### Details:
+Modify the HTML to include a button element with class 'percentage' and text content '%'. Position it logically in the calculator grid layout, ensuring consistent styling with other buttons. Add appropriate event listener to handle percentage button clicks.
+
+## 2. Implement core percentage calculation logic [pending]
+### Dependencies: 38.1
+### Description: Create the main percentage calculation function that handles the mathematical conversion and computation
+### Details:
+Implement handlePercentage() function in calculator object. If operator exists and firstOperand is set, calculate percentage of firstOperand (e.g., for '50 + 10%', calculate 10% of 50 = 5). If no operator exists, convert current value to decimal (e.g., '50%' becomes 0.5). Update displayValue with the result.
+
+## 3. Handle percentage in different calculation contexts [pending]
+### Dependencies: 38.2
+### Description: Ensure percentage works correctly with all operators and in various calculation states
+### Details:
+Extend percentage logic to handle: addition (100 + 10% = 110), subtraction (100 - 10% = 90), multiplication (100 × 10% = 10), division (100 ÷ 10% = 1000). Handle edge cases like pressing % multiple times, percentage after equals, and percentage as first input. Ensure proper state management and display updates.
+
+## 4. Add comprehensive tests for percentage calculations [pending]
+### Dependencies: 38.3
+### Description: Create test suite covering all percentage calculation scenarios and edge cases
+### Details:
+Write tests for: standalone percentage conversion (50% = 0.5), percentage with each operator, chained percentage operations, percentage after equals, multiple percentage presses, percentage with zero and negative numbers, percentage with decimal values. Verify correct calculation method is applied based on context.
+

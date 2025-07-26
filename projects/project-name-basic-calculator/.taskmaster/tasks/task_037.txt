@@ -1,0 +1,31 @@
+# Task ID: 37
+# Title: Add Copy Result Feature
+# Status: pending
+# Dependencies: 17
+# Priority: low
+# Description: Implement ability to copy calculation result to clipboard
+# Details:
+Add copy button or double-click on display to copy. Use navigator.clipboard.writeText(calculator.displayValue). Show brief 'Copied!' message. Handle clipboard API permissions
+
+# Test Strategy:
+Test copy functionality works, verify clipboard contains correct value, test permission handling
+
+# Subtasks:
+## 1. Add copy trigger mechanism [pending]
+### Dependencies: None
+### Description: Implement button or double-click event to trigger copy functionality
+### Details:
+Add a copy button icon next to the display or implement double-click event listener on the display element. Button should have aria-label='Copy result' for accessibility. Position button appropriately without disrupting calculator layout.
+
+## 2. Implement clipboard API with fallback [pending]
+### Dependencies: 37.1
+### Description: Create copy function using modern clipboard API with legacy fallback
+### Details:
+Implement copyToClipboard() function that uses navigator.clipboard.writeText() when available. Add fallback using document.execCommand('copy') for older browsers. Handle promise rejection and permission errors gracefully. Ensure the correct display value is copied.
+
+## 3. Add visual feedback for copy action [pending]
+### Dependencies: 37.2
+### Description: Show temporary notification when copy is successful or fails
+### Details:
+Create a small toast notification or inline message that appears briefly (2 seconds) showing 'Copied!' on success or 'Copy failed' on error. Style feedback to be non-intrusive. Add CSS transitions for smooth appearance/disappearance. Position feedback near the display area.
+

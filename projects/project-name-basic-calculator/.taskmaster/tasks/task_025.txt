@@ -1,0 +1,43 @@
+# Task ID: 25
+# Title: Test Edge Cases
+# Status: pending
+# Dependencies: 23
+# Priority: medium
+# Description: Create tests for edge cases and error conditions
+# Details:
+Test cases: division by zero returns 'Error', multiple decimal points ignored, very large numbers, very small numbers, pressing equals without complete expression, consecutive operator presses
+
+# Test Strategy:
+Document all edge cases, write test for each, verify expected behavior matches actual
+
+# Subtasks:
+## 1. Test Division by Zero Handling [pending]
+### Dependencies: None
+### Description: Create comprehensive tests for all division by zero scenarios
+### Details:
+Test cases: direct division (5/0), chained operations (10+5/0), zero divided by zero (0/0), division by zero in complex expressions ((10+5)/(3-3)). Verify 'Error' is displayed and calculator state is properly reset
+
+## 2. Test Decimal Point Edge Cases [pending]
+### Dependencies: None
+### Description: Test all edge cases related to decimal point handling
+### Details:
+Test cases: multiple decimal points in single number (3.14.159), decimal at start (.5), decimal at end (42.), empty decimal (just .), decimal in both operands (3.14 + 2.71), switching operators after decimal input
+
+## 3. Test Very Large and Small Numbers [pending]
+### Dependencies: None
+### Description: Test calculator behavior with extreme number values
+### Details:
+Test cases: maximum JavaScript number (Number.MAX_VALUE), minimum positive number (Number.MIN_VALUE), scientific notation display, overflow scenarios, underflow scenarios, very long decimal places, negative extreme values
+
+## 4. Test Incomplete Expression Handling [pending]
+### Dependencies: None
+### Description: Test calculator behavior when equals is pressed with incomplete expressions
+### Details:
+Test cases: equals after single number, equals after operator (5+), equals with no input, equals after decimal point (5.), multiple equals presses, equals after clear, operator followed immediately by equals
+
+## 5. Test Rapid Operation Sequences [pending]
+### Dependencies: 25.1, 25.2, 25.3, 25.4
+### Description: Test calculator stability under rapid user input sequences
+### Details:
+Test cases: rapid number entry, quick operator switching, fast clear and number entry, rapid equals pressing, alternating operators and numbers quickly, stress test with 50+ rapid operations, memory leak detection during rapid use
+

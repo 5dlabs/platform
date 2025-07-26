@@ -1,0 +1,43 @@
+# Task ID: 9
+# Title: Differentiate Button Types Visually
+# Status: pending
+# Dependencies: 8
+# Priority: low
+# Description: Apply distinct styling to number buttons, operator buttons, equals, and clear buttons
+# Details:
+Style .btn.number: background: #fff. Style .btn.operator: background: #ff9800, color: white. Style .btn.equals: background: #4caf50, color: white, grid-column: span 2. Style .btn.clear: background: #f44336, color: white, grid-column: span 2
+
+# Test Strategy:
+Visually verify each button type has distinct appearance, check color contrast meets accessibility standards
+
+# Subtasks:
+## 1. Style Number Buttons [pending]
+### Dependencies: None
+### Description: Apply white background styling to all number buttons (0-9) to make them visually distinct
+### Details:
+Add CSS rule for .btn.number class: background-color: #fff; color: #333; border: 1px solid #ddd; transition: background-color 0.2s ease. This creates clean white buttons with dark text for optimal readability
+
+## 2. Style Operator Buttons [pending]
+### Dependencies: None
+### Description: Apply orange background with white text to operator buttons (+, -, *, /) for clear visual differentiation
+### Details:
+Add CSS rule for .btn.operator class: background-color: #ff9800; color: white; border: none; font-weight: bold; transition: background-color 0.2s ease. Add hover state with darker orange (#f57c00) for better user feedback
+
+## 3. Style Equals Button [pending]
+### Dependencies: None
+### Description: Apply green background styling to equals button and make it span two grid columns for prominence
+### Details:
+Add CSS rule for .btn.equals class: background-color: #4caf50; color: white; grid-column: span 2; border: none; font-weight: bold; font-size: 1.2em; transition: background-color 0.2s ease. Add hover state with darker green (#388e3c)
+
+## 4. Style Clear Button [pending]
+### Dependencies: None
+### Description: Apply red background styling to clear button and make it span two grid columns for easy access
+### Details:
+Add CSS rule for .btn.clear class: background-color: #f44336; color: white; grid-column: span 2; border: none; font-weight: bold; transition: background-color 0.2s ease. Add hover state with darker red (#d32f2f) for visual feedback
+
+## 5. Add Button Active States and Transitions [pending]
+### Dependencies: 9.1, 9.2, 9.3, 9.4
+### Description: Implement active states and smooth transitions for all button types to enhance user interaction feedback
+### Details:
+Add general button transitions and active states: .btn { cursor: pointer; transition: all 0.2s ease; } .btn:active { transform: scale(0.95); } .btn.number:hover { background-color: #f5f5f5; } .btn:focus { outline: 2px solid #2196f3; outline-offset: 2px; } for accessibility
+

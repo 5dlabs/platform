@@ -1,0 +1,31 @@
+# Task ID: 40
+# Title: Optimize CSS for Production
+# Status: pending
+# Dependencies: 35
+# Priority: medium
+# Description: Minify and optimize CSS for production deployment
+# Details:
+Remove unused CSS, combine similar rules, minify CSS file. Consider using CSS custom properties for all colors and sizes. Remove any commented code. Use CSS autoprefixer for browser compatibility
+
+# Test Strategy:
+Compare file size before/after optimization, verify visual appearance unchanged, test in multiple browsers
+
+# Subtasks:
+## 1. Audit and Remove Unused CSS Rules [pending]
+### Dependencies: None
+### Description: Analyze CSS file to identify and remove any unused selectors, rules, and declarations
+### Details:
+Use browser DevTools Coverage tab to identify unused CSS. Remove any rules not applied to elements, delete commented-out code, remove vendor prefixes that will be added by autoprefixer. Check for duplicate declarations and remove redundant rules.
+
+## 2. Consolidate and Optimize Selectors [pending]
+### Dependencies: 40.1
+### Description: Combine similar rules, optimize selector specificity, and implement CSS custom properties
+### Details:
+Group selectors with identical properties, simplify overly specific selectors, convert all color values and repeated sizes to CSS custom properties defined in :root. Combine media queries where possible. Ensure selector performance by avoiding universal selectors and deep nesting.
+
+## 3. Minify CSS and Add Autoprefixer [pending]
+### Dependencies: 40.2
+### Description: Process CSS through minification and autoprefixer tools for production deployment
+### Details:
+Use CSS minifier (cssnano or clean-css) to remove whitespace, shorten color values, and optimize code. Run autoprefixer to add vendor prefixes for browser compatibility. Generate source map for debugging. Compare file size before and after optimization.
+
