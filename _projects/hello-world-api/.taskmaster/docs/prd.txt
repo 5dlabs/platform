@@ -1,0 +1,44 @@
+# Hello World API - Product Requirements Document
+
+## Project Overview
+Create a minimal Express.js API that serves as a simple "Hello, World!" service.
+
+## Objectives
+1. Build a basic Express.js server
+2. Implement two simple endpoints
+3. Provide basic documentation
+
+## Functional Requirements
+
+### Core Features
+1. **Hello Endpoint**
+   - GET / returns {"message": "Hello, World!"}
+   - HTTP 200 status code
+
+2. **Health Check**
+   - GET /health returns {"status": "healthy", "timestamp": "<ISO timestamp>"}
+   - HTTP 200 status code
+
+### Technical Requirements
+- Use Express.js framework
+- Run on port 3000
+- Handle basic errors with 500 status codes
+- Log requests to console
+
+## Implementation Tasks
+1. Initialize Node.js project with package.json
+2. Install Express.js dependency
+3. Create main server file (src/index.js)
+4. Implement root endpoint
+5. Implement health endpoint
+6. Add basic error handling
+7. Create README with usage instructions
+8. Test endpoints manually
+
+## Out of Scope
+- Authentication/authorization
+- Database integration
+- Complex routing
+- Production deployment
+- Automated tests
+- Docker configuration

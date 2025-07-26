@@ -1,0 +1,344 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Initialize Node.js Project",
+        "description": "Set up the Node.js project with package.json and install Express.js dependency",
+        "details": "1. Create a new directory for the project\n2. Initialize a new Node.js project with `npm init -y`\n3. Install Express.js with `npm install express`\n4. Create a basic project structure with src directory\n5. Update package.json with start script: `\"start\": \"node src/index.js\"`\n\nExample package.json:\n```json\n{\n  \"name\": \"hello-world-api\",\n  \"version\": \"1.0.0\",\n  \"description\": \"A simple Hello World API\",\n  \"main\": \"src/index.js\",\n  \"scripts\": {\n    \"start\": \"node src/index.js\"\n  },\n  \"dependencies\": {\n    \"express\": \"^4.18.2\"\n  }\n}\n```",
+        "testStrategy": "Verify that package.json is correctly configured and Express.js is installed by running `npm list` to check dependencies and `npm start` to ensure the start script is properly set up.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create Project Directory and Initialize Node.js Project",
+            "description": "Create a new directory for the project and initialize it as a Node.js project with npm",
+            "dependencies": [],
+            "details": "1. Create a new directory named 'hello-world-api'\n2. Navigate into the directory using `cd hello-world-api`\n3. Run `npm init -y` to create a default package.json file\n4. Edit the package.json to update the name, description, and main file path to 'src/index.js'",
+            "status": "pending",
+            "testStrategy": "Verify that package.json was created with correct project name and main file path by examining its contents"
+          },
+          {
+            "id": 2,
+            "title": "Install Express.js and Update Package Scripts",
+            "description": "Install the Express.js framework and configure the package.json with appropriate start script",
+            "dependencies": [],
+            "details": "1. Run `npm install express` to add Express.js as a dependency\n2. Open package.json and add the start script: `\"start\": \"node src/index.js\"`\n3. Verify the dependencies section includes express with a version like ^4.18.2\n4. Ensure the package.json structure matches the example provided in the task description",
+            "status": "pending",
+            "testStrategy": "Run `npm list` to confirm Express.js is installed correctly and check that package.json contains the proper start script"
+          },
+          {
+            "id": 3,
+            "title": "Create Basic Project Structure with Source Directory",
+            "description": "Set up the project directory structure with a src folder and create the main index.js file",
+            "dependencies": [],
+            "details": "1. Create a 'src' directory in the project root\n2. Create an empty index.js file inside the src directory\n3. Create a .gitignore file in the project root with entries for 'node_modules' and '.env'\n4. Create a basic README.md file with the project name and description",
+            "status": "pending",
+            "testStrategy": "Verify the directory structure exists with `ls -la` and confirm that the src/index.js file was created"
+          },
+          {
+            "id": 4,
+            "title": "Implement Basic Express Server Setup",
+            "description": "Create the initial Express.js server configuration in the index.js file",
+            "dependencies": [],
+            "details": "1. Open src/index.js and add the following code:\n```\nconst express = require('express');\nconst app = express();\nconst PORT = process.env.PORT || 3000;\n\n// Middleware for request logging\napp.use((req, res, next) => {\n  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);\n  next();\n});\n\n// Server startup\napp.listen(PORT, () => {\n  console.log(`Server running on http://localhost:${PORT}`);\n});\n```\n2. Save the file",
+            "status": "pending",
+            "testStrategy": "Run `npm start` to verify the server starts without errors and displays the startup message with the correct port"
+          },
+          {
+            "id": 5,
+            "title": "Test Project Setup and Server Initialization",
+            "description": "Verify that the project is correctly set up and the Express server runs properly",
+            "dependencies": [],
+            "details": "1. Run `npm start` to start the Express server\n2. Confirm the server starts without errors and listens on port 3000\n3. Open a web browser or use a tool like curl to make a request to http://localhost:3000\n4. Verify that the request is logged in the console (even though it will return a 404 at this point)\n5. Press Ctrl+C to stop the server\n6. Create a simple test.js file in the project root with a console.log statement to verify Node.js is working",
+            "status": "pending",
+            "testStrategy": "1. Check server startup message in console\n2. Verify request logging works when accessing the server\n3. Confirm the server can be started and stopped without errors"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Create Express.js Server",
+        "description": "Implement the basic Express.js server that listens on port 3000 with request logging",
+        "details": "1. Create src/index.js file\n2. Import Express.js\n3. Create an Express application\n4. Set up middleware for request logging\n5. Configure the server to listen on port 3000\n\nExample implementation:\n```javascript\nconst express = require('express');\nconst app = express();\nconst PORT = 3000;\n\n// Middleware for logging requests\napp.use((req, res, next) => {\n  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);\n  next();\n});\n\n// Server setup\napp.listen(PORT, () => {\n  console.log(`Server running on http://localhost:${PORT}`);\n});\n```",
+        "testStrategy": "Start the server with `npm start` and verify that it runs without errors and logs the startup message. Check that the server is accessible by making a request to http://localhost:3000 (it will return 404 at this point, but should be reachable).",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create src/index.js file and import Express.js",
+            "description": "Create the main server file and import the Express.js framework to begin building the server application.",
+            "dependencies": [],
+            "details": "Create a src directory if it doesn't exist yet. Inside it, create an index.js file. Add the necessary import statements for Express.js and initialize the application and port constant:\n\nconst express = require('express');\nconst app = express();\nconst PORT = 3000;",
+            "status": "pending",
+            "testStrategy": "Verify that the file is created in the correct location and contains the proper import statements by checking the file contents."
+          },
+          {
+            "id": 2,
+            "title": "Implement request logging middleware",
+            "description": "Add middleware to log all incoming HTTP requests with timestamp, method, and URL information.",
+            "dependencies": [
+              "2.1"
+            ],
+            "details": "Add the following middleware code after the Express initialization:\n\n// Middleware for logging requests\napp.use((req, res, next) => {\n  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);\n  next();\n});",
+            "status": "pending",
+            "testStrategy": "After implementing the server, make a request to any endpoint and check the console output to verify that the request is properly logged with timestamp, HTTP method, and URL."
+          },
+          {
+            "id": 3,
+            "title": "Configure server to listen on port 3000",
+            "description": "Set up the Express application to listen on port 3000 and log a startup message when the server successfully starts.",
+            "dependencies": [
+              "2.1"
+            ],
+            "details": "Add the following code at the end of the index.js file to make the server listen on the specified port:\n\n// Server setup\napp.listen(PORT, () => {\n  console.log(`Server running on http://localhost:${PORT}`);\n});",
+            "status": "pending",
+            "testStrategy": "Run the server using 'node src/index.js' and verify that it starts without errors and displays the startup message. Use a tool like curl or a browser to confirm the server is accessible at http://localhost:3000."
+          },
+          {
+            "id": 4,
+            "title": "Add basic route placeholder",
+            "description": "Add a simple placeholder route to test that the server is functioning correctly before implementing specific endpoints.",
+            "dependencies": [
+              "2.2",
+              "2.3"
+            ],
+            "details": "Add a basic route handler before the server.listen call:\n\n// Basic route placeholder\napp.get('/', (req, res) => {\n  res.status(200).send('Server is running');\n});",
+            "status": "pending",
+            "testStrategy": "After starting the server, make a GET request to http://localhost:3000/ and verify that it returns 'Server is running' with a 200 status code."
+          },
+          {
+            "id": 5,
+            "title": "Create a 404 handler for undefined routes",
+            "description": "Implement a catch-all middleware that handles requests to undefined routes by returning a 404 status code.",
+            "dependencies": [
+              "2.4"
+            ],
+            "details": "Add the following middleware after all route definitions but before the server.listen call:\n\n// 404 handler for undefined routes\napp.use((req, res) => {\n  res.status(404).json({ error: 'Not found' });\n});",
+            "status": "pending",
+            "testStrategy": "After implementing the server with all routes, make a request to a non-existent endpoint (e.g., http://localhost:3000/nonexistent) and verify that it returns a JSON response with a 404 status code and the error message."
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Implement Hello Endpoint",
+        "description": "Create the root endpoint that returns a Hello World message with 200 status code",
+        "details": "Add the following route handler to src/index.js after the middleware setup:\n\n```javascript\n// Hello endpoint\napp.get('/', (req, res) => {\n  res.status(200).json({ message: 'Hello, World!' });\n});\n```\n\nThis implements the root endpoint that returns the required JSON response with a 200 status code as specified in the PRD.",
+        "testStrategy": "Test the endpoint by starting the server and making a GET request to http://localhost:3000/ using a browser or tools like curl or Postman. Verify that the response is a JSON object with the message 'Hello, World!' and the status code is 200.",
+        "priority": "medium",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create the root endpoint route handler",
+            "description": "Add the basic route handler for the root endpoint that returns a Hello World message with 200 status code",
+            "dependencies": [],
+            "details": "Add the following route handler to src/index.js after the middleware setup:\n\n// Hello endpoint\napp.get('/', (req, res) => {\n  res.status(200).json({ message: 'Hello, World!' });\n});",
+            "status": "pending",
+            "testStrategy": "Manually test the endpoint by starting the server and making a GET request to http://localhost:3000/ using a browser or tools like curl or Postman. Verify that the response is a JSON object with the message 'Hello, World!' and the status code is 200."
+          },
+          {
+            "id": 2,
+            "title": "Add response status code",
+            "description": "Ensure the endpoint returns the correct 200 status code",
+            "dependencies": [
+              "3.1"
+            ],
+            "details": "Verify that the response includes the correct status code by using res.status(200) before sending the JSON response:\n\nres.status(200).json({ message: 'Hello, World!' });",
+            "status": "pending",
+            "testStrategy": "Use a tool like Postman or curl with the -v flag to verify the status code is 200 in the response headers."
+          },
+          {
+            "id": 3,
+            "title": "Format JSON response structure",
+            "description": "Ensure the response follows the required JSON structure with a message field",
+            "dependencies": [
+              "3.1"
+            ],
+            "details": "Confirm that the response is formatted as a JSON object with a 'message' field containing 'Hello, World!':\n\n{ message: 'Hello, World!' }",
+            "status": "pending",
+            "testStrategy": "Parse the response body and verify it contains the expected JSON structure with the correct message field."
+          },
+          {
+            "id": 4,
+            "title": "Add comments and documentation",
+            "description": "Add appropriate comments to explain the purpose of the endpoint",
+            "dependencies": [
+              "3.1"
+            ],
+            "details": "Add descriptive comments above the route handler to explain its purpose and response format:\n\n// Hello endpoint\n// Returns a simple Hello World message with 200 status code\n// Response format: { message: 'Hello, World!' }",
+            "status": "pending",
+            "testStrategy": "Code review to ensure comments are clear and accurately describe the endpoint's functionality."
+          },
+          {
+            "id": 5,
+            "title": "Test the endpoint integration",
+            "description": "Verify that the endpoint works correctly within the Express application",
+            "dependencies": [
+              "3.1",
+              "3.2",
+              "3.3",
+              "3.4"
+            ],
+            "details": "After implementing the endpoint, ensure it's properly integrated with the Express application by testing it in the context of the running server. Verify that it doesn't conflict with other routes and middleware.",
+            "status": "pending",
+            "testStrategy": "Start the server and make multiple requests to the endpoint to ensure consistent behavior. Also test other endpoints (if any) to ensure they still work correctly after adding this route."
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Implement Health Check Endpoint",
+        "description": "Create the health endpoint that returns the service status and current timestamp",
+        "details": "Add the following route handler to src/index.js after the root endpoint:\n\n```javascript\n// Health check endpoint\napp.get('/health', (req, res) => {\n  res.status(200).json({\n    status: 'healthy',\n    timestamp: new Date().toISOString()\n  });\n});\n```\n\nThis implements the health check endpoint that returns the service status and current timestamp in ISO format with a 200 status code as specified in the PRD.",
+        "testStrategy": "Test the endpoint by starting the server and making a GET request to http://localhost:3000/health using a browser or tools like curl or Postman. Verify that the response is a JSON object with the status 'healthy' and a valid ISO timestamp, and the status code is 200.",
+        "priority": "medium",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create Health Check Route Handler",
+            "description": "Add the health check endpoint route handler to src/index.js that returns the service status and current timestamp",
+            "dependencies": [],
+            "details": "Add the following code to src/index.js after the root endpoint handler:\n\n// Health check endpoint\napp.get('/health', (req, res) => {\n  res.status(200).json({\n    status: 'healthy',\n    timestamp: new Date().toISOString()\n  });\n});",
+            "status": "pending",
+            "testStrategy": "Manually test by starting the server and making a GET request to http://localhost:3000/health using a browser or curl. Verify the response contains status: 'healthy' and a valid timestamp."
+          },
+          {
+            "id": 2,
+            "title": "Add Response Status Code",
+            "description": "Ensure the health endpoint returns the correct HTTP status code (200)",
+            "dependencies": [
+              "4.1"
+            ],
+            "details": "Verify that the response status is set to 200 in the health endpoint handler:\n\nres.status(200).json({\n  status: 'healthy',\n  timestamp: new Date().toISOString()\n});",
+            "status": "pending",
+            "testStrategy": "Use a tool like Postman or curl with the -v flag to verify the HTTP status code is 200."
+          },
+          {
+            "id": 3,
+            "title": "Format Timestamp in ISO Format",
+            "description": "Ensure the timestamp is properly formatted in ISO 8601 format",
+            "dependencies": [
+              "4.1"
+            ],
+            "details": "Verify that the timestamp is generated using the toISOString() method:\n\ntimestamp: new Date().toISOString()",
+            "status": "pending",
+            "testStrategy": "Test the endpoint and verify the timestamp format matches ISO 8601 (e.g., '2023-04-15T14:32:17.000Z')"
+          },
+          {
+            "id": 4,
+            "title": "Add Health Check Documentation",
+            "description": "Add comments explaining the purpose and response format of the health check endpoint",
+            "dependencies": [
+              "4.1"
+            ],
+            "details": "Add the following documentation above the health check endpoint:\n\n/**\n * Health check endpoint\n * Returns the service status and current timestamp\n * Used for monitoring and automated health checks\n * Response format:\n * {\n *   status: 'healthy',\n *   timestamp: '2023-04-15T14:32:17.000Z'\n * }\n */",
+            "status": "pending",
+            "testStrategy": "Review the code to ensure documentation is clear and accurately describes the endpoint's purpose and response format."
+          },
+          {
+            "id": 5,
+            "title": "Test Health Check Endpoint",
+            "description": "Create a comprehensive test for the health endpoint to verify all requirements are met",
+            "dependencies": [
+              "4.1",
+              "4.2",
+              "4.3"
+            ],
+            "details": "Create a test script or manual test plan that verifies:\n1. The endpoint is accessible at /health\n2. The response contains the correct status field with value 'healthy'\n3. The response contains a valid ISO timestamp\n4. The HTTP status code is 200\n\nExample test using curl:\n\ncurl -v http://localhost:3000/health",
+            "status": "pending",
+            "testStrategy": "Execute the test and verify all requirements are met. For automated testing, consider adding a simple test script that makes the request and validates the response."
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Add Error Handling and Documentation",
+        "description": "Implement basic error handling middleware and create a README with usage instructions",
+        "details": "1. Add error handling middleware to src/index.js:\n```javascript\n// Error handling middleware\napp.use((err, req, res, next) => {\n  console.error(err.stack);\n  res.status(500).json({ error: 'Something went wrong!' });\n});\n\n// 404 handler for undefined routes\napp.use((req, res) => {\n  res.status(404).json({ error: 'Not found' });\n});\n```\n\n2. Create a README.md file in the project root with the following content:\n```markdown\n# Hello World API\n\nA simple Express.js API that serves a Hello World message and health check endpoint.\n\n## Installation\n\n```\nnpm install\n```\n\n## Usage\n\nStart the server:\n\n```\nnpm start\n```\n\nThe server will run on http://localhost:3000\n\n## Endpoints\n\n- GET / - Returns a Hello World message\n- GET /health - Returns the service health status and timestamp\n\n## Example Responses\n\n### Root Endpoint\n\n```json\n{\n  \"message\": \"Hello, World!\"\n}\n```\n\n### Health Endpoint\n\n```json\n{\n  \"status\": \"healthy\",\n  \"timestamp\": \"2023-11-14T12:00:00.000Z\"\n}\n```\n```",
+        "testStrategy": "1. Test error handling by intentionally causing an error (e.g., add a route that throws an error) and verify that the 500 response is returned.\n2. Test the 404 handler by making a request to a non-existent endpoint.\n3. Review the README.md file to ensure it contains all the required information and is formatted correctly.",
+        "priority": "low",
+        "dependencies": [
+          3,
+          4
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Error Handling Middleware",
+            "description": "Add error handling middleware to catch and process server errors with appropriate responses",
+            "dependencies": [],
+            "details": "Add the following error handling middleware to src/index.js after all route definitions but before the server listen call:\n\n// Error handling middleware\napp.use((err, req, res, next) => {\n  console.error(err.stack);\n  res.status(500).json({ error: 'Something went wrong!' });\n});\n\nThis middleware will catch any errors thrown during request processing and return a standardized 500 error response.",
+            "status": "pending",
+            "testStrategy": "Create a test route that intentionally throws an error (e.g., app.get('/test-error', () => { throw new Error('Test error'); })) and verify that the response is a 500 status with the expected error message."
+          },
+          {
+            "id": 2,
+            "title": "Implement 404 Handler for Undefined Routes",
+            "description": "Add middleware to handle requests to undefined routes with a 404 response",
+            "dependencies": [
+              "5.1"
+            ],
+            "details": "Add the following 404 handler middleware to src/index.js after the error handling middleware but before the server listen call:\n\n// 404 handler for undefined routes\napp.use((req, res) => {\n  res.status(404).json({ error: 'Not found' });\n});\n\nThis middleware will catch any requests that don't match defined routes and return a standardized 404 error response.",
+            "status": "pending",
+            "testStrategy": "Make a request to a non-existent endpoint (e.g., /nonexistent) and verify that the response is a 404 status with the expected error message."
+          },
+          {
+            "id": 3,
+            "title": "Create Basic README Structure",
+            "description": "Create a README.md file with project title, description, and installation instructions",
+            "dependencies": [],
+            "details": "Create a README.md file in the project root with the following initial content:\n\n# Hello World API\n\nA simple Express.js API that serves a Hello World message and health check endpoint.\n\n## Installation\n\n```\nnpm install\n```\n\n## Usage\n\nStart the server:\n\n```\nnpm start\n```\n\nThe server will run on http://localhost:3000",
+            "status": "pending",
+            "testStrategy": "Review the README.md file to ensure it contains the correct project title, description, and installation instructions."
+          },
+          {
+            "id": 4,
+            "title": "Document API Endpoints in README",
+            "description": "Add detailed documentation for all API endpoints including examples",
+            "dependencies": [
+              "5.3"
+            ],
+            "details": "Add the following endpoint documentation section to the README.md file:\n\n## Endpoints\n\n- GET / - Returns a Hello World message\n- GET /health - Returns the service health status and timestamp\n\n## Example Responses\n\n### Root Endpoint\n\n```json\n{\n  \"message\": \"Hello, World!\"\n}\n```\n\n### Health Endpoint\n\n```json\n{\n  \"status\": \"healthy\",\n  \"timestamp\": \"2023-11-14T12:00:00.000Z\"\n}\n```",
+            "status": "pending",
+            "testStrategy": "Review the README.md file to ensure it accurately documents all API endpoints with correct example responses."
+          },
+          {
+            "id": 5,
+            "title": "Test Error Handling and Documentation",
+            "description": "Verify that error handling works correctly and documentation is complete",
+            "dependencies": [
+              "5.1",
+              "5.2",
+              "5.3",
+              "5.4"
+            ],
+            "details": "1. Start the server with `npm start`\n2. Test the error handling by making requests that should trigger errors\n3. Test the 404 handler by requesting a non-existent endpoint\n4. Review the README.md file to ensure it's complete and accurate\n5. Make any necessary adjustments to error handling or documentation based on testing results",
+            "status": "pending",
+            "testStrategy": "1. Verify error handling by intentionally causing an error and checking the response\n2. Verify 404 handling by requesting a non-existent endpoint\n3. Ensure README.md contains all required sections and accurately reflects the API functionality\n4. Check that all code examples in the documentation are correct"
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-26T18:28:41.071Z",
+      "updated": "2025-07-26T18:28:41.071Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
