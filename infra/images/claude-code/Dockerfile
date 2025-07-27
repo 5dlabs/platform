@@ -1,4 +1,4 @@
-FROM node:20
+FROM ubuntu:24.04
 
 ARG TZ
 ENV TZ="$TZ"
@@ -18,7 +18,27 @@ RUN apt update && apt install -y less \
   dnsutils \
   aggregate \
   jq \
-  netcat-openbsd
+  netcat-openbsd \
+  ca-certificates \
+  curl \
+  wget
+
+# Create node user (since we're not using the node base image)
+RUN id -u node >/dev/null 2>&1 || \
+    (groupadd node && useradd --shell /bin/bash --create-home node --gid node)
+
+# Install Node.js via nvm
+ENV NVM_DIR=/usr/local/nvm
+ENV NODE_VERSION=20.18.0
+RUN mkdir -p $NVM_DIR && \
+  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | NVM_DIR=$NVM_DIR bash && \
+  . $NVM_DIR/nvm.sh && \
+  nvm install $NODE_VERSION && \
+  nvm alias default $NODE_VERSION && \
+  nvm use default
+
+# Add Node.js to PATH for all users
+ENV PATH=$NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
 
 # Install Rust development environment
 RUN apt update && apt install -y \
