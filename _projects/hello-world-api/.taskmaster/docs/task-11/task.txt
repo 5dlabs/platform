@@ -1,0 +1,134 @@
+# Task ID: 11
+# Title: Add Error Handling
+# Status: pending
+# Dependencies: 9, 10
+# Priority: medium
+# Description: Implement basic error handling middleware to return 500 status codes for server errors.
+# Details:
+Add the following error handling middleware to src/index.js after all route definitions:
+```javascript
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(`Error: ${err.message}`);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
+
+// 404 handler for undefined routes
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found' });
+});
+```
+This adds middleware to handle both unexpected errors (returning 500 status codes) and undefined routes (returning 404 status codes).
+
+# Test Strategy:
+Test error handling by intentionally causing errors (e.g., accessing undefined routes or triggering exceptions). Verify that appropriate error responses are returned with the correct status codes.
+
+# Subtasks:
+## 1. Implement 500 Error Handling Middleware [pending]
+### Dependencies: None
+### Description: Add middleware to handle server errors and return 500 status codes with appropriate error messages.
+### Details:
+Add the error handling middleware to src/index.js after all route definitions. This middleware will catch any errors that occur during request processing and return a standardized error response:
+
+```javascript
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(`Error: ${err.message}`);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
+```
+
+Ensure this middleware is placed after all route definitions but before the 404 handler.
+
+## 2. Implement 404 Not Found Handler [pending]
+### Dependencies: 11.1
+### Description: Add middleware to handle undefined routes and return 404 status codes.
+### Details:
+Add the 404 handler middleware to src/index.js after the error handling middleware. This will catch any requests to undefined routes:
+
+```javascript
+// 404 handler for undefined routes
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found' });
+});
+```
+
+This middleware should be the last middleware in the chain to ensure it only runs if no other routes match.
+
+## 3. Add Error Logging Functionality [pending]
+### Dependencies: 11.1
+### Description: Enhance the error handling middleware to log detailed error information for debugging purposes.
+### Details:
+Modify the error handling middleware to include more detailed logging information:
+
+```javascript
+// Enhanced error handling middleware
+app.use((err, req, res, next) => {
+  console.error(`Error: ${err.message}`);
+  console.error(`Stack: ${err.stack}`);
+  console.error(`Request path: ${req.path}`);
+  console.error(`Request method: ${req.method}`);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
+```
+
+This enhancement will log the error message, stack trace, and request details to help with debugging.
+
+## 4. Create Error Testing Routes [pending]
+### Dependencies: 11.1, 11.2
+### Description: Add temporary routes to test both error handlers to ensure they work correctly.
+### Details:
+Add temporary test routes to src/index.js to verify the error handling functionality:
+
+```javascript
+// Test route for 500 error
+app.get('/test-error', (req, res, next) => {
+  try {
+    // Intentionally throw an error
+    throw new Error('Test server error');
+  } catch (err) {
+    next(err); // Pass error to error handling middleware
+  }
+});
+
+// The 404 handler will automatically catch undefined routes
+```
+
+These routes will help verify that the error handling middleware is working correctly. They can be removed after testing.
+
+## 5. Document Error Handling Implementation [pending]
+### Dependencies: 11.1, 11.2, 11.3
+### Description: Add comments and documentation for the error handling middleware to explain its purpose and functionality.
+### Details:
+Add comprehensive comments to the error handling code in src/index.js:
+
+```javascript
+/**
+ * Error Handling Middleware
+ * 
+ * This middleware catches any errors thrown during request processing
+ * and returns a standardized error response with a 500 status code.
+ * It also logs the error details to the console for debugging.
+ */
+app.use((err, req, res, next) => {
+  console.error(`Error: ${err.message}`);
+  console.error(`Stack: ${err.stack}`);
+  console.error(`Request path: ${req.path}`);
+  console.error(`Request method: ${req.method}`);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
+
+/**
+ * 404 Not Found Handler
+ * 
+ * This middleware handles requests to undefined routes
+ * and returns a standardized 404 response.
+ * It must be placed after all other routes and middleware.
+ */
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found' });
+});
+```
+
+Also add a section to the project README.md explaining the error handling approach.
+
