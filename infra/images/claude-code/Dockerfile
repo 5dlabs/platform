@@ -49,7 +49,7 @@ RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhisto
   && touch /commandhistory/.bash_history \
   && chown -R $USERNAME /commandhistory
 
-RUN curl -fsSL https://raw.githubusercontent.com/5dlabs/toolman/main/scripts/install.sh | bash
+RUN curl -fsSL https://raw.githubusercontent.com/5dlabs/toolman/main/scripts/install.sh | bash -s -- --dir /usr/local/bin
 # Set `DEVCONTAINER` environment variable to help with orientation
 ENV DEVCONTAINER=true
 
