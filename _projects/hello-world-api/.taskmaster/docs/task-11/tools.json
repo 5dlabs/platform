@@ -1,0 +1,14 @@
+{
+  "remoteTools": [],
+  "localServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "tools": [
+        "read_file",
+        "edit_file"
+      ],
+      "workingDirectory": "project_root"
+    }
+  }
+}
