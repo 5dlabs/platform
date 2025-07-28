@@ -352,15 +352,8 @@ impl<'a> CodeResourceManager<'a> {
                     "defaultMode": 0o600,
                     "items": [{
                         "key": "ssh-privatekey",
-                        "path": "id_rsa"
+                        "path": "id_ed25519"
                     }]
-                }
-            }),
-            json!({
-                "name": "ssh-config",
-                "configMap": {
-                    "name": "ssh-config",
-                    "defaultMode": 0o644
                 }
             })
         ];
@@ -369,11 +362,6 @@ impl<'a> CodeResourceManager<'a> {
             json!({
                 "name": "ssh-key",
                 "mountPath": "/home/claude/.ssh",
-                "readOnly": true
-            }),
-            json!({
-                "name": "ssh-config", 
-                "mountPath": "/etc/ssh",
                 "readOnly": true
             })
         ];
