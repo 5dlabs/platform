@@ -43,10 +43,16 @@ impl<'a> DocsResourceManager<'a> {
         let cm_name = self.generate_configmap_name(docs_run);
         let configmap = self.create_configmap(docs_run, &cm_name, None)?;
 
+        // Always create or update ConfigMap to ensure latest template content
         match self.configmaps.create(&PostParams::default(), &configmap).await {
             Ok(_) => info!("Created ConfigMap: {}", cm_name),
             Err(kube::Error::Api(ae)) if ae.code == 409 => {
-                info!("ConfigMap already exists: {}", cm_name);
+                // ConfigMap exists, update it with latest content
+                info!("ConfigMap exists, updating with latest content: {}", cm_name);
+                match self.configmaps.replace(&cm_name, &PostParams::default(), &configmap).await {
+                    Ok(_) => info!("Updated ConfigMap: {}", cm_name),
+                    Err(e) => return Err(e.into()),
+                }
             }
             Err(e) => return Err(e.into()),
         }
