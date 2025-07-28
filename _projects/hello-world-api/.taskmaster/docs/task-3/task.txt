@@ -1,0 +1,213 @@
+# Task ID: 3
+# Title: Implement API Endpoints
+# Status: pending
+# Dependencies: 2
+# Priority: high
+# Description: Implement all required API endpoints including health check, hello world, personalized greeting, echo service, and info endpoints.
+# Details:
+1. Create src/routes/index.js to consolidate routes:
+```javascript
+const express = require('express');
+const router = express.Router();
+
+router.use(require('./health'));
+router.use(require('./hello'));
+router.use(require('./echo'));
+router.use(require('./info'));
+
+module.exports = router;
+```
+
+2. Create src/routes/health.js:
+```javascript
+const express = require('express');
+const router = express.Router();
+const { success } = require('../utils/response');
+
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Health check endpoint
+ *     description: Returns the service health status
+ *     responses:
+ *       200:
+ *         description: Service is healthy
+ */
+router.get('/health', (req, res) => {
+  res.json(success('Service is healthy', { status: 'up' }));
+});
+
+module.exports = router;
+```
+
+3. Create src/routes/hello.js:
+```javascript
+const express = require('express');
+const router = express.Router();
+const { success, error } = require('../utils/response');
+
+/**
+ * @swagger
+ * /hello:
+ *   get:
+ *     summary: Basic hello world endpoint
+ *     description: Returns a greeting message
+ *     responses:
+ *       200:
+ *         description: Greeting message
+ */
+router.get('/hello', (req, res) => {
+  res.json(success('Hello, World!', { greeting: 'Hello, World!' }));
+});
+
+/**
+ * @swagger
+ * /hello/{name}:
+ *   get:
+ *     summary: Personalized greeting
+ *     description: Returns a personalized greeting with the provided name
+ *     parameters:
+ *       - in: path
+ *         name: name
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Personalized greeting
+ *       400:
+ *         description: Invalid name parameter
+ */
+router.get('/hello/:name', (req, res, next) => {
+  const { name } = req.params;
+  
+  if (!name || name.trim() === '') {
+    return next(error('Name parameter is required', 400));
+  }
+  
+  const sanitizedName = name.replace(/[^a-zA-Z0-9 ]/g, '');
+  res.json(success(`Hello, ${sanitizedName}!`, { greeting: `Hello, ${sanitizedName}!` }));
+});
+
+module.exports = router;
+```
+
+4. Create src/routes/echo.js:
+```javascript
+const express = require('express');
+const router = express.Router();
+const { success, error } = require('../utils/response');
+
+/**
+ * @swagger
+ * /echo:
+ *   post:
+ *     summary: Echo service
+ *     description: Returns the posted JSON data
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Echoed data
+ *       400:
+ *         description: Invalid request body
+ */
+router.post('/echo', (req, res, next) => {
+  if (!req.body || Object.keys(req.body).length === 0) {
+    return next(error('Request body is required', 400));
+  }
+  
+  res.json(success('Echo response', req.body));
+});
+
+module.exports = router;
+```
+
+5. Create src/routes/info.js:
+```javascript
+const express = require('express');
+const router = express.Router();
+const { success } = require('../utils/response');
+const os = require('os');
+const package = require('../../package.json');
+
+// Track server start time
+const startTime = new Date();
+
+/**
+ * @swagger
+ * /info:
+ *   get:
+ *     summary: Service information
+ *     description: Returns version, uptime, and environment information
+ *     responses:
+ *       200:
+ *         description: Service information
+ */
+router.get('/info', (req, res) => {
+  const uptime = Math.floor((new Date() - startTime) / 1000);
+  
+  const info = {
+    version: package.version,
+    name: package.name,
+    uptime: `${uptime} seconds`,
+    environment: process.env.NODE_ENV || 'development',
+    hostname: os.hostname(),
+    platform: os.platform(),
+    memory: {
+      total: `${Math.round(os.totalmem() / (1024 * 1024))} MB`,
+      free: `${Math.round(os.freemem() / (1024 * 1024))} MB`
+    }
+  };
+  
+  res.json(success('Service information', info));
+});
+
+module.exports = router;
+```
+
+# Test Strategy:
+Create integration tests for each endpoint using Supertest:
+1. Test /health returns 200 and correct format
+2. Test /hello returns correct greeting
+3. Test /hello/{name} with valid and invalid names
+4. Test /echo with valid and invalid JSON payloads
+5. Test /info returns correct service information
+6. Verify all responses follow the required format with status, message, data, and timestamp fields
+
+# Subtasks:
+## 1. Implement Health Check Endpoint [pending]
+### Dependencies: None
+### Description: Create the /health endpoint to return the service health status using a standardized JSON response.
+### Details:
+Develop src/routes/health.js with a GET /health route that responds with a success message and status 'up'. Integrate this route into the main router in src/routes/index.js.
+
+## 2. Implement Hello World and Personalized Greeting Endpoints [pending]
+### Dependencies: None
+### Description: Create /hello for a static greeting and /hello/:name for a personalized greeting, including input validation and sanitization.
+### Details:
+Develop src/routes/hello.js with GET /hello returning a static greeting and GET /hello/:name returning a personalized greeting. Sanitize the name parameter and handle invalid input with appropriate error responses.
+
+## 3. Implement Echo Service Endpoint [pending]
+### Dependencies: None
+### Description: Create the /echo endpoint to accept POST requests and return the posted JSON data, validating the request body.
+### Details:
+Develop src/routes/echo.js with POST /echo that checks for a non-empty JSON body and echoes it back in the response. Handle missing or invalid bodies with error responses.
+
+## 4. Implement Service Info Endpoint [pending]
+### Dependencies: None
+### Description: Create the /info endpoint to return service metadata including version, uptime, environment, hostname, platform, and memory usage.
+### Details:
+Develop src/routes/info.js with GET /info that gathers and returns service information from package.json, environment variables, and the OS module.
+
+## 5. Consolidate and Register All API Routes [pending]
+### Dependencies: 3.1, 3.2, 3.3, 3.4
+### Description: Create a central router to register all endpoint modules and export for use in the main application.
+### Details:
+Develop src/routes/index.js to import and use health, hello, echo, and info route modules, ensuring all endpoints are accessible via the main router.
+
