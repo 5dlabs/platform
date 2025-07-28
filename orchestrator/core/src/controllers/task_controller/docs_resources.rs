@@ -275,7 +275,7 @@ impl<'a> DocsResourceManager<'a> {
                 "name": "ssh-key",
                 "secret": {
                     "secretName": ssh_secret,
-                    "defaultMode": 0o600,
+                    "defaultMode": 0o644,
                     "items": [{
                         "key": "ssh-privatekey",
                         "path": "id_ed25519"
