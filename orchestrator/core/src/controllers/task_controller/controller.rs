@@ -8,7 +8,6 @@ use kube::runtime::controller::{Action, Controller};
 use kube::runtime::watcher::Config;
 use kube::{Api, Client, ResourceExt};
 use std::sync::Arc;
-use std::time::Duration;
 use tracing::{error, info, instrument, Instrument};
 
 /// Main entry point for the separated task controllers
@@ -193,24 +192,26 @@ async fn run_code_controller(
     Ok(())
 }
 
-/// Error policy for DocsRun controller
+/// Error policy for DocsRun controller - limit to single retry
 #[instrument(skip(_ctx), fields(docs_run_name = %_docs_run.name_any(), namespace = %_ctx.namespace))]
 fn error_policy_docs(_docs_run: Arc<DocsRun>, error: &Error, _ctx: Arc<Context>) -> Action {
     error!(
         error = ?error,
         docs_run_name = %_docs_run.name_any(),
-        "DocsRun reconciliation error - requeuing in 30s"
+        "DocsRun reconciliation failed - no retries, stopping"
     );
-    Action::requeue(Duration::from_secs(30))
+    // Don't retry - just stop on first failure
+    Action::await_change()
 }
 
-/// Error policy for CodeRun controller
+/// Error policy for CodeRun controller - limit to single retry
 #[instrument(skip(_ctx), fields(code_run_name = %_code_run.name_any(), namespace = %_ctx.namespace))]
 fn error_policy_code(_code_run: Arc<CodeRun>, error: &Error, _ctx: Arc<Context>) -> Action {
     error!(
         error = ?error,
         code_run_name = %_code_run.name_any(),
-        "CodeRun reconciliation error - requeuing in 30s"
+        "CodeRun reconciliation failed - no retries, stopping"
     );
-    Action::requeue(Duration::from_secs(30))
+    // Don't retry - just stop on first failure
+    Action::await_change()
 }
