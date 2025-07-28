@@ -12,7 +12,7 @@ use kube::{ResourceExt};
 use serde_json::json;
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use tracing::info;
+use tracing::{error, info};
 
 pub struct DocsResourceManager<'a> {
     pub jobs: &'a Api<Job>,
@@ -33,28 +33,64 @@ impl<'a> DocsResourceManager<'a> {
 
     pub async fn reconcile_create_or_update(&self, docs_run: &Arc<DocsRun>) -> Result<Action> {
         let name = docs_run.name_any();
-        info!("Creating/updating docs resources for: {}", name);
+        info!("🚀 RESOURCE_MANAGER: Starting reconcile_create_or_update for: {}", name);
 
         // Clean up older versions
-        self.cleanup_old_jobs(docs_run).await?;
-        self.cleanup_old_configmaps(docs_run).await?;
+        info!("🧹 RESOURCE_MANAGER: Cleaning up old jobs for: {}", name);
+        if let Err(e) = self.cleanup_old_jobs(docs_run).await {
+            error!("❌ RESOURCE_MANAGER: Failed to cleanup old jobs: {:?}", e);
+            return Err(e);
+        }
+        info!("✅ RESOURCE_MANAGER: Old jobs cleaned up successfully");
+
+        info!("🧹 RESOURCE_MANAGER: Cleaning up old configmaps for: {}", name);
+        if let Err(e) = self.cleanup_old_configmaps(docs_run).await {
+            error!("❌ RESOURCE_MANAGER: Failed to cleanup old configmaps: {:?}", e);
+            return Err(e); 
+        }
+        info!("✅ RESOURCE_MANAGER: Old configmaps cleaned up successfully");
 
         // Create ConfigMap FIRST (without owner reference) so Job can mount it
         let cm_name = self.generate_configmap_name(docs_run);
-        let configmap = self.create_configmap(docs_run, &cm_name, None)?;
+        info!("📝 RESOURCE_MANAGER: Generated ConfigMap name: {}", cm_name);
+        
+        info!("🏗️ RESOURCE_MANAGER: Creating ConfigMap object");
+        let configmap = match self.create_configmap(docs_run, &cm_name, None) {
+            Ok(cm) => {
+                info!("✅ RESOURCE_MANAGER: ConfigMap object created successfully");
+                cm
+            }
+            Err(e) => {
+                error!("❌ RESOURCE_MANAGER: Failed to create ConfigMap object: {:?}", e);
+                error!("❌ RESOURCE_MANAGER: Error type: {}", std::any::type_name_of_val(&e));
+                return Err(e);
+            }
+        };
 
         // Always create or update ConfigMap to ensure latest template content
+        info!("🔄 RESOURCE_MANAGER: Attempting to create ConfigMap: {}", cm_name);
         match self.configmaps.create(&PostParams::default(), &configmap).await {
-            Ok(_) => info!("Created ConfigMap: {}", cm_name),
+            Ok(_) => {
+                info!("✅ RESOURCE_MANAGER: Successfully created ConfigMap: {}", cm_name);
+            }
             Err(kube::Error::Api(ae)) if ae.code == 409 => {
                 // ConfigMap exists, update it with latest content
-                info!("ConfigMap exists, updating with latest content: {}", cm_name);
+                info!("🔄 RESOURCE_MANAGER: ConfigMap {} already exists (409), updating with latest content", cm_name);
                 match self.configmaps.replace(&cm_name, &PostParams::default(), &configmap).await {
-                    Ok(_) => info!("Updated ConfigMap: {}", cm_name),
-                    Err(e) => return Err(e.into()),
+                    Ok(_) => {
+                        info!("✅ RESOURCE_MANAGER: Successfully updated ConfigMap: {}", cm_name);
+                    }
+                    Err(e) => {
+                        error!("❌ RESOURCE_MANAGER: Failed to update existing ConfigMap {}: {:?}", cm_name, e);
+                        return Err(e.into());
+                    }
                 }
             }
-            Err(e) => return Err(e.into()),
+            Err(e) => {
+                error!("❌ RESOURCE_MANAGER: Failed to create ConfigMap {}: {:?}", cm_name, e);
+                error!("❌ RESOURCE_MANAGER: Kubernetes error type: {}", std::any::type_name_of_val(&e));
+                return Err(e.into());
+            }
         }
 
         // Create Job SECOND (now it can successfully mount the existing ConfigMap)
@@ -94,12 +130,32 @@ impl<'a> DocsResourceManager<'a> {
         let mut data = BTreeMap::new();
 
         // Generate all templates for docs
-        let templates = super::docs_templates::DocsTemplateGenerator::generate_all_templates(docs_run, self.config)?;
+        error!("🔧 RESOURCE_MANAGER: Generating templates for ConfigMap: {}", name);
+        let templates = match super::docs_templates::DocsTemplateGenerator::generate_all_templates(docs_run, self.config) {
+            Ok(tmpl) => {
+                error!("✅ RESOURCE_MANAGER: Successfully generated {} templates", tmpl.len());
+                for (filename, _) in &tmpl {
+                    error!("📄 RESOURCE_MANAGER: Generated template file: {}", filename);
+                }
+                tmpl
+            }
+            Err(e) => {
+                error!("❌ RESOURCE_MANAGER: Failed to generate templates: {:?}", e);
+                error!("❌ RESOURCE_MANAGER: Template error type: {}", std::any::type_name_of_val(&e));
+                error!("❌ RESOURCE_MANAGER: Template error details: {}", e);
+                return Err(e);
+            }
+        };
+        
         for (filename, content) in templates {
             data.insert(filename, content);
         }
 
+        error!("🏷️ RESOURCE_MANAGER: Creating labels for ConfigMap: {}", name);
         let labels = self.create_task_labels(docs_run);
+        error!("✅ RESOURCE_MANAGER: Created {} labels", labels.len());
+        
+        error!("📝 RESOURCE_MANAGER: Building ConfigMap metadata");
         let mut metadata = ObjectMeta {
             name: Some(name.to_string()),
             labels: Some(labels),
@@ -107,14 +163,19 @@ impl<'a> DocsResourceManager<'a> {
         };
 
         if let Some(owner) = owner_ref {
+            error!("👤 RESOURCE_MANAGER: Adding owner reference to ConfigMap");
             metadata.owner_references = Some(vec![owner]);
         }
 
-        Ok(ConfigMap {
+        error!("🏗️ RESOURCE_MANAGER: Constructing final ConfigMap object with {} data entries", data.len());
+        let configmap = ConfigMap {
             metadata,
             data: Some(data),
             ..Default::default()
-        })
+        };
+        
+        error!("✅ RESOURCE_MANAGER: ConfigMap object created successfully");
+        Ok(configmap)
     }
 
     async fn create_job(&self, docs_run: &DocsRun, cm_name: &str) -> Result<Option<OwnerReference>> {

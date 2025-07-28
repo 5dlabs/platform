@@ -62,26 +62,47 @@ pub async fn reconcile_docs_run(docs_run: Arc<DocsRun>, ctx: Arc<Context>) -> Re
 
 #[instrument(skip(ctx), fields(docs_run_name = %docs_run.name_any(), namespace = %ctx.namespace))]
 async fn reconcile_docs_create_or_update(docs_run: Arc<DocsRun>, ctx: &Context) -> Result<Action> {
-    error!("🚀 DOCS DEBUG: Creating or updating resources for DocsRun");
+    let docs_run_name = docs_run.name_any();
+    error!("🚀 DOCS DEBUG: Starting reconcile_docs_create_or_update for: {}", docs_run_name);
     
     // Create APIs
+    error!("🔗 DOCS DEBUG: Creating Kubernetes API clients for namespace: {}", ctx.namespace);
     let jobs: Api<Job> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
     let configmaps: Api<ConfigMap> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
+    error!("✅ DOCS DEBUG: API clients created successfully");
     
     // Create resource manager and delegate
+    error!("🏗️ DOCS DEBUG: Creating DocsResourceManager");
     let ctx_arc = Arc::new(ctx.clone());
     let resource_manager = DocsResourceManager::new(&jobs, &configmaps, &ctx.config, &ctx_arc);
+    error!("✅ DOCS DEBUG: DocsResourceManager created successfully");
     
     // First handle resource creation/updates  
+    error!("📦 DOCS DEBUG: Calling resource_manager.reconcile_create_or_update");
     let result = resource_manager.reconcile_create_or_update(&docs_run).await;
     
-    // Then monitor any existing job status
-    use super::docs_status::DocsStatusManager;
-    if let Err(e) = DocsStatusManager::monitor_job_status(&docs_run, &jobs, &ctx_arc).await {
-        error!("Failed to monitor job status: {}", e);
-        // Don't fail the reconciliation for monitoring errors
+    match &result {
+        Ok(action) => {
+            error!("✅ DOCS DEBUG: resource_manager.reconcile_create_or_update succeeded with action: {:?}", action);
+        }
+        Err(e) => {
+            error!("❌ DOCS DEBUG: resource_manager.reconcile_create_or_update FAILED with error: {:?}", e);
+            error!("❌ DOCS DEBUG: Error type: {}", std::any::type_name_of_val(e));
+            error!("❌ DOCS DEBUG: Error details: {}", e);
+        }
     }
     
+    // Then monitor any existing job status
+    error!("📊 DOCS DEBUG: Monitoring job status");
+    use super::docs_status::DocsStatusManager;
+    if let Err(e) = DocsStatusManager::monitor_job_status(&docs_run, &jobs, &ctx_arc).await {
+        error!("⚠️ DOCS DEBUG: Failed to monitor job status (non-fatal): {:?}", e);
+        // Don't fail the reconciliation for monitoring errors
+    } else {
+        error!("✅ DOCS DEBUG: Job status monitoring completed");
+    }
+    
+    error!("🏁 DOCS DEBUG: reconcile_docs_create_or_update completed for: {}", docs_run_name);
     result
 }
 
