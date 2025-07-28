@@ -37,19 +37,13 @@ impl<'a> CodeResourceManager<'a> {
         let name = code_run.name_any();
         info!("Creating/updating code resources for: {}", name);
 
-        // Check if there's already an active job running for this CodeRun
-        if let Some(existing_job) = self.find_active_job(code_run).await? {
-            info!("Found existing active job: {}, skipping creation", existing_job.metadata.name.as_ref().unwrap_or(&"unknown".to_string()));
-            return Ok(Action::await_change());
-        }
-
         // Ensure PVC exists for code tasks (persistent workspace)
         let service_name = &code_run.spec.service;
         let pvc_name = format!("workspace-{service_name}");
         self.ensure_pvc_exists(&pvc_name, service_name).await?;
 
-        // Clean up completed/failed jobs only (not active ones)
-        self.cleanup_completed_jobs(code_run).await?;
+        // Clean up any old jobs from previous reconciliations (best effort)
+        let _ = self.cleanup_old_jobs(code_run).await; // Don't fail on cleanup errors
         self.cleanup_old_configmaps(code_run).await?;
 
         // Create ConfigMap FIRST (without owner reference) so Job can mount it
@@ -70,8 +64,8 @@ impl<'a> CodeResourceManager<'a> {
             Err(e) => return Err(e.into()),
         }
 
-        // Create Job SECOND (now it can successfully mount the existing ConfigMap)
-        let job_ref = self.create_job(code_run, &cm_name).await?;
+        // Create Job using idempotent creation (now it can successfully mount the existing ConfigMap)
+        let job_ref = self.create_or_get_job(code_run, &cm_name).await?;
 
         // Update ConfigMap with Job as owner (for automatic cleanup on job deletion)
         if let Some(owner_ref) = job_ref {
@@ -181,6 +175,31 @@ impl<'a> CodeResourceManager<'a> {
         })
     }
 
+    /// Idempotent job creation: create if doesn't exist, get if it does
+    async fn create_or_get_job(&self, code_run: &CodeRun, cm_name: &str) -> Result<Option<OwnerReference>> {
+        let job_name = self.generate_job_name(code_run);
+        
+        // Try to get existing job first (idempotent check)
+        match self.jobs.get(&job_name).await {
+            Ok(existing_job) => {
+                info!("Found existing job: {}, using it", job_name);
+                Ok(Some(OwnerReference {
+                    api_version: "batch/v1".to_string(),
+                    kind: "Job".to_string(),
+                    name: job_name,
+                    uid: existing_job.metadata.uid.unwrap_or_default(),
+                    controller: Some(false),
+                    block_owner_deletion: Some(true),
+                }))
+            }
+            Err(_) => {
+                // Job doesn't exist, create it
+                info!("Job {} doesn't exist, creating it", job_name);
+                self.create_job(code_run, cm_name).await
+            }
+        }
+    }
+
     async fn create_job(&self, code_run: &CodeRun, cm_name: &str) -> Result<Option<OwnerReference>> {
         let job_name = self.generate_job_name(code_run);
         let job = self.build_job_spec(code_run, &job_name, cm_name)?;
@@ -231,10 +250,19 @@ impl<'a> CodeResourceManager<'a> {
     }
 
     fn generate_job_name(&self, code_run: &CodeRun) -> String {
-        let resource_name = code_run.name_any().replace(['_', '.'], "-");
+        // Use deterministic naming based on the CodeRun's actual name and UID
+        // This ensures the same CodeRun always generates the same Job name
+        let namespace = code_run.metadata.namespace.as_deref().unwrap_or("default");
+        let name = code_run.metadata.name.as_deref().unwrap_or("unknown");
+        let uid_suffix = code_run.metadata.uid.as_deref()
+            .map(|uid| &uid[..8]) // Use first 8 chars of UID for uniqueness
+            .unwrap_or("nouid");
         let task_id = code_run.spec.task_id;
         let context_version = code_run.spec.context_version;
-        format!("code-impl-{resource_name}-task{task_id}-v{context_version}")
+        
+        format!("code-{namespace}-{name}-{uid_suffix}-t{task_id}-v{context_version}")
+            .replace(['_', '.'], "-")
+            .to_lowercase()
     }
 
     fn build_job_spec(&self, code_run: &CodeRun, job_name: &str, cm_name: &str) -> Result<Job> {
@@ -409,66 +437,7 @@ impl<'a> CodeResourceManager<'a> {
         Ok(())
     }
 
-    /// Find any active job (Running or Pending) for this CodeRun
-    async fn find_active_job(&self, code_run: &CodeRun) -> Result<Option<Job>> {
-        let list_params = ListParams::default().labels(&format!(
-            "app=orchestrator,component=code-runner,github-user={},service={}",
-            self.sanitize_label_value(&code_run.spec.github_user),
-            self.sanitize_label_value(&code_run.spec.service)
-        ));
-
-        let jobs = self.jobs.list(&list_params).await?;
-        
-        for job in jobs {
-            if let Some(status) = &job.status {
-                // Check if job is still active (not completed or failed)
-                let is_active = status.completion_time.is_none() && 
-                               status.failed.unwrap_or(0) == 0;
-                
-                if is_active {
-                    info!("Found active job: {}", job.metadata.name.as_ref().unwrap_or(&"unknown".to_string()));
-                    return Ok(Some(job));
-                }
-            } else {
-                // Job without status is likely still starting
-                info!("Found job without status (likely starting): {}", job.metadata.name.as_ref().unwrap_or(&"unknown".to_string()));
-                return Ok(Some(job));
-            }
-        }
-
-        Ok(None)
-    }
-
-    /// Clean up only completed or failed jobs, leaving active ones alone
-    async fn cleanup_completed_jobs(&self, code_run: &CodeRun) -> Result<()> {
-        let list_params = ListParams::default().labels(&format!(
-            "app=orchestrator,component=code-runner,github-user={},service={}",
-            self.sanitize_label_value(&code_run.spec.github_user),
-            self.sanitize_label_value(&code_run.spec.service)
-        ));
-
-        let jobs = self.jobs.list(&list_params).await?;
-        
-        for job in jobs {
-            if let Some(job_name) = &job.metadata.name {
-                // Only delete completed or failed jobs
-                if let Some(status) = &job.status {
-                    let is_completed = status.completion_time.is_some() || status.failed.unwrap_or(0) > 0;
-                    if is_completed {
-                        info!("Deleting completed/failed code job: {}", job_name);
-                        let _ = self.jobs.delete(job_name, &DeleteParams::default()).await;
-                    }
-                } else {
-                    // Don't delete jobs without status - they might be starting
-                    info!("Skipping job without status (might be starting): {}", job_name);
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    // Keep the old method for backward compatibility
+    // Legacy cleanup method for backward compatibility
     async fn cleanup_old_jobs(&self, code_run: &CodeRun) -> Result<()> {
         let list_params = ListParams::default().labels(&format!(
             "app=orchestrator,component=code-runner,github-user={},service={}",

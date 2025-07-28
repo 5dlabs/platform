@@ -35,19 +35,9 @@ impl<'a> DocsResourceManager<'a> {
         let name = docs_run.name_any();
         info!("🚀 RESOURCE_MANAGER: Starting reconcile_create_or_update for: {}", name);
 
-        // Check if there's already an active job running for this DocsRun
-        if let Some(existing_job) = self.find_active_job(docs_run).await? {
-            info!("✅ RESOURCE_MANAGER: Found existing active job: {}, skipping creation", existing_job.metadata.name.as_ref().unwrap_or(&"unknown".to_string()));
-            return Ok(Action::await_change());
-        }
-
-        // Clean up completed/failed jobs only (not active ones)
-        info!("🧹 RESOURCE_MANAGER: Cleaning up completed/failed jobs for: {}", name);
-        if let Err(e) = self.cleanup_completed_jobs(docs_run).await {
-            error!("❌ RESOURCE_MANAGER: Failed to cleanup completed jobs: {:?}", e);
-            return Err(e);
-        }
-        info!("✅ RESOURCE_MANAGER: Completed jobs cleaned up successfully");
+        // Clean up any old jobs from previous reconciliations (best effort)
+        info!("🧹 RESOURCE_MANAGER: Cleaning up old resources for: {}", name);
+        let _ = self.cleanup_old_jobs(docs_run).await; // Don't fail on cleanup errors
 
         info!("🧹 RESOURCE_MANAGER: Cleaning up old configmaps for: {}", name);
         if let Err(e) = self.cleanup_old_configmaps(docs_run).await {
@@ -99,8 +89,8 @@ impl<'a> DocsResourceManager<'a> {
             }
         }
 
-        // Create Job SECOND (now it can successfully mount the existing ConfigMap)
-        let job_ref = self.create_job(docs_run, &cm_name).await?;
+        // Create Job using idempotent creation (now it can successfully mount the existing ConfigMap)
+        let job_ref = self.create_or_get_job(docs_run, &cm_name).await?;
 
         // Update ConfigMap with Job as owner (for automatic cleanup on job deletion)
         if let Some(owner_ref) = job_ref {
@@ -184,6 +174,31 @@ impl<'a> DocsResourceManager<'a> {
         Ok(configmap)
     }
 
+    /// Idempotent job creation: create if doesn't exist, get if it does
+    async fn create_or_get_job(&self, docs_run: &DocsRun, cm_name: &str) -> Result<Option<OwnerReference>> {
+        let job_name = self.generate_job_name(docs_run);
+        
+        // Try to get existing job first (idempotent check)
+        match self.jobs.get(&job_name).await {
+            Ok(existing_job) => {
+                info!("Found existing job: {}, using it", job_name);
+                Ok(Some(OwnerReference {
+                    api_version: "batch/v1".to_string(),
+                    kind: "Job".to_string(),
+                    name: job_name,
+                    uid: existing_job.metadata.uid.unwrap_or_default(),
+                    controller: Some(false),
+                    block_owner_deletion: Some(true),
+                }))
+            }
+            Err(_) => {
+                // Job doesn't exist, create it
+                info!("Job {} doesn't exist, creating it", job_name);
+                self.create_job(docs_run, cm_name).await
+            }
+        }
+    }
+
     async fn create_job(&self, docs_run: &DocsRun, cm_name: &str) -> Result<Option<OwnerReference>> {
         let job_name = self.generate_job_name(docs_run);
         let job = self.build_job_spec(docs_run, &job_name, cm_name)?;
@@ -234,8 +249,17 @@ impl<'a> DocsResourceManager<'a> {
     }
 
     fn generate_job_name(&self, docs_run: &DocsRun) -> String {
-        let resource_name = docs_run.name_any().replace(['_', '.'], "-");
-        format!("docs-gen-{resource_name}")
+        // Use deterministic naming based on the DocsRun's actual name and UID
+        // This ensures the same DocsRun always generates the same Job name
+        let namespace = docs_run.metadata.namespace.as_deref().unwrap_or("default");
+        let name = docs_run.metadata.name.as_deref().unwrap_or("unknown");
+        let uid_suffix = docs_run.metadata.uid.as_deref()
+            .map(|uid| &uid[..8]) // Use first 8 chars of UID for uniqueness
+            .unwrap_or("nouid");
+        
+        format!("docs-{namespace}-{name}-{uid_suffix}")
+            .replace(['_', '.'], "-")
+            .to_lowercase()
     }
 
     fn build_job_spec(&self, docs_run: &DocsRun, job_name: &str, cm_name: &str) -> Result<Job> {
@@ -394,64 +418,7 @@ impl<'a> DocsResourceManager<'a> {
         Ok(())
     }
 
-    /// Find any active job (Running or Pending) for this DocsRun
-    async fn find_active_job(&self, docs_run: &DocsRun) -> Result<Option<Job>> {
-        let list_params = ListParams::default().labels(&format!(
-            "app=orchestrator,component=docs-generator,github-user={}",
-            self.sanitize_label_value(&docs_run.spec.github_user)
-        ));
-
-        let jobs = self.jobs.list(&list_params).await?;
-        
-        for job in jobs {
-            if let Some(status) = &job.status {
-                // Check if job is still active (not completed or failed)
-                let is_active = status.completion_time.is_none() && 
-                               status.failed.unwrap_or(0) == 0;
-                
-                if is_active {
-                    info!("Found active job: {}", job.metadata.name.as_ref().unwrap_or(&"unknown".to_string()));
-                    return Ok(Some(job));
-                }
-            } else {
-                // Job without status is likely still starting
-                info!("Found job without status (likely starting): {}", job.metadata.name.as_ref().unwrap_or(&"unknown".to_string()));
-                return Ok(Some(job));
-            }
-        }
-
-        Ok(None)
-    }
-
-    /// Clean up only completed or failed jobs, leaving active ones alone
-    async fn cleanup_completed_jobs(&self, docs_run: &DocsRun) -> Result<()> {
-        let list_params = ListParams::default().labels(&format!(
-            "app=orchestrator,component=docs-generator,github-user={}",
-            self.sanitize_label_value(&docs_run.spec.github_user)
-        ));
-
-        let jobs = self.jobs.list(&list_params).await?;
-        
-        for job in jobs {
-            if let Some(job_name) = &job.metadata.name {
-                // Only delete completed or failed jobs
-                if let Some(status) = &job.status {
-                    let is_completed = status.completion_time.is_some() || status.failed.unwrap_or(0) > 0;
-                    if is_completed {
-                        info!("Deleting completed/failed docs job: {}", job_name);
-                        let _ = self.jobs.delete(job_name, &DeleteParams::default()).await;
-                    }
-                } else {
-                    // Don't delete jobs without status - they might be starting
-                    info!("Skipping job without status (might be starting): {}", job_name);
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    // Keep the old method for backward compatibility
+    // Legacy cleanup method for backward compatibility
     async fn cleanup_old_jobs(&self, docs_run: &DocsRun) -> Result<()> {
         let list_params = ListParams::default().labels(&format!(
             "app=orchestrator,component=docs-generator,github-user={}",
