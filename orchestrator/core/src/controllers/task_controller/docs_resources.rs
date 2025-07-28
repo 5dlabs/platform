@@ -227,6 +227,15 @@ impl<'a> DocsResourceManager<'a> {
                                             "key": "token"
                                         }
                                     }
+                                },
+                                {
+                                    "name": "ANTHROPIC_API_KEY",
+                                    "valueFrom": {
+                                        "secretKeyRef": {
+                                            "name": self.config.secrets.api_key_secret_name,
+                                            "key": self.config.secrets.api_key_secret_key
+                                        }
+                                    }
                                 }
                             ],
                             "command": ["/bin/bash"],
@@ -278,7 +287,7 @@ impl<'a> DocsResourceManager<'a> {
         let volume_mounts = vec![
             json!({
                 "name": "ssh-key",
-                "mountPath": "/home/claude/.ssh",
+                "mountPath": "/workspace/.ssh",
                 "readOnly": true
             })
         ];
