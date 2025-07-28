@@ -199,7 +199,7 @@ impl<'a> DocsResourceManager<'a> {
         volumes.extend(ssh_volumes.volumes);
         volume_mounts.extend(ssh_volumes.volume_mounts);
 
-        let image = "ghcr.io/anthropics/claude-3-5-sonnet-20241022:latest";
+        let image = format!("{}:{}", self.config.agent.image.repository, self.config.agent.image.tag);
         let job_spec = json!({
             "apiVersion": "batch/v1",
             "kind": "Job",
