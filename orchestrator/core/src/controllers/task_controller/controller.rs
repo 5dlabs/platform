@@ -6,12 +6,13 @@ use crate::crds::{CodeRun, DocsRun};
 use futures::StreamExt;
 use kube::runtime::controller::{Action, Controller};
 use kube::runtime::watcher::Config;
-use kube::{Api, Client};
+use kube::{Api, Client, ResourceExt};
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::error;
+use tracing::{error, info, instrument, Instrument};
 
 /// Main entry point for the separated task controllers
+#[instrument(skip(client), fields(namespace = %namespace))]
 pub async fn run_task_controller(client: Client, namespace: String) -> Result<()> {
     error!(
         "🚀 TASK_CONTROLLER DEBUG: Starting separated task controllers in namespace: {}",
@@ -115,6 +116,7 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
 }
 
 /// Run the DocsRun controller
+#[instrument(skip(client, context), fields(namespace = %namespace))]
 async fn run_docs_controller(
     client: Client,
     namespace: String,
@@ -127,21 +129,24 @@ async fn run_docs_controller(
 
     Controller::new(docs_api, watcher_config)
         .run(reconcile_docs_run, error_policy_docs, context)
-        .for_each(|reconciliation_result| async move {
-            match reconciliation_result {
-                Ok(docs_run_resource) => {
-                    error!(
-                        "✅ DOCS_CONTROLLER DEBUG: Reconciliation successful for DocsRun: {:?}",
-                        docs_run_resource
-                    );
+        .for_each(|reconciliation_result| {
+            let docs_span = tracing::info_span!("docs_reconciliation_result");
+            async move {
+                match reconciliation_result {
+                    Ok(docs_run_resource) => {
+                        info!(
+                            resource = ?docs_run_resource,
+                            "✅ DOCS_CONTROLLER: Reconciliation successful for DocsRun"
+                        );
+                    }
+                    Err(reconciliation_err) => {
+                        error!(
+                            error = ?reconciliation_err,
+                            "❌ DOCS_CONTROLLER: Reconciliation error"
+                        );
+                    }
                 }
-                Err(reconciliation_err) => {
-                    error!(
-                        "❌ DOCS_CONTROLLER DEBUG: Reconciliation error: {:?}",
-                        reconciliation_err
-                    );
-                }
-            }
+            }.instrument(docs_span)
         })
         .await;
 
@@ -150,6 +155,7 @@ async fn run_docs_controller(
 }
 
 /// Run the CodeRun controller
+#[instrument(skip(client, context), fields(namespace = %namespace))]
 async fn run_code_controller(
     client: Client,
     namespace: String,
@@ -162,21 +168,24 @@ async fn run_code_controller(
 
     Controller::new(code_api, watcher_config)
         .run(reconcile_code_run, error_policy_code, context)
-        .for_each(|reconciliation_result| async move {
-            match reconciliation_result {
-                Ok(code_run_resource) => {
-                    error!(
-                        "✅ CODE_CONTROLLER DEBUG: Reconciliation successful for CodeRun: {:?}",
-                        code_run_resource
-                    );
+        .for_each(|reconciliation_result| {
+            let code_span = tracing::info_span!("code_reconciliation_result");
+            async move {
+                match reconciliation_result {
+                    Ok(code_run_resource) => {
+                        info!(
+                            resource = ?code_run_resource,
+                            "✅ CODE_CONTROLLER: Reconciliation successful for CodeRun"
+                        );
+                    }
+                    Err(reconciliation_err) => {
+                        error!(
+                            error = ?reconciliation_err,
+                            "❌ CODE_CONTROLLER: Reconciliation error"
+                        );
+                    }
                 }
-                Err(reconciliation_err) => {
-                    error!(
-                        "❌ CODE_CONTROLLER DEBUG: Reconciliation error: {:?}",
-                        reconciliation_err
-                    );
-                }
-            }
+            }.instrument(code_span)
         })
         .await;
 
@@ -185,13 +194,23 @@ async fn run_code_controller(
 }
 
 /// Error policy for DocsRun controller
+#[instrument(skip(_ctx), fields(docs_run_name = %_docs_run.name_any(), namespace = %_ctx.namespace))]
 fn error_policy_docs(_docs_run: Arc<DocsRun>, error: &Error, _ctx: Arc<Context>) -> Action {
-    error!("DocsRun reconciliation error: {:?}", error);
+    error!(
+        error = ?error,
+        docs_run_name = %_docs_run.name_any(),
+        "DocsRun reconciliation error - requeuing in 30s"
+    );
     Action::requeue(Duration::from_secs(30))
 }
 
 /// Error policy for CodeRun controller
+#[instrument(skip(_ctx), fields(code_run_name = %_code_run.name_any(), namespace = %_ctx.namespace))]
 fn error_policy_code(_code_run: Arc<CodeRun>, error: &Error, _ctx: Arc<Context>) -> Action {
-    error!("CodeRun reconciliation error: {:?}", error);
+    error!(
+        error = ?error,
+        code_run_name = %_code_run.name_any(),
+        "CodeRun reconciliation error - requeuing in 30s"
+    );
     Action::requeue(Duration::from_secs(30))
 }

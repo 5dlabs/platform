@@ -35,7 +35,7 @@ use serde_json::{json, Value};
 use tokio::signal;
 use tower::ServiceBuilder;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
-use tracing::{error, info};
+use tracing::{error, info, Instrument};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 async fn create_app_state() -> Result<AppState> {
@@ -74,13 +74,21 @@ fn api_routes() -> Router<AppState> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize tracing with OpenTelemetry support
+    // Initialize tracing with enhanced controller visibility
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+                .unwrap_or_else(|_| {
+                    // Default filter includes controller-specific tracing
+                    tracing_subscriber::EnvFilter::new("info,orchestrator::controllers=debug,kube_runtime=debug")
+                }),
         )
-        .with(tracing_subscriber::fmt::layer())
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_target(true)
+                .with_thread_ids(true)
+                .with_span_events(tracing_subscriber::fmt::format::FmtSpan::NEW | tracing_subscriber::fmt::format::FmtSpan::CLOSE)
+        )
         .init();
 
     info!(
@@ -97,11 +105,14 @@ async fn main() -> Result<()> {
 
     info!("Starting task controller in namespace: {}", namespace);
 
-    // Spawn the controller in the background
-    tokio::spawn(async move {
-        if let Err(e) = run_task_controller(client, namespace).await {
-            error!("Task controller error: {}", e);
-        }
+    // Spawn the controller in the background with proper tracing context
+    tokio::spawn({
+        let controller_span = tracing::info_span!("task_controller", namespace = %namespace);
+        async move {
+            if let Err(e) = run_task_controller(client, namespace).await {
+                error!(error = ?e, "Task controller error");
+            }
+        }.instrument(controller_span)
     });
 
     // Build the application with middleware layers

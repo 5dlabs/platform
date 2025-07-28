@@ -9,8 +9,9 @@ use kube::runtime::finalizer::{finalizer, Event as FinalizerEvent};
 use kube::runtime::controller::Action;
 use kube::{Api, ResourceExt};
 use std::sync::Arc;
-use tracing::error;
+use tracing::{error, instrument};
 
+#[instrument(skip(ctx), fields(docs_run_name = %docs_run.name_any(), namespace = %ctx.namespace))]
 pub async fn reconcile_docs_run(docs_run: Arc<DocsRun>, ctx: Arc<Context>) -> Result<Action> {
     error!(
         "🎯 DOCS DEBUG: Starting reconcile for DocsRun: {}",
@@ -59,6 +60,7 @@ pub async fn reconcile_docs_run(docs_run: Arc<DocsRun>, ctx: Arc<Context>) -> Re
     Ok(result)
 }
 
+#[instrument(skip(ctx), fields(docs_run_name = %docs_run.name_any(), namespace = %ctx.namespace))]
 async fn reconcile_docs_create_or_update(docs_run: Arc<DocsRun>, ctx: &Context) -> Result<Action> {
     error!("🚀 DOCS DEBUG: Creating or updating resources for DocsRun");
     
@@ -83,6 +85,7 @@ async fn reconcile_docs_create_or_update(docs_run: Arc<DocsRun>, ctx: &Context) 
     result
 }
 
+#[instrument(skip(ctx), fields(docs_run_name = %docs_run.name_any(), namespace = %ctx.namespace))]
 async fn cleanup_docs_resources(docs_run: Arc<DocsRun>, ctx: &Context) -> Result<Action> {
     error!("🧹 DOCS DEBUG: Cleaning up resources for DocsRun");
     

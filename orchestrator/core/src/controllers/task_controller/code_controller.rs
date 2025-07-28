@@ -9,8 +9,9 @@ use kube::runtime::finalizer::{finalizer, Event as FinalizerEvent};
 use kube::runtime::controller::Action;
 use kube::{Api, ResourceExt};
 use std::sync::Arc;
-use tracing::error;
+use tracing::{error, instrument};
 
+#[instrument(skip(ctx), fields(code_run_name = %code_run.name_any(), namespace = %ctx.namespace))]
 pub async fn reconcile_code_run(code_run: Arc<CodeRun>, ctx: Arc<Context>) -> Result<Action> {
     error!(
         "🎯 CODE DEBUG: Starting reconcile for CodeRun: {}",
@@ -59,6 +60,7 @@ pub async fn reconcile_code_run(code_run: Arc<CodeRun>, ctx: Arc<Context>) -> Re
     Ok(result)
 }
 
+#[instrument(skip(ctx), fields(code_run_name = %code_run.name_any(), namespace = %ctx.namespace))]
 async fn reconcile_code_create_or_update(code_run: Arc<CodeRun>, ctx: &Context) -> Result<Action> {
     error!("🚀 CODE DEBUG: Creating or updating resources for CodeRun");
     
@@ -84,6 +86,7 @@ async fn reconcile_code_create_or_update(code_run: Arc<CodeRun>, ctx: &Context) 
     result
 }
 
+#[instrument(skip(ctx), fields(code_run_name = %code_run.name_any(), namespace = %ctx.namespace))]
 async fn cleanup_code_resources(code_run: Arc<CodeRun>, ctx: &Context) -> Result<Action> {
     error!("🧹 CODE DEBUG: Cleaning up resources for CodeRun");
     
