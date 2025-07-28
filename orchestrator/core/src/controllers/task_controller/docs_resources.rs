@@ -35,13 +35,19 @@ impl<'a> DocsResourceManager<'a> {
         let name = docs_run.name_any();
         info!("🚀 RESOURCE_MANAGER: Starting reconcile_create_or_update for: {}", name);
 
-        // Clean up older versions
-        info!("🧹 RESOURCE_MANAGER: Cleaning up old jobs for: {}", name);
-        if let Err(e) = self.cleanup_old_jobs(docs_run).await {
-            error!("❌ RESOURCE_MANAGER: Failed to cleanup old jobs: {:?}", e);
+        // Check if there's already an active job running for this DocsRun
+        if let Some(existing_job) = self.find_active_job(docs_run).await? {
+            info!("✅ RESOURCE_MANAGER: Found existing active job: {}, skipping creation", existing_job.metadata.name.as_ref().unwrap_or(&"unknown".to_string()));
+            return Ok(Action::await_change());
+        }
+
+        // Clean up completed/failed jobs only (not active ones)
+        info!("🧹 RESOURCE_MANAGER: Cleaning up completed/failed jobs for: {}", name);
+        if let Err(e) = self.cleanup_completed_jobs(docs_run).await {
+            error!("❌ RESOURCE_MANAGER: Failed to cleanup completed jobs: {:?}", e);
             return Err(e);
         }
-        info!("✅ RESOURCE_MANAGER: Old jobs cleaned up successfully");
+        info!("✅ RESOURCE_MANAGER: Completed jobs cleaned up successfully");
 
         info!("🧹 RESOURCE_MANAGER: Cleaning up old configmaps for: {}", name);
         if let Err(e) = self.cleanup_old_configmaps(docs_run).await {
@@ -134,7 +140,7 @@ impl<'a> DocsResourceManager<'a> {
         let templates = match super::docs_templates::DocsTemplateGenerator::generate_all_templates(docs_run, self.config) {
             Ok(tmpl) => {
                 error!("✅ RESOURCE_MANAGER: Successfully generated {} templates", tmpl.len());
-                for (filename, _) in &tmpl {
+                for filename in tmpl.keys() {
                     error!("📄 RESOURCE_MANAGER: Generated template file: {}", filename);
                 }
                 tmpl
@@ -388,6 +394,64 @@ impl<'a> DocsResourceManager<'a> {
         Ok(())
     }
 
+    /// Find any active job (Running or Pending) for this DocsRun
+    async fn find_active_job(&self, docs_run: &DocsRun) -> Result<Option<Job>> {
+        let list_params = ListParams::default().labels(&format!(
+            "app=orchestrator,component=docs-generator,github-user={}",
+            self.sanitize_label_value(&docs_run.spec.github_user)
+        ));
+
+        let jobs = self.jobs.list(&list_params).await?;
+        
+        for job in jobs {
+            if let Some(status) = &job.status {
+                // Check if job is still active (not completed or failed)
+                let is_active = status.completion_time.is_none() && 
+                               status.failed.unwrap_or(0) == 0;
+                
+                if is_active {
+                    info!("Found active job: {}", job.metadata.name.as_ref().unwrap_or(&"unknown".to_string()));
+                    return Ok(Some(job));
+                }
+            } else {
+                // Job without status is likely still starting
+                info!("Found job without status (likely starting): {}", job.metadata.name.as_ref().unwrap_or(&"unknown".to_string()));
+                return Ok(Some(job));
+            }
+        }
+
+        Ok(None)
+    }
+
+    /// Clean up only completed or failed jobs, leaving active ones alone
+    async fn cleanup_completed_jobs(&self, docs_run: &DocsRun) -> Result<()> {
+        let list_params = ListParams::default().labels(&format!(
+            "app=orchestrator,component=docs-generator,github-user={}",
+            self.sanitize_label_value(&docs_run.spec.github_user)
+        ));
+
+        let jobs = self.jobs.list(&list_params).await?;
+        
+        for job in jobs {
+            if let Some(job_name) = &job.metadata.name {
+                // Only delete completed or failed jobs
+                if let Some(status) = &job.status {
+                    let is_completed = status.completion_time.is_some() || status.failed.unwrap_or(0) > 0;
+                    if is_completed {
+                        info!("Deleting completed/failed docs job: {}", job_name);
+                        let _ = self.jobs.delete(job_name, &DeleteParams::default()).await;
+                    }
+                } else {
+                    // Don't delete jobs without status - they might be starting
+                    info!("Skipping job without status (might be starting): {}", job_name);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    // Keep the old method for backward compatibility
     async fn cleanup_old_jobs(&self, docs_run: &DocsRun) -> Result<()> {
         let list_params = ListParams::default().labels(&format!(
             "app=orchestrator,component=docs-generator,github-user={}",

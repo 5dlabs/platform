@@ -37,13 +37,19 @@ impl<'a> CodeResourceManager<'a> {
         let name = code_run.name_any();
         info!("Creating/updating code resources for: {}", name);
 
+        // Check if there's already an active job running for this CodeRun
+        if let Some(existing_job) = self.find_active_job(code_run).await? {
+            info!("Found existing active job: {}, skipping creation", existing_job.metadata.name.as_ref().unwrap_or(&"unknown".to_string()));
+            return Ok(Action::await_change());
+        }
+
         // Ensure PVC exists for code tasks (persistent workspace)
         let service_name = &code_run.spec.service;
         let pvc_name = format!("workspace-{service_name}");
         self.ensure_pvc_exists(&pvc_name, service_name).await?;
 
-        // Clean up older versions for retries
-        self.cleanup_old_jobs(code_run).await?;
+        // Clean up completed/failed jobs only (not active ones)
+        self.cleanup_completed_jobs(code_run).await?;
         self.cleanup_old_configmaps(code_run).await?;
 
         // Create ConfigMap FIRST (without owner reference) so Job can mount it
@@ -403,6 +409,66 @@ impl<'a> CodeResourceManager<'a> {
         Ok(())
     }
 
+    /// Find any active job (Running or Pending) for this CodeRun
+    async fn find_active_job(&self, code_run: &CodeRun) -> Result<Option<Job>> {
+        let list_params = ListParams::default().labels(&format!(
+            "app=orchestrator,component=code-runner,github-user={},service={}",
+            self.sanitize_label_value(&code_run.spec.github_user),
+            self.sanitize_label_value(&code_run.spec.service)
+        ));
+
+        let jobs = self.jobs.list(&list_params).await?;
+        
+        for job in jobs {
+            if let Some(status) = &job.status {
+                // Check if job is still active (not completed or failed)
+                let is_active = status.completion_time.is_none() && 
+                               status.failed.unwrap_or(0) == 0;
+                
+                if is_active {
+                    info!("Found active job: {}", job.metadata.name.as_ref().unwrap_or(&"unknown".to_string()));
+                    return Ok(Some(job));
+                }
+            } else {
+                // Job without status is likely still starting
+                info!("Found job without status (likely starting): {}", job.metadata.name.as_ref().unwrap_or(&"unknown".to_string()));
+                return Ok(Some(job));
+            }
+        }
+
+        Ok(None)
+    }
+
+    /// Clean up only completed or failed jobs, leaving active ones alone
+    async fn cleanup_completed_jobs(&self, code_run: &CodeRun) -> Result<()> {
+        let list_params = ListParams::default().labels(&format!(
+            "app=orchestrator,component=code-runner,github-user={},service={}",
+            self.sanitize_label_value(&code_run.spec.github_user),
+            self.sanitize_label_value(&code_run.spec.service)
+        ));
+
+        let jobs = self.jobs.list(&list_params).await?;
+        
+        for job in jobs {
+            if let Some(job_name) = &job.metadata.name {
+                // Only delete completed or failed jobs
+                if let Some(status) = &job.status {
+                    let is_completed = status.completion_time.is_some() || status.failed.unwrap_or(0) > 0;
+                    if is_completed {
+                        info!("Deleting completed/failed code job: {}", job_name);
+                        let _ = self.jobs.delete(job_name, &DeleteParams::default()).await;
+                    }
+                } else {
+                    // Don't delete jobs without status - they might be starting
+                    info!("Skipping job without status (might be starting): {}", job_name);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    // Keep the old method for backward compatibility
     async fn cleanup_old_jobs(&self, code_run: &CodeRun) -> Result<()> {
         let list_params = ListParams::default().labels(&format!(
             "app=orchestrator,component=code-runner,github-user={},service={}",
