@@ -35,16 +35,8 @@ impl<'a> DocsResourceManager<'a> {
         let name = docs_run.name_any();
         info!("🚀 RESOURCE_MANAGER: Starting reconcile_create_or_update for: {}", name);
 
-        // Clean up any old jobs from previous reconciliations (best effort)
-        info!("🧹 RESOURCE_MANAGER: Cleaning up old resources for: {}", name);
-        let _ = self.cleanup_old_jobs(docs_run).await; // Don't fail on cleanup errors
-
-        info!("🧹 RESOURCE_MANAGER: Cleaning up old configmaps for: {}", name);
-        if let Err(e) = self.cleanup_old_configmaps(docs_run).await {
-            error!("❌ RESOURCE_MANAGER: Failed to cleanup old configmaps: {:?}", e);
-            return Err(e); 
-        }
-        info!("✅ RESOURCE_MANAGER: Old configmaps cleaned up successfully");
+        // Don't cleanup resources at start - let idempotent creation handle it
+        info!("🔄 RESOURCE_MANAGER: Using idempotent resource creation (no aggressive cleanup)");
 
         // Create ConfigMap FIRST (without owner reference) so Job can mount it
         let cm_name = self.generate_configmap_name(docs_run);
