@@ -86,9 +86,9 @@ fi
 
 # Copy ConfigMap files
 echo "Setting up ConfigMap files..."
-if [ -d "/config" ]; then
+if [ -d "/task-files" ]; then
   # Copy markdown files
-  for md_file in /config/*.md; do
+  for md_file in /task-files/*.md; do
     if [ -f "$md_file" ]; then
       basename_file=$(basename "$md_file")
       if [ "$basename_file" = "claude.md" ]; then
@@ -113,7 +113,7 @@ if [ -d "/config" ]; then
   fi
 
   # Copy hook scripts
-  for hook_file in /config/hooks-*.sh; do
+  for hook_file in /task-files/hooks-*.sh; do
     if [ -f "$hook_file" ]; then
       hook_name=$(basename "$hook_file" | sed 's/^hooks-//')
       cp "$hook_file" "$CLAUDE_WORK_DIR/$hook_name"
@@ -122,7 +122,7 @@ if [ -d "/config" ]; then
     fi
   done
 else
-  echo "❌ ConfigMap not mounted"
+  echo "❌ ConfigMap not mounted at /task-files"
   exit 1
 fi
 

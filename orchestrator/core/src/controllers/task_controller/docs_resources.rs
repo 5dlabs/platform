@@ -183,6 +183,13 @@ impl<'a> DocsResourceManager<'a> {
             "name": "task-files",
             "mountPath": "/task-files"
         }));
+        
+        // Mount settings.json as managed-settings.json for enterprise compatibility
+        volume_mounts.push(json!({
+            "name": "task-files",
+            "mountPath": "/etc/claude-code/managed-settings.json",
+            "subPath": "settings.json"
+        }));
 
         // EmptyDir workspace volume for docs (no persistence needed)
         volumes.push(json!({
