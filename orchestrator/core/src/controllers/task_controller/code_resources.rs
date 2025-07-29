@@ -12,7 +12,7 @@ use kube::{ResourceExt};
 use serde_json::json;
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use tracing::info;
+use tracing::{error, info};
 
 pub struct CodeResourceManager<'a> {
     pub jobs: &'a Api<Job>,
@@ -35,43 +35,70 @@ impl<'a> CodeResourceManager<'a> {
 
     pub async fn reconcile_create_or_update(&self, code_run: &Arc<CodeRun>) -> Result<Action> {
         let name = code_run.name_any();
-        info!("Creating/updating code resources for: {}", name);
+        error!("🚀 CODE DEBUG: Creating/updating code resources for: {}", name);
 
         // Ensure PVC exists for code tasks (persistent workspace)
         let service_name = &code_run.spec.service;
         let pvc_name = format!("workspace-{service_name}");
+        error!("📦 CODE DEBUG: Ensuring PVC exists: {}", pvc_name);
         self.ensure_pvc_exists(&pvc_name, service_name).await?;
+        error!("✅ CODE DEBUG: PVC check completed");
 
         // Clean up any old jobs from previous reconciliations (best effort)
+        error!("🧹 CODE DEBUG: Cleaning up old jobs...");
         let _ = self.cleanup_old_jobs(code_run).await; // Don't fail on cleanup errors
+        error!("🧹 CODE DEBUG: Cleaning up old configmaps...");
         self.cleanup_old_configmaps(code_run).await?;
+        error!("✅ CODE DEBUG: Cleanup completed");
 
         // Create ConfigMap FIRST (without owner reference) so Job can mount it
         let cm_name = self.generate_configmap_name(code_run);
+        error!("📄 CODE DEBUG: Generated ConfigMap name: {}", cm_name);
+        
+        error!("🔧 CODE DEBUG: Creating ConfigMap template data...");
         let configmap = self.create_configmap(code_run, &cm_name, None)?;
+        error!("✅ CODE DEBUG: ConfigMap template created successfully");
 
         // Always create or update ConfigMap to ensure latest template content
+        error!("📤 CODE DEBUG: Attempting to create ConfigMap: {}", cm_name);
         match self.configmaps.create(&PostParams::default(), &configmap).await {
-            Ok(_) => info!("Created ConfigMap: {}", cm_name),
+            Ok(_) => {
+                error!("✅ CODE DEBUG: Created ConfigMap: {}", cm_name);
+            },
             Err(kube::Error::Api(ae)) if ae.code == 409 => {
                 // ConfigMap exists, update it with latest content
-                info!("ConfigMap exists, updating with latest content: {}", cm_name);
+                error!("📝 CODE DEBUG: ConfigMap exists, updating with latest content: {}", cm_name);
                 match self.configmaps.replace(&cm_name, &PostParams::default(), &configmap).await {
-                    Ok(_) => info!("Updated ConfigMap: {}", cm_name),
-                    Err(e) => return Err(e.into()),
+                    Ok(_) => {
+                        error!("✅ CODE DEBUG: Updated ConfigMap: {}", cm_name);
+                    },
+                    Err(e) => {
+                        error!("❌ CODE DEBUG: Failed to update ConfigMap {}: {}", cm_name, e);
+                        return Err(e.into());
+                    }
                 }
             }
-            Err(e) => return Err(e.into()),
+            Err(e) => {
+                error!("❌ CODE DEBUG: Failed to create ConfigMap {}: {}", cm_name, e);
+                return Err(e.into());
+            }
         }
 
         // Create Job using idempotent creation (now it can successfully mount the existing ConfigMap)
+        error!("🚀 CODE DEBUG: Creating job with ConfigMap: {}", cm_name);
         let job_ref = self.create_or_get_job(code_run, &cm_name).await?;
+        error!("✅ CODE DEBUG: Job creation completed");
 
         // Update ConfigMap with Job as owner (for automatic cleanup on job deletion)
         if let Some(owner_ref) = job_ref {
+            error!("🔗 CODE DEBUG: Updating ConfigMap owner reference");
             self.update_configmap_owner(code_run, &cm_name, owner_ref).await?;
+            error!("✅ CODE DEBUG: ConfigMap owner reference updated");
+        } else {
+            error!("⚠️ CODE DEBUG: No job owner reference to set");
         }
 
+        error!("🎉 CODE DEBUG: Reconciliation completed successfully for: {}", name);
         Ok(Action::await_change())
     }
 
