@@ -26,12 +26,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Set version from tag
         id: version
         run: |
-          VERSION="${{ inputs.tag }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.tag }}"
+          else
+            # For push events, use latest
+            VERSION="latest"
+          fi
           SHORT_SHA=$(git rev-parse --short HEAD)
 
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
@@ -50,7 +55,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Setup optimized Rust environment
         run: |
