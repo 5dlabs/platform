@@ -340,6 +340,7 @@ impl<'a> DocsResourceManager<'a> {
             },
             "spec": {
                 "backoffLimit": 0,
+                "ttlSecondsAfterFinished": 30,
                 "template": {
                     "metadata": {
                         "labels": labels
