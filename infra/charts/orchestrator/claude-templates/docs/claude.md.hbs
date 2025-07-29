@@ -1,6 +1,6 @@
 # Claude Code Memory
 
-You are working on documentation generation for Task Master tasks.
+You are working on Task Master documentation generation.
 
 - **Repository**: {{repository_url}}
 - **Source Branch**: {{source_branch}}
@@ -8,46 +8,42 @@ You are working on documentation generation for Task Master tasks.
 - **Working Directory**: {{working_directory}}
 - **Documentation Target**: {{#if task_id}}task {{task_id}}{{else}}all tasks{{/if}}
 
-## Task
+## Task Master Documentation Generation
 
-Generate comprehensive documentation for Task Master tasks by:
+Your role is to generate structured Task Master documentation by:
 
-1. Analyzing the task definitions in `.taskmaster/tasks/tasks.json`
-2. Reading existing architecture documentation if available
-3. Creating detailed documentation for each task including:
-   - Purpose and objectives
-   - Technical approach
-   - Implementation details
-   - Testing strategy
-   - Dependencies and requirements
+1. **Reading individual task files** from `.taskmaster/docs/task-{id}/task.txt` (NOT the large tasks.json)
+2. **Checking for existing documentation** and skipping completed tasks
+3. **Creating exactly 3 files** for each incomplete task:
+   - `task.md` - Comprehensive task overview and implementation guide
+   - `prompt.md` - Autonomous prompt for AI agents
+   - `acceptance-criteria.md` - Clear acceptance criteria and test cases
 
-{{#if task_id}}For task {{task_id}}, create documentation in `.taskmaster/docs/task-{{task_id}}/`:{{else}}For each task, create documentation in `.taskmaster/docs/task-{id}/`:{{/if}}
+## Critical Instructions
 
-- `README.md` - Main task documentation
-- `architecture.md` - Technical design details
-- `implementation.md` - Step-by-step implementation guide
-- `testing.md` - Testing approach and test cases
-- `api.md` - API endpoints and contracts (if applicable)
-- `database.md` - Database schema changes (if applicable)
-- `security.md` - Security considerations
-- `deployment.md` - Deployment and rollout strategy
+**SKIP TASKS WITH COMPLETE DOCUMENTATION:**
+Before processing any task, check if ALL required files already exist with substantial content:
+- `task.md` 
+- `prompt.md`
+- `acceptance-criteria.md`
 
-## Guidelines
+If ALL three files exist and have substantial content, SKIP that task.
 
+**PROCESS ONLY INCOMPLETE TASKS:**
+Only generate documentation for tasks missing one or more of the required files.
+
+**FILE LOCATIONS:**
+All documentation goes in `.taskmaster/docs/task-{id}/` directories.
+
+## Documentation Standards
+
+- **task.md**: Technical implementation guide with clear steps
+- **prompt.md**: Standalone prompt for autonomous AI agents
+- **acceptance-criteria.md**: Testable completion criteria
 - Use clear, professional language
-- Include code examples and snippets where helpful
+- Include code examples where helpful
 - Reference existing architecture patterns
-- Follow Task Master documentation conventions
-- Ensure all documentation is current and accurate
-- Cross-reference related tasks and dependencies
-
-## Workflow
-
-1. Read and analyze task definitions
-2. Review existing project architecture
-3. Generate comprehensive documentation
-4. Organize files in proper directory structure
-5. Use descriptive commit messages
+- Follow Task Master conventions
 
 ## Resources
 
