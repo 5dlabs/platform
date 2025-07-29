@@ -298,6 +298,16 @@ impl<'a> CodeResourceManager<'a> {
     fn build_job_spec(&self, code_run: &CodeRun, job_name: &str, cm_name: &str) -> Result<Job> {
         let labels = self.create_task_labels(code_run);
 
+        // Create owner reference to CodeRun for proper event handling
+        let owner_ref = OwnerReference {
+            api_version: "platform.fdl.dev/v1alpha1".to_string(),
+            kind: "CodeRun".to_string(),
+            name: code_run.name_any(),
+            uid: code_run.metadata.uid.clone().unwrap_or_default(),
+            controller: Some(true),
+            block_owner_deletion: Some(true),
+        };
+
         // Build volumes for code (PVC for persistence)
         let mut volumes = vec![];
         let mut volume_mounts = vec![];
@@ -376,7 +386,15 @@ impl<'a> CodeResourceManager<'a> {
             "kind": "Job",
             "metadata": {
                 "name": job_name,
-                "labels": labels
+                "labels": labels,
+                "ownerReferences": [{
+                    "apiVersion": owner_ref.api_version,
+                    "kind": owner_ref.kind,
+                    "name": owner_ref.name,
+                    "uid": owner_ref.uid,
+                    "controller": owner_ref.controller,
+                    "blockOwnerDeletion": owner_ref.block_owner_deletion
+                }]
             },
             "spec": {
                 "backoffLimit": 0,
