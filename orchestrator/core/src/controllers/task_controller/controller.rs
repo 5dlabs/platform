@@ -4,6 +4,7 @@ use super::docs_controller::reconcile_docs_run;
 use super::types::{Context, Error, Result};
 use crate::crds::{CodeRun, DocsRun};
 use futures::StreamExt;
+use k8s_openapi::api::batch::v1::Job;
 use kube::runtime::controller::{Action, Controller};
 use kube::runtime::watcher::Config;
 use kube::{Api, Client, ResourceExt};
@@ -123,10 +124,12 @@ async fn run_docs_controller(
 ) -> Result<()> {
     error!("🚀 DOCS_CONTROLLER DEBUG: Starting DocsRun controller");
 
-    let docs_api: Api<DocsRun> = Api::namespaced(client, &namespace);
+    let docs_api: Api<DocsRun> = Api::namespaced(client.clone(), &namespace);
+    let jobs_api: Api<Job> = Api::namespaced(client.clone(), &namespace);
     let watcher_config = Config::default().any_semantic();
 
-    Controller::new(docs_api, watcher_config)
+    Controller::new(docs_api, watcher_config.clone())
+        .owns(jobs_api, watcher_config)
         .run(reconcile_docs_run, error_policy_docs, context)
         .for_each(|reconciliation_result| {
             let docs_span = tracing::info_span!("docs_reconciliation_result");
@@ -162,10 +165,12 @@ async fn run_code_controller(
 ) -> Result<()> {
     error!("🚀 CODE_CONTROLLER DEBUG: Starting CodeRun controller");
 
-    let code_api: Api<CodeRun> = Api::namespaced(client, &namespace);
+    let code_api: Api<CodeRun> = Api::namespaced(client.clone(), &namespace);
+    let jobs_api: Api<Job> = Api::namespaced(client.clone(), &namespace);
     let watcher_config = Config::default().any_semantic();
 
-    Controller::new(code_api, watcher_config)
+    Controller::new(code_api, watcher_config.clone())
+        .owns(jobs_api, watcher_config)
         .run(reconcile_code_run, error_policy_code, context)
         .for_each(|reconciliation_result| {
             let code_span = tracing::info_span!("code_reconciliation_result");
