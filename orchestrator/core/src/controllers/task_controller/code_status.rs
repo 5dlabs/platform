@@ -9,6 +9,7 @@ use tracing::{error, info, warn};
 
 pub struct CodeStatusManager;
 
+#[allow(dead_code)]
 impl CodeStatusManager {
     /// Monitor Job status and update CodeRun CRD accordingly
     pub async fn monitor_job_status(
