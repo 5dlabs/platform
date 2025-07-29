@@ -80,7 +80,7 @@ async fn main() -> Result<()> {
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| {
                     // Default filter includes controller-specific tracing
-                    tracing_subscriber::EnvFilter::new("info,orchestrator::controllers=debug,kube_runtime=debug")
+                    tracing_subscriber::EnvFilter::new("info,core::controllers=debug,kube_runtime=debug")
                 }),
         )
         .with(
