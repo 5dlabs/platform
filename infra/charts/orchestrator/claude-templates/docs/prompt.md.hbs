@@ -1,5 +1,8 @@
 # CRITICAL: Complete Documentation Generation Task
 
+{{!-- Safety toggle: set to false to run safe test mode --}}
+{{#unless (eq "false" "false")}}
+
 **🚨 MANDATORY COMPLETION REQUIREMENT 🚨**
 You MUST complete ALL steps in this process. Partial completion is not acceptable. This is especially critical for large projects with many tasks.
 
@@ -96,3 +99,11 @@ Place all documentation in `.taskmaster/docs/task-{id}/` directories.
 ```
 
 **If you cannot provide this final confirmation, the task is NOT complete and you must continue working until it is done.**
+
+{{else}}
+
+## Safe Test Mode
+
+What time is it? Please answer this simple question and exit immediately.
+
+{{/unless}}
