@@ -113,15 +113,18 @@ impl DocsStatusManager {
         let pp = PatchParams::default();
 
         match docs_api.patch_status(&name, &pp, &patch).await {
-            Ok(_) => {
-                info!("Updated DocsRun status: {} -> {}", name, phase);
+            Ok(updated_docs_run) => {
+                info!("✅ Successfully updated DocsRun status: {} -> {}", name, phase);
+                info!("✅ Updated resource version: {:?}", updated_docs_run.metadata.resource_version);
+                Ok(())
             }
             Err(e) => {
-                error!("Failed to update DocsRun status for {}: {}", name, e);
+                error!("❌ Failed to update DocsRun status for {}: {}", name, e);
+                error!("❌ Error type: {}", std::any::type_name_of_val(&e));
+                error!("❌ Full error details: {:?}", e);
+                Err(e.into())
             }
         }
-
-        Ok(())
     }
 
     /// Get the current job name for a docs task

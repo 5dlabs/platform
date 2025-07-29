@@ -198,15 +198,18 @@ impl CodeStatusManager {
         let pp = PatchParams::default();
 
         match code_api.patch_status(&name, &pp, &patch).await {
-            Ok(_) => {
-                info!("Updated CodeRun status: {} -> {}", name, phase);
+            Ok(updated_code_run) => {
+                info!("✅ Successfully updated CodeRun status: {} -> {}", name, phase);
+                info!("✅ Updated resource version: {:?}", updated_code_run.metadata.resource_version);
+                Ok(())
             }
             Err(e) => {
-                error!("Failed to update CodeRun status for {}: {}", name, e);
+                error!("❌ Failed to update CodeRun status for {}: {}", name, e);
+                error!("❌ Error type: {}", std::any::type_name_of_val(&e));
+                error!("❌ Full error details: {:?}", e);
+                Err(e.into())
             }
         }
-
-        Ok(())
     }
 
     /// Get the current job name for a code task
