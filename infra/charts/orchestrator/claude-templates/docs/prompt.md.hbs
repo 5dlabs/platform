@@ -33,9 +33,18 @@ Generate comprehensive documentation for {{#if task_id}}task {{task_id}}{{else}}
 {{#if task_id}}
 Focus specifically on task {{task_id}} and create:
 {{else}}
-**YOU MUST CREATE DOCUMENTATION FOR EVERY SINGLE TASK. DO NOT SKIP ANY.**
+**IMPORTANT: SKIP TASKS THAT ALREADY HAVE COMPLETE DOCUMENTATION**
 
-For each task (process ALL tasks, no exceptions):
+Before processing any task, check if ALL required files already exist:
+- `task.md` 
+- `prompt.md`
+- `acceptance-criteria.md`
+
+If ALL three files exist and have substantial content (not just stubs), SKIP that task to save tokens and time.
+
+**YOU MUST CREATE DOCUMENTATION FOR EVERY TASK THAT NEEDS IT. DO NOT SKIP ANY INCOMPLETE TASKS.**
+
+For each task that needs documentation (process ALL incomplete tasks, no exceptions):
 {{/if}}
 - `task.md` - Comprehensive task overview and implementation guide
 - `prompt.md` - Autonomous prompt for AI agents
