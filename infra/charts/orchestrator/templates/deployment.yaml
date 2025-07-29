@@ -18,6 +18,8 @@ spec:
         claude-templates/checksum: {{ include (print $.Template.BasePath "/claude-templates-configmap.yaml") . | sha256sum }}
         # Force pod restart when controller config changes
         controller-config/checksum: {{ include (print $.Template.BasePath "/task-controller-config.yaml") . | sha256sum }}
+        # Force pod restart when main config changes
+        config/checksum: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
