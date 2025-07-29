@@ -259,7 +259,7 @@ impl<'a> DocsResourceManager<'a> {
 
         // Create owner reference to DocsRun for proper event handling
         let owner_ref = OwnerReference {
-            api_version: "platform.fdl.dev/v1alpha1".to_string(),
+            api_version: "orchestrator.platform/v1".to_string(),
             kind: "DocsRun".to_string(),
             name: docs_run.name_any(),
             uid: docs_run.metadata.uid.clone().unwrap_or_default(),

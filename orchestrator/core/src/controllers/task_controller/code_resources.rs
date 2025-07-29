@@ -300,7 +300,7 @@ impl<'a> CodeResourceManager<'a> {
 
         // Create owner reference to CodeRun for proper event handling
         let owner_ref = OwnerReference {
-            api_version: "platform.fdl.dev/v1alpha1".to_string(),
+            api_version: "orchestrator.platform/v1".to_string(),
             kind: "CodeRun".to_string(),
             name: code_run.name_any(),
             uid: code_run.metadata.uid.clone().unwrap_or_default(),
