@@ -44,12 +44,8 @@ impl<'a> CodeResourceManager<'a> {
         self.ensure_pvc_exists(&pvc_name, service_name).await?;
         error!("✅ CODE DEBUG: PVC check completed");
 
-        // Clean up any old jobs from previous reconciliations (best effort)
-        error!("🧹 CODE DEBUG: Cleaning up old jobs...");
-        let _ = self.cleanup_old_jobs(code_run).await; // Don't fail on cleanup errors
-        error!("🧹 CODE DEBUG: Cleaning up old configmaps...");
-        self.cleanup_old_configmaps(code_run).await?;
-        error!("✅ CODE DEBUG: Cleanup completed");
+        // Don't cleanup resources at start - let idempotent creation handle it
+        error!("🔄 CODE DEBUG: Using idempotent resource creation (no aggressive cleanup)");
 
         // Create ConfigMap FIRST (without owner reference) so Job can mount it
         let cm_name = self.generate_configmap_name(code_run);
