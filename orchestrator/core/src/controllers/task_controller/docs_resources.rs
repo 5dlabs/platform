@@ -183,27 +183,41 @@ impl<'a> DocsResourceManager<'a> {
         Ok(configmap)
     }
 
-    /// Idempotent job creation: create if doesn't exist, get if it does
+    /// Optimistic job creation: create job directly, handle conflicts gracefully
     async fn create_or_get_job(&self, docs_run: &DocsRun, cm_name: &str) -> Result<Option<OwnerReference>> {
         let job_name = self.generate_job_name(docs_run);
         
-        // Try to get existing job first (idempotent check)
-        match self.jobs.get(&job_name).await {
-            Ok(existing_job) => {
-                info!("Found existing job: {}, using it", job_name);
-                Ok(Some(OwnerReference {
-                    api_version: "batch/v1".to_string(),
-                    kind: "Job".to_string(),
-                    name: job_name,
-                    uid: existing_job.metadata.uid.unwrap_or_default(),
-                    controller: Some(false),
-                    block_owner_deletion: Some(true),
-                }))
+        // OPTIMISTIC APPROACH: Try to create job directly first
+        error!("🎯 RESOURCE_MANAGER: Using optimistic job creation for: {}", job_name);
+        match self.create_job(docs_run, cm_name).await {
+            Ok(owner_ref) => {
+                error!("✅ RESOURCE_MANAGER: Successfully created new job: {}", job_name);
+                Ok(owner_ref)
             }
-            Err(_) => {
-                // Job doesn't exist, create it
-                info!("Job {} doesn't exist, creating it", job_name);
-                self.create_job(docs_run, cm_name).await
+            Err(super::types::Error::KubeError(kube::Error::Api(ae))) if ae.code == 409 => {
+                // Job already exists due to race condition, get the existing one
+                error!("🔄 RESOURCE_MANAGER: Job {} already exists (409 conflict), getting existing job", job_name);
+                match self.jobs.get(&job_name).await {
+                    Ok(existing_job) => {
+                        error!("✅ RESOURCE_MANAGER: Retrieved existing job: {}", job_name);
+                        Ok(Some(OwnerReference {
+                            api_version: "batch/v1".to_string(),
+                            kind: "Job".to_string(),
+                            name: job_name,
+                            uid: existing_job.metadata.uid.unwrap_or_default(),
+                            controller: Some(false),
+                            block_owner_deletion: Some(true),
+                        }))
+                    }
+                    Err(e) => {
+                        error!("❌ RESOURCE_MANAGER: Failed to get existing job after 409 conflict: {:?}", e);
+                        Err(e.into())
+                    }
+                }
+            }
+            Err(e) => {
+                error!("❌ RESOURCE_MANAGER: Job creation failed with non-conflict error: {:?}", e);
+                Err(e)
             }
         }
     }
@@ -212,48 +226,29 @@ impl<'a> DocsResourceManager<'a> {
         let job_name = self.generate_job_name(docs_run);
         let job = self.build_job_spec(docs_run, &job_name, cm_name)?;
 
-        match self.jobs.create(&PostParams::default(), &job).await {
-            Ok(created_job) => {
-                info!("Created docs job: {}", job_name);
-                // Update status
-                super::docs_status::DocsStatusManager::update_job_started(&Arc::new(docs_run.clone()), self.ctx, &job_name, cm_name).await?;
+        let created_job = self.jobs.create(&PostParams::default(), &job).await?;
+        
+        error!("✅ RESOURCE_MANAGER: Created docs job: {}", job_name);
+        
+        // Update status using legacy status manager if needed
+        if let Err(e) = super::docs_status::DocsStatusManager::update_job_started(&Arc::new(docs_run.clone()), self.ctx, &job_name, cm_name).await {
+            error!("⚠️ RESOURCE_MANAGER: Failed to update job started status: {:?}", e);
+            // Continue anyway, status will be updated by main controller
+        }
 
-                // Return owner reference for the created job
-                if let (Some(uid), Some(name)) = (created_job.metadata.uid, created_job.metadata.name) {
-                    Ok(Some(OwnerReference {
-                        api_version: "batch/v1".to_string(),
-                        kind: "Job".to_string(),
-                        name,
-                        uid,
-                        controller: Some(true),
-                        block_owner_deletion: Some(true),
-                    }))
-                } else {
-                    Ok(None)
-                }
-            }
-            Err(kube::Error::Api(ae)) if ae.code == 409 => {
-                info!("Job already exists: {}", job_name);
-                // Try to get existing job for owner reference
-                match self.jobs.get(&job_name).await {
-                    Ok(existing_job) => {
-                        if let (Some(uid), Some(name)) = (existing_job.metadata.uid, existing_job.metadata.name) {
-                            Ok(Some(OwnerReference {
-                                api_version: "batch/v1".to_string(),
-                                kind: "Job".to_string(),
-                                name,
-                                uid,
-                                controller: Some(true),
-                                block_owner_deletion: Some(true),
-                            }))
-                        } else {
-                            Ok(None)
-                        }
-                    }
-                    Err(_) => Ok(None),
-                }
-            }
-            Err(e) => Err(e.into()),
+        // Return owner reference for the created job
+        if let (Some(uid), Some(name)) = (created_job.metadata.uid, created_job.metadata.name) {
+            Ok(Some(OwnerReference {
+                api_version: "batch/v1".to_string(),
+                kind: "Job".to_string(),
+                name,
+                uid,
+                controller: Some(true),
+                block_owner_deletion: Some(true),
+            }))
+        } else {
+            error!("⚠️ RESOURCE_MANAGER: Created job missing UID or name metadata");
+            Ok(None)
         }
     }
 

@@ -91,3 +91,6 @@ spec:
               configmapName:
                 type: string
                 description: "Name of the ConfigMap containing the prompt and context"
+              workCompleted:
+                type: boolean
+                description: "Tracks whether the documentation work has been completed successfully for idempotent reconciliation and TTL safety"

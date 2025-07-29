@@ -64,6 +64,7 @@ pub async fn generate_docs(
             pull_request_url: None,
             conditions: None,
             configmap_name: None,
+            work_completed: Some(false),
         }),
     };
 

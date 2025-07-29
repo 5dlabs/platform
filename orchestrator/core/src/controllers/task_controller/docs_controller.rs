@@ -65,33 +65,62 @@ pub async fn reconcile_docs_run(docs_run: Arc<DocsRun>, ctx: Arc<Context>) -> Re
 #[instrument(skip(ctx), fields(docs_run_name = %docs_run.name_any(), namespace = %ctx.namespace))]
 async fn reconcile_docs_create_or_update(docs_run: Arc<DocsRun>, ctx: &Context) -> Result<Action> {
     let docs_run_name = docs_run.name_any();
-    error!("🚀 DOCS DEBUG: Starting idempotent reconcile for: {}", docs_run_name);
+    error!("🚀 DOCS DEBUG: Starting status-first idempotent reconcile for: {}", docs_run_name);
     
-    // Create APIs
+    // STEP 1: Check DocsRun status first (status-first idempotency)
+    if let Some(status) = &docs_run.status {
+        // Check for completion based on work_completed field (TTL-safe)
+        if status.work_completed == Some(true) {
+            error!("✅ DOCS DEBUG: Work already completed (work_completed=true), no further action needed");
+            return Ok(Action::await_change());
+        }
+        
+        // Check legacy completion states
+        match status.phase.as_str() {
+            "Succeeded" => {
+                error!("✅ DOCS DEBUG: Already succeeded, ensuring work_completed is set");
+                update_docs_status_with_completion(&docs_run, ctx, "Succeeded", "Documentation generation completed successfully", true).await?;
+                return Ok(Action::await_change());
+            }
+            "Failed" => {
+                error!("❌ DOCS DEBUG: Already failed, no retry logic");
+                return Ok(Action::await_change());
+            }
+            "Running" => {
+                error!("🔄 DOCS DEBUG: Status shows running, checking actual job state");
+                // Continue to job state check below
+            }
+            _ => {
+                error!("📝 DOCS DEBUG: Status is '{}', proceeding with job creation", status.phase);
+                // Continue to job creation below
+            }
+        }
+    } else {
+        error!("📝 DOCS DEBUG: No status found, initializing");
+    }
+    
+    // STEP 2: Check job state for running jobs
     let jobs: Api<Job> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
     let configmaps: Api<ConfigMap> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
-    
-    // Generate deterministic job name
     let job_name = generate_job_name(&docs_run);
     error!("🏷️ DOCS DEBUG: Generated job name: {}", job_name);
     
-    // Step 1: Check current job state
     let job_state = check_job_state(&jobs, &job_name).await?;
     error!("📊 DOCS DEBUG: Current job state: {:?}", job_state);
     
     match job_state {
         JobState::NotFound => {
-            error!("📝 DOCS DEBUG: No existing job found, creating resources and job");
+            error!("📝 DOCS DEBUG: No existing job found, using optimistic job creation");
             
-            // Use the existing resource manager pattern to create ConfigMap and Job
+            // STEP 3: Optimistic job creation with conflict handling
             let ctx_arc = Arc::new(ctx.clone()); 
             let resource_manager = DocsResourceManager::new(&jobs, &configmaps, &ctx.config, &ctx_arc);
             
-            // This will create both ConfigMap and Job atomically
+            // This handles 409 conflicts gracefully
             resource_manager.reconcile_create_or_update(&docs_run).await?;
             
-            // Update status to Running (only if not already Running)
-            update_docs_status_if_changed(&docs_run, ctx, "Running", "Documentation generation started").await?;
+            // Update status to Running
+            update_docs_status_with_completion(&docs_run, ctx, "Running", "Documentation generation started", false).await?;
             
             // Requeue to check job progress
             Ok(Action::requeue(std::time::Duration::from_secs(30)))
@@ -100,18 +129,18 @@ async fn reconcile_docs_create_or_update(docs_run: Arc<DocsRun>, ctx: &Context) 
         JobState::Running => {
             error!("🔄 DOCS DEBUG: Job is still running, monitoring progress");
             
-            // Update status to Running if not already
-            update_docs_status_if_changed(&docs_run, ctx, "Running", "Documentation generation in progress").await?;
+            // Update status to Running if needed
+            update_docs_status_with_completion(&docs_run, ctx, "Running", "Documentation generation in progress", false).await?;
             
             // Continue monitoring
             Ok(Action::requeue(std::time::Duration::from_secs(30)))
         }
         
         JobState::Completed => {
-            error!("🎉 DOCS DEBUG: Job completed successfully - final state reached");
+            error!("🎉 DOCS DEBUG: Job completed successfully - marking work as complete");
             
-            // Update to completed status
-            update_docs_status_if_changed(&docs_run, ctx, "Succeeded", "Documentation generation completed successfully").await?;
+            // Mark work as completed (TTL-safe)
+            update_docs_status_with_completion(&docs_run, ctx, "Succeeded", "Documentation generation completed successfully", true).await?;
             
             // CRITICAL: Use await_change() to stop reconciliation
             Ok(Action::await_change())
@@ -120,8 +149,8 @@ async fn reconcile_docs_create_or_update(docs_run: Arc<DocsRun>, ctx: &Context) 
         JobState::Failed => {
             error!("💥 DOCS DEBUG: Job failed - final state reached");
             
-            // Update to failed status
-            update_docs_status_if_changed(&docs_run, ctx, "Failed", "Documentation generation failed").await?;
+            // Update to failed status (work_completed remains false for potential retry)
+            update_docs_status_with_completion(&docs_run, ctx, "Failed", "Documentation generation failed", false).await?;
             
             // CRITICAL: Use await_change() to stop reconciliation
             Ok(Action::await_change())
@@ -214,15 +243,27 @@ async fn update_docs_status_if_changed(
     new_phase: &str,
     new_message: &str,
 ) -> Result<()> {
+    update_docs_status_with_completion(docs_run, ctx, new_phase, new_message, false).await
+}
+
+async fn update_docs_status_with_completion(
+    docs_run: &DocsRun,
+    ctx: &Context,
+    new_phase: &str,
+    new_message: &str,
+    work_completed: bool,
+) -> Result<()> {
     // Only update if status actually changed
     let current_phase = docs_run.status.as_ref().map(|s| s.phase.as_str()).unwrap_or("");
+    let current_work_completed = docs_run.status.as_ref().and_then(|s| s.work_completed).unwrap_or(false);
     
-    if current_phase == new_phase {
-        info!("📊 DOCS DEBUG: Status already '{}', skipping update to prevent reconciliation", new_phase);
+    if current_phase == new_phase && current_work_completed == work_completed {
+        info!("📊 DOCS DEBUG: Status already '{}' with work_completed={}, skipping update to prevent reconciliation", new_phase, work_completed);
         return Ok(());
     }
     
-    error!("📊 DOCS DEBUG: Updating status from '{}' to '{}'", current_phase, new_phase);
+    error!("📊 DOCS DEBUG: Updating status from '{}' (work_completed={}) to '{}' (work_completed={})", 
+           current_phase, current_work_completed, new_phase, work_completed);
     
     let docsruns: Api<DocsRun> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
     
@@ -231,6 +272,7 @@ async fn update_docs_status_if_changed(
             "phase": new_phase,
             "message": new_message,            
             "lastUpdate": chrono::Utc::now().to_rfc3339(),
+            "workCompleted": work_completed,
         }
     });
     
@@ -241,6 +283,6 @@ async fn update_docs_status_if_changed(
         &Patch::Merge(&status_patch)
     ).await?;
     
-    error!("✅ DOCS DEBUG: Status updated successfully to '{}'", new_phase);
+    error!("✅ DOCS DEBUG: Status updated successfully to '{}' with work_completed={}", new_phase, work_completed);
     Ok(())
 }
