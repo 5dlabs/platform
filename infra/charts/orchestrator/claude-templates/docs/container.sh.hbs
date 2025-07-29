@@ -142,8 +142,9 @@ if [ ! -d "$CLAUDE_WORK_DIR/.taskmaster" ]; then
   exit 1
 fi
 
-if [ ! -f "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" ]; then
-  echo "❌ tasks.json not found"
+# Individual task files are used instead of tasks.json
+if [ ! -d "$CLAUDE_WORK_DIR/.taskmaster/docs" ]; then
+  echo "❌ .taskmaster/docs directory not found"
   exit 1
 fi
 
