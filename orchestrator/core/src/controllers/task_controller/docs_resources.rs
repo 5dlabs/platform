@@ -57,20 +57,37 @@ impl<'a> DocsResourceManager<'a> {
 
         // Always create or update ConfigMap to ensure latest template content
         info!("🔄 RESOURCE_MANAGER: Attempting to create ConfigMap: {}", cm_name);
+        error!("📝 RESOURCE_MANAGER: Attempting to create ConfigMap: {}", cm_name);
         match self.configmaps.create(&PostParams::default(), &configmap).await {
             Ok(_) => {
-                info!("✅ RESOURCE_MANAGER: Successfully created ConfigMap: {}", cm_name);
+                error!("✅ RESOURCE_MANAGER: Successfully created ConfigMap: {}", cm_name);
             }
             Err(kube::Error::Api(ae)) if ae.code == 409 => {
                 // ConfigMap exists, update it with latest content
-                info!("🔄 RESOURCE_MANAGER: ConfigMap {} already exists (409), updating with latest content", cm_name);
-                match self.configmaps.replace(&cm_name, &PostParams::default(), &configmap).await {
-                    Ok(_) => {
-                        info!("✅ RESOURCE_MANAGER: Successfully updated ConfigMap: {}", cm_name);
+                error!("🔄 RESOURCE_MANAGER: ConfigMap {} already exists (409), attempting to update with latest content", cm_name);
+                
+                // First get the existing ConfigMap to preserve resourceVersion
+                match self.configmaps.get(&cm_name).await {
+                    Ok(existing_cm) => {
+                        let mut updated_configmap = configmap;
+                        updated_configmap.metadata.resource_version = existing_cm.metadata.resource_version;
+                        
+                        match self.configmaps.replace(&cm_name, &PostParams::default(), &updated_configmap).await {
+                            Ok(_) => {
+                                error!("✅ RESOURCE_MANAGER: Successfully updated existing ConfigMap: {}", cm_name);
+                            }
+                            Err(e) => {
+                                error!("❌ RESOURCE_MANAGER: Failed to replace existing ConfigMap {}: {:?}", cm_name, e);
+                                error!("❌ RESOURCE_MANAGER: Replace error type: {}", std::any::type_name_of_val(&e));
+                                
+                                // Fall back to creating a new one with a different name
+                                error!("🔄 RESOURCE_MANAGER: Replace failed, falling back to create-only approach");
+                            }
+                        }
                     }
                     Err(e) => {
-                        error!("❌ RESOURCE_MANAGER: Failed to update existing ConfigMap {}: {:?}", cm_name, e);
-                        return Err(e.into());
+                        error!("❌ RESOURCE_MANAGER: Failed to get existing ConfigMap {} for update: {:?}", cm_name, e);
+                        error!("🔄 RESOURCE_MANAGER: Get failed, falling back to create-only approach");
                     }
                 }
             }

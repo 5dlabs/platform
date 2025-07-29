@@ -16,9 +16,11 @@ impl DocsStatusManager {
         jobs: &Api<Job>,
         ctx: &Arc<Context>,
     ) -> Result<()> {
+        error!("🔍 STATUS_MANAGER: Starting monitor_job_status for DocsRun: {}", docs_run.name_any());
         let job_name = Self::get_current_job_name(docs_run);
 
         if let Some(job_name) = job_name {
+            error!("✅ STATUS_MANAGER: Found job_name to monitor: {}", job_name);
             // Get the current job
             match jobs.get(&job_name).await {
                 Ok(job) => {
@@ -42,6 +44,9 @@ impl DocsStatusManager {
                     );
                 }
             }
+        } else {
+            error!("❌ STATUS_MANAGER: No job_name found in DocsRun status - cannot monitor job!");
+            error!("❌ STATUS_MANAGER: This means the initial status update failed or was overwritten");
         }
 
         Ok(())
@@ -73,12 +78,20 @@ impl DocsStatusManager {
         let patch = Patch::Merge(&status_patch);
         let pp = PatchParams::default();
 
+        error!("🔄 STATUS_MANAGER: Attempting to update DocsRun status with job_name: {}", job_name);
+        error!("🔄 STATUS_MANAGER: Status patch: {}", serde_json::to_string_pretty(&status_patch).unwrap_or_else(|e| format!("Failed to serialize patch: {}", e)));
+        
         match docs_api.patch_status(&name, &pp, &patch).await {
-            Ok(_) => {
-                info!("Updated DocsRun status: {} -> Running", name);
+            Ok(updated_docs_run) => {
+                error!("✅ STATUS_MANAGER: Successfully updated DocsRun status: {} -> Running", name);
+                error!("✅ STATUS_MANAGER: Updated resource version: {:?}", updated_docs_run.metadata.resource_version);
+                error!("✅ STATUS_MANAGER: Updated job_name in status: {:?}", updated_docs_run.status.as_ref().and_then(|s| s.job_name.as_ref()));
             }
             Err(e) => {
-                error!("Failed to update DocsRun status for {}: {}", name, e);
+                error!("❌ STATUS_MANAGER: Failed to update DocsRun status for {}: {}", name, e);
+                error!("❌ STATUS_MANAGER: Error type: {}", std::any::type_name_of_val(&e));
+                error!("❌ STATUS_MANAGER: Full error details: {:?}", e);
+                return Err(e.into());
             }
         }
 
@@ -129,23 +142,34 @@ impl DocsStatusManager {
 
     /// Get the current job name for a docs task
     fn get_current_job_name(docs_run: &DocsRun) -> Option<String> {
-        docs_run.status.as_ref().and_then(|s| s.job_name.clone())
+        let job_name = docs_run.status.as_ref().and_then(|s| s.job_name.clone());
+        error!("🔍 STATUS_MANAGER: get_current_job_name for {}: {:?}", docs_run.name_any(), job_name);
+        error!("🔍 STATUS_MANAGER: DocsRun status: {:?}", docs_run.status);
+        job_name
     }
 
     /// Analyze job status and return (phase, message)
     fn analyze_job_status(job: &Job) -> (String, String) {
+        let job_name = job.metadata.name.as_deref().unwrap_or("unknown");
+        error!("🔍 STATUS_MANAGER: analyze_job_status for job: {}", job_name);
+        
         if let Some(status) = &job.status {
+            error!("📊 STATUS_MANAGER: Job status - active: {:?}, succeeded: {:?}, failed: {:?}, completion_time: {:?}",
+                status.active, status.succeeded, status.failed, status.completion_time);
             // Check completion time first
             if status.completion_time.is_some() {
                 if let Some(conditions) = &status.conditions {
                     for condition in conditions {
+                        error!("🏷️ STATUS_MANAGER: Job condition - type: {}, status: {}", condition.type_, condition.status);
                         if condition.type_ == "Complete" && condition.status == "True" {
+                            error!("🎉 STATUS_MANAGER: Job COMPLETED successfully! Setting phase to Succeeded");
                             return (
                                 "Succeeded".to_string(),
                                 "Documentation generation completed successfully".to_string(),
                             );
                         } else if condition.type_ == "Failed" && condition.status == "True" {
                             let message = condition.message.as_deref().unwrap_or("Documentation generation failed");
+                            error!("💥 STATUS_MANAGER: Job FAILED! Setting phase to Failed: {}", message);
                             return ("Failed".to_string(), message.to_string());
                         }
                     }
