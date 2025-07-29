@@ -92,12 +92,12 @@ if command -v gh >/dev/null 2>&1; then
   echo "✓ GitHub CLI configured to use SSH protocol for github.com"
 
   # Authenticate with GitHub using the provided PAT
-  if [ -n "$GH_TOKEN" ]; then
+  if [ -n "$GITHUB_TOKEN" ]; then
     echo "Authenticating GitHub CLI with provided token..."
-    echo "$GH_TOKEN" | gh auth login --with-token
+    echo "$GITHUB_TOKEN" | gh auth login --with-token
     echo "✓ GitHub CLI authenticated successfully"
   else
-    echo "⚠️ No GitHub token (GH_TOKEN) provided - API operations may fail"
+    echo "⚠️ No GitHub token (GITHUB_TOKEN) provided - API operations may fail"
   fi
 else
   echo "⚠️ GitHub CLI not available - will use pure git commands"
@@ -312,7 +312,7 @@ echo "Setting up files in Claude working directory: $CLAUDE_WORK_DIR"
 cd "$CLAUDE_WORK_DIR"
 
 # Copy all files from ConfigMap to working directory
-if [ -d "/config" ]; then
+if [ -d "/task-files" ]; then
   echo "Copying ConfigMap files to working directory..."
 
   # CLAUDE.md Memory Persistence Logic (controlled by overwriteMemory CRD field)
@@ -321,16 +321,16 @@ if [ -d "/config" ]; then
   # Handle CLAUDE.md based on overwriteMemory setting
         if [ "$OVERWRITE_MEMORY" = "true" ]; then
           # Overwrite mode: Always replace CLAUDE.md with fresh template
-    cp "/config/CLAUDE.md" "$CLAUDE_WORK_DIR/CLAUDE.md"
-    cp "/config/CLAUDE.md" "/workspace/CLAUDE.md"
+    cp "/task-files/CLAUDE.md" "$CLAUDE_WORK_DIR/CLAUDE.md"
+    cp "/task-files/CLAUDE.md" "/workspace/CLAUDE.md"
           echo "✓ Overwrote CLAUDE.md memory file (fresh start requested)"
           echo "✓ Copied CLAUDE.md to workspace root for easy access"
         else
           # Preserve mode (default): Only copy if doesn't exist
           if [ ! -f "$CLAUDE_WORK_DIR/CLAUDE.md" ]; then
       # Initial creation - copy from ConfigMap
-      cp "/config/CLAUDE.md" "$CLAUDE_WORK_DIR/CLAUDE.md"
-      cp "/config/CLAUDE.md" "/workspace/CLAUDE.md"
+      cp "/task-files/CLAUDE.md" "$CLAUDE_WORK_DIR/CLAUDE.md"
+      cp "/task-files/CLAUDE.md" "/workspace/CLAUDE.md"
             echo "✓ Created initial CLAUDE.md memory file"
             echo "✓ Copied CLAUDE.md to workspace root for easy access"
           else
@@ -342,7 +342,7 @@ if [ -d "/config" ]; then
         fi
 
   # Copy all other markdown files (excluding CLAUDE.md)
-  for md_file in /config/*.md; do
+  for md_file in /task-files/*.md; do
     if [ -f "$md_file" ]; then
       basename_file=$(basename "$md_file")
       # Skip CLAUDE.md since we handled it above
@@ -394,13 +394,13 @@ if [ -d "/config" ]; then
   fi
 
   # Copy guidelines files to working directory
-  if [ -f "/config/coding-guidelines.md" ]; then
-    cp /config/coding-guidelines.md "$CLAUDE_WORK_DIR/"
+  if [ -f "/task-files/coding-guidelines.md" ]; then
+    cp /task-files/coding-guidelines.md "$CLAUDE_WORK_DIR/"
     echo "✓ Copied coding-guidelines.md to working directory"
   fi
 
-  if [ -f "/config/github-guidelines.md" ]; then
-    cp /config/github-guidelines.md "$CLAUDE_WORK_DIR/"
+  if [ -f "/task-files/github-guidelines.md" ]; then
+    cp /task-files/github-guidelines.md "$CLAUDE_WORK_DIR/"
     echo "✓ Copied github-guidelines.md to working directory"
   fi
 
@@ -416,18 +416,27 @@ if [ -d "/config" ]; then
   chmod 755 "$CLAUDE_WORK_DIR/.claude"
 
   # Copy MCP configuration files from ConfigMap
-  if [ -f "/config/mcp.json" ]; then
-    cp /config/mcp.json "$CLAUDE_WORK_DIR/.claude/mcp.json"
+  if [ -f "/task-files/mcp.json" ]; then
+    cp /task-files/mcp.json "$CLAUDE_WORK_DIR/.claude/mcp.json"
     echo "✓ Copied mcp.json to .claude/mcp.json"
   else
     echo "⚠️  mcp.json template not found"
   fi
 
-  if [ -f "/config/client-config.json" ]; then
-    cp /config/client-config.json "$CLAUDE_WORK_DIR/.claude/client-config.json"
+  if [ -f "/task-files/client-config.json" ]; then
+    cp /task-files/client-config.json "$CLAUDE_WORK_DIR/.claude/client-config.json"
     echo "✓ Copied client-config.json to .claude/client-config.json"
   else
     echo "⚠️  client-config.json template not found"
+  fi
+  
+  # Copy settings file to expected enterprise location
+  if [ -f "/task-files/settings.json" ]; then
+    mkdir -p /etc/claude-code
+    cp /task-files/settings.json /etc/claude-code/managed-settings.json
+    echo "✓ Copied settings to enterprise location: /etc/claude-code/managed-settings.json"
+  else
+    echo "❌ settings.json not found in ConfigMap"
   fi
 
     # Enterprise managed settings are directly mounted from ConfigMap
@@ -460,7 +469,7 @@ if [ -d "/config" ]; then
 
   echo "✓ ConfigMap files copied to $CLAUDE_WORK_DIR"
 else
-  echo "⚠️  Warning: /config directory not found (ConfigMap not mounted?)"
+  echo "⚠️  Warning: /task-files directory not found (ConfigMap not mounted?)"
 fi
 
 # Copy Current Task Documentation to Working Directory
