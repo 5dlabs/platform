@@ -9,6 +9,7 @@ use tracing::{error, info, warn};
 
 pub struct DocsStatusManager;
 
+#[allow(dead_code)]
 impl DocsStatusManager {
     /// Monitor Job status and update DocsRun CRD accordingly
     pub async fn monitor_job_status(
@@ -79,7 +80,7 @@ impl DocsStatusManager {
         let pp = PatchParams::default();
 
         error!("🔄 STATUS_MANAGER: Attempting to update DocsRun status with job_name: {}", job_name);
-        error!("🔄 STATUS_MANAGER: Status patch: {}", serde_json::to_string_pretty(&status_patch).unwrap_or_else(|e| format!("Failed to serialize patch: {}", e)));
+        error!("🔄 STATUS_MANAGER: Status patch: {}", serde_json::to_string_pretty(&status_patch).unwrap_or_else(|e| format!("Failed to serialize patch: {e}")));
         
         match docs_api.patch_status(&name, &pp, &patch).await {
             Ok(updated_docs_run) => {
