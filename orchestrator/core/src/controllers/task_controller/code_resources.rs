@@ -139,6 +139,20 @@ impl<'a> CodeResourceManager<'a> {
     }
 
     fn build_pvc_spec(&self, pvc_name: &str, service_name: &str) -> PersistentVolumeClaim {
+        let mut spec = json!({
+            "accessModes": ["ReadWriteOnce"],
+            "resources": {
+                "requests": {
+                    "storage": self.config.storage.workspace_size.clone()
+                }
+            }
+        });
+
+        // Add storageClassName if specified in config
+        if let Some(ref storage_class) = self.config.storage.storage_class_name {
+            spec["storageClassName"] = json!(storage_class);
+        }
+
         let pvc_spec = json!({
             "apiVersion": "v1",
             "kind": "PersistentVolumeClaim",
@@ -150,15 +164,7 @@ impl<'a> CodeResourceManager<'a> {
                     "service": service_name
                 }
             },
-            "spec": {
-                "accessModes": ["ReadWriteOnce"],
-                "storageClassName": "local-path",
-                "resources": {
-                    "requests": {
-                        "storage": "10Gi"
-                    }
-                }
-            }
+            "spec": spec
         });
 
         serde_json::from_value(pvc_spec).expect("Failed to build PVC spec")
