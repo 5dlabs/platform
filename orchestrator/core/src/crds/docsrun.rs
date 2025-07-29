@@ -23,6 +23,7 @@ pub struct DocsRunSpec {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct DocsRunStatus {
     pub phase: String,
     pub message: Option<String>,
