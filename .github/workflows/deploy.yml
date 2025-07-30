@@ -199,7 +199,7 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.version }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.version }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.short-sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -238,7 +238,7 @@ jobs:
             --create-namespace \
             --values infra/charts/orchestrator/values.yaml \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator \
-            --set image.tag=latest \
+            --set image.tag=${{ needs.version.outputs.version }} \
             --set secrets.anthropicApiKey="${{ secrets.ANTHROPIC_API_KEY }}" \
             --timeout 5m \
             --wait
