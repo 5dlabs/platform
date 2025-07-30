@@ -11,7 +11,7 @@ use kube::{Api, ResourceExt};
 use kube::api::{Patch, PatchParams};
 use serde_json::json;
 use std::sync::Arc;
-use tracing::{info, instrument};
+use tracing::{debug, info, instrument};
 
 #[instrument(skip(ctx), fields(code_run_name = %code_run.name_any(), namespace = %ctx.namespace))]
 pub async fn reconcile_code_run(code_run: Arc<CodeRun>, ctx: Arc<Context>) -> Result<Action> {
@@ -130,8 +130,8 @@ async fn reconcile_code_create_or_update(code_run: Arc<CodeRun>, ctx: &Context) 
         CodeJobState::Running => {
             info!("Job is still running, monitoring progress");
             
-            // Update status to Running if not already
-            update_code_status_if_changed(&code_run, ctx, "Running", "Code task in progress").await?;
+            // Update status to Running with workCompleted=false
+            update_code_status_with_completion(&code_run, ctx, "Running", "Code task in progress", false).await?;
             
             // Continue monitoring
             Ok(Action::requeue(std::time::Duration::from_secs(30)))
@@ -151,7 +151,7 @@ async fn reconcile_code_create_or_update(code_run: Arc<CodeRun>, ctx: &Context) 
             info!("Job failed - marking as failed");
             
             // Update to failed status (no work_completed=true for failures)
-            update_code_status_if_changed(&code_run, ctx, "Failed", "Code implementation failed").await?;
+            update_code_status_with_completion(&code_run, ctx, "Failed", "Code implementation failed", false).await?;
             
             // Use await_change() to stop reconciliation
             Ok(Action::await_change())
@@ -239,42 +239,6 @@ fn determine_code_job_state(status: &k8s_openapi::api::batch::v1::JobStatus) -> 
     CodeJobState::Running
 }
 
-async fn update_code_status_if_changed(
-    code_run: &CodeRun,
-    ctx: &Context,
-    new_phase: &str,
-    new_message: &str,
-) -> Result<()> {
-    // Only update if status actually changed
-    let current_phase = code_run.status.as_ref().map(|s| s.phase.as_str()).unwrap_or("");
-    
-    if current_phase == new_phase {
-        info!("Status already '{}', skipping update to prevent reconciliation", new_phase);
-        return Ok(());
-    }
-    
-    info!("Updating status from '{}' to '{}'", current_phase, new_phase);
-    
-    let coderuns: Api<CodeRun> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
-    
-    let status_patch = json!({
-        "status": {
-            "phase": new_phase,
-            "message": new_message,            
-            "lastUpdate": chrono::Utc::now().to_rfc3339(),
-        }
-    });
-    
-    // Use status subresource to avoid triggering spec reconciliation
-    coderuns.patch_status(
-        &code_run.name_any(),
-        &PatchParams::default(),
-        &Patch::Merge(&status_patch)
-    ).await?;
-    
-    info!("Status updated successfully to '{}'", new_phase);
-    Ok(())
-}
 
 async fn update_code_status_with_completion(
     code_run: &CodeRun,
@@ -283,7 +247,17 @@ async fn update_code_status_with_completion(
     new_message: &str,
     work_completed: bool,
 ) -> Result<()> {
-    info!("Updating status to '{}' with work_completed={}", new_phase, work_completed);
+    // Only update if status actually changed or work_completed changed
+    let current_phase = code_run.status.as_ref().map(|s| s.phase.as_str()).unwrap_or("");
+    let current_work_completed = code_run.status.as_ref().and_then(|s| s.work_completed).unwrap_or(false);
+    
+    if current_phase == new_phase && current_work_completed == work_completed {
+        info!("Status already '{}' with work_completed={}, skipping update to prevent reconciliation", new_phase, work_completed);
+        return Ok(());
+    }
+    
+    info!("Updating status from '{}' (work_completed={}) to '{}' (work_completed={})", 
+          current_phase, current_work_completed, new_phase, work_completed);
     
     let coderuns: Api<CodeRun> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
     
