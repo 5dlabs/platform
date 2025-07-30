@@ -65,37 +65,53 @@ pub async fn reconcile_code_run(code_run: Arc<CodeRun>, ctx: Arc<Context>) -> Re
 #[instrument(skip(ctx), fields(code_run_name = %code_run.name_any(), namespace = %ctx.namespace))]
 async fn reconcile_code_create_or_update(code_run: Arc<CodeRun>, ctx: &Context) -> Result<Action> {
     let code_run_name = code_run.name_any();
-    info!("🚀 CODE DEBUG: Starting idempotent reconcile for: {}", code_run_name);
+    info!("Starting status-first idempotent reconcile for CodeRun: {}", code_run_name);
     
-    // Create APIs
+    // STEP 1: Check CodeRun status first (status-first idempotency)
+    if let Some(status) = &code_run.status {
+        // Check for completion based on work_completed field (TTL-safe)
+        if status.work_completed == Some(true) {
+            info!("Work already completed (work_completed=true), no further action needed");
+            return Ok(Action::await_change());
+        }
+        
+        // Check legacy completion states
+        match status.phase.as_str() {
+            "Succeeded" => {
+                info!("Already succeeded, ensuring work_completed is set");
+                update_code_status_with_completion(&code_run, ctx, "Succeeded", "Code implementation completed successfully", true).await?;
+                return Ok(Action::await_change());
+            }
+            "Failed" => {
+                info!("Already failed, no retry logic");
+                return Ok(Action::await_change());
+            }
+            "Running" => {
+                info!("Status shows running, checking actual job state");
+                // Continue to job state check below
+            }
+            _ => {
+                info!("Status is '{}', proceeding with job creation", status.phase);
+                // Continue to job creation below
+            }
+        }
+    } else {
+        info!("No status found, initializing");
+    }
+    
+    // STEP 2: Check job state for running jobs
     let jobs: Api<Job> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
     let configmaps: Api<ConfigMap> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
     let pvcs: Api<PersistentVolumeClaim> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
-    
-    // Generate deterministic job name
     let job_name = generate_code_job_name(&code_run);
-    info!("🏷️ CODE DEBUG: Generated job name: {}", job_name);
+    info!("Generated job name: {}", job_name);
     
-    // Step 1: Check current job state
     let job_state = check_code_job_state(&jobs, &job_name).await?;
-    info!("📊 CODE DEBUG: Current job state: {:?}", job_state);
+    info!("Current job state: {:?}", job_state);
     
     match job_state {
         CodeJobState::NotFound => {
-            // CRITICAL: Check if this is a retry scenario where job was already completed
-            // Look at CodeRun status to see if we previously completed successfully
-            if let Some(status) = &code_run.status {
-                if status.phase == "Succeeded" {
-                    info!("✅ CODE DEBUG: CodeRun already succeeded, maintaining final state");
-                    return Ok(Action::await_change());
-                }
-                if status.phase == "Failed" {
-                    info!("❌ CODE DEBUG: CodeRun already failed, maintaining final state");
-                    return Ok(Action::await_change());
-                }
-            }
-            
-            info!("📝 CODE DEBUG: No existing job found, creating resources and job");
+            info!("No existing job found, creating resources and job");
             
             // Use the existing resource manager pattern to create ConfigMap, PVC, and Job
             let ctx_arc = Arc::new(ctx.clone()); 
@@ -112,7 +128,7 @@ async fn reconcile_code_create_or_update(code_run: Arc<CodeRun>, ctx: &Context) 
         }
         
         CodeJobState::Running => {
-            info!("🔄 CODE DEBUG: Job is still running, monitoring progress");
+            info!("Job is still running, monitoring progress");
             
             // Update status to Running if not already
             update_code_status_if_changed(&code_run, ctx, "Running", "Code task in progress").await?;
@@ -122,22 +138,22 @@ async fn reconcile_code_create_or_update(code_run: Arc<CodeRun>, ctx: &Context) 
         }
         
         CodeJobState::Completed => {
-            info!("🎉 CODE DEBUG: Job completed successfully - final state reached");
+            info!("Job completed successfully - marking work as completed");
             
-            // Update to completed status
-            update_code_status_if_changed(&code_run, ctx, "Succeeded", "Code task completed successfully").await?;
+            // CRITICAL: Update with work_completed=true for TTL safety
+            update_code_status_with_completion(&code_run, ctx, "Succeeded", "Code implementation completed successfully", true).await?;
             
-            // CRITICAL: Use await_change() to stop reconciliation
+            // Use await_change() to stop reconciliation
             Ok(Action::await_change())
         }
         
         CodeJobState::Failed => {
-            info!("💥 CODE DEBUG: Job failed - final state reached");
+            info!("Job failed - marking as failed");
             
-            // Update to failed status
-            update_code_status_if_changed(&code_run, ctx, "Failed", "Code task failed").await?;
+            // Update to failed status (no work_completed=true for failures)
+            update_code_status_if_changed(&code_run, ctx, "Failed", "Code implementation failed").await?;
             
-            // CRITICAL: Use await_change() to stop reconciliation
+            // Use await_change() to stop reconciliation
             Ok(Action::await_change())
         }
     }
@@ -233,11 +249,11 @@ async fn update_code_status_if_changed(
     let current_phase = code_run.status.as_ref().map(|s| s.phase.as_str()).unwrap_or("");
     
     if current_phase == new_phase {
-        info!("📊 CODE DEBUG: Status already '{}', skipping update to prevent reconciliation", new_phase);
+        info!("Status already '{}', skipping update to prevent reconciliation", new_phase);
         return Ok(());
     }
     
-    info!("📊 CODE DEBUG: Updating status from '{}' to '{}'", current_phase, new_phase);
+    info!("Updating status from '{}' to '{}'", current_phase, new_phase);
     
     let coderuns: Api<CodeRun> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
     
@@ -256,6 +272,37 @@ async fn update_code_status_if_changed(
         &Patch::Merge(&status_patch)
     ).await?;
     
-    info!("✅ CODE DEBUG: Status updated successfully to '{}'", new_phase);
+    info!("Status updated successfully to '{}'", new_phase);
+    Ok(())
+}
+
+async fn update_code_status_with_completion(
+    code_run: &CodeRun,
+    ctx: &Context,
+    new_phase: &str,
+    new_message: &str,
+    work_completed: bool,
+) -> Result<()> {
+    info!("Updating status to '{}' with work_completed={}", new_phase, work_completed);
+    
+    let coderuns: Api<CodeRun> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
+    
+    let status_patch = json!({
+        "status": {
+            "phase": new_phase,
+            "message": new_message,            
+            "lastUpdate": chrono::Utc::now().to_rfc3339(),
+            "work_completed": work_completed,
+        }
+    });
+    
+    // Use status subresource to avoid triggering spec reconciliation
+    coderuns.patch_status(
+        &code_run.name_any(),
+        &PatchParams::default(),
+        &Patch::Merge(&status_patch)
+    ).await?;
+    
+    info!("Status updated successfully to '{}' with work_completed={}", new_phase, work_completed);
     Ok(())
 }

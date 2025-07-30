@@ -71,6 +71,7 @@ pub async fn submit_code_task(
             prompt_modification: None,
             prompt_mode: Some("direct".to_string()),
             session_id: None,
+            work_completed: None,
         }),
     };
 

@@ -144,6 +144,10 @@ pub struct CodeRunStatus {
 
     /// Session ID for tracking
     pub session_id: Option<String>,
+
+    /// Tracks whether the code implementation work has been completed successfully
+    /// This field is used for idempotent reconciliation and TTL safety
+    pub work_completed: Option<bool>,
 }
 
 /// Condition for the `CodeRun`
