@@ -35,31 +35,12 @@ if [ -f "/workspace/.ssh/id_ed25519" ]; then
   mkdir -p ~/.ssh
   chmod 700 ~/.ssh
 
-  # Copy SSH keys from mounted read-only volume to writable location
-  if cp /workspace/.ssh/id_ed25519 ~/.ssh/id_ed25519 2>/dev/null; then
-    echo "✓ SSH private key copied to ~/.ssh/id_ed25519"
-  else
-    echo "⚠️  Could not copy SSH key, using mounted location"
-    export SSH_KEY_PATH="/workspace/.ssh/id_ed25519"
-  fi
-
-  # Copy public key if exists
-  if [ -f "/workspace/.ssh/id_ed25519.pub" ]; then
-    cp /workspace/.ssh/id_ed25519.pub ~/.ssh/id_ed25519.pub 2>/dev/null || echo "⚠️  Could not copy public key"
-  fi
-
-  # Set proper permissions if we copied the keys
-  if [ -f ~/.ssh/id_ed25519 ]; then
-    chmod 600 ~/.ssh/id_ed25519
-    [ -f ~/.ssh/id_ed25519.pub ] && chmod 644 ~/.ssh/id_ed25519.pub
-  fi
-
-  # Configure SSH to use the key
+  # Configure SSH to use the mounted key directly (no copying needed)
   cat > ~/.ssh/config << EOF
 Host github.com
     HostName github.com
     User git
-    IdentityFile ${SSH_KEY_PATH:-~/.ssh/id_ed25519}
+    IdentityFile /workspace/.ssh/id_ed25519
     IdentitiesOnly yes
     StrictHostKeyChecking no
 EOF
@@ -69,12 +50,6 @@ EOF
   # Test SSH connection
   echo "Testing SSH connection to GitHub..."
   ssh -T git@github.com 2>&1 | head -3 || echo "SSH test completed (expected to fail with 'successfully authenticated')"
-
-  # Copy SSH setup to PVC for persistence and debugging
-  if [ ! -f "/workspace/.ssh/config" ]; then
-    cp ~/.ssh/config /workspace/.ssh/config 2>/dev/null || echo "⚠️ Could not copy SSH config to PVC"
-    echo "✓ SSH config copied to PVC for persistence"
-  fi
 
   echo "✓ SSH authentication configured successfully"
 else
@@ -353,43 +328,15 @@ if [ -d "/task-files" ]; then
     fi
   done
 
-  # Check that the settings are mounted correctly
+  # Verify enterprise settings (mounted directly from ConfigMap)
   if [ -f "/etc/claude-code/managed-settings.json" ]; then
-    echo "✓ Enterprise managed settings found at /etc/claude-code/managed-settings.json"
-    echo "✓ Mounted directly from ConfigMap (no copying needed)"
-
-    # Validate the enterprise settings JSON
-    if jq empty /etc/claude-code/managed-settings.json 2>/dev/null; then
-      echo "✓ Enterprise settings JSON is valid"
-      echo "✓ This will override ALL other Claude Code settings (highest precedence)"
-      echo "✓ Model configuration, tools, and permissions are defined"
-
-      # Debug: Print current settings configuration
-      echo ""
-      echo "🔧 SETTINGS CONFIGURATION DEBUG:"
-      echo "═══════════════════════════════════════════════════════════════"
-      echo "📋 FULL Enterprise Managed Settings:"
-      jq . /etc/claude-code/managed-settings.json
-      echo ""
-      echo "🔍 Searching for other settings files that might override:"
-      find /workspace -name "*settings*.json" -type f 2>/dev/null || echo "   No other settings files found on PVC"
-      echo ""
-      echo "🔑 API Key Status:"
-      if [ -n "$ANTHROPIC_API_KEY" ]; then
-        echo "   ✓ ANTHROPIC_API_KEY is set (${#ANTHROPIC_API_KEY} characters)"
-      else
-        echo "   ⚠️  ANTHROPIC_API_KEY is not set"
-      fi
-      echo "═══════════════════════════════════════════════════════════════"
-      echo ""
-    else
-      echo "❌ Enterprise settings JSON is invalid"
-      cat /etc/claude-code/managed-settings.json
+    echo "✓ Enterprise settings verified"
+    if ! jq empty /etc/claude-code/managed-settings.json 2>/dev/null; then
+      echo "❌ Invalid enterprise settings JSON"
       exit 1
     fi
   else
-    echo "❌ ERROR: Enterprise managed settings not found!"
-    echo "Expected: /etc/claude-code/managed-settings.json (mounted from ConfigMap)"
+    echo "❌ Enterprise settings not found"
     exit 1
   fi
 
@@ -430,42 +377,10 @@ if [ -d "/task-files" ]; then
     echo "⚠️  client-config.json template not found"
   fi
   
-  # Copy settings file to expected enterprise location
-  if [ -f "/task-files/settings.json" ]; then
-    mkdir -p /etc/claude-code
-    cp /task-files/settings.json /etc/claude-code/managed-settings.json
-    echo "✓ Copied settings to enterprise location: /etc/claude-code/managed-settings.json"
-  else
-    echo "❌ settings.json not found in ConfigMap"
-  fi
-
-    # Enterprise managed settings are directly mounted from ConfigMap
+  # Enterprise managed settings are mounted directly from ConfigMap  
   echo "=== ENTERPRISE MANAGED SETTINGS ==="
   echo "✓ Settings mounted directly from ConfigMap at: /etc/claude-code/managed-settings.json"
   echo "✓ No copying needed - mount automatically reflects latest ConfigMap changes"
-
-  # Clean up any old persistent settings that might interfere
-  if [ -f "$CLAUDE_WORK_DIR/etc/claude-code/managed-settings.json" ]; then
-    echo "⚠️  Found old persistent settings on PVC, removing to prevent conflicts..."
-    rm -f "$CLAUDE_WORK_DIR/etc/claude-code/managed-settings.json"
-    echo "✓ Removed old persistent settings file"
-  fi
-
-  # Also check for any other settings files that might interfere
-  echo "🔍 Checking for any conflicting settings files on PVC..."
-  find /workspace -name "*settings*.json" -type f 2>/dev/null | while read -r settings_file; do
-    echo "   Found settings file: $settings_file"
-  done
-
-  # Verify the mounted settings
-  if [ -f "/etc/claude-code/managed-settings.json" ]; then
-    echo "✓ Enterprise managed settings verified. Current mounted settings:"
-    jq . "/etc/claude-code/managed-settings.json"
-  else
-    echo "❌ ERROR: Enterprise managed settings not found at mount point!"
-    echo "   Expected: /etc/claude-code/managed-settings.json (mounted from ConfigMap)"
-    exit 1
-  fi
 
   echo "✓ ConfigMap files copied to $CLAUDE_WORK_DIR"
 else

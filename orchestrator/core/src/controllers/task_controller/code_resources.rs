@@ -323,6 +323,13 @@ impl<'a> CodeResourceManager<'a> {
             "name": "task-files",
             "mountPath": "/task-files"
         }));
+        
+        // Mount settings.json as managed-settings.json for enterprise compatibility
+        volume_mounts.push(json!({
+            "name": "task-files",
+            "mountPath": "/etc/claude-code/managed-settings.json",
+            "subPath": "settings.json"
+        }));
 
         // PVC workspace volume for code (persistent across sessions)
         let pvc_name = format!("workspace-{}", code_run.spec.service);
