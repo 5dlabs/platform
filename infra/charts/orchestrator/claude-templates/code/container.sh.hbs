@@ -281,6 +281,12 @@ else
     
     echo "✓ Task files copied to target repository"
     
+    # DEBUG: Verify files were copied successfully
+    echo "🔍 DEBUG: Contents of target task directory after copy:"
+    ls -la "/workspace/$TARGET_REPO_NAME/task/" || echo "Task directory not found"
+    echo "🔍 DEBUG: Checking if prompt.md exists:"
+    [ -f "/workspace/$TARGET_REPO_NAME/task/prompt.md" ] && echo "✅ prompt.md exists" || echo "❌ prompt.md missing"
+    
     # Step 4: Clean up docs repository
     echo "🧹 CLEANUP: Removing temporary docs repository"
     rm -rf /tmp/docs-repo
