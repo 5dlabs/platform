@@ -11,11 +11,11 @@ use kube::{Api, ResourceExt};
 use kube::api::{Patch, PatchParams};
 use serde_json::json;
 use std::sync::Arc;
-use tracing::{error, info, instrument};
+use tracing::{info, instrument};
 
 #[instrument(skip(ctx), fields(code_run_name = %code_run.name_any(), namespace = %ctx.namespace))]
 pub async fn reconcile_code_run(code_run: Arc<CodeRun>, ctx: Arc<Context>) -> Result<Action> {
-    error!(
+    info!(
         "🎯 CODE DEBUG: Starting reconcile for CodeRun: {}",
         code_run.name_any()
     );
@@ -24,12 +24,12 @@ pub async fn reconcile_code_run(code_run: Arc<CodeRun>, ctx: Arc<Context>) -> Re
     let client = &ctx.client;
     let name = code_run.name_any();
 
-    error!("🔄 CODE DEBUG: Reconciling CodeRun: {}", name);
+    info!("🔄 CODE DEBUG: Reconciling CodeRun: {}", name);
 
     // Create APIs
-    error!("🔗 CODE DEBUG: Creating Kubernetes API clients...");
+    info!("🔗 CODE DEBUG: Creating Kubernetes API clients...");
     let coderuns: Api<CodeRun> = Api::namespaced(client.clone(), namespace);
-    error!("✅ CODE DEBUG: API clients created successfully");
+    info!("✅ CODE DEBUG: API clients created successfully");
 
     // Handle finalizers for cleanup
     let result = finalizer(&coderuns, CODE_FINALIZER_NAME, code_run.clone(), |event| async {
@@ -54,7 +54,7 @@ pub async fn reconcile_code_run(code_run: Arc<CodeRun>, ctx: Arc<Context>) -> Re
         }
     })?;
 
-    error!(
+    info!(
         "🏁 CODE DEBUG: reconcile completed with result: {:?}",
         result
     );
@@ -65,7 +65,7 @@ pub async fn reconcile_code_run(code_run: Arc<CodeRun>, ctx: Arc<Context>) -> Re
 #[instrument(skip(ctx), fields(code_run_name = %code_run.name_any(), namespace = %ctx.namespace))]
 async fn reconcile_code_create_or_update(code_run: Arc<CodeRun>, ctx: &Context) -> Result<Action> {
     let code_run_name = code_run.name_any();
-    error!("🚀 CODE DEBUG: Starting idempotent reconcile for: {}", code_run_name);
+    info!("🚀 CODE DEBUG: Starting idempotent reconcile for: {}", code_run_name);
     
     // Create APIs
     let jobs: Api<Job> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
@@ -74,15 +74,28 @@ async fn reconcile_code_create_or_update(code_run: Arc<CodeRun>, ctx: &Context) 
     
     // Generate deterministic job name
     let job_name = generate_code_job_name(&code_run);
-    error!("🏷️ CODE DEBUG: Generated job name: {}", job_name);
+    info!("🏷️ CODE DEBUG: Generated job name: {}", job_name);
     
     // Step 1: Check current job state
     let job_state = check_code_job_state(&jobs, &job_name).await?;
-    error!("📊 CODE DEBUG: Current job state: {:?}", job_state);
+    info!("📊 CODE DEBUG: Current job state: {:?}", job_state);
     
     match job_state {
         CodeJobState::NotFound => {
-            error!("📝 CODE DEBUG: No existing job found, creating resources and job");
+            // CRITICAL: Check if this is a retry scenario where job was already completed
+            // Look at CodeRun status to see if we previously completed successfully
+            if let Some(status) = &code_run.status {
+                if status.phase == "Succeeded" {
+                    info!("✅ CODE DEBUG: CodeRun already succeeded, maintaining final state");
+                    return Ok(Action::await_change());
+                }
+                if status.phase == "Failed" {
+                    info!("❌ CODE DEBUG: CodeRun already failed, maintaining final state");
+                    return Ok(Action::await_change());
+                }
+            }
+            
+            info!("📝 CODE DEBUG: No existing job found, creating resources and job");
             
             // Use the existing resource manager pattern to create ConfigMap, PVC, and Job
             let ctx_arc = Arc::new(ctx.clone()); 
@@ -99,7 +112,7 @@ async fn reconcile_code_create_or_update(code_run: Arc<CodeRun>, ctx: &Context) 
         }
         
         CodeJobState::Running => {
-            error!("🔄 CODE DEBUG: Job is still running, monitoring progress");
+            info!("🔄 CODE DEBUG: Job is still running, monitoring progress");
             
             // Update status to Running if not already
             update_code_status_if_changed(&code_run, ctx, "Running", "Code task in progress").await?;
@@ -109,7 +122,7 @@ async fn reconcile_code_create_or_update(code_run: Arc<CodeRun>, ctx: &Context) 
         }
         
         CodeJobState::Completed => {
-            error!("🎉 CODE DEBUG: Job completed successfully - final state reached");
+            info!("🎉 CODE DEBUG: Job completed successfully - final state reached");
             
             // Update to completed status
             update_code_status_if_changed(&code_run, ctx, "Succeeded", "Code task completed successfully").await?;
@@ -119,7 +132,7 @@ async fn reconcile_code_create_or_update(code_run: Arc<CodeRun>, ctx: &Context) 
         }
         
         CodeJobState::Failed => {
-            error!("💥 CODE DEBUG: Job failed - final state reached");
+            info!("💥 CODE DEBUG: Job failed - final state reached");
             
             // Update to failed status
             update_code_status_if_changed(&code_run, ctx, "Failed", "Code task failed").await?;
@@ -132,7 +145,7 @@ async fn reconcile_code_create_or_update(code_run: Arc<CodeRun>, ctx: &Context) 
 
 #[instrument(skip(ctx), fields(code_run_name = %code_run.name_any(), namespace = %ctx.namespace))]
 async fn cleanup_code_resources(code_run: Arc<CodeRun>, ctx: &Context) -> Result<Action> {
-    error!("🧹 CODE DEBUG: Cleaning up resources for CodeRun");
+    info!("🧹 CODE DEBUG: Cleaning up resources for CodeRun");
     
     // Create APIs  
     let jobs: Api<Job> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
@@ -224,7 +237,7 @@ async fn update_code_status_if_changed(
         return Ok(());
     }
     
-    error!("📊 CODE DEBUG: Updating status from '{}' to '{}'", current_phase, new_phase);
+    info!("📊 CODE DEBUG: Updating status from '{}' to '{}'", current_phase, new_phase);
     
     let coderuns: Api<CodeRun> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
     
@@ -243,6 +256,6 @@ async fn update_code_status_if_changed(
         &Patch::Merge(&status_patch)
     ).await?;
     
-    error!("✅ CODE DEBUG: Status updated successfully to '{}'", new_phase);
+    info!("✅ CODE DEBUG: Status updated successfully to '{}'", new_phase);
     Ok(())
 }
