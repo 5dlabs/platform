@@ -292,7 +292,7 @@ async fn update_code_status_with_completion(
             "phase": new_phase,
             "message": new_message,            
             "lastUpdate": chrono::Utc::now().to_rfc3339(),
-            "work_completed": work_completed,
+            "workCompleted": work_completed,
         }
     });
     
