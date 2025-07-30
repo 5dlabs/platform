@@ -165,13 +165,27 @@ export GITHUB_USER="{{github_user}}"
 echo "Starting Claude execution..."
 CLAUDE_CMD="claude -p --output-format stream-json --verbose"
 
-if [ -f "prompt.md" ]; then
-    $CLAUDE_CMD "$(cat prompt.md)"
+# Safe mode toggle for debugging (prevents token consumption)
+SAFE_MODE="true"  # Set to "false" for full docs generation
+
+if [ "$SAFE_MODE" = "true" ]; then
+    echo "🛡️ SAFE MODE ENABLED - Running simple test instead of full docs generation"
+    echo "What time is it? Please answer this simple question and exit immediately." | $CLAUDE_CMD
     CLAUDE_EXIT_CODE=$?
-    echo "Claude completed with exit code: $CLAUDE_EXIT_CODE"
+    echo "Safe mode test completed with exit code: $CLAUDE_EXIT_CODE"
+    
+    # Exit successfully to prevent PR creation in safe mode
+    echo "✅ Safe mode test complete, exiting without changes"
+    exit 0
 else
-    echo "❌ No prompt.md found"
-    exit 1
+    if [ -f "prompt.md" ]; then
+        $CLAUDE_CMD "$(cat prompt.md)"
+        CLAUDE_EXIT_CODE=$?
+        echo "Claude completed with exit code: $CLAUDE_EXIT_CODE"
+    else
+        echo "❌ No prompt.md found"
+        exit 1
+    fi
 fi
 
 # PR creation
