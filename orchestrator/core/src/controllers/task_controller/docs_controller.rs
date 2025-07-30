@@ -231,15 +231,6 @@ fn determine_job_state(status: &k8s_openapi::api::batch::v1::JobStatus) -> JobSt
     JobState::Running
 }
 
-async fn update_docs_status_if_changed(
-    docs_run: &DocsRun,
-    ctx: &Context,
-    new_phase: &str,
-    new_message: &str,
-) -> Result<()> {
-    update_docs_status_with_completion(docs_run, ctx, new_phase, new_message, false).await
-}
-
 async fn update_docs_status_with_completion(
     docs_run: &DocsRun,
     ctx: &Context,

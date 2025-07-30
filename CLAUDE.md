@@ -4,45 +4,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build and Development Commands
 
-### Rust Projects (Orchestrator & Toolman)
+### Rust Projects (Orchestrator)
 
-**Build all components:**
+**Build orchestrator:**
 ```bash
 # Build orchestrator components
-cd orchestrator && cargo build --release
-
-# Build toolman
-cd toolman && cargo build --release
+cargo build --release
 ```
 
 **Run tests:**
 ```bash
 # Run orchestrator tests
-cd orchestrator && cargo test
-
-# Run toolman tests (including integration tests)
-cd toolman && cargo test
-cd toolman && cargo test --test integration
+cargo test
 ```
 
 **Linting and quality checks:**
 ```bash
 # ALWAYS run clippy before pushing code (required)
-cd orchestrator && cargo clippy --all-targets --all-features -- -D warnings
-cd toolman && cargo clippy --all-targets --all-features -- -D warnings
+cargo clippy --all-targets --all-features -- -D warnings
 ```
 
 **Run specific services locally:**
 ```bash
-# Start toolman HTTP server for local testing
-cd toolman && cargo run --bin toolman-server -- --project-dir .
-
 # Build CLI tools
-cd orchestrator && cargo build --release --bin fdl --bin fdl-mcp
+cargo build --release --bin fdl --bin fdl-mcp
 
 # Run single test
-cd orchestrator && cargo test test_name
-cd toolman && cargo test test_name
+cargo test test_name
 ```
 
 ### Kubernetes and Infrastructure
@@ -70,7 +58,7 @@ helm install orchestrator infra/charts/orchestrator --namespace orchestrator --c
 
 ## Architecture Overview
 
-This is an **AI-powered development platform** with three main components:
+This is an **AI-powered development platform** with two main components:
 
 ### 1. **Orchestrator** (Rust)
 - **Location**: `orchestrator/`
@@ -80,13 +68,7 @@ This is an **AI-powered development platform** with three main components:
   - `tools/`: CLI tools (`fdl`, `fdl-mcp`) for direct API calls and MCP integration
   - `common/`: Shared models and utilities
 
-### 2. **Toolman** (Rust) 
-- **Location**: `toolman/`
-- **Purpose**: MCP (Model Context Protocol) proxy and tool management
-- **Key Features**: Session-based configuration, HTTP server, stdio wrapper
-- **Binaries**: `toolman-client`, `toolman-server`
-
-### 3. **Infrastructure** (Kubernetes/Helm)
+### 2. **Infrastructure** (Kubernetes/Helm)
 - **Location**: `infra/`
 - **Purpose**: Kubernetes deployment manifests, Helm charts, and operational scripts
 - **Key Components**:
@@ -274,15 +256,12 @@ What time is it? Please answer this simple question and exit immediately.
 
 ### Configuration Files
 - **MCP configuration**: `.cursor/mcp.json` for Cursor integration
-- **Server configs**: `servers-config.json`, `client-config.json` in toolman
 - **Agent templates**: All in `infra/charts/orchestrator/claude-templates/`
 - **Cursor rules**: Structured rules in `.cursor/rules/` for development guidelines
 
 ### Testing Strategy
-- **Unit tests**: `cargo test` for both orchestrator and toolman
-- **Integration tests**: Specialized tests in `toolman/tests/integration/`
+- **Unit tests**: `cargo test` for orchestrator
 - **Infrastructure tests**: Comprehensive test suite in `infra/scripts/`
-- **Local development**: Use `toolman-server` with `--project-dir .` for testing
 
 ### Development Workflow
 - **Follow Cursor rules**: Use structured MDC files in `.cursor/rules/` for consistent development patterns
@@ -315,7 +294,6 @@ The platform provides the following MCP tools for integration with Cursor/Claude
 
 ### Supporting MCP Integrations
 - **`task-master-ai`**: Full Task Master AI CLI integration for project planning
-- **`toolman`**: Advanced MCP proxy and tool management capabilities
 - **`rust-docs`**: Rust documentation search and reference
 
 ### Configuration

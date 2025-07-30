@@ -160,11 +160,10 @@ fn handle_orchestrator_tools(
                     None => return Some(Err(anyhow!("working_directory parameter is required"))),
                 };
 
-            // Extract model with default
+            // Extract model parameter (no default - let CLI/backend handle it)
             let model = params_map
                 .get("model")
-                .and_then(|v| v.as_str())
-                .unwrap_or("claude-opus-4-20250514");
+                .and_then(|v| v.as_str());
 
             // Get GitHub user from environment variable (takes precedence) or parameter
             let env_user = std::env::var("FDL_DEFAULT_DOCS_USER").ok();
@@ -176,18 +175,24 @@ fn handle_orchestrator_tools(
                 None => return Some(Err(anyhow!("github_user parameter is required or FDL_DEFAULT_DOCS_USER environment variable must be set"))),
             };
 
-            // Validate model parameter - allow any model that starts with "claude-"
-            if !model.starts_with("claude-") {
-                return Some(Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name (e.g., 'claude-opus-4-20250514')", model)));
+            // Validate model parameter if provided - allow any model that starts with "claude-"
+            if let Some(m) = model {
+                if !m.starts_with("claude-") {
+                    return Some(Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name (e.g., 'claude-opus-4-20250514')", m)));
+                }
             }
 
             // Build CLI arguments
             let mut args = vec!["task", "docs"];
 
             // Add required parameters
-            args.extend(&["--model", model]);
             args.extend(&["--working-directory", working_directory]);
             args.extend(&["--github-user", github_user]);
+            
+            // Add model parameter only if provided
+            if let Some(m) = model {
+                args.extend(&["--model", m]);
+            }
 
             // Debug output removed to satisfy clippy
 
@@ -198,7 +203,7 @@ fn handle_orchestrator_tools(
                     "message": "Documentation generation initiated successfully",
                     "output": output,
                     "parameters_used": {
-                        "model": model,
+                        "model": model.unwrap_or("default from Helm configuration"),
                         "working_directory": working_directory,
                         "github_user": github_user
                     }

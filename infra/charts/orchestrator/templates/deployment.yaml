@@ -56,6 +56,11 @@ spec:
                 configMapKeyRef:
                   name: {{ include "orchestrator.fullname" . }}-config
                   key: RUST_LOG
+            - name: DEFAULT_DOCS_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "orchestrator.fullname" . }}-config
+                  key: DEFAULT_DOCS_MODEL
             # Secrets for agents
             {{- if .Values.secrets.anthropicApiKey }}
             - name: ANTHROPIC_API_KEY
