@@ -111,17 +111,17 @@ async fn reconcile_code_create_or_update(code_run: Arc<CodeRun>, ctx: &Context) 
     
     match job_state {
         CodeJobState::NotFound => {
-            info!("No existing job found, creating resources and job");
+            info!("No existing job found, using optimistic job creation");
             
-            // Use the existing resource manager pattern to create ConfigMap, PVC, and Job
+            // STEP 3: Optimistic job creation with conflict handling (copied from working docs controller)
             let ctx_arc = Arc::new(ctx.clone()); 
             let resource_manager = CodeResourceManager::new(&jobs, &configmaps, &pvcs, &ctx.config, &ctx_arc);
             
-            // This will create all resources atomically
+            // This handles 409 conflicts gracefully (same as docs controller)
             resource_manager.reconcile_create_or_update(&code_run).await?;
             
-            // Update status to Running (only if not already Running)
-            update_code_status_if_changed(&code_run, ctx, "Running", "Code task started").await?;
+            // Update status to Running (same pattern as docs)
+            update_code_status_with_completion(&code_run, ctx, "Running", "Code implementation started", false).await?;
             
             // Requeue to check job progress
             Ok(Action::requeue(std::time::Duration::from_secs(30)))
@@ -306,3 +306,4 @@ async fn update_code_status_with_completion(
     info!("Status updated successfully to '{}' with work_completed={}", new_phase, work_completed);
     Ok(())
 }
+
