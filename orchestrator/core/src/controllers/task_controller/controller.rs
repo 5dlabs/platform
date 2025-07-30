@@ -9,26 +9,20 @@ use kube::runtime::controller::{Action, Controller};
 use kube::runtime::watcher::Config;
 use kube::{Api, Client, ResourceExt};
 use std::sync::Arc;
-use tracing::{error, info, instrument, Instrument};
+use tracing::{debug, error, info, instrument, Instrument};
 
 /// Main entry point for the separated task controllers
 #[instrument(skip(client), fields(namespace = %namespace))]
 pub async fn run_task_controller(client: Client, namespace: String) -> Result<()> {
-    error!(
-        "🚀 TASK_CONTROLLER DEBUG: Starting separated task controllers in namespace: {}",
-        namespace
-    );
+    info!("Starting separated task controllers in namespace: {}", namespace);
 
-    error!("🔧 TASK_CONTROLLER DEBUG: Loading controller configuration from mounted file...");
+    debug!("Loading controller configuration from mounted file...");
 
     // Load controller configuration from mounted file
     let config = match ControllerConfig::from_mounted_file("/config/config.yaml") {
         Ok(cfg) => {
-            error!("✅ TASK_CONTROLLER DEBUG: Successfully loaded controller configuration");
-            error!(
-                "🔧 TASK_CONTROLLER DEBUG: Configuration cleanup enabled = {}",
-                cfg.cleanup.enabled
-            );
+            debug!("Successfully loaded controller configuration");
+            debug!("Configuration cleanup enabled = {}", cfg.cleanup.enabled);
 
             // Validate configuration has required fields
             if let Err(validation_error) = cfg.validate() {
@@ -38,7 +32,7 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
                 );
                 return Err(Error::ConfigError(validation_error.to_string()));
             }
-            error!("✅ TASK_CONTROLLER DEBUG: Configuration validation passed");
+            debug!("Configuration validation passed");
             cfg
         }
         Err(e) => {
@@ -46,7 +40,7 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
                 "❌ TASK_CONTROLLER DEBUG: Failed to load configuration, using defaults: {}",
                 e
             );
-            error!("🔧 TASK_CONTROLLER DEBUG: Creating default configuration...");
+            debug!("Creating default configuration...");
             let default_config = ControllerConfig::default();
 
             // Validate default configuration
@@ -57,12 +51,12 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
                 );
                 return Err(Error::ConfigError(validation_error.to_string()));
             }
-            error!("✅ TASK_CONTROLLER DEBUG: Default configuration validation passed");
+            debug!("Default configuration validation passed");
             default_config
         }
     };
 
-    error!("🏗️ TASK_CONTROLLER DEBUG: Creating controller context...");
+    debug!("Creating controller context...");
 
     // Create shared context
     let context = Arc::new(Context {
@@ -71,10 +65,10 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
         config: Arc::new(config),
     });
 
-    error!("✅ TASK_CONTROLLER DEBUG: Controller context created successfully");
+    debug!("Controller context created successfully");
 
     // Run both controllers concurrently
-    error!("🚀 TASK_CONTROLLER DEBUG: Starting DocsRun and CodeRun controllers...");
+    info!("Starting DocsRun and CodeRun controllers...");
     
     let docs_controller_handle = tokio::spawn({
         let context = context.clone();
@@ -94,7 +88,7 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
         }
     });
 
-    error!("🔄 TASK_CONTROLLER DEBUG: Both controllers started, waiting for completion...");
+    debug!("Both controllers started, waiting for completion...");
 
     // Wait for both controllers to complete (they should run indefinitely)
     match tokio::try_join!(docs_controller_handle, code_controller_handle) {
@@ -111,7 +105,7 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
         }
     }
 
-    error!("🏁 TASK_CONTROLLER DEBUG: Task controller shutting down");
+    info!("Task controller shutting down");
     Ok(())
 }
 
@@ -122,7 +116,7 @@ async fn run_docs_controller(
     namespace: String,
     context: Arc<Context>,
 ) -> Result<()> {
-    error!("🚀 DOCS_CONTROLLER DEBUG: Starting DocsRun controller");
+    info!("Starting DocsRun controller");
 
     let docs_api: Api<DocsRun> = Api::namespaced(client.clone(), &namespace);
     let jobs_api: Api<Job> = Api::namespaced(client.clone(), &namespace);
@@ -138,13 +132,13 @@ async fn run_docs_controller(
                     Ok(docs_run_resource) => {
                         info!(
                             resource = ?docs_run_resource,
-                            "✅ DOCS_CONTROLLER: Reconciliation successful for DocsRun"
+                            "DocsRun reconciliation successful"
                         );
                     }
                     Err(reconciliation_err) => {
                         error!(
                             error = ?reconciliation_err,
-                            "❌ DOCS_CONTROLLER: Reconciliation error"
+                            "DocsRun reconciliation error"
                         );
                     }
                 }
@@ -152,7 +146,7 @@ async fn run_docs_controller(
         })
         .await;
 
-    error!("🏁 DOCS_CONTROLLER DEBUG: DocsRun controller shutting down");
+    info!("DocsRun controller shutting down");
     Ok(())
 }
 
@@ -163,7 +157,7 @@ async fn run_code_controller(
     namespace: String,
     context: Arc<Context>,
 ) -> Result<()> {
-    error!("🚀 CODE_CONTROLLER DEBUG: Starting CodeRun controller");
+    info!("Starting CodeRun controller");
 
     let code_api: Api<CodeRun> = Api::namespaced(client.clone(), &namespace);
     let jobs_api: Api<Job> = Api::namespaced(client.clone(), &namespace);
@@ -179,13 +173,13 @@ async fn run_code_controller(
                     Ok(code_run_resource) => {
                         info!(
                             resource = ?code_run_resource,
-                            "✅ CODE_CONTROLLER: Reconciliation successful for CodeRun"
+                            "CodeRun reconciliation successful"
                         );
                     }
                     Err(reconciliation_err) => {
                         error!(
                             error = ?reconciliation_err,
-                            "❌ CODE_CONTROLLER: Reconciliation error"
+                            "CodeRun reconciliation error"
                         );
                     }
                 }
@@ -193,7 +187,7 @@ async fn run_code_controller(
         })
         .await;
 
-    error!("🏁 CODE_CONTROLLER DEBUG: CodeRun controller shutting down");
+    info!("CodeRun controller shutting down");
     Ok(())
 }
 

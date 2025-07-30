@@ -11,25 +11,22 @@ use kube::{Api, ResourceExt};
 use kube::api::{Patch, PatchParams};
 use serde_json::json;
 use std::sync::Arc;
-use tracing::{error, info, instrument};
+use tracing::{debug, info, instrument};
 
 #[instrument(skip(ctx), fields(docs_run_name = %docs_run.name_any(), namespace = %ctx.namespace))]
 pub async fn reconcile_docs_run(docs_run: Arc<DocsRun>, ctx: Arc<Context>) -> Result<Action> {
-    error!(
-        "🎯 DOCS DEBUG: Starting reconcile for DocsRun: {}",
-        docs_run.name_any()
-    );
+    info!("Starting reconcile for DocsRun: {}", docs_run.name_any());
 
     let namespace = &ctx.namespace;
     let client = &ctx.client;
     let name = docs_run.name_any();
 
-    error!("🔄 DOCS DEBUG: Reconciling DocsRun: {}", name);
+    debug!("Reconciling DocsRun: {}", name);
 
     // Create APIs
-    error!("🔗 DOCS DEBUG: Creating Kubernetes API clients...");
+    debug!("Creating Kubernetes API clients...");
     let docsruns: Api<DocsRun> = Api::namespaced(client.clone(), namespace);
-    error!("✅ DOCS DEBUG: API clients created successfully");
+    debug!("API clients created successfully");
 
     // Handle finalizers for cleanup
     let result = finalizer(&docsruns, DOCS_FINALIZER_NAME, docs_run.clone(), |event| async {
@@ -54,10 +51,7 @@ pub async fn reconcile_docs_run(docs_run: Arc<DocsRun>, ctx: Arc<Context>) -> Re
         }
     })?;
 
-    error!(
-        "🏁 DOCS DEBUG: reconcile completed with result: {:?}",
-        result
-    );
+    debug!("Reconcile completed with result: {:?}", result);
 
     Ok(result)
 }
@@ -65,52 +59,52 @@ pub async fn reconcile_docs_run(docs_run: Arc<DocsRun>, ctx: Arc<Context>) -> Re
 #[instrument(skip(ctx), fields(docs_run_name = %docs_run.name_any(), namespace = %ctx.namespace))]
 async fn reconcile_docs_create_or_update(docs_run: Arc<DocsRun>, ctx: &Context) -> Result<Action> {
     let docs_run_name = docs_run.name_any();
-    error!("🚀 DOCS DEBUG: Starting status-first idempotent reconcile for: {}", docs_run_name);
+    info!("Starting status-first idempotent reconcile for DocsRun: {}", docs_run_name);
     
     // STEP 1: Check DocsRun status first (status-first idempotency)
     if let Some(status) = &docs_run.status {
         // Check for completion based on work_completed field (TTL-safe)
         if status.work_completed == Some(true) {
-            error!("✅ DOCS DEBUG: Work already completed (work_completed=true), no further action needed");
+            info!("Work already completed (work_completed=true), no further action needed");
             return Ok(Action::await_change());
         }
         
         // Check legacy completion states
         match status.phase.as_str() {
             "Succeeded" => {
-                error!("✅ DOCS DEBUG: Already succeeded, ensuring work_completed is set");
+                info!("Already succeeded, ensuring work_completed is set");
                 update_docs_status_with_completion(&docs_run, ctx, "Succeeded", "Documentation generation completed successfully", true).await?;
                 return Ok(Action::await_change());
             }
             "Failed" => {
-                error!("❌ DOCS DEBUG: Already failed, no retry logic");
+                info!("Already failed, no retry logic");
                 return Ok(Action::await_change());
             }
             "Running" => {
-                error!("🔄 DOCS DEBUG: Status shows running, checking actual job state");
+                debug!("Status shows running, checking actual job state");
                 // Continue to job state check below
             }
             _ => {
-                error!("📝 DOCS DEBUG: Status is '{}', proceeding with job creation", status.phase);
+                debug!("Status is '{}', proceeding with job creation", status.phase);
                 // Continue to job creation below
             }
         }
     } else {
-        error!("📝 DOCS DEBUG: No status found, initializing");
+        debug!("No status found, initializing");
     }
     
     // STEP 2: Check job state for running jobs
     let jobs: Api<Job> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
     let configmaps: Api<ConfigMap> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
     let job_name = generate_job_name(&docs_run);
-    error!("🏷️ DOCS DEBUG: Generated job name: {}", job_name);
+    debug!("Generated job name: {}", job_name);
     
     let job_state = check_job_state(&jobs, &job_name).await?;
-    error!("📊 DOCS DEBUG: Current job state: {:?}", job_state);
+    debug!("Current job state: {:?}", job_state);
     
     match job_state {
         JobState::NotFound => {
-            error!("📝 DOCS DEBUG: No existing job found, using optimistic job creation");
+            debug!("No existing job found, using optimistic job creation");
             
             // STEP 3: Optimistic job creation with conflict handling
             let ctx_arc = Arc::new(ctx.clone()); 
@@ -127,7 +121,7 @@ async fn reconcile_docs_create_or_update(docs_run: Arc<DocsRun>, ctx: &Context) 
         }
         
         JobState::Running => {
-            error!("🔄 DOCS DEBUG: Job is still running, monitoring progress");
+            debug!("Job is still running, monitoring progress");
             
             // Update status to Running if needed
             update_docs_status_with_completion(&docs_run, ctx, "Running", "Documentation generation in progress", false).await?;
@@ -137,7 +131,7 @@ async fn reconcile_docs_create_or_update(docs_run: Arc<DocsRun>, ctx: &Context) 
         }
         
         JobState::Completed => {
-            error!("🎉 DOCS DEBUG: Job completed successfully - marking work as complete");
+            info!("Job completed successfully - marking work as complete");
             
             // Mark work as completed (TTL-safe)
             update_docs_status_with_completion(&docs_run, ctx, "Succeeded", "Documentation generation completed successfully", true).await?;
@@ -147,7 +141,7 @@ async fn reconcile_docs_create_or_update(docs_run: Arc<DocsRun>, ctx: &Context) 
         }
         
         JobState::Failed => {
-            error!("💥 DOCS DEBUG: Job failed - final state reached");
+            info!("Job failed - final state reached");
             
             // Update to failed status (work_completed remains false for potential retry)
             update_docs_status_with_completion(&docs_run, ctx, "Failed", "Documentation generation failed", false).await?;
@@ -160,7 +154,7 @@ async fn reconcile_docs_create_or_update(docs_run: Arc<DocsRun>, ctx: &Context) 
 
 #[instrument(skip(ctx), fields(docs_run_name = %docs_run.name_any(), namespace = %ctx.namespace))]
 async fn cleanup_docs_resources(docs_run: Arc<DocsRun>, ctx: &Context) -> Result<Action> {
-    error!("🧹 DOCS DEBUG: Cleaning up resources for DocsRun");
+    debug!("Cleaning up resources for DocsRun");
     
     // Create APIs
     let jobs: Api<Job> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
@@ -258,11 +252,11 @@ async fn update_docs_status_with_completion(
     let current_work_completed = docs_run.status.as_ref().and_then(|s| s.work_completed).unwrap_or(false);
     
     if current_phase == new_phase && current_work_completed == work_completed {
-        info!("📊 DOCS DEBUG: Status already '{}' with work_completed={}, skipping update to prevent reconciliation", new_phase, work_completed);
+        debug!("Status already '{}' with work_completed={}, skipping update to prevent reconciliation", new_phase, work_completed);
         return Ok(());
     }
     
-    error!("📊 DOCS DEBUG: Updating status from '{}' (work_completed={}) to '{}' (work_completed={})", 
+    debug!("Updating status from '{}' (work_completed={}) to '{}' (work_completed={})", 
            current_phase, current_work_completed, new_phase, work_completed);
     
     let docsruns: Api<DocsRun> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
@@ -283,6 +277,6 @@ async fn update_docs_status_with_completion(
         &Patch::Merge(&status_patch)
     ).await?;
     
-    error!("✅ DOCS DEBUG: Status updated successfully to '{}' with work_completed={}", new_phase, work_completed);
+    debug!("Status updated successfully to '{}' with work_completed={}", new_phase, work_completed);
     Ok(())
 }
