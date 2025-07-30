@@ -223,12 +223,44 @@ else
     # Step 3: Copy task files from docs repo to target repo
     echo "📋 TASK FILES: COPYING from docs to target repository"
     mkdir -p "/workspace/$TARGET_REPO_NAME/task"
-    if [ -d "/tmp/docs-repo/.taskmaster/tasks" ]; then
-        cp -r "/tmp/docs-repo/.taskmaster/tasks/"* "/workspace/$TARGET_REPO_NAME/task/" 2>/dev/null || echo "⚠️ No individual task files found"
+    
+    # Determine docs project directory path
+    {{#if docs_project_directory}}
+    if [ "{{docs_project_directory}}" = "." ]; then
+        DOCS_PATH="/tmp/docs-repo/.taskmaster"
+    else
+        DOCS_PATH="/tmp/docs-repo/{{docs_project_directory}}/.taskmaster"
     fi
-    if [ -f "/tmp/docs-repo/.taskmaster/tasks.json" ]; then
-        cp "/tmp/docs-repo/.taskmaster/tasks.json" "/workspace/$TARGET_REPO_NAME/task/"
+    {{else}}
+    DOCS_PATH="/tmp/docs-repo/.taskmaster"
+    {{/if}}
+    
+    # Copy specific task files
+    TASK_DIR="$DOCS_PATH/docs/task-{{task_id}}"
+    if [ -d "$TASK_DIR" ]; then
+        cp "$TASK_DIR/task.md" "/workspace/$TARGET_REPO_NAME/task/" 2>/dev/null || echo "⚠️ task.md not found"
+        cp "$TASK_DIR/acceptance-criteria.md" "/workspace/$TARGET_REPO_NAME/task/" 2>/dev/null || echo "⚠️ acceptance-criteria.md not found"
+        cp "$TASK_DIR/prompt.md" "/workspace/$TARGET_REPO_NAME/task/" 2>/dev/null || echo "⚠️ prompt.md not found"
+        echo "✓ Task {{task_id}} files copied from $TASK_DIR"
+    else
+        echo "❌ CRITICAL: Task {{task_id}} directory not found at: $TASK_DIR"
     fi
+    
+    # Copy architecture.md from docs root
+    ARCH_FILE="$DOCS_PATH/docs/architecture.md"
+    if [ -f "$ARCH_FILE" ]; then
+        cp "$ARCH_FILE" "/workspace/$TARGET_REPO_NAME/task/"
+        echo "✓ Architecture documentation copied"
+    else
+        echo "⚠️ architecture.md not found at: $ARCH_FILE"
+    fi
+    
+    # Copy tasks.json if it exists
+    if [ -f "$DOCS_PATH/tasks.json" ]; then
+        cp "$DOCS_PATH/tasks.json" "/workspace/$TARGET_REPO_NAME/task/"
+        echo "✓ tasks.json copied"
+    fi
+    
     echo "✓ Task files copied to target repository"
     
     # Step 4: Clean up docs repository
