@@ -478,10 +478,7 @@ fi
 # Copy Current Task Documentation to Working Directory
 echo "=== TASK DOCUMENTATION SETUP ==="
 
-# Remove any previous task content to avoid confusion
-rm -rf "$CLAUDE_WORK_DIR/task/" 2>/dev/null
-
-# Create clean task directory for current task only
+# Task directory should already exist from multi-repo workflow or be created as needed
 mkdir -p "$CLAUDE_WORK_DIR/task"
 
 # Task documentation should already be available in the task/ directory
