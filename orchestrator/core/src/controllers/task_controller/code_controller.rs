@@ -190,8 +190,10 @@ fn generate_code_job_name(code_run: &CodeRun) -> String {
     let uid_suffix = code_run.metadata.uid.as_deref()
         .map(|uid| &uid[..8])
         .unwrap_or("nouid");
+    let task_id = code_run.spec.task_id;
+    let context_version = code_run.spec.context_version;
     
-    format!("code-{namespace}-{name}-{uid_suffix}")
+    format!("code-{namespace}-{name}-{uid_suffix}-t{task_id}-v{context_version}")
         .replace(['_', '.'], "-")
         .to_lowercase()
 }

@@ -35,7 +35,7 @@ jobs:
             VERSION="${{ inputs.tag }}"
           else
             # For push events, use specific tag for TTL fix testing
-            VERSION="ttl-fix-v2"
+            VERSION="ttl-fix-v3"
           fi
           SHORT_SHA=$(git rev-parse --short HEAD)
 
