@@ -659,7 +659,7 @@ echo "Starting Claude execution..."
 echo "=========================="
 
 # Safe mode toggle for debugging (prevents token consumption)
-SAFE_MODE="false"  # Set to "false" for full task execution
+SAFE_MODE="true"  # Set to "false" for full task execution
 
 if [ "$SAFE_MODE" = "true" ]; then
     echo "🛡️ SAFE MODE ENABLED - Running simple test instead of full task"
