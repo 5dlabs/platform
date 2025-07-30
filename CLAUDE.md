@@ -33,6 +33,27 @@ cargo build --release --bin fdl --bin fdl-mcp
 cargo test test_name
 ```
 
+**Testing CLI and MCP Server Changes:**
+```bash
+# After making changes to orchestrator/tools/src/, install updated binaries globally
+cargo install --path orchestrator/tools
+
+# This updates both binaries:
+# - fdl (CLI tool)
+# - fdl-mcp (MCP server)
+
+# Test CLI directly
+fdl task docs --help
+
+# Test MCP server integration
+# MCP tools (like Cursor) will automatically use the updated fdl-mcp binary
+# since it's installed globally in ~/.cargo/bin/
+
+# Verify installation
+which fdl
+which fdl-mcp
+```
+
 ### Kubernetes and Infrastructure
 
 **Deploy the platform:**

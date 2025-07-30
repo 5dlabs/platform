@@ -345,7 +345,7 @@ impl<'a> CodeResourceManager<'a> {
         let image = format!("{}:{}", self.config.agent.image.repository, self.config.agent.image.tag);
         
         // Build environment variables for code tasks
-        let mut env_vars = vec![
+        let env_vars = vec![
             json!({
                 "name": "GITHUB_TOKEN",
                 "valueFrom": {
@@ -366,20 +366,7 @@ impl<'a> CodeResourceManager<'a> {
             })
         ];
 
-        // Add code-specific environment variables based on spec
-        if let Some(local_tools) = &code_run.spec.local_tools {
-            env_vars.push(json!({
-                "name": "LOCAL_TOOLS",
-                "value": local_tools
-            }));
-        }
-
-        if let Some(remote_tools) = &code_run.spec.remote_tools {
-            env_vars.push(json!({
-                "name": "REMOTE_TOOLS", 
-                "value": remote_tools
-            }));
-        }
+        // Code-specific environment variables will be added here when needed
 
         let job_spec = json!({
             "apiVersion": "batch/v1",

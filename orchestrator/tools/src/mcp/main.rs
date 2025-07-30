@@ -60,6 +60,20 @@ struct RpcRequest {
     id: Option<Value>,
 }
 
+/// Validate repository format (org/repo or user/repo)
+fn validate_repository_format(repo: &str) -> Result<()> {
+    let parts: Vec<&str> = repo.split('/').collect();
+    if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
+        return Err(anyhow!("Repository must be in format 'org/repo' or 'user/repo'"));
+    }
+    Ok(())
+}
+
+/// Convert org/repo format to HTTPS URL
+fn repo_to_https_url(repo: &str) -> String {
+    format!("https://github.com/{repo}.git")
+}
+
 /// Run the orchestrator CLI command
 fn run_orchestrator_cli(args: &[&str]) -> Result<String> {
     // Use the local build in the same directory as this MCP binary
@@ -228,28 +242,42 @@ fn handle_orchestrator_tools(
                 Some(s) => s,
                 None => return Some(Err(anyhow!("Missing required parameter: service"))),
             };
+            
+            // Extract required repository parameters in org/repo format
+            let repository = match params_map.get("repository").and_then(|v| v.as_str()) {
+                Some(r) => r,
+                None => return Some(Err(anyhow!("Missing required parameter: repository"))),
+            };
+            
+            let docs_repository = match params_map.get("docs_repository").and_then(|v| v.as_str()) {
+                Some(r) => r,
+                None => return Some(Err(anyhow!("Missing required parameter: docs_repository"))),
+            };
+            
+            // Extract required directory parameters
+            let docs_project_directory = match params_map.get("docs_project_directory").and_then(|v| v.as_str()) {
+                Some(d) => d,
+                None => return Some(Err(anyhow!("Missing required parameter: docs_project_directory"))),
+            };
+            
+            let working_directory = match params_map.get("working_directory").and_then(|v| v.as_str()) {
+                Some(d) => d,
+                None => return Some(Err(anyhow!("Missing required parameter: working_directory"))),
+            };
+            
+            // Validate repository format (org/repo)
+            if let Err(e) = validate_repository_format(repository) {
+                return Some(Err(anyhow!("Invalid repository format '{}': {}", repository, e)));
+            }
+            if let Err(e) = validate_repository_format(docs_repository) {
+                return Some(Err(anyhow!("Invalid docs_repository format '{}': {}", docs_repository, e)));
+            }
 
-            // Extract optional parameters with defaults
-            let docs_repository_url = params_map
-                .get("docs_repository_url")
-                .and_then(|v| v.as_str());
 
-            let docs_project_directory = params_map
-                .get("docs_project_directory")
-                .and_then(|v| v.as_str());
-
-            let working_directory = params_map.get("working_directory").and_then(|v| v.as_str());
-
-            // Extract parameters with task-specific default
+            // Extract optional model parameter (no default - let CLI/backend handle it)
             let model = params_map
                 .get("model")
-                .and_then(|v| v.as_str())
-                .filter(|s| !s.is_empty());
-
-            let model = match model {
-                Some(m) => m,
-                None => return Some(Err(anyhow!("Model parameter is required. Please specify a model like 'claude-opus-4-20250514' or 'claude-sonnet-4-20250514'"))),
-            };
+                .and_then(|v| v.as_str());
 
             let github_user = params_map.get("github_user").and_then(|v| v.as_str());
 
@@ -257,19 +285,6 @@ fn handle_orchestrator_tools(
             let env_code_user = std::env::var("FDL_DEFAULT_CODE_USER").ok();
             let github_user = env_code_user.as_deref().or(github_user);
 
-            let local_tools = params_map.get("local_tools").and_then(|v| v.as_str());
-
-            let remote_tools = params_map.get("remote_tools").and_then(|v| v.as_str());
-
-            let context_version = params_map
-                .get("context_version")
-                .and_then(serde_json::Value::as_u64)
-                .and_then(|v| u32::try_from(v).ok())
-                .unwrap_or(1);
-
-            let prompt_modification = params_map
-                .get("prompt_modification")
-                .and_then(|v| v.as_str());
 
             let docs_branch = params_map
                 .get("docs_branch")
@@ -281,20 +296,17 @@ fn handle_orchestrator_tools(
                 .and_then(serde_json::Value::as_bool)
                 .unwrap_or(false);
 
-            let overwrite_memory = params_map
-                .get("overwrite_memory")
-                .and_then(serde_json::Value::as_bool)
-                .unwrap_or(false);
-
             let env = params_map.get("env").and_then(|v| v.as_object());
 
             let env_from_secrets = params_map
                 .get("env_from_secrets")
                 .and_then(|v| v.as_array());
 
-            // Validate model parameter - allow any model that starts with "claude-"
-            if !model.starts_with("claude-") {
-                return Some(Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name (e.g., 'claude-sonnet-4-20250514')", model)));
+            // Validate model parameter if provided - allow any model that starts with "claude-"
+            if let Some(m) = model {
+                if !m.starts_with("claude-") {
+                    return Some(Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name (e.g., 'claude-sonnet-4-20250514')", m)));
+                }
             }
 
             // Validate service name (must be valid for PVC naming)
@@ -305,6 +317,10 @@ fn handle_orchestrator_tools(
                 return Some(Err(anyhow!("Invalid service name '{}'. Must contain only lowercase letters, numbers, and hyphens", service)));
             }
 
+            // Convert org/repo format to URLs for CLI
+            let repository_url = repo_to_https_url(repository);
+            let docs_repository_url = repo_to_https_url(docs_repository);
+
             // Build CLI arguments using the new CLI interface
             let mut args = vec!["task", "code"];
 
@@ -312,23 +328,18 @@ fn handle_orchestrator_tools(
             let task_id_str = task_id.to_string();
             args.push(&task_id_str);
             args.extend(&["--service", service]);
-
-            // Add model parameter
-            args.extend(&["--model", model]);
-
-            // Add docs repository URL if specified
-            if let Some(docs_repo) = docs_repository_url {
-                args.extend(&["--docs-repository-url", docs_repo]);
-            }
-
-            // Add docs project directory if specified
-            if let Some(docs_proj_dir) = docs_project_directory {
-                args.extend(&["--docs-project-directory", docs_proj_dir]);
-            }
-
-            // Add working directory if specified
-            if let Some(wd) = working_directory {
-                args.extend(&["--working-directory", wd]);
+            
+            // Add required repository URLs (converted from org/repo format)
+            args.extend(&["--repository-url", &repository_url]);
+            args.extend(&["--docs-repository-url", &docs_repository_url]);
+            
+            // Add required directory parameters
+            args.extend(&["--docs-project-directory", docs_project_directory]);
+            args.extend(&["--working-directory", working_directory]);
+            
+            // Add model parameter only if provided
+            if let Some(m) = model {
+                args.extend(&["--model", m]);
             }
 
             // Add GitHub user if specified
@@ -336,34 +347,12 @@ fn handle_orchestrator_tools(
                 args.extend(&["--github-user", user]);
             }
 
-            // Add tool configuration parameters
-            if let Some(local) = local_tools {
-                args.extend(&["--local-tools", local]);
-            }
-
-            if let Some(remote) = remote_tools {
-                args.extend(&["--remote-tools", remote]);
-            }
-
-            // Add context version
-            let context_version_str = context_version.to_string();
-            args.extend(&["--context-version", &context_version_str]);
-
-            // Add prompt modification if specified
-            if let Some(prompt_mod) = prompt_modification {
-                args.extend(&["--prompt-modification", prompt_mod]);
-            }
-
-            // Add docs branch
+            // Add docs branch (with default)
             args.extend(&["--docs-branch", docs_branch]);
 
             // Add session flags
             if continue_session {
                 args.push("--continue-session");
-            }
-
-            if overwrite_memory {
-                args.push("--overwrite-memory");
             }
 
             // Prepare environment variables string if specified
@@ -415,18 +404,14 @@ fn handle_orchestrator_tools(
                     "parameters_used": {
                         "task_id": task_id,
                         "service": service,
-                        "docs_repository_url": docs_repository_url,
+                        "repository": repository,
+                        "docs_repository": docs_repository,
                         "docs_project_directory": docs_project_directory,
                         "working_directory": working_directory,
-                        "model": model,
+                        "model": model.unwrap_or("default from Helm configuration"),
                         "github_user": github_user,
-                        "local_tools": local_tools,
-                        "remote_tools": remote_tools,
-                        "context_version": context_version,
-                        "prompt_modification": prompt_modification,
                         "docs_branch": docs_branch,
                         "continue_session": continue_session,
-                        "overwrite_memory": overwrite_memory,
                         "env": env,
                         "env_from_secrets": env_from_secrets
                     }

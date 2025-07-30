@@ -23,8 +23,7 @@ fn get_init_docs_schema() -> Value {
                 },
                 "model": {
                     "type": "string",
-                    "description": "Claude model to use (default: 'claude-opus-4-20250514')",
-                    "default": "claude-opus-4-20250514"
+                    "description": "Claude model to use (optional, defaults to Helm configuration value)"
                 },
                 "github_user": {
                     "type": "string",
@@ -45,7 +44,7 @@ fn get_submit_implementation_task_schema() -> Value {
             "properties": {
                 "task_id": {
                     "type": "integer",
-                    "description": "REQUIRED: Task ID to implement from tasks.json",
+                    "description": "REQUIRED: Task ID to implement from task files",
                     "minimum": 1
                 },
                 "service": {
@@ -53,70 +52,48 @@ fn get_submit_implementation_task_schema() -> Value {
                     "description": "REQUIRED: Target service name (creates workspace-{service} PVC)",
                     "pattern": "^[a-z0-9-]+$"
                 },
-                "working_directory": {
+                "repository": {
                     "type": "string",
-                    "description": "Working directory within target repository (required)"
+                    "description": "REQUIRED: Target repository in format 'org/repo' or 'user/repo' (e.g., '5dlabs/platform')"
                 },
-                "model": {
-                    "type": "string",
-                    "description": "Claude model to use (default: 'claude-sonnet-4-20250514')",
-                    "default": "claude-sonnet-4-20250514"
-                },
-                "docs_repository_url": {
-                    "type": "string",
-                    "description": "Documentation repository URL (where Task Master definitions come from)"
+                "docs_repository": {
+                    "type": "string", 
+                    "description": "REQUIRED: Documentation repository in format 'org/repo' or 'user/repo' where Task Master definitions are stored"
                 },
                 "docs_project_directory": {
                     "type": "string",
-                    "description": "Project directory within docs repository (e.g. '_projects/simple-api')"
+                    "description": "REQUIRED: Project directory within docs repository (e.g., '_projects/simple-api')"
+                },
+                "working_directory": {
+                    "type": "string",
+                    "description": "REQUIRED: Working directory within target repository"
+                },
+                "model": {
+                    "type": "string",
+                    "description": "Claude model to use (optional, defaults to Helm configuration value)"
                 },
                 "github_user": {
                     "type": "string",
-                    "description": "GitHub username for authentication (optional if FDL_DEFAULT_CODE_USER environment variable is set, which takes precedence)"
-                },
-                "local_tools": {
-                    "type": "string",
-                    "description": "Comma-separated list of local MCP tools/servers to enable (e.g., 'mcp-server-git,taskmaster')"
-                },
-                "remote_tools": {
-                    "type": "string",
-                    "description": "Comma-separated list of remote MCP tools/servers to enable (e.g., 'api-docs-tool')"
-                },
-                "context_version": {
-                    "type": "integer",
-                    "description": "Context version for retry attempts (incremented on each retry, default: 1)",
-                    "minimum": 1,
-                    "default": 1
-                },
-                "prompt_modification": {
-                    "type": "string",
-                    "description": "Additional context for retry attempts"
+                    "description": "GitHub username for authentication (optional if FDL_DEFAULT_CODE_USER environment variable is set)"
                 },
                 "docs_branch": {
                     "type": "string",
-                    "description": "Docs branch to use (e.g., 'main', 'feature/branch', default: 'main')",
-                    "default": "main"
+                    "description": "Docs branch to use (optional, defaults to 'main')"
                 },
                 "continue_session": {
                     "type": "boolean",
-                    "description": "Whether to continue a previous session (auto-continue on retries or user-requested, default: false)",
-                    "default": false
-                },
-                "overwrite_memory": {
-                    "type": "boolean",
-                    "description": "Whether to overwrite memory before starting (default: false)",
-                    "default": false
+                    "description": "Whether to continue a previous session (optional, defaults to false)"
                 },
                 "env": {
                     "type": "object",
-                    "description": "Environment variables to set in the container (key-value pairs)",
+                    "description": "Environment variables to set in the container (optional)",
                     "additionalProperties": {
                         "type": "string"
                     }
                 },
                 "env_from_secrets": {
                     "type": "array",
-                    "description": "Environment variables from secrets",
+                    "description": "Environment variables from secrets (optional)",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -137,7 +114,7 @@ fn get_submit_implementation_task_schema() -> Value {
                     }
                 }
             },
-            "required": ["task_id", "service", "working_directory"]
+            "required": ["task_id", "service", "repository", "docs_repository", "docs_project_directory", "working_directory"]
         }
     })
 }

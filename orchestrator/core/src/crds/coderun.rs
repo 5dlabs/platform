@@ -79,21 +79,11 @@ pub struct CodeRunSpec {
     #[serde(rename = "githubUser")]
     pub github_user: String,
 
-    /// Local MCP tools/servers to enable (comma-separated)
-    #[serde(default, rename = "localTools")]
-    pub local_tools: Option<String>,
-
-    /// Remote MCP tools/servers to enable (comma-separated)
-    #[serde(default, rename = "remoteTools")]
-    pub remote_tools: Option<String>,
 
     /// Context version for retry attempts (incremented on each retry)
     #[serde(default = "default_context_version", rename = "contextVersion")]
     pub context_version: u32,
 
-    /// Additional context for retry attempts
-    #[serde(default, rename = "promptModification")]
-    pub prompt_modification: Option<String>,
 
     /// Docs branch to use (e.g., "main", "feature/branch")
     #[serde(default = "default_docs_branch", rename = "docsBranch")]

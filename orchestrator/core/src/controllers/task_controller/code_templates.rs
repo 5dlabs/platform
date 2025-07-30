@@ -67,8 +67,6 @@ impl CodeTemplateGenerator {
             "continue_session": Self::get_continue_session(code_run),
             "overwrite_memory": code_run.spec.overwrite_memory,
             "docs_project_directory": code_run.spec.docs_project_directory.as_deref().unwrap_or(""),
-            "local_tools": code_run.spec.local_tools.as_deref().unwrap_or(""),
-            "remote_tools": code_run.spec.remote_tools.as_deref().unwrap_or(""),
             "github_user": code_run.spec.github_user,
         });
 
@@ -103,7 +101,6 @@ impl CodeTemplateGenerator {
             "github_user": code_run.spec.github_user,
             "model": code_run.spec.model,
             "context_version": code_run.spec.context_version,
-            "prompt_modification": code_run.spec.prompt_modification.as_deref().unwrap_or(""),
         });
 
         handlebars.render("claude_memory", &context).map_err(|e| {
@@ -157,8 +154,6 @@ impl CodeTemplateGenerator {
 
         let context = json!({
             "github_user": code_run.spec.github_user,
-            "local_tools": code_run.spec.local_tools.as_deref().unwrap_or(""),
-            "remote_tools": code_run.spec.remote_tools.as_deref().unwrap_or(""),
             "toolman_server_url": "http://toolman-server:3000", // Default toolman server URL
         });
 
@@ -185,8 +180,6 @@ impl CodeTemplateGenerator {
 
         let context = json!({
             "github_user": code_run.spec.github_user,
-            "local_tools": code_run.spec.local_tools.as_deref().unwrap_or(""),
-            "remote_tools": code_run.spec.remote_tools.as_deref().unwrap_or(""),
             "toolman_server_url": "http://toolman-server:3000", // Default toolman server URL
         });
 
@@ -250,7 +243,7 @@ impl CodeTemplateGenerator {
         })
     }
 
-    fn generate_mcp_tools_doc(code_run: &CodeRun) -> Result<String> {
+    fn generate_mcp_tools_doc(_code_run: &CodeRun) -> Result<String> {
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(false);
 
@@ -265,8 +258,6 @@ impl CodeTemplateGenerator {
             })?;
 
         let context = json!({
-            "local_tools": code_run.spec.local_tools.as_deref().unwrap_or(""),
-            "remote_tools": code_run.spec.remote_tools.as_deref().unwrap_or(""),
         });
 
         handlebars.render("mcp_tools", &context).map_err(|e| {
