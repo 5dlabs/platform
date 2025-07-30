@@ -658,20 +658,28 @@ You have a DANGEROUS tendency to declare task completion before actually verifyi
 echo "Starting Claude execution..."
 echo "=========================="
 
-# Check if prompt.md exists and use it as main prompt
-if [ -f "$CLAUDE_WORK_DIR/task/prompt.md" ]; then
-    echo "✓ Using task-specific prompt from docs service: task/prompt.md"
+# Safe mode toggle for debugging (prevents token consumption)
+SAFE_MODE="true"  # Set to "false" for full task execution
 
-    echo "startingTask:{{task_id}}"
-    echo ""
-
-    # Use main prompt with appended system prompt
-    $CLAUDE_CMD --append-system-prompt "$SYSTEM_PROMPT" "$(cat $CLAUDE_WORK_DIR/task/prompt.md)"
+if [ "$SAFE_MODE" = "true" ]; then
+    echo "🛡️ SAFE MODE ENABLED - Running simple test instead of full task"
+    echo "What time is it? Please answer this simple question and exit immediately." | $CLAUDE_CMD
 else
-    echo "❌ ERROR: No prompt.md found from docs service"
-    echo "The docs service should always provide task/prompt.md"
-    echo "Check docs repository and task configuration"
-    exit 1
+    # Check if prompt.md exists and use it as main prompt
+    if [ -f "$CLAUDE_WORK_DIR/task/prompt.md" ]; then
+        echo "✓ Using task-specific prompt from docs service: task/prompt.md"
+
+        echo "startingTask:{{task_id}}"
+        echo ""
+
+        # Use main prompt with appended system prompt
+        $CLAUDE_CMD --append-system-prompt "$SYSTEM_PROMPT" "$(cat $CLAUDE_WORK_DIR/task/prompt.md)"
+    else
+        echo "❌ ERROR: No prompt.md found from docs service"
+        echo "The docs service should always provide task/prompt.md"
+        echo "Check docs repository and task configuration"
+        exit 1
+    fi
 fi
 
 echo '════════════════════════════════════════════════════════════════'
