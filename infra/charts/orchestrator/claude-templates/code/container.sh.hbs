@@ -237,13 +237,31 @@ else
     
     # Copy specific task files
     TASK_DIR="$DOCS_PATH/docs/task-{{task_id}}"
+    echo "🔍 DEBUG: Looking for task files at: $TASK_DIR"
+    echo "🔍 DEBUG: Docs path is: $DOCS_PATH"
+    echo "🔍 DEBUG: Contents of docs temp directory:"
+    ls -la /tmp/docs-repo/.taskmaster/ || echo "No .taskmaster found"
+    echo "🔍 DEBUG: Contents of docs directory:"
+    ls -la /tmp/docs-repo/.taskmaster/docs/ || echo "No docs directory found"
+    
     if [ -d "$TASK_DIR" ]; then
-        cp "$TASK_DIR/task.md" "/workspace/$TARGET_REPO_NAME/task/" 2>/dev/null || echo "⚠️ task.md not found"
-        cp "$TASK_DIR/acceptance-criteria.md" "/workspace/$TARGET_REPO_NAME/task/" 2>/dev/null || echo "⚠️ acceptance-criteria.md not found"
-        cp "$TASK_DIR/prompt.md" "/workspace/$TARGET_REPO_NAME/task/" 2>/dev/null || echo "⚠️ prompt.md not found"
+        echo "🔍 DEBUG: Task directory found, contents:"
+        ls -la "$TASK_DIR"
+        
+        echo "✅ Copying task.md..."
+        cp "$TASK_DIR/task.md" "/workspace/$TARGET_REPO_NAME/task/" && echo "✓ task.md copied" || echo "❌ task.md copy failed"
+        
+        echo "✅ Copying acceptance-criteria.md..."
+        cp "$TASK_DIR/acceptance-criteria.md" "/workspace/$TARGET_REPO_NAME/task/" && echo "✓ acceptance-criteria.md copied" || echo "❌ acceptance-criteria.md copy failed"
+        
+        echo "✅ Copying prompt.md..."
+        cp "$TASK_DIR/prompt.md" "/workspace/$TARGET_REPO_NAME/task/" && echo "✓ prompt.md copied" || echo "❌ prompt.md copy failed"
+        
         echo "✓ Task {{task_id}} files copied from $TASK_DIR"
     else
         echo "❌ CRITICAL: Task {{task_id}} directory not found at: $TASK_DIR"
+        echo "🔍 DEBUG: Available directories in docs:"
+        find /tmp/docs-repo -name "task-*" -type d || echo "No task directories found"
     fi
     
     # Copy architecture.md from docs root
