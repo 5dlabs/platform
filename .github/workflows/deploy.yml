@@ -34,8 +34,8 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             VERSION="${{ inputs.tag }}"
           else
-            # For push events, use latest
-            VERSION="latest"
+            # For push events, use specific tag for TTL fix testing
+            VERSION="ttl-fix-v1"
           fi
           SHORT_SHA=$(git rev-parse --short HEAD)
 
