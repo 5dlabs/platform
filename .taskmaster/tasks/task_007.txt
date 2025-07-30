@@ -1,0 +1,173 @@
+# Task ID: 7
+# Title: Create Kubernetes Deployment Manifests
+# Status: pending
+# Dependencies: 6
+# Priority: medium
+# Description: Create Kubernetes deployment manifests for deploying the application to a Kubernetes cluster.
+# Details:
+1. Create kubernetes/deployment.yaml:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world-api
+  labels:
+    app: hello-world-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hello-world-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: hello-world-api
+    spec:
+      containers:
+      - name: hello-world-api
+        image: hello-world-api:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3000"
+        resources:
+          limits:
+            cpu: "0.2"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+```
+
+2. Create kubernetes/service.yaml:
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-world-api
+  labels:
+    app: hello-world-api
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: hello-world-api
+```
+
+3. Create kubernetes/ingress.yaml:
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello-world-api
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: hello-api.example.com  # Replace with actual domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: hello-world-api
+            port:
+              number: 80
+```
+
+4. Create kubernetes/configmap.yaml:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hello-world-api-config
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+```
+
+5. Create scripts/k8s-deploy.sh:
+```bash
+#!/bin/bash
+set -e
+
+echo "Applying Kubernetes manifests..."
+kubectl apply -f kubernetes/configmap.yaml
+kubectl apply -f kubernetes/deployment.yaml
+kubectl apply -f kubernetes/service.yaml
+kubectl apply -f kubernetes/ingress.yaml
+
+echo "Waiting for deployment to be ready..."
+kubectl rollout status deployment/hello-world-api
+
+echo "Deployment complete!"
+echo "Service available at: http://hello-api.example.com"
+```
+
+6. Make the script executable: `chmod +x scripts/k8s-deploy.sh`
+
+# Test Strategy:
+1. Apply the Kubernetes manifests to a test cluster
+2. Verify the deployment, service, and ingress are created successfully
+3. Test the health endpoint through the service
+4. Verify that the readiness and liveness probes are working correctly
+5. Test scaling the deployment up and down
+6. Verify that rolling updates work correctly
+
+# Subtasks:
+## 1. Define Deployment Manifest [pending]
+### Dependencies: None
+### Description: Create a Kubernetes deployment manifest (deployment.yaml) specifying the application's desired state, including replica count, container image, resource requests/limits, environment variables, and health probes.
+### Details:
+Write deployment.yaml using apiVersion: apps/v1, kind: Deployment, and include metadata, spec, selector, strategy, and template sections. Ensure readiness and liveness probes, resource requests/limits, and environment variables are defined according to best practices.
+
+## 2. Define Service Manifest [pending]
+### Dependencies: 7.1
+### Description: Create a Kubernetes service manifest (service.yaml) to expose the deployment internally within the cluster using a ClusterIP service.
+### Details:
+Write service.yaml with apiVersion: v1, kind: Service, and define metadata, spec, ports, and selector fields to route traffic to the deployment pods.
+
+## 3. Define Ingress Manifest [pending]
+### Dependencies: 7.2
+### Description: Create a Kubernetes ingress manifest (ingress.yaml) to expose the service externally and configure routing based on host and path.
+### Details:
+Write ingress.yaml with apiVersion: networking.k8s.io/v1, kind: Ingress, and specify metadata, annotations, and rules for routing HTTP traffic to the service.
+
+## 4. Define ConfigMap Manifest [pending]
+### Dependencies: None
+### Description: Create a Kubernetes ConfigMap manifest (configmap.yaml) to manage environment-specific configuration for the application.
+### Details:
+Write configmap.yaml with apiVersion: v1, kind: ConfigMap, and define metadata and data fields for environment variables such as NODE_ENV and PORT.
+
+## 5. Create Deployment Automation Script [pending]
+### Dependencies: 7.1, 7.2, 7.3, 7.4
+### Description: Develop a shell script (k8s-deploy.sh) to automate the application of all Kubernetes manifests and manage deployment rollout.
+### Details:
+Write k8s-deploy.sh to sequentially apply configmap.yaml, deployment.yaml, service.yaml, and ingress.yaml, then wait for the deployment to become ready. Make the script executable.
+

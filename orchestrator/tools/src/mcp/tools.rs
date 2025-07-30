@@ -49,7 +49,7 @@ fn get_submit_implementation_task_schema() -> Value {
                 },
                 "service": {
                     "type": "string",
-                    "description": "REQUIRED: Target service name (creates workspace-{service} PVC)",
+                    "description": "REQUIRED: Target service name (creates workspace-{service} PVC) - can be overridden by FDL_DEFAULT_SERVICE environment variable",
                     "pattern": "^[a-z0-9-]+$"
                 },
                 "repository": {
@@ -62,23 +62,19 @@ fn get_submit_implementation_task_schema() -> Value {
                 },
                 "docs_project_directory": {
                     "type": "string",
-                    "description": "REQUIRED: Project directory within docs repository (e.g., '_projects/simple-api')"
+                    "description": "REQUIRED: Project directory within docs repository (e.g., '_projects/simple-api', use '.' for repo root)"
+                },
+                "github_user": {
+                    "type": "string",
+                    "description": "REQUIRED: GitHub username for authentication and task assignment"
                 },
                 "working_directory": {
                     "type": "string",
-                    "description": "REQUIRED: Working directory within target repository"
+                    "description": "Working directory within target repository (optional, defaults to '.' for repo root)"
                 },
                 "model": {
                     "type": "string",
                     "description": "Claude model to use (optional, defaults to Helm configuration value)"
-                },
-                "github_user": {
-                    "type": "string",
-                    "description": "GitHub username for authentication (optional if FDL_DEFAULT_CODE_USER environment variable is set)"
-                },
-                "docs_branch": {
-                    "type": "string",
-                    "description": "Docs branch to use (optional, defaults to 'main')"
                 },
                 "continue_session": {
                     "type": "boolean",
@@ -114,7 +110,7 @@ fn get_submit_implementation_task_schema() -> Value {
                     }
                 }
             },
-            "required": ["task_id", "service", "repository", "docs_repository", "docs_project_directory", "working_directory"]
+            "required": ["task_id", "service", "repository", "docs_repository", "docs_project_directory", "github_user"]
         }
     })
 }

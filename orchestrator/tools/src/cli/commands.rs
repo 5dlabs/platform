@@ -42,7 +42,6 @@ pub async fn handle_task_command(
             github_user,
             working_directory,
             model,
-            docs_branch,
             continue_session,
             env,
             env_from_secrets,
@@ -58,7 +57,6 @@ pub async fn handle_task_command(
                 &github_user,
                 working_directory.as_deref(),
                 model.as_deref(),
-                &docs_branch,
                 continue_session,
                 env.as_deref(),
                 env_from_secrets.as_deref(),
@@ -144,7 +142,6 @@ async fn handle_code_command(
     github_user: &str,
     working_directory: Option<&str>,
     model: Option<&str>,
-    docs_branch: &str,
     continue_session: bool,
     env: Option<&str>,
     env_from_secrets: Option<&str>,
@@ -184,6 +181,9 @@ async fn handle_code_command(
     
     // Set overwrite_memory to false (not user-configurable)
     let overwrite_memory = false;
+    
+    // Auto-detect current git branch for docs
+    let docs_branch = get_git_current_branch()?;
 
     // Parse environment variables
     let env_map = parse_env_vars(env)?;
@@ -210,7 +210,7 @@ async fn handle_code_command(
     output.info(&format!("Target repository: {repo_url}"));
     output.info(&format!("Docs repository: {docs_repo_url}"));
     output.info(&format!("Docs project directory: {docs_proj_dir}"));
-    output.info(&format!("Docs branch: {docs_branch}"));
+    output.info(&format!("Docs branch: {docs_branch} (auto-detected)"));
     output.info(&format!("Working directory: {working_dir}"));
     output.info(&format!("Context version: {context_version} (auto-detected)"));
     output.info(&format!("GitHub user: {github_user_name}"));
@@ -259,6 +259,25 @@ fn get_git_remote_url() -> Result<String> {
     Ok(String::from_utf8(output.stdout)?.trim().to_string())
 }
 
+/// Get current git branch
+fn get_git_current_branch() -> Result<String> {
+    use std::process::Command;
+
+    let output = Command::new("git")
+        .args(["branch", "--show-current"])
+        .output()?;
+
+    if !output.status.success() {
+        anyhow::bail!("Failed to get current git branch");
+    }
+
+    let branch = String::from_utf8(output.stdout)?.trim().to_string();
+    if branch.is_empty() {
+        Ok("main".to_string()) // fallback to main if no branch (detached HEAD)
+    } else {
+        Ok(branch)
+    }
+}
 
 /// Parse environment variables from comma-separated key=value string
 fn parse_env_vars(env_str: Option<&str>) -> Result<std::collections::HashMap<String, String>> {

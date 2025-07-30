@@ -117,9 +117,6 @@ pub enum TaskCommands {
 
 
 
-        /// Docs branch to use (e.g., "main", "feature/branch")
-        #[arg(long, default_value = "main")]
-        docs_branch: String,
 
         /// Whether to continue a previous session
         #[arg(long)]

@@ -238,9 +238,13 @@ fn handle_orchestrator_tools(
                 None => return Some(Err(anyhow!("Missing required parameter: task_id"))),
             };
 
-            let service = match params_map.get("service").and_then(|v| v.as_str()) {
+            let service = params_map.get("service").and_then(|v| v.as_str());
+            
+            // Get service from environment variable (takes precedence) or parameter
+            let env_service = std::env::var("FDL_DEFAULT_SERVICE").ok();
+            let service = match env_service.as_deref().or(service) {
                 Some(s) => s,
-                None => return Some(Err(anyhow!("Missing required parameter: service"))),
+                None => return Some(Err(anyhow!("Missing required parameter: service (can also be set via FDL_DEFAULT_SERVICE environment variable)"))),
             };
             
             // Extract required repository parameters in org/repo format
@@ -260,10 +264,10 @@ fn handle_orchestrator_tools(
                 None => return Some(Err(anyhow!("Missing required parameter: docs_project_directory"))),
             };
             
-            let working_directory = match params_map.get("working_directory").and_then(|v| v.as_str()) {
-                Some(d) => d,
-                None => return Some(Err(anyhow!("Missing required parameter: working_directory"))),
-            };
+            let working_directory = params_map
+                .get("working_directory")
+                .and_then(|v| v.as_str())
+                .unwrap_or(".");
             
             // Validate repository format (org/repo)
             if let Err(e) = validate_repository_format(repository) {
@@ -279,17 +283,12 @@ fn handle_orchestrator_tools(
                 .get("model")
                 .and_then(|v| v.as_str());
 
-            let github_user = params_map.get("github_user").and_then(|v| v.as_str());
+            let github_user = match params_map.get("github_user").and_then(|v| v.as_str()) {
+                Some(u) => u,
+                None => return Some(Err(anyhow!("Missing required parameter: github_user"))),
+            };
 
-            // Get GitHub user from environment variable (takes precedence) or parameter
-            let env_code_user = std::env::var("FDL_DEFAULT_CODE_USER").ok();
-            let github_user = env_code_user.as_deref().or(github_user);
 
-
-            let docs_branch = params_map
-                .get("docs_branch")
-                .and_then(|v| v.as_str())
-                .unwrap_or("main");
 
             let continue_session = params_map
                 .get("continue_session")
@@ -317,7 +316,7 @@ fn handle_orchestrator_tools(
                 return Some(Err(anyhow!("Invalid service name '{}'. Must contain only lowercase letters, numbers, and hyphens", service)));
             }
 
-            // Convert org/repo format to URLs for CLI
+            // Convert org/repo format to HTTPS URLs for CLI 
             let repository_url = repo_to_https_url(repository);
             let docs_repository_url = repo_to_https_url(docs_repository);
 
@@ -342,13 +341,10 @@ fn handle_orchestrator_tools(
                 args.extend(&["--model", m]);
             }
 
-            // Add GitHub user if specified
-            if let Some(user) = github_user {
-                args.extend(&["--github-user", user]);
-            }
+            // Add GitHub user (now required)
+            args.extend(&["--github-user", github_user]);
 
-            // Add docs branch (with default)
-            args.extend(&["--docs-branch", docs_branch]);
+            // Docs branch will be auto-detected by CLI
 
             // Add session flags
             if continue_session {
@@ -410,7 +406,6 @@ fn handle_orchestrator_tools(
                         "working_directory": working_directory,
                         "model": model.unwrap_or("default from Helm configuration"),
                         "github_user": github_user,
-                        "docs_branch": docs_branch,
                         "continue_session": continue_session,
                         "env": env,
                         "env_from_secrets": env_from_secrets

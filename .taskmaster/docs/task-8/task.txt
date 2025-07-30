@@ -1,0 +1,237 @@
+# Task ID: 8
+# Title: Create CI/CD Pipeline Configuration
+# Status: pending
+# Dependencies: 5, 6, 7
+# Priority: low
+# Description: Create CI/CD pipeline configuration for automated testing, building, and deployment of the application.
+# Details:
+1. Create .github/workflows/ci.yml for GitHub Actions:
+```yaml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    - name: Install dependencies
+      run: npm ci
+    - name: Run linting
+      run: npm run lint
+    - name: Run tests
+      run: npm test
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Login to DockerHub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Build and push
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/hello-world-api:latest
+    - name: Image size check
+      run: |
+        IMAGE_SIZE=$(docker image inspect ${{ secrets.DOCKERHUB_USERNAME }}/hello-world-api:latest --format='{{.Size}}')
+        IMAGE_SIZE_MB=$(echo "scale=2; $IMAGE_SIZE/1024/1024" | bc)
+        echo "Image size: ${IMAGE_SIZE_MB}MB"
+        if (( $(echo "$IMAGE_SIZE_MB > 200" | bc -l) )); then
+          echo "Image size exceeds 200MB limit"
+          exit 1
+        fi
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+    - name: Set Kubernetes context
+      uses: azure/k8s-set-context@v3
+      with:
+        kubeconfig: ${{ secrets.KUBE_CONFIG }}
+    - name: Deploy to Kubernetes
+      run: |
+        # Update image tag in deployment.yaml
+        sed -i 's|image: hello-world-api:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/hello-world-api:latest|' kubernetes/deployment.yaml
+        # Apply Kubernetes manifests
+        kubectl apply -f kubernetes/configmap.yaml
+        kubectl apply -f kubernetes/deployment.yaml
+        kubectl apply -f kubernetes/service.yaml
+        kubectl apply -f kubernetes/ingress.yaml
+        # Wait for deployment to complete
+        kubectl rollout status deployment/hello-world-api
+```
+
+2. Create a comprehensive README.md:
+```markdown
+# Hello World API
+
+A simple REST API that serves as a "Hello World" example for testing the 5D Labs orchestrator workflow. This API demonstrates basic HTTP endpoints, JSON responses, and containerized deployment.
+
+## Features
+
+- Health check endpoint
+- Basic and personalized greeting endpoints
+- Echo service for posted JSON data
+- Service information endpoint
+- OpenAPI/Swagger documentation
+- Containerized with Docker
+- Kubernetes deployment ready
+- Comprehensive test suite
+
+## Technical Stack
+
+- **Language**: Node.js with Express.js framework
+- **Testing**: Jest for unit tests, Supertest for API testing
+- **Documentation**: OpenAPI/Swagger specification
+- **Containerization**: Docker with multi-stage builds
+- **Deployment**: Kubernetes deployment ready
+
+## API Endpoints
+
+- **GET /health** - Health check endpoint
+- **GET /hello** - Basic hello world endpoint
+- **GET /hello/{name}** - Personalized greeting
+- **POST /echo** - Echo service for JSON data
+- **GET /info** - Service information
+- **GET /docs** - API documentation
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18 or higher
+- npm or yarn
+- Docker (for containerization)
+- Kubernetes (for deployment)
+
+### Installation
+
+1. Clone the repository
+   ```
+   git clone https://github.com/yourusername/hello-world-api.git
+   cd hello-world-api
+   ```
+
+2. Install dependencies
+   ```
+   npm install
+   ```
+
+3. Start the development server
+   ```
+   npm run dev
+   ```
+
+4. Access the API at http://localhost:3000
+
+### Running Tests
+
+```
+npm test
+```
+
+### Building and Running with Docker
+
+1. Build the Docker image
+   ```
+   docker build -t hello-world-api .
+   ```
+
+2. Run the container
+   ```
+   docker run -p 3000:3000 hello-world-api
+   ```
+
+### Deploying to Kubernetes
+
+1. Apply the Kubernetes manifests
+   ```
+   kubectl apply -f kubernetes/
+   ```
+
+2. Check the deployment status
+   ```
+   kubectl get pods -l app=hello-world-api
+   ```
+
+## CI/CD Pipeline
+
+This project includes a GitHub Actions workflow for continuous integration and deployment:
+
+1. Run tests and linting on pull requests
+2. Build and push Docker image on merge to main
+3. Deploy to Kubernetes on successful build
+
+## License
+
+MIT
+```
+
+# Test Strategy:
+1. Verify the GitHub Actions workflow by creating a test repository and pushing the code
+2. Test the CI pipeline by creating a pull request with failing tests
+3. Test the CI pipeline with passing tests
+4. Verify the Docker build and push steps work correctly
+5. Test the Kubernetes deployment step with a test cluster
+6. Verify that the README.md contains accurate and complete information
+
+# Subtasks:
+## 1. Define CI/CD Pipeline Workflow Triggers and Structure [pending]
+### Dependencies: None
+### Description: Specify the events that trigger the pipeline (e.g., push, pull request to main branch) and outline the overall structure of the workflow, including job dependencies and execution order.
+### Details:
+Configure the .github/workflows/ci.yml file to trigger on push and pull request events targeting the main branch. Define the sequence of jobs: test, build (dependent on test), and deploy (dependent on build).
+
+## 2. Implement Automated Testing and Linting Job [pending]
+### Dependencies: 8.1
+### Description: Set up a job to automatically install dependencies, run linting, execute tests, and upload coverage reports as part of the CI process.
+### Details:
+In the 'test' job, use actions to check out code, set up Node.js, install dependencies with npm ci, run linting (npm run lint), execute tests (npm test), and upload coverage using codecov.
+
+## 3. Configure Build and Docker Image Push Job [pending]
+### Dependencies: 8.2
+### Description: Set up a build job that builds the Docker image, checks image size, and pushes the image to DockerHub only on successful tests and main branch pushes.
+### Details:
+Use Docker Buildx for building, authenticate with DockerHub, build and push the image, and check that the image size does not exceed 200MB.
+
+## 4. Implement Automated Deployment to Kubernetes [pending]
+### Dependencies: 8.3
+### Description: Set up a deployment job that updates Kubernetes manifests with the new image and applies them to the cluster using kubectl.
+### Details:
+Configure the job to set up kubectl, set the Kubernetes context, update the deployment manifest with the new image, and apply all manifests (configmap, deployment, service, ingress). Wait for rollout completion.
+
+## 5. Document CI/CD Pipeline and Usage in README [pending]
+### Dependencies: 8.1, 8.2, 8.3, 8.4
+### Description: Update the README.md to provide clear instructions on the CI/CD pipeline, including workflow triggers, job descriptions, and how to monitor pipeline status.
+### Details:
+Add a section to README.md explaining the CI/CD pipeline, its stages (test, build, deploy), and how contributors can interact with and troubleshoot the pipeline.
+
