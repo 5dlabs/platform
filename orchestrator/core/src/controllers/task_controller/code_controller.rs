@@ -11,7 +11,7 @@ use kube::{Api, ResourceExt};
 use kube::api::{Patch, PatchParams};
 use serde_json::json;
 use std::sync::Arc;
-use tracing::{debug, info, instrument};
+use tracing::{info, instrument};
 
 #[instrument(skip(ctx), fields(code_run_name = %code_run.name_any(), namespace = %ctx.namespace))]
 pub async fn reconcile_code_run(code_run: Arc<CodeRun>, ctx: Arc<Context>) -> Result<Action> {
