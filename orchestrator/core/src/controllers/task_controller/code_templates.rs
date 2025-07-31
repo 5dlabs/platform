@@ -40,10 +40,7 @@ impl CodeTemplateGenerator {
             "mcp.json".to_string(),
             Self::generate_mcp_config(code_run, config)?,
         );
-        templates.insert(
-            "client-config.json".to_string(),
-            Self::generate_client_config(code_run, config)?,
-        );
+
         templates.insert(
             "coding-guidelines.md".to_string(),
             Self::generate_coding_guidelines(code_run)?,
@@ -51,10 +48,6 @@ impl CodeTemplateGenerator {
         templates.insert(
             "github-guidelines.md".to_string(),
             Self::generate_github_guidelines(code_run)?,
-        );
-        templates.insert(
-            "mcp-tools.md".to_string(),
-            Self::generate_mcp_tools_doc(code_run)?,
         );
 
         // Generate hook scripts
@@ -164,57 +157,12 @@ impl CodeTemplateGenerator {
         })
     }
 
-    fn generate_mcp_config(code_run: &CodeRun, _config: &ControllerConfig) -> Result<String> {
-        let mut handlebars = Handlebars::new();
-        handlebars.set_strict_mode(false);
-
-        let template = Self::load_template("code/mcp.json.hbs")?;
-
-        handlebars
-            .register_template_string("mcp_config", template)
-            .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
-                    "Failed to register mcp.json template: {e}"
-                ))
-            })?;
-
-        let context = json!({
-            "github_user": code_run.spec.github_user,
-            "toolman_server_url": "http://toolman-server:3000", // Default toolman server URL
-        });
-
-        handlebars.render("mcp_config", &context).map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
-                "Failed to render mcp.json: {e}"
-            ))
-        })
+    fn generate_mcp_config(_code_run: &CodeRun, _config: &ControllerConfig) -> Result<String> {
+        // MCP config is currently static, so just load and return the template content
+        Self::load_template("code/mcp.json.hbs")
     }
 
-    fn generate_client_config(code_run: &CodeRun, _config: &ControllerConfig) -> Result<String> {
-        let mut handlebars = Handlebars::new();
-        handlebars.set_strict_mode(false);
 
-        let template = Self::load_template("code/client-config.json.hbs")?;
-
-        handlebars
-            .register_template_string("client_config", template)
-            .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
-                    "Failed to register client-config.json template: {e}"
-                ))
-            })?;
-
-        let context = json!({
-            "github_user": code_run.spec.github_user,
-            "toolman_server_url": "http://toolman-server:3000", // Default toolman server URL
-        });
-
-        handlebars.render("client_config", &context).map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
-                "Failed to render client-config.json: {e}"
-            ))
-        })
-    }
 
     fn generate_coding_guidelines(code_run: &CodeRun) -> Result<String> {
         let mut handlebars = Handlebars::new();
@@ -273,28 +221,6 @@ impl CodeTemplateGenerator {
             })
     }
 
-    fn generate_mcp_tools_doc(_code_run: &CodeRun) -> Result<String> {
-        let mut handlebars = Handlebars::new();
-        handlebars.set_strict_mode(false);
-
-        let template = Self::load_template("code/mcp-tools.md.hbs")?;
-
-        handlebars
-            .register_template_string("mcp_tools", template)
-            .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
-                    "Failed to register mcp-tools.md template: {e}"
-                ))
-            })?;
-
-        let context = json!({});
-
-        handlebars.render("mcp_tools", &context).map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
-                "Failed to render mcp-tools.md: {e}"
-            ))
-        })
-    }
 
     fn generate_hook_scripts(code_run: &CodeRun) -> Result<BTreeMap<String, String>> {
         let mut hook_scripts = BTreeMap::new();
