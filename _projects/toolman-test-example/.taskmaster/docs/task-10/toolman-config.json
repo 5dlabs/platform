@@ -1,0 +1,23 @@
+{
+  "remoteTools": [
+    "brave_web_search",
+    "query_rust_docs",
+    "helmList",
+    "getAPIResources",
+    "describeResource"
+  ],
+  "localServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      "tools": [
+        "create_directory",
+        "write_file",
+        "read_file",
+        "edit_file",
+        "list_directory"
+      ],
+      "workingDirectory": "project_root"
+    }
+  }
+}
