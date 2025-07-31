@@ -166,7 +166,7 @@ echo "Starting Claude execution..."
 CLAUDE_CMD="claude -p --output-format stream-json --verbose"
 
 # Safe mode toggle for debugging (prevents token consumption)
-SAFE_MODE="true"  # Set to "false" for full docs generation
+SAFE_MODE="false"  # Set to "false" for full docs generation
 
 if [ "$SAFE_MODE" = "true" ]; then
     echo "🛡️ SAFE MODE ENABLED - Running simple test instead of full docs generation"
