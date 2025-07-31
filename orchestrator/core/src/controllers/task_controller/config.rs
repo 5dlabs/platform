@@ -237,8 +237,8 @@ impl Default for ControllerConfig {
                 image_pull_secrets: vec!["ghcr-secret".to_string()],
             },
             secrets: SecretsConfig {
-                api_key_secret_name: "anthropic-api-key".to_string(),
-                api_key_secret_key: "api-key".to_string(),
+                api_key_secret_name: "orchestrator-secrets".to_string(),
+                api_key_secret_key: "ANTHROPIC_API_KEY".to_string(),
             },
             permissions: PermissionsConfig {
                 agent_tools_override: false,
@@ -341,7 +341,7 @@ cleanup:
         let config = ControllerConfig::default();
         assert_eq!(config.job.active_deadline_seconds, 7200);
         assert_eq!(config.agent.image.repository, "MISSING_IMAGE_CONFIG");
-        assert_eq!(config.secrets.api_key_secret_name, "anthropic-api-key");
+        assert_eq!(config.secrets.api_key_secret_name, "orchestrator-secrets");
         assert!(!config.telemetry.enabled);
         assert!(!config.permissions.agent_tools_override);
     }

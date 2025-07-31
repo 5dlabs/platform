@@ -155,6 +155,7 @@ impl<T> ApiResponse<T> {
     }
 
     /// Set the duration in milliseconds
+    #[must_use]
     pub fn with_duration(mut self, duration_ms: u64) -> Self {
         self.metadata.duration_ms = Some(duration_ms);
         self

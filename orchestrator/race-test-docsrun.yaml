@@ -1,0 +1,11 @@
+apiVersion: orchestrator.platform/v1
+kind: DocsRun
+metadata:
+  name: race-condition-test
+  namespace: orchestrator
+spec:
+  repositoryUrl: "git@github.com:5dlabs/platform.git"
+  workingDirectory: "."
+  sourceBranch: "feature/separate-task-concerns"
+  model: "claude-opus-4-20250514"
+  githubUser: "pm0-5dlabs"

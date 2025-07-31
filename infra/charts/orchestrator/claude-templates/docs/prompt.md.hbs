@@ -1,5 +1,8 @@
 # CRITICAL: Complete Documentation Generation Task
 
+{{!-- Safety toggle: set to false to run safe test mode --}}
+{{#unless (eq "false" "true")}}
+
 **🚨 MANDATORY COMPLETION REQUIREMENT 🚨**
 You MUST complete ALL steps in this process. Partial completion is not acceptable. This is especially critical for large projects with many tasks.
 
@@ -16,26 +19,34 @@ Generate comprehensive documentation for {{#if task_id}}task {{task_id}}{{else}}
 
 ### Step 1: Context Analysis (REQUIRED)
 1. Read CLAUDE.md for project context and standards
-2. **Use individual task files to avoid token limits:**
+2. **Use individual task files:**
    - Individual task files have been pre-copied to `.taskmaster/docs/task-{id}/task.txt`
-   - **Read these individual task files instead of the large tasks.json**
    - Each `task.txt` contains complete task information including subtasks and implementation details
 3. Review architecture.md and prd.txt for context
 4. **For large projects: Announce total task count and confirm you will process ALL of them**
 
-**🎯 IMPORTANT: Use individual `task.txt` files, NOT the large `tasks.json` file**
+**🎯 IMPORTANT: Use individual `task.txt` files for each task**
 - Individual task files are available at: `.taskmaster/docs/task-{id}/task.txt`
 - Example: task 1 → `.taskmaster/docs/task-1/task.txt`, task 15 → `.taskmaster/docs/task-15/task.txt`
 - These files contain complete task information including subtasks and implementation details
-- This avoids token limit issues with large projects (no need to read huge tasks.json)
+- This approach allows efficient processing of large projects with many tasks
 
 ### Step 2: Documentation Generation (MANDATORY FOR ALL TASKS)
 {{#if task_id}}
 Focus specifically on task {{task_id}} and create:
 {{else}}
-**YOU MUST CREATE DOCUMENTATION FOR EVERY SINGLE TASK. DO NOT SKIP ANY.**
+**IMPORTANT: SKIP TASKS THAT ALREADY HAVE COMPLETE DOCUMENTATION**
 
-For each task (process ALL tasks, no exceptions):
+Before processing any task, check if ALL required files already exist:
+- `task.md` 
+- `prompt.md`
+- `acceptance-criteria.md`
+
+If ALL three files exist and have substantial content (not just stubs), SKIP that task to save tokens and time.
+
+**YOU MUST CREATE DOCUMENTATION FOR EVERY TASK THAT NEEDS IT. DO NOT SKIP ANY INCOMPLETE TASKS.**
+
+For each task that needs documentation (process ALL incomplete tasks, no exceptions):
 {{/if}}
 - `task.md` - Comprehensive task overview and implementation guide
 - `prompt.md` - Autonomous prompt for AI agents
@@ -87,3 +98,11 @@ Place all documentation in `.taskmaster/docs/task-{id}/` directories.
 ```
 
 **If you cannot provide this final confirmation, the task is NOT complete and you must continue working until it is done.**
+
+{{else}}
+
+## Safe Test Mode
+
+What time is it? Please answer this simple question and exit immediately.
+
+{{/unless}}

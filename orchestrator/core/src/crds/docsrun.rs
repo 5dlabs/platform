@@ -23,6 +23,7 @@ pub struct DocsRunSpec {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct DocsRunStatus {
     pub phase: String,
     pub message: Option<String>,
@@ -31,6 +32,9 @@ pub struct DocsRunStatus {
     pub pull_request_url: Option<String>,
     pub conditions: Option<Vec<DocsRunCondition>>,
     pub configmap_name: Option<String>,
+    /// Tracks whether the documentation work has been completed successfully
+    /// This field is used for idempotent reconciliation and TTL safety
+    pub work_completed: Option<bool>,
 }
 
 /// Condition for the `DocsRun`

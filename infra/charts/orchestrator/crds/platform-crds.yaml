@@ -173,6 +173,9 @@ spec:
               sessionId:
                 type: string
                 description: "Session ID for tracking"
+              workCompleted:
+                type: boolean
+                description: "Tracks whether the code implementation work has been completed successfully - used for idempotent reconciliation and TTL safety"
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -267,3 +270,6 @@ spec:
               configmapName:
                 type: string
                 description: "Name of the ConfigMap containing the prompt and context"
+              workCompleted:
+                type: boolean
+                description: "Tracks whether the documentation work has been completed successfully - used for idempotent reconciliation and TTL safety"

@@ -14,20 +14,25 @@ REPO_URL="{{repository_url}}"
 if [ -f "/workspace/.ssh/id_ed25519" ]; then
   echo "✓ SSH private key found"
 
-  # Create writable SSH directory
+  # Create SSH directory in home
   mkdir -p ~/.ssh
   chmod 700 ~/.ssh
 
-  # Copy SSH keys to writable location
-  cp /workspace/.ssh/id_ed25519 ~/.ssh/id_ed25519
-  cp /workspace/.ssh/id_ed25519.pub ~/.ssh/id_ed25519.pub 2>/dev/null || true
-  chmod 600 ~/.ssh/id_ed25519
-  chmod 644 ~/.ssh/id_ed25519.pub 2>/dev/null || true
+  # Configure SSH to use the mounted key directly (no copying needed)
+  cat > ~/.ssh/config << EOF
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile /workspace/.ssh/id_ed25519
+    IdentitiesOnly yes
+    StrictHostKeyChecking no
+EOF
 
-  # Add GitHub to known hosts
-  echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" >> ~/.ssh/known_hosts
-  echo "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" >> ~/.ssh/known_hosts
-  echo "github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8HLGQ/5/qRd6Q6e+3jOo1Cg/cJZ4LJeJMpvIrRl9dFXWLwHmN7zd1kCHbgRhLSXNE3fJ5YuKwZ5t8nP8QJc5k8YNAjzd4x4IxlJMZU7S1lUJNW1xHhV3IQ8c2UG3n6pxGe2TK6ZJHZ3HUd5eUd+e6f+qD8nO+OQtO+w+YqEk+v6L+mPZhzU+pE5g+H+GpP6xH7g+ZqFd+Wg5m3iKf+z+h3qIe9wV5f8+C4GU8j3pYhZgPk1Q3r4fEr+B9Y4CKq+7v9Y9cKhj+9pF4L8U7cz2eHrW2zdVbP5q9oOL+VVJ+nkHoIH2pOAkZ4eE=" >> ~/.ssh/known_hosts
+  chmod 600 ~/.ssh/config
+
+  # Test SSH connection
+  echo "Testing SSH connection to GitHub..."
+  ssh -T git@github.com 2>&1 | head -3 || echo "SSH test completed (expected to fail with 'successfully authenticated')"
 
   echo "✓ SSH authentication configured"
 else
@@ -86,9 +91,9 @@ fi
 
 # Copy ConfigMap files
 echo "Setting up ConfigMap files..."
-if [ -d "/config" ]; then
+if [ -d "/task-files" ]; then
   # Copy markdown files
-  for md_file in /config/*.md; do
+  for md_file in /task-files/*.md; do
     if [ -f "$md_file" ]; then
       basename_file=$(basename "$md_file")
       if [ "$basename_file" = "claude.md" ]; then
@@ -113,7 +118,7 @@ if [ -d "/config" ]; then
   fi
 
   # Copy hook scripts
-  for hook_file in /config/hooks-*.sh; do
+  for hook_file in /task-files/hooks-*.sh; do
     if [ -f "$hook_file" ]; then
       hook_name=$(basename "$hook_file" | sed 's/^hooks-//')
       cp "$hook_file" "$CLAUDE_WORK_DIR/$hook_name"
@@ -122,13 +127,13 @@ if [ -d "/config" ]; then
     fi
   done
 else
-  echo "❌ ConfigMap not mounted"
+  echo "❌ ConfigMap not mounted at /task-files"
   exit 1
 fi
 
 # Validate workspace
 echo "Validating workspace..."
-REQUIRED_FILES="CLAUDE.md stop-pr-creation.sh"
+REQUIRED_FILES="CLAUDE.md"
 for file in $REQUIRED_FILES; do
   if [ ! -f "$CLAUDE_WORK_DIR/$file" ]; then
     echo "❌ Missing required file: $file"
@@ -142,8 +147,9 @@ if [ ! -d "$CLAUDE_WORK_DIR/.taskmaster" ]; then
   exit 1
 fi
 
-if [ ! -f "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" ]; then
-  echo "❌ tasks.json not found"
+# Individual task files are used instead of tasks.json
+if [ ! -d "$CLAUDE_WORK_DIR/.taskmaster/docs" ]; then
+  echo "❌ .taskmaster/docs directory not found"
   exit 1
 fi
 
@@ -159,21 +165,35 @@ export GITHUB_USER="{{github_user}}"
 echo "Starting Claude execution..."
 CLAUDE_CMD="claude -p --output-format stream-json --verbose"
 
-if [ -f "prompt.md" ]; then
-    $CLAUDE_CMD "$(cat prompt.md)"
+# Safe mode toggle for debugging (prevents token consumption)
+SAFE_MODE="false"  # Set to "false" for full docs generation
+
+if [ "$SAFE_MODE" = "true" ]; then
+    echo "🛡️ SAFE MODE ENABLED - Running simple test instead of full docs generation"
+    echo "What time is it? Please answer this simple question and exit immediately." | $CLAUDE_CMD
     CLAUDE_EXIT_CODE=$?
-    echo "Claude completed with exit code: $CLAUDE_EXIT_CODE"
+    echo "Safe mode test completed with exit code: $CLAUDE_EXIT_CODE"
+    
+    # Exit successfully to prevent PR creation in safe mode
+    echo "✅ Safe mode test complete, exiting without changes"
+    exit 0
 else
-    echo "❌ No prompt.md found"
-    exit 1
+    if [ -f "prompt.md" ]; then
+        $CLAUDE_CMD "$(cat prompt.md)"
+        CLAUDE_EXIT_CODE=$?
+        echo "Claude completed with exit code: $CLAUDE_EXIT_CODE"
+    else
+        echo "❌ No prompt.md found"
+        exit 1
+    fi
 fi
 
 # PR creation
 echo "Creating pull request..."
 
 # Check for documentation changes
-if git diff --quiet HEAD -- .taskmaster/docs/ 2>/dev/null && git diff --cached --quiet HEAD -- .taskmaster/docs/ 2>/dev/null; then
-    UNTRACKED_DOCS=$(git ls-files --others --exclude-standard .taskmaster/docs/ 2>/dev/null | wc -l)
+if git diff --quiet HEAD -- .taskmaster/ 2>/dev/null && git diff --cached --quiet HEAD -- .taskmaster/ 2>/dev/null; then
+    UNTRACKED_DOCS=$(git ls-files --others --exclude-standard .taskmaster/ 2>/dev/null | wc -l)
     if [ "$UNTRACKED_DOCS" -eq 0 ]; then
         echo "No documentation changes found"
         exit 0
@@ -186,13 +206,34 @@ TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 RANDOM_ID=$(date +%s | tail -c 6)
 PR_BRANCH="docs/{{#if task_id}}task-{{task_id}}{{else}}auto-gen{{/if}}-${TIMESTAMP}-${RANDOM_ID}"
 
+echo "Creating branch: $PR_BRANCH"
 git checkout -b "$PR_BRANCH"
-git add .taskmaster/docs/
+
+echo "Staging all .taskmaster changes..."
+git add .taskmaster/
+
+echo "Showing what will be committed:"
+git status --porcelain
+
+echo "Committing changes..."
 git commit -m "docs: auto-generate Task Master documentation{{#if task_id}} for task {{task_id}}{{/if}}"
+
+echo "Pushing branch..."
 git push -u origin "$PR_BRANCH"
 
 # Create PR
 if command -v gh >/dev/null 2>&1; then
+    # Authenticate GitHub CLI with token
+    if [ -n "$GITHUB_TOKEN" ]; then
+        echo "Authenticating GitHub CLI..."
+        echo "$GITHUB_TOKEN" | gh auth login --with-token
+        echo "✓ GitHub CLI authenticated"
+    else
+        echo "❌ GITHUB_TOKEN not found - cannot authenticate GitHub CLI"
+        echo "⚠️ Creating branch and pushing, but cannot create PR automatically"
+        exit 0
+    fi
+    
     PR_TITLE="docs: auto-generate Task Master documentation{{#if task_id}} for task {{task_id}}{{/if}}"
     PR_BODY="Auto-generated Task Master documentation by orchestrator container script.
 
@@ -203,8 +244,29 @@ if command -v gh >/dev/null 2>&1; then
 
 🤖 Auto-generated by Container Script"
 
-    gh pr create --title "$PR_TITLE" --body "$PR_BODY" --base "$SOURCE_BRANCH" --head "$PR_BRANCH"
-    echo "✓ Pull request created"
+    # Retry PR creation up to 3 times for transient failures
+    PR_CREATED=false
+    for attempt in 1 2 3; do
+        echo "Creating PR (attempt $attempt/3)..."
+        if gh pr create --title "$PR_TITLE" --body "$PR_BODY" --base "$SOURCE_BRANCH" --head "$PR_BRANCH"; then
+            echo "✓ Pull request created successfully"
+            PR_CREATED=true
+            break
+        else
+            echo "❌ PR creation attempt $attempt failed"
+            if [ $attempt -lt 3 ]; then
+                echo "⏳ Waiting 5 seconds before retry..."
+                sleep 5
+            fi
+        fi
+    done
+    
+    if [ "$PR_CREATED" = false ]; then
+        echo "❌ Failed to create pull request after 3 attempts"
+        echo "⚠️ Branch has been pushed, but PR creation failed"
+        echo "💡 You can manually create a PR at: https://github.com/{{github_user}}/platform/pull/new/$PR_BRANCH"
+        exit 1
+    fi
 else
     echo "⚠️ GitHub CLI not available - create PR manually"
 fi

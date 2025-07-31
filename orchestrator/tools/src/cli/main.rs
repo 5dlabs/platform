@@ -115,33 +115,13 @@ pub enum TaskCommands {
         #[arg(long)]
         model: Option<String>,
 
-        /// Local MCP tools to enable (comma-separated)
-        #[arg(long)]
-        local_tools: Option<String>,
 
-        /// Remote MCP tools to enable (comma-separated)
-        #[arg(long)]
-        remote_tools: Option<String>,
 
-        /// Context version for retry attempts (incremented on each retry)
-        #[arg(long, default_value = "1")]
-        context_version: u32,
-
-        /// Additional context for retry attempts
-        #[arg(long)]
-        prompt_modification: Option<String>,
-
-        /// Docs branch to use (e.g., "main", "feature/branch")
-        #[arg(long, default_value = "main")]
-        docs_branch: String,
 
         /// Whether to continue a previous session
         #[arg(long)]
         continue_session: bool,
 
-        /// Whether to overwrite memory before starting
-        #[arg(long)]
-        overwrite_memory: bool,
 
         /// Environment variables (format: KEY=value,KEY2=value2)
         #[arg(long)]

@@ -37,7 +37,7 @@ pub async fn generate_docs(
         source_branch: request.source_branch.clone(),
         model: request.model.unwrap_or_else(|| {
             std::env::var("DEFAULT_DOCS_MODEL")
-                .unwrap_or_else(|_| "claude-opus-4-20250514".to_string())
+                .expect("DEFAULT_DOCS_MODEL environment variable must be set")
         }),
         github_user: request.github_user.clone(),
     };
@@ -64,6 +64,7 @@ pub async fn generate_docs(
             pull_request_url: None,
             conditions: None,
             configmap_name: None,
+            work_completed: Some(false),
         }),
     };
 

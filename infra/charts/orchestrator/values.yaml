@@ -121,7 +121,7 @@ config:
   serverPort: "8080"
 
   # Logging
-  rustLog: "orchestrator=debug,tower_http=debug,axum=debug,kube=info"
+  rustLog: "debug"
 
 # Default model configurations
 models:

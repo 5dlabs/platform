@@ -42,13 +42,7 @@ pub async fn handle_task_command(
             github_user,
             working_directory,
             model,
-            local_tools,
-            remote_tools,
-            context_version,
-            prompt_modification,
-            docs_branch,
             continue_session,
-            overwrite_memory,
             env,
             env_from_secrets,
         } => {
@@ -63,13 +57,7 @@ pub async fn handle_task_command(
                 &github_user,
                 working_directory.as_deref(),
                 model.as_deref(),
-                local_tools.as_deref(),
-                remote_tools.as_deref(),
-                context_version,
-                prompt_modification.as_deref(),
-                &docs_branch,
                 continue_session,
-                overwrite_memory,
                 env.as_deref(),
                 env_from_secrets.as_deref(),
             )
@@ -154,13 +142,7 @@ async fn handle_code_command(
     github_user: &str,
     working_directory: Option<&str>,
     model: Option<&str>,
-    local_tools: Option<&str>,
-    remote_tools: Option<&str>,
-    context_version: u32,
-    prompt_modification: Option<&str>,
-    docs_branch: &str,
     continue_session: bool,
-    overwrite_memory: bool,
     env: Option<&str>,
     env_from_secrets: Option<&str>,
 ) -> Result<()> {
@@ -183,11 +165,25 @@ async fn handle_code_command(
     // Use provided GitHub user (now required)
     let github_user_name = github_user.to_string();
 
-    // Auto-detect working directory if not provided
-    let working_dir = match working_directory {
-        Some(wd) => wd.to_string(),
-        None => get_working_directory()?,
-    };
+    // Working directory is now required
+    let working_dir = working_directory
+        .ok_or_else(|| anyhow::anyhow!("working_directory is required"))?
+        .to_string();
+        
+    // Docs project directory is now required
+    let docs_proj_dir = docs_project_directory
+        .ok_or_else(|| anyhow::anyhow!("docs_project_directory is required"))?
+        .to_string();
+
+    // Auto-detect context version (always 1 for new tasks for now)
+    // TODO: Query existing CodeRuns for this task+service and increment
+    let context_version = 1u32;
+    
+    // Set overwrite_memory to false (not user-configurable)
+    let overwrite_memory = false;
+    
+    // Auto-detect current git branch for docs
+    let docs_branch = get_git_current_branch()?;
 
     // Parse environment variables
     let env_map = parse_env_vars(env)?;
@@ -199,14 +195,11 @@ async fn handle_code_command(
         service: service.to_string(),
         repository_url: repo_url.clone(),
         docs_repository_url: docs_repo_url.clone(),
-        docs_project_directory: docs_project_directory.map(std::string::ToString::to_string),
+        docs_project_directory: Some(docs_proj_dir.clone()),
         working_directory: Some(working_dir.clone()),
         model: model.map(|s| s.to_string()),
         github_user: github_user_name.clone(),
-        local_tools: local_tools.map(std::string::ToString::to_string),
-        remote_tools: remote_tools.map(std::string::ToString::to_string),
         context_version,
-        prompt_modification: prompt_modification.map(std::string::ToString::to_string),
         docs_branch: docs_branch.to_string(),
         continue_session,
         overwrite_memory,
@@ -216,9 +209,10 @@ async fn handle_code_command(
 
     output.info(&format!("Target repository: {repo_url}"));
     output.info(&format!("Docs repository: {docs_repo_url}"));
-    output.info(&format!("Docs branch: {docs_branch}"));
+    output.info(&format!("Docs project directory: {docs_proj_dir}"));
+    output.info(&format!("Docs branch: {docs_branch} (auto-detected)"));
     output.info(&format!("Working directory: {working_dir}"));
-    output.info(&format!("Context version: {context_version}"));
+    output.info(&format!("Context version: {context_version} (auto-detected)"));
     output.info(&format!("GitHub user: {github_user_name}"));
 
     match api_client.submit_code_task(&request).await {
@@ -265,27 +259,24 @@ fn get_git_remote_url() -> Result<String> {
     Ok(String::from_utf8(output.stdout)?.trim().to_string())
 }
 
-fn get_working_directory() -> Result<String> {
+/// Get current git branch
+fn get_git_current_branch() -> Result<String> {
     use std::process::Command;
 
-    let current_dir = std::env::current_dir()?;
-    let repo_root = Command::new("git")
-        .args(["rev-parse", "--show-toplevel"])
-        .output()?
-        .stdout;
-    let repo_root_string = String::from_utf8(repo_root)?;
-    let repo_root = repo_root_string.trim();
+    let output = Command::new("git")
+        .args(["branch", "--show-current"])
+        .output()?;
 
-    let rel_path = current_dir
-        .strip_prefix(repo_root)?
-        .to_string_lossy()
-        .to_string();
+    if !output.status.success() {
+        anyhow::bail!("Failed to get current git branch");
+    }
 
-    Ok(if rel_path.is_empty() {
-        ".".to_string()
+    let branch = String::from_utf8(output.stdout)?.trim().to_string();
+    if branch.is_empty() {
+        Ok("main".to_string()) // fallback to main if no branch (detached HEAD)
     } else {
-        rel_path
-    })
+        Ok(branch)
+    }
 }
 
 /// Parse environment variables from comma-separated key=value string

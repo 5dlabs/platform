@@ -117,6 +117,10 @@ impl Job {
     }
 
     /// Update job status based on Kubernetes job status
+    /// 
+    /// # Panics
+    /// 
+    /// Panics if the Kubernetes job completion time cannot be parsed as RFC3339
     pub fn update_from_k8s_job(&mut self, k8s_job: &K8sJob) {
         if let Some(status) = &k8s_job.status {
             if status.succeeded == Some(1) {

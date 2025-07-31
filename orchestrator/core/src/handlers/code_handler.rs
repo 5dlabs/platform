@@ -28,13 +28,10 @@ pub async fn submit_code_task(
         working_directory: request.working_directory,
         model: request.model.unwrap_or_else(|| {
             std::env::var("DEFAULT_CODE_MODEL")
-                .unwrap_or_else(|_| "claude-sonnet-4-20250514".to_string())
+                .expect("DEFAULT_CODE_MODEL environment variable must be set")
         }),
         github_user: request.github_user,
-        local_tools: request.local_tools,
-        remote_tools: request.remote_tools,
         context_version: request.context_version,
-        prompt_modification: request.prompt_modification,
         docs_branch: request.docs_branch,
         continue_session: request.continue_session,
         overwrite_memory: request.overwrite_memory,
@@ -74,6 +71,7 @@ pub async fn submit_code_task(
             prompt_modification: None,
             prompt_mode: Some("direct".to_string()),
             session_id: None,
+            work_completed: None,
         }),
     };
 

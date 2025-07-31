@@ -18,6 +18,8 @@ spec:
         claude-templates/checksum: {{ include (print $.Template.BasePath "/claude-templates-configmap.yaml") . | sha256sum }}
         # Force pod restart when controller config changes
         controller-config/checksum: {{ include (print $.Template.BasePath "/task-controller-config.yaml") . | sha256sum }}
+        # Force pod restart when main config changes
+        config/checksum: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -54,6 +56,16 @@ spec:
                 configMapKeyRef:
                   name: {{ include "orchestrator.fullname" . }}-config
                   key: RUST_LOG
+            - name: DEFAULT_DOCS_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "orchestrator.fullname" . }}-config
+                  key: DEFAULT_DOCS_MODEL
+            - name: DEFAULT_CODE_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "orchestrator.fullname" . }}-config
+                  key: DEFAULT_CODE_MODEL
             # Secrets for agents
             {{- if .Values.secrets.anthropicApiKey }}
             - name: ANTHROPIC_API_KEY
