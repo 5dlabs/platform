@@ -7,10 +7,6 @@ on:
         description: 'Release tag to deploy (e.g., v0.1.4)'
         required: true
         type: string
-  push:
-    branches:
-      - feature/separate-task-concerns
-
 
 env:
   REGISTRY: ghcr.io
