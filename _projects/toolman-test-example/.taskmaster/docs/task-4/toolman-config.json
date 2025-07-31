@@ -1,0 +1,237 @@
+{
+  "task": {
+    "id": 4,
+    "title": "Chat Room API Implementation",
+    "description": "Develop REST API endpoints for chat rooms with message history persistence"
+  },
+  "tools": {
+    "fileSystem": {
+      "enabled": true,
+      "capabilities": [
+        "create",
+        "read",
+        "update",
+        "delete",
+        "list"
+      ],
+      "description": "Create and manage API modules, controllers, routes, and middleware"
+    },
+    "webSearch": {
+      "enabled": true,
+      "capabilities": [
+        "search",
+        "research"
+      ],
+      "searchTopics": [
+        "Rust HTTP server patterns Actix-web Rocket",
+        "Express.js REST API best practices security",
+        "Kubernetes API service deployment ingress",
+        "PostgreSQL optimization for chat applications",
+        "JWT authentication best practices Node.js",
+        "API rate limiting strategies Redis",
+        "REST API versioning strategies",
+        "WebSocket integration with REST APIs"
+      ],
+      "description": "Research Rust patterns, Kubernetes deployment, and API best practices"
+    },
+    "database": {
+      "enabled": true,
+      "type": "postgresql",
+      "capabilities": [
+        "schema_design",
+        "query_optimization",
+        "migration_management"
+      ],
+      "tables": [
+        "rooms",
+        "messages",
+        "room_users"
+      ],
+      "description": "Design and implement PostgreSQL persistence for rooms and messages"
+    },
+    "testing": {
+      "enabled": true,
+      "frameworks": [
+        "jest",
+        "supertest"
+      ],
+      "types": [
+        "unit",
+        "integration",
+        "performance"
+      ],
+      "description": "Validate API endpoints, authorization, and performance"
+    },
+    "documentation": {
+      "enabled": true,
+      "formats": [
+        "openapi",
+        "markdown",
+        "jsdoc"
+      ],
+      "description": "Generate API documentation and usage examples"
+    },
+    "containerization": {
+      "enabled": true,
+      "platforms": [
+        "docker",
+        "kubernetes"
+      ],
+      "capabilities": [
+        "dockerfile_creation",
+        "k8s_manifests",
+        "helm_charts"
+      ],
+      "description": "Create Kubernetes deployment configurations"
+    },
+    "codeAnalysis": {
+      "enabled": true,
+      "tools": [
+        "eslint",
+        "typescript",
+        "sonarqube"
+      ],
+      "description": "Ensure code quality and security standards"
+    },
+    "performance": {
+      "enabled": true,
+      "tools": [
+        "k6",
+        "artillery"
+      ],
+      "metrics": [
+        "response_time",
+        "throughput",
+        "error_rate"
+      ],
+      "description": "Benchmark API performance under load"
+    }
+  },
+  "workflow": {
+    "phases": [
+      {
+        "name": "Research",
+        "tools": ["webSearch"],
+        "outputs": [
+          "rust-patterns-analysis.md",
+          "kubernetes-deployment-guide.md",
+          "security-best-practices.md"
+        ]
+      },
+      {
+        "name": "Design",
+        "tools": ["database", "documentation"],
+        "outputs": [
+          "database-schema.sql",
+          "api-specification.yaml",
+          "architecture-diagram.md"
+        ]
+      },
+      {
+        "name": "Implementation",
+        "tools": ["fileSystem", "database", "codeAnalysis"],
+        "outputs": [
+          "src/api/v1/*",
+          "src/models/*",
+          "src/repositories/*",
+          "src/middleware/*"
+        ]
+      },
+      {
+        "name": "Testing",
+        "tools": ["testing", "performance"],
+        "outputs": [
+          "tests/unit/*",
+          "tests/integration/*",
+          "performance-report.json"
+        ]
+      },
+      {
+        "name": "Deployment",
+        "tools": ["containerization", "documentation"],
+        "outputs": [
+          "Dockerfile",
+          "k8s/*.yaml",
+          "README.md"
+        ]
+      }
+    ]
+  },
+  "constraints": {
+    "performance": {
+      "responseTime": {
+        "roomList": "< 200ms",
+        "messageHistory": "< 300ms",
+        "messagePost": "< 100ms"
+      },
+      "scalability": {
+        "concurrentUsers": 10000,
+        "messagesPerSecond": 1000
+      }
+    },
+    "security": {
+      "authentication": "JWT required",
+      "authorization": "Role-based (owner/admin/member)",
+      "validation": "All inputs validated",
+      "rateLimit": "100 requests/15min"
+    },
+    "codeQuality": {
+      "testCoverage": "> 80%",
+      "linting": "No errors",
+      "typeScript": "Strict mode"
+    }
+  },
+  "dependencies": {
+    "npm": [
+      "express",
+      "jsonwebtoken",
+      "joi",
+      "pg",
+      "knex",
+      "redis",
+      "express-rate-limit",
+      "helmet",
+      "cors",
+      "winston"
+    ],
+    "devDependencies": [
+      "jest",
+      "supertest",
+      "@types/express",
+      "@types/jest",
+      "typescript",
+      "eslint",
+      "prettier"
+    ]
+  },
+  "environment": {
+    "variables": [
+      "DATABASE_URL",
+      "REDIS_URL",
+      "JWT_SECRET",
+      "JWT_EXPIRY",
+      "ALLOWED_ORIGINS",
+      "PORT",
+      "NODE_ENV",
+      "LOG_LEVEL"
+    ]
+  },
+  "outputStructure": {
+    "api": {
+      "v1": {
+        "routes": ["rooms.ts", "messages.ts"],
+        "controllers": ["roomController.ts", "messageController.ts"],
+        "middleware": ["auth.ts", "validation.ts", "errorHandler.ts"],
+        "validators": ["roomValidators.ts", "messageValidators.ts"]
+      }
+    },
+    "models": ["Room.ts", "Message.ts", "RoomUser.ts"],
+    "repositories": ["roomRepository.ts", "messageRepository.ts", "roomUserRepository.ts"],
+    "tests": {
+      "unit": ["controllers/*.test.ts", "validators/*.test.ts"],
+      "integration": ["api/*.test.ts"],
+      "performance": ["load-test.js"]
+    },
+    "kubernetes": ["deployment.yaml", "service.yaml", "ingress.yaml", "configmap.yaml"]
+  }
+}

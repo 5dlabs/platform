@@ -1,0 +1,228 @@
+{
+  "name": "File and Image Sharing Implementation",
+  "description": "Comprehensive file upload, storage, and preview system with security measures",
+  "version": "1.0.0",
+  "tools": {
+    "fileSystem": {
+      "enabled": true,
+      "permissions": ["read", "write", "create"],
+      "paths": {
+        "frontend": ["src/components", "src/hooks", "src/services", "src/api"],
+        "backend": ["api", "services", "middleware", "config"],
+        "database": ["prisma", "migrations"],
+        "tests": ["__tests__", "test"],
+        "uploads": ["uploads", "temp"]
+      },
+      "restrictions": {
+        "maxFileSize": "100MB",
+        "allowedExtensions": [
+          ".ts", ".tsx", ".js", ".jsx", ".json", ".sql", ".prisma",
+          ".md", ".txt", ".env.example", ".yml", ".yaml"
+        ]
+      }
+    },
+    "shell": {
+      "enabled": true,
+      "commands": {
+        "packageManagement": ["npm", "yarn", "pnpm"],
+        "database": ["prisma", "psql", "mysql"],
+        "aws": ["aws", "s3cmd"],
+        "testing": ["jest", "vitest", "cypress"],
+        "build": ["tsc", "webpack", "vite"],
+        "security": ["npm audit", "snyk"]
+      },
+      "restrictions": {
+        "forbidden": ["rm -rf /", "sudo", "chmod 777"],
+        "requireConfirmation": ["npm install", "prisma migrate", "aws s3"]
+      }
+    },
+    "documentation": {
+      "enabled": true,
+      "generators": ["jsdoc", "typedoc", "swagger"],
+      "formats": ["markdown", "html", "json"],
+      "autoGenerate": {
+        "apiDocs": true,
+        "componentDocs": true,
+        "testDocs": false
+      }
+    },
+    "testing": {
+      "enabled": true,
+      "frameworks": ["jest", "react-testing-library", "cypress"],
+      "coverage": {
+        "minimum": 80,
+        "reports": ["lcov", "html", "text"]
+      },
+      "types": ["unit", "integration", "e2e", "security"]
+    },
+    "security": {
+      "enabled": true,
+      "scanners": ["npm-audit", "snyk", "owasp-dependency-check"],
+      "fileValidation": {
+        "enabled": true,
+        "magicBytes": true,
+        "virusScanning": true,
+        "contentPolicy": "strict"
+      },
+      "policies": {
+        "preventPathTraversal": true,
+        "sanitizeFileNames": true,
+        "enforceFileSizeLimits": true,
+        "blockExecutables": true
+      }
+    },
+    "deployment": {
+      "enabled": true,
+      "environments": ["development", "staging", "production"],
+      "storage": {
+        "provider": "aws-s3",
+        "cdnEnabled": true,
+        "backupEnabled": true
+      },
+      "monitoring": {
+        "uploads": true,
+        "errors": true,
+        "performance": true
+      }
+    }
+  },
+  "workflows": {
+    "implementation": {
+      "steps": [
+        {
+          "name": "Setup Storage",
+          "tools": ["shell", "fileSystem"],
+          "commands": [
+            "npm install @aws-sdk/client-s3 @aws-sdk/lib-storage multer",
+            "npm install --save-dev @types/multer"
+          ]
+        },
+        {
+          "name": "Database Migration",
+          "tools": ["shell", "fileSystem"],
+          "commands": [
+            "prisma migrate dev --name add-attachments-support"
+          ]
+        },
+        {
+          "name": "Create Upload Service",
+          "tools": ["fileSystem"],
+          "files": [
+            "services/uploadService.ts",
+            "services/storageService.ts",
+            "services/thumbnailService.ts"
+          ]
+        },
+        {
+          "name": "Implement API Endpoints",
+          "tools": ["fileSystem"],
+          "files": [
+            "api/upload.ts",
+            "middleware/fileValidation.ts",
+            "middleware/uploadLimiter.ts"
+          ]
+        },
+        {
+          "name": "Build Frontend Components",
+          "tools": ["fileSystem"],
+          "files": [
+            "components/FileUpload.tsx",
+            "components/ImagePreview.tsx",
+            "components/DocumentPreview.tsx",
+            "hooks/useFileUpload.ts"
+          ]
+        },
+        {
+          "name": "Security Implementation",
+          "tools": ["fileSystem", "security"],
+          "files": [
+            "services/fileValidator.ts",
+            "middleware/security.ts",
+            "config/cors.ts"
+          ]
+        },
+        {
+          "name": "Testing",
+          "tools": ["testing", "shell"],
+          "commands": [
+            "npm test -- upload.test.ts",
+            "npm test -- fileValidation.test.ts",
+            "npm run test:security"
+          ]
+        }
+      ]
+    },
+    "validation": {
+      "preDeployment": [
+        {
+          "name": "Security Scan",
+          "tools": ["security", "shell"],
+          "commands": ["npm audit", "npm run scan:vulnerabilities"]
+        },
+        {
+          "name": "Test Coverage",
+          "tools": ["testing"],
+          "requirements": {
+            "coverage": 80,
+            "criticalPaths": ["upload", "validation", "storage"]
+          }
+        }
+      ]
+    }
+  },
+  "configuration": {
+    "environment": {
+      "required": [
+        "AWS_REGION",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "S3_BUCKET_NAME",
+        "MAX_FILE_SIZE",
+        "ALLOWED_FILE_TYPES"
+      ],
+      "optional": [
+        "CDN_URL",
+        "VIRUS_SCAN_API_KEY",
+        "THUMBNAIL_SIZES",
+        "UPLOAD_RATE_LIMIT"
+      ]
+    },
+    "defaults": {
+      "maxFileSize": "10MB",
+      "allowedTypes": ["image/*", "application/pdf", "text/*"],
+      "thumbnailSizes": [200, 400, 800],
+      "uploadTimeout": 300000,
+      "presignedUrlExpiry": 3600
+    }
+  },
+  "monitoring": {
+    "metrics": [
+      "upload_count",
+      "upload_size_bytes",
+      "upload_duration_ms",
+      "storage_usage_bytes",
+      "thumbnail_generation_time_ms",
+      "failed_uploads",
+      "security_violations"
+    ],
+    "alerts": [
+      {
+        "metric": "failed_uploads",
+        "threshold": 10,
+        "window": "5m",
+        "severity": "warning"
+      },
+      {
+        "metric": "security_violations",
+        "threshold": 1,
+        "window": "1m",
+        "severity": "critical"
+      }
+    ]
+  },
+  "dependencies": {
+    "tasks": ["task-4", "task-7"],
+    "services": ["database", "authentication", "real-time-messaging"],
+    "external": ["aws-s3", "cloudfront"]
+  }
+}

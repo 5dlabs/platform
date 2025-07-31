@@ -1,0 +1,250 @@
+{
+  "task": {
+    "id": "9",
+    "title": "Performance Optimization and Scaling",
+    "description": "Optimize the application for high performance, implement caching, and ensure it can scale to support 1000+ concurrent users with sub-100ms latency"
+  },
+  "tools": {
+    "required": [
+      {
+        "name": "file_system",
+        "purpose": "Create and modify optimization code, configuration files, and performance monitoring scripts",
+        "capabilities": [
+          "read_file",
+          "write_file",
+          "create_directory",
+          "list_directory"
+        ]
+      },
+      {
+        "name": "shell",
+        "purpose": "Run performance tests, install dependencies, execute load testing tools, and manage services",
+        "capabilities": [
+          "execute_command",
+          "run_script",
+          "manage_processes"
+        ]
+      },
+      {
+        "name": "code_analysis",
+        "purpose": "Analyze existing code for performance bottlenecks and optimization opportunities",
+        "capabilities": [
+          "parse_code",
+          "find_patterns",
+          "analyze_complexity"
+        ]
+      },
+      {
+        "name": "search",
+        "purpose": "Search codebase for performance-critical paths and existing optimization patterns",
+        "capabilities": [
+          "grep_files",
+          "find_files",
+          "search_patterns"
+        ]
+      }
+    ],
+    "optional": [
+      {
+        "name": "database",
+        "purpose": "Analyze and optimize database queries, create indexes, and test query performance",
+        "capabilities": [
+          "execute_query",
+          "analyze_query_plan",
+          "create_index"
+        ]
+      },
+      {
+        "name": "monitoring",
+        "purpose": "Set up performance monitoring, create dashboards, and configure alerts",
+        "capabilities": [
+          "create_metrics",
+          "configure_alerts",
+          "generate_dashboards"
+        ]
+      },
+      {
+        "name": "docker",
+        "purpose": "Configure containerized services for Redis, load balancers, and monitoring stack",
+        "capabilities": [
+          "build_image",
+          "run_container",
+          "manage_compose"
+        ]
+      }
+    ]
+  },
+  "workflow": {
+    "phases": [
+      {
+        "name": "analysis",
+        "description": "Analyze current performance bottlenecks and identify optimization opportunities",
+        "tools": ["code_analysis", "search", "shell"],
+        "outputs": [
+          "performance_baseline.json",
+          "bottleneck_analysis.md",
+          "optimization_plan.md"
+        ]
+      },
+      {
+        "name": "caching_implementation",
+        "description": "Implement Redis caching layer with middleware and invalidation strategies",
+        "tools": ["file_system", "shell", "docker"],
+        "outputs": [
+          "config/redis.ts",
+          "middleware/cache.ts",
+          "docker-compose.redis.yml"
+        ]
+      },
+      {
+        "name": "socketio_optimization",
+        "description": "Optimize Socket.io configuration for high-performance real-time communication",
+        "tools": ["file_system", "code_analysis"],
+        "outputs": [
+          "config/socketio.ts",
+          "services/realtimeService.ts",
+          "middleware/socketRateLimit.ts"
+        ]
+      },
+      {
+        "name": "database_optimization",
+        "description": "Create indexes, optimize queries, and implement connection pooling",
+        "tools": ["file_system", "database", "shell"],
+        "outputs": [
+          "migrations/add_performance_indexes.sql",
+          "config/database.ts",
+          "repositories/optimized/*.ts"
+        ]
+      },
+      {
+        "name": "frontend_optimization",
+        "description": "Implement code splitting, memoization, and virtual scrolling",
+        "tools": ["file_system", "code_analysis"],
+        "outputs": [
+          "src/routes/AppRoutes.tsx",
+          "src/components/VirtualList.tsx",
+          "webpack.config.prod.js"
+        ]
+      },
+      {
+        "name": "horizontal_scaling",
+        "description": "Configure load balancing, clustering, and stateless architecture",
+        "tools": ["file_system", "shell", "docker"],
+        "outputs": [
+          "nginx.conf",
+          "ecosystem.config.js",
+          "docker-compose.scale.yml"
+        ]
+      },
+      {
+        "name": "load_testing",
+        "description": "Execute comprehensive load tests to validate performance targets",
+        "tools": ["shell", "file_system", "monitoring"],
+        "outputs": [
+          "tests/load/k6-scripts/*.js",
+          "test-results/performance-report.html",
+          "metrics/load-test-results.json"
+        ]
+      },
+      {
+        "name": "monitoring_setup",
+        "description": "Configure performance monitoring, metrics collection, and alerting",
+        "tools": ["file_system", "shell", "monitoring", "docker"],
+        "outputs": [
+          "monitoring/performance.ts",
+          "config/statsd.ts",
+          "docker-compose.monitoring.yml",
+          "grafana-dashboards/*.json"
+        ]
+      }
+    ],
+    "validation": {
+      "performance_tests": [
+        "npm run test:load",
+        "npm run test:stress",
+        "npm run test:performance"
+      ],
+      "benchmarks": [
+        "k6 run tests/load/concurrent-users.js",
+        "k6 run tests/load/message-latency.js",
+        "lighthouse https://localhost:3000 --preset=desktop"
+      ],
+      "monitoring_checks": [
+        "curl http://localhost:9090/metrics",
+        "docker-compose -f docker-compose.monitoring.yml ps",
+        "redis-cli ping"
+      ]
+    }
+  },
+  "context": {
+    "performance_targets": {
+      "concurrent_users": 1000,
+      "message_latency_ms": 100,
+      "api_response_cached_ms": 50,
+      "api_response_uncached_ms": 200,
+      "frontend_load_seconds": 3,
+      "memory_per_instance_mb": 512,
+      "cpu_usage_percent": 70
+    },
+    "technology_stack": {
+      "backend": ["Node.js", "Express", "TypeScript"],
+      "realtime": ["Socket.io", "Redis Adapter"],
+      "database": ["PostgreSQL", "Knex.js"],
+      "caching": ["Redis", "Redis Cluster"],
+      "frontend": ["React", "TypeScript", "Webpack"],
+      "monitoring": ["StatsD", "Prometheus", "Grafana"],
+      "load_testing": ["K6", "Artillery", "Apache Bench"]
+    },
+    "optimization_strategies": [
+      "API response caching with Redis",
+      "Socket.io room-based broadcasting",
+      "Database query optimization and indexing",
+      "Frontend code splitting and lazy loading",
+      "Horizontal scaling with load balancing",
+      "Connection pooling and reuse",
+      "Virtual scrolling for long lists",
+      "Component memoization"
+    ]
+  },
+  "outputs": {
+    "expected_files": [
+      "config/redis.ts",
+      "config/socketio.ts",
+      "config/database.ts",
+      "middleware/cache.ts",
+      "services/realtimeService.ts",
+      "components/VirtualList.tsx",
+      "monitoring/performance.ts",
+      "nginx.conf",
+      "docker-compose.yml",
+      "tests/load/*.js"
+    ],
+    "documentation": [
+      "docs/performance-optimization-guide.md",
+      "docs/scaling-architecture.md",
+      "docs/monitoring-setup.md"
+    ],
+    "metrics": {
+      "performance_baseline": "metrics/baseline.json",
+      "load_test_results": "metrics/load-test-results.json",
+      "optimization_impact": "metrics/optimization-impact.json"
+    }
+  },
+  "environment": {
+    "development": {
+      "REDIS_HOST": "localhost",
+      "REDIS_PORT": "6379",
+      "ENABLE_CACHE": "true",
+      "CACHE_TTL": "300",
+      "NODE_ENV": "development"
+    },
+    "production": {
+      "REDIS_HOST": "redis-cluster.internal",
+      "REDIS_PORT": "6379",
+      "ENABLE_CACHE": "true",
+      "CACHE_TTL": "3600",
+      "NODE_ENV": "production",
+      "NODE_OPTIONS": "--max-old-space-size=512"
+    }
+  }
+}

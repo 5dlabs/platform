@@ -1,0 +1,228 @@
+{
+  "name": "chat-ui-implementation",
+  "version": "1.0.0",
+  "description": "Tool configuration for implementing real-time chat UI with Socket.io integration",
+  "tools": {
+    "fileSystem": {
+      "enabled": true,
+      "permissions": {
+        "read": true,
+        "write": true,
+        "delete": false
+      },
+      "allowedPaths": [
+        "src/components/chat/**",
+        "src/hooks/**",
+        "src/contexts/**",
+        "src/styles/**",
+        "src/utils/**",
+        "src/types/**",
+        "public/**",
+        "package.json",
+        "tsconfig.json"
+      ],
+      "excludePaths": [
+        "node_modules/**",
+        ".git/**",
+        "build/**",
+        "dist/**"
+      ]
+    },
+    "shell": {
+      "enabled": true,
+      "allowedCommands": [
+        "npm install",
+        "npm run",
+        "npm test",
+        "npm run build",
+        "npm run lint",
+        "npm run format",
+        "npx",
+        "git status",
+        "git add",
+        "git commit",
+        "git diff"
+      ],
+      "environment": {
+        "NODE_ENV": "development",
+        "REACT_APP_API_URL": "http://localhost:3000",
+        "REACT_APP_SOCKET_URL": "http://localhost:3001"
+      }
+    },
+    "browser": {
+      "enabled": true,
+      "capabilities": [
+        "localStorage",
+        "sessionStorage",
+        "webSocket",
+        "notifications",
+        "mediaQuery"
+      ],
+      "testingFramework": "jest",
+      "e2eFramework": "cypress"
+    },
+    "socketClient": {
+      "enabled": true,
+      "config": {
+        "url": "${REACT_APP_SOCKET_URL}",
+        "transports": ["websocket", "polling"],
+        "reconnection": true,
+        "reconnectionAttempts": 5,
+        "reconnectionDelay": 1000,
+        "timeout": 10000
+      },
+      "events": {
+        "incoming": [
+          "connect",
+          "disconnect",
+          "connect_error",
+          "reconnect",
+          "message:new",
+          "message:status",
+          "user:typing",
+          "user:presence",
+          "room:updated",
+          "error"
+        ],
+        "outgoing": [
+          "message:send",
+          "message:read",
+          "user:typing",
+          "room:join",
+          "room:leave",
+          "room:create"
+        ]
+      }
+    },
+    "documentation": {
+      "enabled": true,
+      "generators": [
+        "jsdoc",
+        "storybook",
+        "typedoc"
+      ],
+      "outputPath": "docs/components"
+    },
+    "testing": {
+      "enabled": true,
+      "frameworks": {
+        "unit": "jest",
+        "integration": "react-testing-library",
+        "e2e": "cypress",
+        "accessibility": "jest-axe"
+      },
+      "coverage": {
+        "threshold": 80,
+        "reporters": ["text", "lcov", "html"]
+      }
+    },
+    "linting": {
+      "enabled": true,
+      "extends": [
+        "eslint:recommended",
+        "plugin:react/recommended",
+        "plugin:@typescript-eslint/recommended",
+        "plugin:jsx-a11y/recommended"
+      ],
+      "rules": {
+        "react-hooks/rules-of-hooks": "error",
+        "react-hooks/exhaustive-deps": "warn"
+      }
+    },
+    "bundler": {
+      "enabled": true,
+      "tool": "webpack",
+      "optimizations": {
+        "splitChunks": true,
+        "treeShaking": true,
+        "minification": true,
+        "compression": "gzip"
+      }
+    },
+    "styling": {
+      "enabled": true,
+      "preprocessor": "css-modules",
+      "features": [
+        "css-variables",
+        "flexbox",
+        "grid",
+        "animations"
+      ],
+      "postProcessors": [
+        "autoprefixer",
+        "cssnano"
+      ]
+    },
+    "performance": {
+      "enabled": true,
+      "monitoring": {
+        "renderTime": true,
+        "bundleSize": true,
+        "networkRequests": true
+      },
+      "optimizations": [
+        "react-window",
+        "react-memo",
+        "useMemo",
+        "useCallback",
+        "lazy-loading"
+      ]
+    }
+  },
+  "workflows": {
+    "development": {
+      "steps": [
+        "npm install",
+        "npm run dev",
+        "npm run test:watch"
+      ]
+    },
+    "testing": {
+      "steps": [
+        "npm run lint",
+        "npm run test",
+        "npm run test:coverage",
+        "npm run test:a11y"
+      ]
+    },
+    "deployment": {
+      "steps": [
+        "npm run build",
+        "npm run test:e2e",
+        "npm run analyze"
+      ]
+    }
+  },
+  "dependencies": {
+    "required": [
+      "react@^18.2.0",
+      "react-dom@^18.2.0",
+      "socket.io-client@^4.7.0",
+      "react-window@^1.8.10",
+      "emoji-picker-react@^4.5.0",
+      "lucide-react@^0.263.0",
+      "react-markdown@^9.0.0",
+      "date-fns@^3.0.0"
+    ],
+    "development": [
+      "@types/react@^18.2.0",
+      "@types/react-dom@^18.2.0",
+      "@testing-library/react@^14.0.0",
+      "@testing-library/jest-dom@^6.0.0",
+      "jest-axe@^8.0.0",
+      "cypress@^13.0.0"
+    ]
+  },
+  "aiAssistance": {
+    "codeGeneration": true,
+    "codeReview": true,
+    "testGeneration": true,
+    "documentation": true,
+    "suggestions": {
+      "componentStructure": true,
+      "performanceOptimization": true,
+      "accessibilityImprovements": true,
+      "securityBestPractices": true
+    }
+  }
+}

@@ -1,0 +1,273 @@
+{
+  "task": {
+    "id": "5",
+    "title": "Real-time Communication with Socket.io",
+    "description": "Implement Socket.io for real-time messaging, typing indicators, user presence, and read receipts with Redis scaling"
+  },
+  "tools": {
+    "fileSystem": {
+      "enabled": true,
+      "permissions": {
+        "read": true,
+        "write": true,
+        "delete": true
+      },
+      "allowedPaths": [
+        "src/socket/**",
+        "src/middleware/**",
+        "src/models/**",
+        "src/services/**",
+        "src/utils/**",
+        "tests/**",
+        "package.json",
+        ".env",
+        ".env.example"
+      ],
+      "description": "File system access for creating Socket.io server, handlers, middleware, and tests"
+    },
+    "shell": {
+      "enabled": true,
+      "allowedCommands": [
+        "npm install socket.io @socket.io/redis-adapter redis jsonwebtoken",
+        "npm install --save-dev @types/socket.io socket.io-client @types/redis",
+        "npm run test",
+        "npm run test:socket",
+        "npm run lint",
+        "npm run build",
+        "redis-cli ping",
+        "redis-cli info",
+        "netstat -an | grep :3001",
+        "lsof -i :3001"
+      ],
+      "description": "Shell access for package installation, testing, and service verification"
+    },
+    "documentation": {
+      "enabled": true,
+      "sources": [
+        {
+          "name": "Socket.io Documentation",
+          "url": "https://socket.io/docs/v4/",
+          "sections": [
+            "Server Installation",
+            "Authentication",
+            "Rooms",
+            "Broadcasting Events",
+            "Error Handling",
+            "Using with Redis",
+            "Performance Tuning"
+          ]
+        },
+        {
+          "name": "Redis Adapter Documentation",
+          "url": "https://socket.io/docs/v4/redis-adapter/",
+          "sections": [
+            "Installation",
+            "Configuration",
+            "Scaling Socket.io",
+            "Pub/Sub Implementation"
+          ]
+        },
+        {
+          "name": "JWT Documentation",
+          "url": "https://github.com/auth0/node-jsonwebtoken",
+          "sections": [
+            "Verify Tokens",
+            "Error Handling",
+            "Best Practices"
+          ]
+        }
+      ],
+      "description": "Access to Socket.io, Redis adapter, and JWT documentation"
+    },
+    "testing": {
+      "enabled": true,
+      "frameworks": ["jest", "socket.io-client"],
+      "capabilities": [
+        "Unit testing for event handlers",
+        "Integration testing for Socket.io flows",
+        "Performance benchmarking",
+        "Load testing with multiple clients",
+        "Latency measurement",
+        "Security testing"
+      ],
+      "testPaths": [
+        "src/socket/__tests__/**",
+        "tests/integration/socket/**",
+        "tests/performance/socket/**"
+      ],
+      "description": "Testing tools for Socket.io implementation validation"
+    },
+    "monitoring": {
+      "enabled": true,
+      "metrics": [
+        "socket_connections_total",
+        "socket_messages_sent",
+        "socket_messages_received",
+        "socket_errors_total",
+        "socket_latency_ms",
+        "redis_connection_status",
+        "memory_usage_mb"
+      ],
+      "endpoints": [
+        "/metrics/socket",
+        "/health/socket",
+        "/debug/socket/connections"
+      ],
+      "description": "Monitoring tools for Socket.io performance and health"
+    },
+    "debugging": {
+      "enabled": true,
+      "tools": [
+        "Socket.io Admin UI",
+        "Chrome DevTools WebSocket inspector",
+        "Redis Monitor",
+        "Node.js Inspector"
+      ],
+      "logLevels": ["debug", "info", "warn", "error"],
+      "description": "Debugging tools for Socket.io and WebSocket connections"
+    },
+    "security": {
+      "enabled": true,
+      "scanners": [
+        "npm audit",
+        "socket connection limits",
+        "rate limiting verification",
+        "input sanitization tests"
+      ],
+      "validations": [
+        "JWT token validation",
+        "CSRF protection",
+        "XSS prevention",
+        "Message size limits"
+      ],
+      "description": "Security tools for Socket.io implementation"
+    }
+  },
+  "workflow": {
+    "phases": [
+      {
+        "name": "Setup",
+        "tasks": [
+          "Install Socket.io and dependencies",
+          "Configure Redis connection",
+          "Set up project structure"
+        ]
+      },
+      {
+        "name": "Implementation",
+        "tasks": [
+          "Create Socket.io server with configuration",
+          "Implement JWT authentication middleware",
+          "Create event handlers for all features",
+          "Set up Redis adapter for scaling",
+          "Implement error handling and reconnection"
+        ]
+      },
+      {
+        "name": "Optimization",
+        "tasks": [
+          "Add compression middleware",
+          "Implement event batching",
+          "Create caching layer",
+          "Optimize payload sizes"
+        ]
+      },
+      {
+        "name": "Security",
+        "tasks": [
+          "Implement rate limiting",
+          "Add input sanitization",
+          "Set up CSRF protection",
+          "Create IP blacklisting"
+        ]
+      },
+      {
+        "name": "Testing",
+        "tasks": [
+          "Write unit tests for handlers",
+          "Create integration tests",
+          "Performance benchmarking",
+          "Security testing"
+        ]
+      },
+      {
+        "name": "Documentation",
+        "tasks": [
+          "Document all socket events",
+          "Create client integration guide",
+          "Write deployment instructions",
+          "Prepare troubleshooting guide"
+        ]
+      }
+    ]
+  },
+  "constraints": {
+    "performance": {
+      "messageLatency": "< 100ms",
+      "connectionTime": "< 2s",
+      "concurrentConnections": "> 10000",
+      "memoryPerConnection": "< 100KB"
+    },
+    "security": {
+      "authentication": "JWT required",
+      "rateLimit": "30 messages/minute",
+      "messageSizeLimit": "1MB",
+      "connectionLimit": "5 per IP"
+    },
+    "availability": {
+      "uptime": "99.9%",
+      "gracefulShutdown": true,
+      "autoReconnection": true
+    }
+  },
+  "dependencies": {
+    "npm": {
+      "production": [
+        "socket.io@^4.7.0",
+        "@socket.io/redis-adapter@^8.3.0",
+        "redis@^4.6.0",
+        "jsonwebtoken@^9.0.0",
+        "compression@^1.7.4",
+        "limiter@^2.1.0"
+      ],
+      "development": [
+        "@types/socket.io@^3.0.0",
+        "socket.io-client@^4.7.0",
+        "@types/redis@^4.0.0",
+        "@types/compression@^1.7.0"
+      ]
+    },
+    "services": {
+      "redis": {
+        "version": "7.0+",
+        "required": true,
+        "purpose": "Socket.io adapter and presence management"
+      }
+    }
+  },
+  "outputs": {
+    "files": [
+      "src/socket/server.ts",
+      "src/socket/middleware/auth.ts",
+      "src/socket/handlers/messageHandlers.ts",
+      "src/socket/handlers/typingHandlers.ts",
+      "src/socket/handlers/presenceHandlers.ts",
+      "src/socket/handlers/roomHandlers.ts",
+      "src/socket/config/redis.ts",
+      "src/socket/security/index.ts",
+      "src/socket/optimizations/performance.ts"
+    ],
+    "tests": [
+      "src/socket/__tests__/server.test.ts",
+      "src/socket/__tests__/auth.test.ts",
+      "src/socket/__tests__/handlers.test.ts",
+      "src/socket/__tests__/performance.test.ts"
+    ],
+    "documentation": [
+      "docs/socket-events.md",
+      "docs/client-integration.md",
+      "docs/deployment-guide.md",
+      "docs/troubleshooting.md"
+    ]
+  }
+}

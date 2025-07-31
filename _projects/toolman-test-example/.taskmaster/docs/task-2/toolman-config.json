@@ -1,0 +1,259 @@
+{
+  "name": "Database Setup and Schema Design Tools",
+  "version": "1.0.0",
+  "description": "Tool configuration for PostgreSQL and Redis database setup, schema creation, and migration management",
+  "tools": {
+    "fileSystem": {
+      "enabled": true,
+      "priority": 1,
+      "capabilities": [
+        "create",
+        "read",
+        "update",
+        "delete",
+        "search"
+      ],
+      "usage": {
+        "primary": [
+          "Creating SQL migration files in src/db/migrations/",
+          "Creating TypeScript model files in src/models/",
+          "Creating repository files in src/repositories/",
+          "Creating database configuration files",
+          "Reading and updating environment files"
+        ],
+        "restrictions": [
+          "Use absolute paths only",
+          "Verify directory existence before file creation",
+          "Maintain consistent file naming conventions"
+        ]
+      }
+    },
+    "terminal": {
+      "enabled": true,
+      "priority": 1,
+      "capabilities": [
+        "execute",
+        "shell",
+        "process"
+      ],
+      "usage": {
+        "primary": [
+          "PostgreSQL database creation and user setup",
+          "Running psql commands for schema verification",
+          "Redis server status and configuration checks",
+          "Running database migration scripts",
+          "Installing npm packages (pg, ioredis, bcrypt)",
+          "Running TypeScript compilation"
+        ],
+        "commands": [
+          "psql -U postgres -c 'CREATE DATABASE chatapp_db;'",
+          "psql -U postgres -d chatapp_db -f schema.sql",
+          "redis-cli ping",
+          "npm install pg @types/pg ioredis @types/ioredis bcrypt @types/bcrypt",
+          "npm run db:migrate",
+          "npm run db:seed"
+        ],
+        "restrictions": [
+          "Always check command execution status",
+          "Use proper error handling for database commands",
+          "Avoid interactive commands requiring user input"
+        ]
+      }
+    },
+    "documentation": {
+      "enabled": true,
+      "priority": 2,
+      "capabilities": [
+        "reference",
+        "search",
+        "explain"
+      ],
+      "usage": {
+        "primary": [
+          "PostgreSQL documentation for syntax and best practices",
+          "Redis documentation for data structures and commands",
+          "TypeScript documentation for type definitions",
+          "Node.js pg library documentation",
+          "ioredis library documentation"
+        ],
+        "sources": [
+          "https://www.postgresql.org/docs/",
+          "https://redis.io/docs/",
+          "https://node-postgres.com/",
+          "https://github.com/luin/ioredis",
+          "https://www.typescriptlang.org/docs/"
+        ]
+      }
+    },
+    "codeAnalysis": {
+      "enabled": true,
+      "priority": 2,
+      "capabilities": [
+        "lint",
+        "typecheck",
+        "dependencies"
+      ],
+      "usage": {
+        "primary": [
+          "TypeScript type checking for models and repositories",
+          "SQL syntax validation in migration files",
+          "Dependency analysis for database packages",
+          "Code quality checks for repository pattern",
+          "Security analysis for SQL injection prevention"
+        ],
+        "tools": [
+          "TypeScript compiler for type validation",
+          "ESLint for code quality",
+          "SQL linters for migration files"
+        ]
+      }
+    },
+    "testing": {
+      "enabled": true,
+      "priority": 3,
+      "capabilities": [
+        "unit",
+        "integration",
+        "performance"
+      ],
+      "usage": {
+        "primary": [
+          "Database connectivity tests",
+          "Migration runner tests",
+          "Repository method unit tests",
+          "Redis operation tests",
+          "Performance benchmark tests"
+        ],
+        "frameworks": [
+          "Jest for unit and integration testing",
+          "Supertest for API testing",
+          "Database test utilities"
+        ],
+        "commands": [
+          "npm test -- --testPathPattern=database",
+          "npm test -- --testPathPattern=repositories",
+          "npm run test:integration:db"
+        ]
+      }
+    },
+    "environment": {
+      "enabled": true,
+      "priority": 1,
+      "capabilities": [
+        "variables",
+        "secrets",
+        "configuration"
+      ],
+      "usage": {
+        "primary": [
+          "Database connection string management",
+          "Redis connection configuration",
+          "Environment-specific settings",
+          "Secret management for passwords",
+          "SSL certificate configuration"
+        ],
+        "variables": [
+          "DB_HOST",
+          "DB_PORT",
+          "DB_NAME",
+          "DB_USER",
+          "DB_PASSWORD",
+          "REDIS_HOST",
+          "REDIS_PORT",
+          "REDIS_PASSWORD"
+        ]
+      }
+    }
+  },
+  "workflow": {
+    "phases": [
+      {
+        "name": "Database Installation",
+        "tools": ["terminal", "documentation"],
+        "tasks": [
+          "Install PostgreSQL and Redis if not present",
+          "Verify database services are running",
+          "Create database and user with proper permissions"
+        ]
+      },
+      {
+        "name": "Schema Creation",
+        "tools": ["fileSystem", "terminal", "codeAnalysis"],
+        "tasks": [
+          "Create migration files for all tables",
+          "Implement database triggers and functions",
+          "Create indexes for performance optimization",
+          "Run migrations to create schema"
+        ]
+      },
+      {
+        "name": "Model Implementation",
+        "tools": ["fileSystem", "codeAnalysis", "documentation"],
+        "tasks": [
+          "Create TypeScript interfaces for all entities",
+          "Implement DTOs for data transfer",
+          "Define type-safe model relationships",
+          "Add validation logic to models"
+        ]
+      },
+      {
+        "name": "Repository Development",
+        "tools": ["fileSystem", "codeAnalysis", "testing"],
+        "tasks": [
+          "Implement BaseRepository class",
+          "Create specialized repositories for each entity",
+          "Add database query methods",
+          "Implement transaction support"
+        ]
+      },
+      {
+        "name": "Redis Integration",
+        "tools": ["fileSystem", "terminal", "documentation"],
+        "tasks": [
+          "Configure Redis connection with retry logic",
+          "Implement session management",
+          "Set up pub/sub for real-time features",
+          "Create Redis key naming utilities"
+        ]
+      },
+      {
+        "name": "Testing and Validation",
+        "tools": ["testing", "terminal", "codeAnalysis"],
+        "tasks": [
+          "Write unit tests for repositories",
+          "Create integration tests for database operations",
+          "Perform security validation tests",
+          "Run performance benchmarks"
+        ]
+      }
+    ]
+  },
+  "bestPractices": [
+    "Always use parameterized queries to prevent SQL injection",
+    "Implement proper connection pooling for scalability",
+    "Use transactions for data consistency",
+    "Create comprehensive indexes based on query patterns",
+    "Implement proper error handling and logging",
+    "Use environment variables for all sensitive configuration",
+    "Follow the repository pattern for data access",
+    "Write tests for all database operations",
+    "Document all schema design decisions",
+    "Use TypeScript strict mode for type safety"
+  ],
+  "dependencies": {
+    "required": [
+      "pg@^8.11.0",
+      "@types/pg@^8.10.0",
+      "ioredis@^5.3.0",
+      "@types/ioredis@^5.0.0",
+      "bcrypt@^5.1.0",
+      "@types/bcrypt@^5.0.0",
+      "dotenv@^16.0.0"
+    ],
+    "development": [
+      "jest@^29.0.0",
+      "@types/jest@^29.0.0",
+      "ts-jest@^29.0.0"
+    ]
+  }
+}

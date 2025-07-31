@@ -1,0 +1,192 @@
+{
+  "name": "Task 10 - Deployment and Documentation",
+  "description": "Configuration for deployment infrastructure and comprehensive documentation tasks",
+  "version": "1.0.0",
+  "tools": {
+    "file_system": {
+      "enabled": true,
+      "priority": "high",
+      "purpose": "Create and manage deployment configurations, Docker files, Kubernetes manifests, and documentation",
+      "operations": [
+        "read",
+        "write",
+        "edit",
+        "list"
+      ],
+      "paths": {
+        "docker": ["Dockerfile", "docker-compose.yml", ".dockerignore"],
+        "kubernetes": ["k8s/", "manifests/", "helm/"],
+        "ci_cd": [".github/workflows/", "ci/", "scripts/"],
+        "docs": ["docs/", "api/", "openapi.yaml", "README.md"]
+      }
+    },
+    "web_search": {
+      "enabled": true,
+      "priority": "high",
+      "purpose": "Research deployment patterns, Kubernetes best practices, and monitoring solutions",
+      "domains": {
+        "allowed": [
+          "kubernetes.io",
+          "docs.docker.com",
+          "rust-lang.org",
+          "prometheus.io",
+          "grafana.com",
+          "github.com",
+          "helm.sh",
+          "nginx.org",
+          "openapis.org"
+        ],
+        "research_areas": [
+          "Kubernetes deployment patterns",
+          "Rust containerization best practices",
+          "CI/CD pipeline patterns",
+          "Monitoring and observability",
+          "Security hardening"
+        ]
+      }
+    },
+    "kubernetes_docs": {
+      "enabled": true,
+      "priority": "high",
+      "purpose": "Access official Kubernetes documentation for deployment patterns and best practices",
+      "resources": [
+        "deployment strategies",
+        "service configuration",
+        "ingress controllers",
+        "security policies",
+        "autoscaling",
+        "monitoring"
+      ]
+    },
+    "rust_ecosystem": {
+      "enabled": true,
+      "priority": "medium",
+      "purpose": "Research Rust-specific deployment and monitoring patterns",
+      "resources": [
+        "containerization best practices",
+        "production build optimization",
+        "monitoring with Prometheus",
+        "tracing and logging",
+        "performance tuning"
+      ]
+    },
+    "shell_commands": {
+      "enabled": true,
+      "priority": "medium",
+      "purpose": "Execute deployment commands and validate configurations",
+      "commands": [
+        "docker build",
+        "docker-compose",
+        "kubectl apply --dry-run",
+        "helm lint",
+        "yamllint"
+      ]
+    },
+    "api_documentation": {
+      "enabled": true,
+      "priority": "high",
+      "purpose": "Generate and validate OpenAPI specifications",
+      "formats": [
+        "OpenAPI 3.0",
+        "Swagger",
+        "AsyncAPI"
+      ]
+    },
+    "monitoring_tools": {
+      "enabled": true,
+      "priority": "medium",
+      "purpose": "Configure monitoring and observability stack",
+      "components": [
+        "Prometheus metrics",
+        "Grafana dashboards",
+        "Alert rules",
+        "Log aggregation",
+        "Distributed tracing"
+      ]
+    }
+  },
+  "workflow": {
+    "phases": [
+      {
+        "name": "research",
+        "description": "Research deployment patterns and best practices",
+        "tools": ["web_search", "kubernetes_docs", "rust_ecosystem"],
+        "outputs": ["research_findings.md", "pattern_analysis.md"]
+      },
+      {
+        "name": "docker_setup",
+        "description": "Create multi-stage Docker configurations",
+        "tools": ["file_system", "shell_commands"],
+        "outputs": ["Dockerfile", "docker-compose.yml", "nginx.conf"]
+      },
+      {
+        "name": "kubernetes_config",
+        "description": "Develop Kubernetes manifests and configurations",
+        "tools": ["file_system", "kubernetes_docs", "shell_commands"],
+        "outputs": ["k8s/*.yaml", "helm/charts/"]
+      },
+      {
+        "name": "ci_cd_pipeline",
+        "description": "Implement GitHub Actions workflows",
+        "tools": ["file_system", "web_search"],
+        "outputs": [".github/workflows/ci.yml", ".github/workflows/deploy.yml"]
+      },
+      {
+        "name": "api_documentation",
+        "description": "Create comprehensive API documentation",
+        "tools": ["file_system", "api_documentation"],
+        "outputs": ["openapi.yaml", "api/docs/"]
+      },
+      {
+        "name": "monitoring_setup",
+        "description": "Configure monitoring and alerting",
+        "tools": ["file_system", "monitoring_tools", "rust_ecosystem"],
+        "outputs": ["prometheus/", "grafana/", "alerts/"]
+      },
+      {
+        "name": "security_hardening",
+        "description": "Implement security best practices",
+        "tools": ["file_system", "web_search"],
+        "outputs": ["security/", "rbac.yaml", "network-policies.yaml"]
+      }
+    ]
+  },
+  "constraints": {
+    "security": {
+      "container_user": "non-root (UID 1001)",
+      "image_scanning": "required",
+      "secrets_management": "Kubernetes secrets only",
+      "tls": "required for all endpoints"
+    },
+    "performance": {
+      "image_size": {
+        "frontend": "< 50MB",
+        "backend": "< 100MB"
+      },
+      "build_time": "< 5 minutes",
+      "deployment_time": "< 2 minutes"
+    },
+    "documentation": {
+      "api_spec": "OpenAPI 3.0",
+      "user_docs": "Markdown with screenshots",
+      "versioning": "semantic versioning"
+    }
+  },
+  "validation": {
+    "docker": [
+      "docker build --no-cache",
+      "docker run --rm security-scan",
+      "docker-compose config"
+    ],
+    "kubernetes": [
+      "kubectl apply --dry-run=client",
+      "kubectl api-resources",
+      "helm lint"
+    ],
+    "documentation": [
+      "openapi-validator",
+      "markdown-lint",
+      "link-checker"
+    ]
+  }
+}

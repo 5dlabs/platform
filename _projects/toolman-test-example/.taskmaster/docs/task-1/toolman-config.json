@@ -1,0 +1,147 @@
+{
+  "task": {
+    "id": "1",
+    "title": "Setup Project Structure and Environment",
+    "description": "Initialize project repository with React frontend and Node.js backend, configure TypeScript, and set up development environment with Docker"
+  },
+  "tools": {
+    "filesystem": {
+      "enabled": true,
+      "operations": ["create_directory", "create_file", "read_file", "write_file"],
+      "description": "Essential for creating project structure, configuration files, and code templates"
+    },
+    "web_search": {
+      "enabled": true,
+      "priority": "high",
+      "topics": [
+        "React 18 TypeScript best practices 2024",
+        "Node.js Express TypeScript project structure",
+        "Monorepo architecture JavaScript",
+        "Docker multi-stage builds Node.js",
+        "Kubernetes deployment patterns"
+      ],
+      "description": "Research current best practices for project setup and architecture decisions"
+    },
+    "documentation_lookup": {
+      "enabled": true,
+      "sources": {
+        "react": {
+          "url": "https://react.dev/",
+          "topics": ["project setup", "TypeScript integration", "folder structure"]
+        },
+        "vite": {
+          "url": "https://vitejs.dev/",
+          "topics": ["React template", "TypeScript configuration", "build optimization"]
+        },
+        "docker": {
+          "url": "https://docs.docker.com/",
+          "topics": ["Node.js best practices", "multi-stage builds", "compose files"]
+        },
+        "kubernetes": {
+          "url": "https://kubernetes.io/docs/",
+          "topics": ["deployment configurations", "service definitions", "resource management"]
+        },
+        "typescript": {
+          "url": "https://www.typescriptlang.org/docs/",
+          "topics": ["tsconfig options", "project references", "path mapping"]
+        }
+      },
+      "description": "Access official documentation for accurate configuration examples"
+    },
+    "shell_commands": {
+      "enabled": true,
+      "allowed_commands": [
+        "mkdir", "touch", "npm", "npx", "git",
+        "docker", "docker-compose", "kubectl"
+      ],
+      "description": "Execute commands for project initialization and dependency installation"
+    },
+    "code_generation": {
+      "enabled": true,
+      "templates": [
+        "react_component",
+        "express_route",
+        "dockerfile",
+        "kubernetes_deployment",
+        "typescript_config"
+      ],
+      "description": "Generate boilerplate code and configuration files"
+    },
+    "validation": {
+      "enabled": true,
+      "checks": [
+        "typescript_compilation",
+        "eslint_validation",
+        "docker_build_test",
+        "yaml_validation"
+      ],
+      "description": "Validate configurations and code quality"
+    }
+  },
+  "workflow": {
+    "phases": [
+      {
+        "name": "research",
+        "tools": ["web_search", "documentation_lookup"],
+        "duration": "30-45 minutes",
+        "output": "Best practices document and architectural decisions"
+      },
+      {
+        "name": "structure_creation",
+        "tools": ["filesystem", "shell_commands"],
+        "duration": "15-20 minutes",
+        "output": "Complete directory structure"
+      },
+      {
+        "name": "frontend_setup",
+        "tools": ["shell_commands", "code_generation", "filesystem"],
+        "duration": "20-30 minutes",
+        "output": "Configured React application with TypeScript"
+      },
+      {
+        "name": "backend_setup",
+        "tools": ["shell_commands", "code_generation", "filesystem"],
+        "duration": "20-30 minutes",
+        "output": "Configured Express server with TypeScript"
+      },
+      {
+        "name": "containerization",
+        "tools": ["code_generation", "filesystem", "documentation_lookup"],
+        "duration": "30-40 minutes",
+        "output": "Docker and Kubernetes configurations"
+      },
+      {
+        "name": "tooling_configuration",
+        "tools": ["code_generation", "filesystem"],
+        "duration": "15-20 minutes",
+        "output": "ESLint, Prettier, and Git configurations"
+      },
+      {
+        "name": "validation",
+        "tools": ["validation", "shell_commands"],
+        "duration": "20-30 minutes",
+        "output": "Verified working development environment"
+      }
+    ]
+  },
+  "constraints": {
+    "no_external_packages": false,
+    "require_approval": false,
+    "security_scan": true,
+    "test_coverage": false
+  },
+  "success_metrics": {
+    "required": [
+      "All directories created according to specification",
+      "TypeScript compiles without errors",
+      "Docker containers build successfully",
+      "Development servers start without errors",
+      "Hot reloading functional"
+    ],
+    "optional": [
+      "Build time under 2 minutes",
+      "Container size optimized",
+      "Comprehensive documentation"
+    ]
+  }
+}

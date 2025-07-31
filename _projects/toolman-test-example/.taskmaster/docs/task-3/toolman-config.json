@@ -1,0 +1,260 @@
+{
+  "name": "user-authentication-system",
+  "description": "Implementation of secure user authentication with JWT tokens, refresh tokens, and password reset",
+  "version": "1.0.0",
+  "tools": {
+    "filesystem": {
+      "enabled": true,
+      "permissions": {
+        "read": true,
+        "write": true,
+        "delete": false
+      },
+      "paths": {
+        "allowed": [
+          "src/controllers/auth.controller.ts",
+          "src/services/jwt.service.ts",
+          "src/services/user.service.ts",
+          "src/services/email.service.ts",
+          "src/middleware/auth.middleware.ts",
+          "src/routes/auth.routes.ts",
+          "src/validators/auth.validator.ts",
+          "src/models/user.model.ts",
+          "src/config/redis.ts",
+          "src/config/database.ts",
+          "tests/auth.test.ts",
+          ".env.example"
+        ],
+        "restricted": [
+          ".env",
+          "node_modules",
+          ".git"
+        ]
+      }
+    },
+    "shell": {
+      "enabled": true,
+      "commands": {
+        "allowed": [
+          "npm install",
+          "npm install jsonwebtoken bcrypt redis ioredis nodemailer",
+          "npm install --save-dev @types/jsonwebtoken @types/bcrypt @types/nodemailer",
+          "npm test",
+          "npm run test:auth",
+          "npm run lint",
+          "npm run build"
+        ],
+        "restricted": [
+          "rm",
+          "sudo",
+          "chmod",
+          "chown"
+        ]
+      }
+    },
+    "git": {
+      "enabled": true,
+      "operations": {
+        "commit": true,
+        "branch": true,
+        "push": false,
+        "pull": true
+      }
+    },
+    "documentation": {
+      "enabled": true,
+      "sources": [
+        "https://jwt.io/introduction",
+        "https://www.npmjs.com/package/jsonwebtoken",
+        "https://www.npmjs.com/package/bcrypt",
+        "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html",
+        "https://redis.io/docs/manual/patterns/distributed-locks/",
+        "https://nodemailer.com/about/"
+      ]
+    },
+    "testing": {
+      "enabled": true,
+      "frameworks": ["jest", "supertest"],
+      "coverage": {
+        "threshold": 80,
+        "reports": ["text", "lcov", "html"]
+      }
+    },
+    "security": {
+      "enabled": true,
+      "scanners": [
+        "npm audit",
+        "eslint-plugin-security"
+      ],
+      "rules": {
+        "preventSensitiveDataLogging": true,
+        "enforceHttps": true,
+        "validateInputs": true
+      }
+    }
+  },
+  "workflow": {
+    "steps": [
+      {
+        "id": "setup",
+        "name": "Project Setup",
+        "tasks": [
+          "Create project structure",
+          "Install dependencies",
+          "Configure environment variables"
+        ]
+      },
+      {
+        "id": "models",
+        "name": "Database Models",
+        "tasks": [
+          "Create User model",
+          "Set up database migrations",
+          "Configure Redis connection"
+        ]
+      },
+      {
+        "id": "services",
+        "name": "Core Services",
+        "tasks": [
+          "Implement JWT service",
+          "Create User service",
+          "Set up Email service"
+        ]
+      },
+      {
+        "id": "controllers",
+        "name": "API Controllers",
+        "tasks": [
+          "Implement authentication controller",
+          "Add input validation",
+          "Configure error handling"
+        ]
+      },
+      {
+        "id": "middleware",
+        "name": "Middleware",
+        "tasks": [
+          "Create authentication middleware",
+          "Implement rate limiting",
+          "Add security headers"
+        ]
+      },
+      {
+        "id": "routes",
+        "name": "API Routes",
+        "tasks": [
+          "Configure authentication routes",
+          "Apply middleware to routes",
+          "Set up route documentation"
+        ]
+      },
+      {
+        "id": "testing",
+        "name": "Testing",
+        "tasks": [
+          "Write unit tests for services",
+          "Create integration tests",
+          "Perform security testing",
+          "Check test coverage"
+        ]
+      },
+      {
+        "id": "documentation",
+        "name": "Documentation",
+        "tasks": [
+          "Document API endpoints",
+          "Create setup guide",
+          "Write security documentation"
+        ]
+      }
+    ]
+  },
+  "validation": {
+    "preChecks": [
+      {
+        "name": "Node.js version",
+        "command": "node --version",
+        "expectedPattern": "v1[68]\\.|v2[0-9]\\."
+      },
+      {
+        "name": "npm installed",
+        "command": "npm --version",
+        "expectedPattern": "\\d+\\.\\d+\\.\\d+"
+      }
+    ],
+    "postChecks": [
+      {
+        "name": "Tests pass",
+        "command": "npm test -- --testPathPattern=auth"
+      },
+      {
+        "name": "No security vulnerabilities",
+        "command": "npm audit --production"
+      },
+      {
+        "name": "Linting passes",
+        "command": "npm run lint"
+      }
+    ]
+  },
+  "environment": {
+    "required": [
+      "JWT_SECRET",
+      "JWT_REFRESH_SECRET",
+      "REDIS_URL",
+      "DATABASE_URL",
+      "EMAIL_HOST",
+      "EMAIL_PORT",
+      "EMAIL_USER",
+      "EMAIL_PASS",
+      "FRONTEND_URL"
+    ],
+    "optional": [
+      "NODE_ENV",
+      "PORT",
+      "LOG_LEVEL"
+    ]
+  },
+  "dependencies": {
+    "production": {
+      "jsonwebtoken": "^9.0.0",
+      "bcrypt": "^5.1.0",
+      "redis": "^4.6.0",
+      "ioredis": "^5.3.0",
+      "nodemailer": "^6.9.0",
+      "express": "^4.18.0",
+      "joi": "^17.9.0",
+      "express-rate-limit": "^6.7.0"
+    },
+    "development": {
+      "@types/jsonwebtoken": "^9.0.0",
+      "@types/bcrypt": "^5.0.0",
+      "@types/nodemailer": "^6.4.0",
+      "@types/express": "^4.17.0",
+      "jest": "^29.5.0",
+      "supertest": "^6.3.0",
+      "@types/jest": "^29.5.0",
+      "@types/supertest": "^2.0.0"
+    }
+  },
+  "outputs": {
+    "files": [
+      "src/controllers/auth.controller.ts",
+      "src/services/jwt.service.ts",
+      "src/services/user.service.ts",
+      "src/services/email.service.ts",
+      "src/middleware/auth.middleware.ts",
+      "src/routes/auth.routes.ts",
+      "tests/auth.test.ts"
+    ],
+    "endpoints": [
+      "POST /api/auth/register",
+      "POST /api/auth/login",
+      "POST /api/auth/refresh",
+      "GET /api/auth/profile",
+      "POST /api/auth/reset-password",
+      "POST /api/auth/logout"
+    ]
+  }
+}

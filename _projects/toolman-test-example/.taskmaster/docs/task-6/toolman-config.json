@@ -1,0 +1,250 @@
+{
+  "task": {
+    "id": "6",
+    "title": "Frontend Authentication and User Profile",
+    "description": "Implement comprehensive authentication system for React frontend including registration, login, profile management, and state management"
+  },
+  "tools": {
+    "filesystem": {
+      "read": {
+        "enabled": true,
+        "description": "Read existing React components and configuration files",
+        "use_cases": [
+          "Review existing component structure",
+          "Check current routing configuration",
+          "Examine API service setup",
+          "Review TypeScript type definitions"
+        ]
+      },
+      "write": {
+        "enabled": true,
+        "description": "Create new React components and context providers",
+        "use_cases": [
+          "Create AuthContext.tsx",
+          "Create authentication form components",
+          "Create profile management components",
+          "Define TypeScript interfaces and types"
+        ]
+      },
+      "edit": {
+        "enabled": true,
+        "description": "Modify existing React components and configurations",
+        "use_cases": [
+          "Update App.tsx with AuthProvider",
+          "Modify routing configuration",
+          "Update API service with auth interceptors",
+          "Add authentication to existing components"
+        ]
+      }
+    },
+    "shell": {
+      "command_execution": {
+        "enabled": true,
+        "description": "Execute npm commands for dependencies and testing",
+        "allowed_commands": [
+          "npm install",
+          "npm test",
+          "npm run type-check",
+          "npm run lint",
+          "npm run build"
+        ],
+        "use_cases": [
+          "Install required dependencies",
+          "Run component tests",
+          "Check TypeScript types",
+          "Validate code quality",
+          "Build production bundle"
+        ]
+      }
+    },
+    "search": {
+      "file_search": {
+        "enabled": true,
+        "description": "Search for React patterns and authentication implementations",
+        "use_cases": [
+          "Find existing auth-related code",
+          "Locate API endpoint references",
+          "Search for routing configuration",
+          "Find component usage patterns"
+        ]
+      },
+      "code_search": {
+        "enabled": true,
+        "description": "Search for specific React hooks and patterns",
+        "patterns": [
+          "useContext",
+          "useAuth",
+          "ProtectedRoute",
+          "localStorage",
+          "axios.interceptors"
+        ]
+      }
+    },
+    "documentation": {
+      "read_docs": {
+        "enabled": true,
+        "description": "Reference React and authentication best practices",
+        "sources": [
+          "React documentation",
+          "React Router documentation",
+          "React Hook Form documentation",
+          "JWT best practices",
+          "Material-UI documentation"
+        ]
+      },
+      "generate_docs": {
+        "enabled": true,
+        "description": "Create component documentation and usage guides",
+        "outputs": [
+          "Component API documentation",
+          "Authentication flow diagrams",
+          "Integration guides",
+          "Security documentation"
+        ]
+      }
+    },
+    "testing": {
+      "unit_tests": {
+        "enabled": true,
+        "description": "Test individual React components and hooks",
+        "frameworks": ["Jest", "React Testing Library"],
+        "coverage_requirements": {
+          "statements": 80,
+          "branches": 75,
+          "functions": 80,
+          "lines": 80
+        }
+      },
+      "integration_tests": {
+        "enabled": true,
+        "description": "Test complete authentication flows",
+        "scenarios": [
+          "Registration flow",
+          "Login flow",
+          "Token refresh",
+          "Profile update",
+          "Password reset"
+        ]
+      }
+    },
+    "analysis": {
+      "type_checking": {
+        "enabled": true,
+        "description": "Validate TypeScript types and interfaces",
+        "strict_mode": true,
+        "check_patterns": [
+          "Component props",
+          "Hook return types",
+          "API response types",
+          "Context types"
+        ]
+      },
+      "linting": {
+        "enabled": true,
+        "description": "Ensure code quality and React best practices",
+        "rules": [
+          "react/jsx-no-leaked-render",
+          "react-hooks/rules-of-hooks",
+          "react-hooks/exhaustive-deps",
+          "@typescript-eslint/no-explicit-any"
+        ]
+      }
+    }
+  },
+  "constraints": {
+    "technology_stack": {
+      "framework": "React 18+",
+      "language": "TypeScript",
+      "state_management": "React Context API",
+      "routing": "React Router v6",
+      "ui_library": "Material-UI (MUI)",
+      "form_handling": "React Hook Form",
+      "validation": "Yup",
+      "http_client": "Axios"
+    },
+    "security_requirements": [
+      "Secure token storage",
+      "XSS prevention",
+      "CSRF protection awareness",
+      "Input validation",
+      "Secure password requirements"
+    ],
+    "performance_requirements": [
+      "Lazy loading for routes",
+      "Optimistic UI updates",
+      "Debounced form validation",
+      "Memoized components",
+      "Efficient re-renders"
+    ],
+    "accessibility_requirements": [
+      "WCAG 2.1 AA compliance",
+      "Keyboard navigation",
+      "Screen reader support",
+      "Focus management",
+      "Error announcements"
+    ]
+  },
+  "workflow": {
+    "phases": [
+      {
+        "name": "Setup",
+        "tasks": [
+          "Install required dependencies",
+          "Set up project structure",
+          "Configure TypeScript paths",
+          "Set up testing environment"
+        ]
+      },
+      {
+        "name": "Core Implementation",
+        "tasks": [
+          "Create AuthContext and Provider",
+          "Implement API service with interceptors",
+          "Create authentication forms",
+          "Implement protected routes"
+        ]
+      },
+      {
+        "name": "Feature Development",
+        "tasks": [
+          "Build user profile components",
+          "Implement password reset flow",
+          "Add avatar upload functionality",
+          "Create loading and error states"
+        ]
+      },
+      {
+        "name": "Testing",
+        "tasks": [
+          "Write unit tests for components",
+          "Create integration tests",
+          "Test accessibility compliance",
+          "Perform security testing"
+        ]
+      },
+      {
+        "name": "Polish",
+        "tasks": [
+          "Optimize performance",
+          "Improve error messages",
+          "Add loading animations",
+          "Document component usage"
+        ]
+      }
+    ]
+  },
+  "validation": {
+    "checklist": [
+      "All authentication flows working end-to-end",
+      "Forms have proper validation and error handling",
+      "Protected routes redirect appropriately",
+      "Tokens refresh automatically",
+      "Profile updates persist correctly",
+      "Tests achieve required coverage",
+      "No TypeScript errors",
+      "Accessibility audit passes",
+      "Mobile responsive design",
+      "Security best practices followed"
+    ]
+  }
+}
