@@ -215,8 +215,8 @@ jobs:
         run: |
           echo "🚀 Deploying Toolman Integration feature version ${{ needs.version.outputs.feature-tag }}"
 
-          # Deploy with specific feature tag and Always pull policy
-          helm upgrade --install orchestrator-toolman-integration ./infra/charts/orchestrator \
+          # Deploy with specific feature tag and Always pull policy (same as main deployment)
+          helm upgrade --install orchestrator ./infra/charts/orchestrator \
             --namespace orchestrator \
             --create-namespace \
             --values infra/charts/orchestrator/values.yaml \
@@ -224,16 +224,14 @@ jobs:
             --set image.tag=${{ needs.version.outputs.feature-tag }} \
             --set image.pullPolicy=Always \
             --set secrets.anthropicApiKey="${{ secrets.ANTHROPIC_API_KEY }}" \
-            --set nameOverride="orchestrator-toolman-integration" \
-            --set fullnameOverride="orchestrator-toolman-integration" \
             --timeout 5m \
             --wait
 
       - name: Verify deployment
         run: |
-          echo "🔍 Toolman Integration deployment verification..."
-          kubectl get pods -n orchestrator -l app.kubernetes.io/name=orchestrator-toolman-integration -o wide
-          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=orchestrator-toolman-integration -n orchestrator --timeout=120s || true
+          echo "🔍 Deployment verification..."
+          kubectl get pods -n orchestrator -o wide
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=orchestrator -n orchestrator --timeout=120s || true
 
           echo ""
           echo "✅ Toolman Integration deployment complete!"
@@ -241,15 +239,7 @@ jobs:
           echo "🏷️ Feature Tag: ${{ needs.version.outputs.feature-tag }}"
           echo "🔧 Features: Task-specific Toolman configuration generation"
 
-      - name: Show deployment status
+      - name: Show recent TaskRuns
         run: |
-          echo "📋 Toolman Integration Orchestrator Status:"
-          kubectl get deployment orchestrator-toolman-integration -n orchestrator -o wide || echo "Deployment not found"
-          
-          echo ""
           echo "📋 Recent TaskRuns:"
           kubectl get taskruns -A --sort-by=.metadata.creationTimestamp | tail -10 || echo "No TaskRuns found"
-
-          echo ""
-          echo "🔍 ConfigMaps (should include toolman-tool-catalog):"
-          kubectl get configmaps -n orchestrator | grep -E "(toolman|orchestrator)" || echo "No relevant ConfigMaps found"
