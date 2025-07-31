@@ -17,7 +17,10 @@ impl DocsStatusManager {
         jobs: &Api<Job>,
         ctx: &Arc<Context>,
     ) -> Result<()> {
-        error!("🔍 STATUS_MANAGER: Starting monitor_job_status for DocsRun: {}", docs_run.name_any());
+        error!(
+            "🔍 STATUS_MANAGER: Starting monitor_job_status for DocsRun: {}",
+            docs_run.name_any()
+        );
         let job_name = Self::get_current_job_name(docs_run);
 
         if let Some(job_name) = job_name {
@@ -34,7 +37,11 @@ impl DocsStatusManager {
                     }
                 }
                 Err(kube::Error::Api(ae)) if ae.code == 404 => {
-                    warn!("Job {} not found for DocsRun {}", job_name, docs_run.name_any());
+                    warn!(
+                        "Job {} not found for DocsRun {}",
+                        job_name,
+                        docs_run.name_any()
+                    );
                 }
                 Err(e) => {
                     error!(
@@ -47,7 +54,9 @@ impl DocsStatusManager {
             }
         } else {
             error!("❌ STATUS_MANAGER: No job_name found in DocsRun status - cannot monitor job!");
-            error!("❌ STATUS_MANAGER: This means the initial status update failed or was overwritten");
+            error!(
+                "❌ STATUS_MANAGER: This means the initial status update failed or was overwritten"
+            );
         }
 
         Ok(())
@@ -79,18 +88,43 @@ impl DocsStatusManager {
         let patch = Patch::Merge(&status_patch);
         let pp = PatchParams::default();
 
-        error!("🔄 STATUS_MANAGER: Attempting to update DocsRun status with job_name: {}", job_name);
-        error!("🔄 STATUS_MANAGER: Status patch: {}", serde_json::to_string_pretty(&status_patch).unwrap_or_else(|e| format!("Failed to serialize patch: {e}")));
-        
+        error!(
+            "🔄 STATUS_MANAGER: Attempting to update DocsRun status with job_name: {}",
+            job_name
+        );
+        error!(
+            "🔄 STATUS_MANAGER: Status patch: {}",
+            serde_json::to_string_pretty(&status_patch)
+                .unwrap_or_else(|e| format!("Failed to serialize patch: {e}"))
+        );
+
         match docs_api.patch_status(&name, &pp, &patch).await {
             Ok(updated_docs_run) => {
-                error!("✅ STATUS_MANAGER: Successfully updated DocsRun status: {} -> Running", name);
-                error!("✅ STATUS_MANAGER: Updated resource version: {:?}", updated_docs_run.metadata.resource_version);
-                error!("✅ STATUS_MANAGER: Updated job_name in status: {:?}", updated_docs_run.status.as_ref().and_then(|s| s.job_name.as_ref()));
+                error!(
+                    "✅ STATUS_MANAGER: Successfully updated DocsRun status: {} -> Running",
+                    name
+                );
+                error!(
+                    "✅ STATUS_MANAGER: Updated resource version: {:?}",
+                    updated_docs_run.metadata.resource_version
+                );
+                error!(
+                    "✅ STATUS_MANAGER: Updated job_name in status: {:?}",
+                    updated_docs_run
+                        .status
+                        .as_ref()
+                        .and_then(|s| s.job_name.as_ref())
+                );
             }
             Err(e) => {
-                error!("❌ STATUS_MANAGER: Failed to update DocsRun status for {}: {}", name, e);
-                error!("❌ STATUS_MANAGER: Error type: {}", std::any::type_name_of_val(&e));
+                error!(
+                    "❌ STATUS_MANAGER: Failed to update DocsRun status for {}: {}",
+                    name, e
+                );
+                error!(
+                    "❌ STATUS_MANAGER: Error type: {}",
+                    std::any::type_name_of_val(&e)
+                );
                 error!("❌ STATUS_MANAGER: Full error details: {:?}", e);
                 return Err(e.into());
             }
@@ -98,7 +132,6 @@ impl DocsStatusManager {
 
         Ok(())
     }
-
 
     /// Update the DocsRun CRD status
     async fn update_status(
@@ -128,8 +161,14 @@ impl DocsStatusManager {
 
         match docs_api.patch_status(&name, &pp, &patch).await {
             Ok(updated_docs_run) => {
-                info!("✅ Successfully updated DocsRun status: {} -> {}", name, phase);
-                info!("✅ Updated resource version: {:?}", updated_docs_run.metadata.resource_version);
+                info!(
+                    "✅ Successfully updated DocsRun status: {} -> {}",
+                    name, phase
+                );
+                info!(
+                    "✅ Updated resource version: {:?}",
+                    updated_docs_run.metadata.resource_version
+                );
                 Ok(())
             }
             Err(e) => {
@@ -144,7 +183,11 @@ impl DocsStatusManager {
     /// Get the current job name for a docs task
     fn get_current_job_name(docs_run: &DocsRun) -> Option<String> {
         let job_name = docs_run.status.as_ref().and_then(|s| s.job_name.clone());
-        error!("🔍 STATUS_MANAGER: get_current_job_name for {}: {:?}", docs_run.name_any(), job_name);
+        error!(
+            "🔍 STATUS_MANAGER: get_current_job_name for {}: {:?}",
+            docs_run.name_any(),
+            job_name
+        );
         error!("🔍 STATUS_MANAGER: DocsRun status: {:?}", docs_run.status);
         job_name
     }
@@ -152,8 +195,11 @@ impl DocsStatusManager {
     /// Analyze job status and return (phase, message)
     fn analyze_job_status(job: &Job) -> (String, String) {
         let job_name = job.metadata.name.as_deref().unwrap_or("unknown");
-        error!("🔍 STATUS_MANAGER: analyze_job_status for job: {}", job_name);
-        
+        error!(
+            "🔍 STATUS_MANAGER: analyze_job_status for job: {}",
+            job_name
+        );
+
         if let Some(status) = &job.status {
             error!("📊 STATUS_MANAGER: Job status - active: {:?}, succeeded: {:?}, failed: {:?}, completion_time: {:?}",
                 status.active, status.succeeded, status.failed, status.completion_time);
@@ -161,7 +207,10 @@ impl DocsStatusManager {
             if status.completion_time.is_some() {
                 if let Some(conditions) = &status.conditions {
                     for condition in conditions {
-                        error!("🏷️ STATUS_MANAGER: Job condition - type: {}, status: {}", condition.type_, condition.status);
+                        error!(
+                            "🏷️ STATUS_MANAGER: Job condition - type: {}, status: {}",
+                            condition.type_, condition.status
+                        );
                         if condition.type_ == "Complete" && condition.status == "True" {
                             error!("🎉 STATUS_MANAGER: Job COMPLETED successfully! Setting phase to Succeeded");
                             return (
@@ -169,8 +218,14 @@ impl DocsStatusManager {
                                 "Documentation generation completed successfully".to_string(),
                             );
                         } else if condition.type_ == "Failed" && condition.status == "True" {
-                            let message = condition.message.as_deref().unwrap_or("Documentation generation failed");
-                            error!("💥 STATUS_MANAGER: Job FAILED! Setting phase to Failed: {}", message);
+                            let message = condition
+                                .message
+                                .as_deref()
+                                .unwrap_or("Documentation generation failed");
+                            error!(
+                                "💥 STATUS_MANAGER: Job FAILED! Setting phase to Failed: {}",
+                                message
+                            );
                             return ("Failed".to_string(), message.to_string());
                         }
                     }
@@ -180,19 +235,28 @@ impl DocsStatusManager {
             // Check if job is running
             if let Some(active) = status.active {
                 if active > 0 {
-                    return ("Running".to_string(), "Documentation generation is running".to_string());
+                    return (
+                        "Running".to_string(),
+                        "Documentation generation is running".to_string(),
+                    );
                 }
             }
 
             // Check for failure conditions
             if let Some(failed) = status.failed {
                 if failed > 0 {
-                    return ("Failed".to_string(), "Documentation generation failed".to_string());
+                    return (
+                        "Failed".to_string(),
+                        "Documentation generation failed".to_string(),
+                    );
                 }
             }
         }
 
-        ("Pending".to_string(), "Documentation generation job pending".to_string())
+        (
+            "Pending".to_string(),
+            "Documentation generation job pending".to_string(),
+        )
     }
 
     /// Build DocsRun conditions
@@ -227,8 +291,11 @@ impl DocsStatusManager {
 
         // For docs jobs, we can clean up immediately since they don't need session persistence
         let jobs: Api<Job> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
-        
-        if let Err(e) = jobs.delete(job_name, &kube::api::DeleteParams::default()).await {
+
+        if let Err(e) = jobs
+            .delete(job_name, &kube::api::DeleteParams::default())
+            .await
+        {
             warn!("Failed to delete completed docs job {}: {}", job_name, e);
         } else {
             info!("Successfully deleted completed docs job: {}", job_name);

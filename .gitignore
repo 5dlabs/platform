@@ -63,8 +63,8 @@ Chart.lock
 # Taskmaster directory (local task management)
 # .taskmaster/
 
-# Claude configuration file
-CLAUDE.md
+# Claude configuration files
+**/CLAUDE.md
 orchestrator/target/
 
 # Task files

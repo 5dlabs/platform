@@ -64,7 +64,9 @@ struct RpcRequest {
 fn validate_repository_format(repo: &str) -> Result<()> {
     let parts: Vec<&str> = repo.split('/').collect();
     if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
-        return Err(anyhow!("Repository must be in format 'org/repo' or 'user/repo'"));
+        return Err(anyhow!(
+            "Repository must be in format 'org/repo' or 'user/repo'"
+        ));
     }
     Ok(())
 }
@@ -175,9 +177,7 @@ fn handle_orchestrator_tools(
                 };
 
             // Extract model parameter (no default - let CLI/backend handle it)
-            let model = params_map
-                .get("model")
-                .and_then(|v| v.as_str());
+            let model = params_map.get("model").and_then(|v| v.as_str());
 
             // Get GitHub user from environment variable (takes precedence) or parameter
             let env_user = std::env::var("FDL_DEFAULT_DOCS_USER").ok();
@@ -202,7 +202,7 @@ fn handle_orchestrator_tools(
             // Add required parameters
             args.extend(&["--working-directory", working_directory]);
             args.extend(&["--github-user", github_user]);
-            
+
             // Add model parameter only if provided
             if let Some(m) = model {
                 args.extend(&["--model", m]);
@@ -239,56 +239,66 @@ fn handle_orchestrator_tools(
             };
 
             let service = params_map.get("service").and_then(|v| v.as_str());
-            
+
             // Get service from environment variable (takes precedence) or parameter
             let env_service = std::env::var("FDL_DEFAULT_SERVICE").ok();
             let service = match env_service.as_deref().or(service) {
                 Some(s) => s,
                 None => return Some(Err(anyhow!("Missing required parameter: service (can also be set via FDL_DEFAULT_SERVICE environment variable)"))),
             };
-            
+
             // Extract required repository parameters in org/repo format
             let repository = match params_map.get("repository").and_then(|v| v.as_str()) {
                 Some(r) => r,
                 None => return Some(Err(anyhow!("Missing required parameter: repository"))),
             };
-            
+
             let docs_repository = match params_map.get("docs_repository").and_then(|v| v.as_str()) {
                 Some(r) => r,
                 None => return Some(Err(anyhow!("Missing required parameter: docs_repository"))),
             };
-            
+
             // Extract required directory parameters
-            let docs_project_directory = match params_map.get("docs_project_directory").and_then(|v| v.as_str()) {
+            let docs_project_directory = match params_map
+                .get("docs_project_directory")
+                .and_then(|v| v.as_str())
+            {
                 Some(d) => d,
-                None => return Some(Err(anyhow!("Missing required parameter: docs_project_directory"))),
+                None => {
+                    return Some(Err(anyhow!(
+                        "Missing required parameter: docs_project_directory"
+                    )))
+                }
             };
-            
+
             let working_directory = params_map
                 .get("working_directory")
                 .and_then(|v| v.as_str())
                 .unwrap_or(".");
-            
+
             // Validate repository format (org/repo)
             if let Err(e) = validate_repository_format(repository) {
-                return Some(Err(anyhow!("Invalid repository format '{}': {}", repository, e)));
+                return Some(Err(anyhow!(
+                    "Invalid repository format '{}': {}",
+                    repository,
+                    e
+                )));
             }
             if let Err(e) = validate_repository_format(docs_repository) {
-                return Some(Err(anyhow!("Invalid docs_repository format '{}': {}", docs_repository, e)));
+                return Some(Err(anyhow!(
+                    "Invalid docs_repository format '{}': {}",
+                    docs_repository,
+                    e
+                )));
             }
 
-
             // Extract optional model parameter (no default - let CLI/backend handle it)
-            let model = params_map
-                .get("model")
-                .and_then(|v| v.as_str());
+            let model = params_map.get("model").and_then(|v| v.as_str());
 
             let github_user = match params_map.get("github_user").and_then(|v| v.as_str()) {
                 Some(u) => u,
                 None => return Some(Err(anyhow!("Missing required parameter: github_user"))),
             };
-
-
 
             let continue_session = params_map
                 .get("continue_session")
@@ -316,7 +326,7 @@ fn handle_orchestrator_tools(
                 return Some(Err(anyhow!("Invalid service name '{}'. Must contain only lowercase letters, numbers, and hyphens", service)));
             }
 
-            // Convert org/repo format to HTTPS URLs for CLI 
+            // Convert org/repo format to HTTPS URLs for CLI
             let repository_url = repo_to_https_url(repository);
             let docs_repository_url = repo_to_https_url(docs_repository);
 
@@ -327,15 +337,15 @@ fn handle_orchestrator_tools(
             let task_id_str = task_id.to_string();
             args.push(&task_id_str);
             args.extend(&["--service", service]);
-            
+
             // Add required repository URLs (converted from org/repo format)
             args.extend(&["--repository-url", &repository_url]);
             args.extend(&["--docs-repository-url", &docs_repository_url]);
-            
+
             // Add required directory parameters
             args.extend(&["--docs-project-directory", docs_project_directory]);
             args.extend(&["--working-directory", working_directory]);
-            
+
             // Add model parameter only if provided
             if let Some(m) = model {
                 args.extend(&["--model", m]);

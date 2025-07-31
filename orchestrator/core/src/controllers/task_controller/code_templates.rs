@@ -22,16 +22,40 @@ impl CodeTemplateGenerator {
         let mut templates = BTreeMap::new();
 
         // Generate core code templates
-        templates.insert("container.sh".to_string(), Self::generate_container_script(code_run)?);
-        templates.insert("CLAUDE.md".to_string(), Self::generate_claude_memory(code_run)?);
-        templates.insert("settings.json".to_string(), Self::generate_claude_settings(code_run, config)?);
-        
+        templates.insert(
+            "container.sh".to_string(),
+            Self::generate_container_script(code_run)?,
+        );
+        templates.insert(
+            "CLAUDE.md".to_string(),
+            Self::generate_claude_memory(code_run)?,
+        );
+        templates.insert(
+            "settings.json".to_string(),
+            Self::generate_claude_settings(code_run, config)?,
+        );
+
         // Generate code-specific templates
-        templates.insert("mcp.json".to_string(), Self::generate_mcp_config(code_run, config)?);
-        templates.insert("client-config.json".to_string(), Self::generate_client_config(code_run, config)?);
-        templates.insert("coding-guidelines.md".to_string(), Self::generate_coding_guidelines(code_run)?);
-        templates.insert("github-guidelines.md".to_string(), Self::generate_github_guidelines(code_run)?);
-        templates.insert("mcp-tools.md".to_string(), Self::generate_mcp_tools_doc(code_run)?);
+        templates.insert(
+            "mcp.json".to_string(),
+            Self::generate_mcp_config(code_run, config)?,
+        );
+        templates.insert(
+            "client-config.json".to_string(),
+            Self::generate_client_config(code_run, config)?,
+        );
+        templates.insert(
+            "coding-guidelines.md".to_string(),
+            Self::generate_coding_guidelines(code_run)?,
+        );
+        templates.insert(
+            "github-guidelines.md".to_string(),
+            Self::generate_github_guidelines(code_run)?,
+        );
+        templates.insert(
+            "mcp-tools.md".to_string(),
+            Self::generate_mcp_tools_doc(code_run)?,
+        );
 
         // Generate hook scripts
         let hook_scripts = Self::generate_hook_scripts(code_run)?;
@@ -48,7 +72,7 @@ impl CodeTemplateGenerator {
         handlebars.set_strict_mode(false);
 
         let template = Self::load_template("code/container.sh.hbs")?;
-        
+
         handlebars
             .register_template_string("container_script", template)
             .map_err(|e| {
@@ -70,11 +94,13 @@ impl CodeTemplateGenerator {
             "github_user": code_run.spec.github_user,
         });
 
-        handlebars.render("container_script", &context).map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
-                "Failed to render container script: {e}"
-            ))
-        })
+        handlebars
+            .render("container_script", &context)
+            .map_err(|e| {
+                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                    "Failed to render container script: {e}"
+                ))
+            })
     }
 
     fn generate_claude_memory(code_run: &CodeRun) -> Result<String> {
@@ -209,11 +235,13 @@ impl CodeTemplateGenerator {
             "working_directory": Self::get_working_directory(code_run),
         });
 
-        handlebars.render("coding_guidelines", &context).map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
-                "Failed to render coding-guidelines.md: {e}"
-            ))
-        })
+        handlebars
+            .render("coding_guidelines", &context)
+            .map_err(|e| {
+                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                    "Failed to render coding-guidelines.md: {e}"
+                ))
+            })
     }
 
     fn generate_github_guidelines(code_run: &CodeRun) -> Result<String> {
@@ -236,11 +264,13 @@ impl CodeTemplateGenerator {
             "github_user": code_run.spec.github_user,
         });
 
-        handlebars.render("github_guidelines", &context).map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
-                "Failed to render github-guidelines.md: {e}"
-            ))
-        })
+        handlebars
+            .render("github_guidelines", &context)
+            .map_err(|e| {
+                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                    "Failed to render github-guidelines.md: {e}"
+                ))
+            })
     }
 
     fn generate_mcp_tools_doc(_code_run: &CodeRun) -> Result<String> {
@@ -257,8 +287,7 @@ impl CodeTemplateGenerator {
                 ))
             })?;
 
-        let context = json!({
-        });
+        let context = json!({});
 
         handlebars.render("mcp_tools", &context).map_err(|e| {
             crate::controllers::task_controller::types::Error::ConfigError(format!(
@@ -271,7 +300,10 @@ impl CodeTemplateGenerator {
         let mut hook_scripts = BTreeMap::new();
         let hooks_prefix = "code_hooks_";
 
-        debug!("Scanning for code hook templates with prefix: {}", hooks_prefix);
+        debug!(
+            "Scanning for code hook templates with prefix: {}",
+            hooks_prefix
+        );
 
         // Read the ConfigMap directory and find files with the hook prefix
         match std::fs::read_dir(CLAUDE_TEMPLATES_PATH) {
@@ -283,17 +315,26 @@ impl CodeTemplateGenerator {
                             // Check if this is a hook template for code
                             if filename.starts_with(hooks_prefix) && filename.ends_with(".hbs") {
                                 // Extract just the hook filename (remove prefix)
-                                let hook_name = filename.strip_prefix(hooks_prefix).unwrap_or(filename);
+                                let hook_name =
+                                    filename.strip_prefix(hooks_prefix).unwrap_or(filename);
 
                                 match std::fs::read_to_string(&path) {
                                     Ok(template_content) => {
-                                        debug!("Loaded code hook template: {} (from {})", hook_name, filename);
-                                        
+                                        debug!(
+                                            "Loaded code hook template: {} (from {})",
+                                            hook_name, filename
+                                        );
+
                                         let mut handlebars = Handlebars::new();
                                         handlebars.set_strict_mode(false);
 
-                                        if let Err(e) = handlebars.register_template_string("hook", template_content) {
-                                            debug!("Failed to register hook template {}: {}", hook_name, e);
+                                        if let Err(e) = handlebars
+                                            .register_template_string("hook", template_content)
+                                        {
+                                            debug!(
+                                                "Failed to register hook template {}: {}",
+                                                hook_name, e
+                                            );
                                             continue;
                                         }
 
@@ -309,16 +350,27 @@ impl CodeTemplateGenerator {
                                         match handlebars.render("hook", &context) {
                                             Ok(rendered_script) => {
                                                 // Remove .hbs extension for the final filename
-                                                let script_name = hook_name.strip_suffix(".hbs").unwrap_or(hook_name);
-                                                hook_scripts.insert(script_name.to_string(), rendered_script);
+                                                let script_name = hook_name
+                                                    .strip_suffix(".hbs")
+                                                    .unwrap_or(hook_name);
+                                                hook_scripts.insert(
+                                                    script_name.to_string(),
+                                                    rendered_script,
+                                                );
                                             }
                                             Err(e) => {
-                                                debug!("Failed to render code hook script {}: {}", hook_name, e);
+                                                debug!(
+                                                    "Failed to render code hook script {}: {}",
+                                                    hook_name, e
+                                                );
                                             }
                                         }
                                     }
                                     Err(e) => {
-                                        debug!("Failed to load code hook template {}: {}", filename, e);
+                                        debug!(
+                                            "Failed to load code hook template {}: {}",
+                                            filename, e
+                                        );
                                     }
                                 }
                             }
@@ -345,7 +397,10 @@ impl CodeTemplateGenerator {
     /// Get continue session flag - true for retries or user-requested continuation
     fn get_continue_session(code_run: &CodeRun) -> bool {
         // Continue if it's a retry attempt OR user explicitly requested it
-        let retry_count = code_run.status.as_ref().map_or(0, |s| s.retry_count.unwrap_or(0));
+        let retry_count = code_run
+            .status
+            .as_ref()
+            .map_or(0, |s| s.retry_count.unwrap_or(0));
         retry_count > 0 || code_run.spec.continue_session
     }
 

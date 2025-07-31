@@ -14,7 +14,10 @@ use tracing::{debug, error, info, instrument, Instrument};
 /// Main entry point for the separated task controllers
 #[instrument(skip(client), fields(namespace = %namespace))]
 pub async fn run_task_controller(client: Client, namespace: String) -> Result<()> {
-    info!("Starting separated task controllers in namespace: {}", namespace);
+    info!(
+        "Starting separated task controllers in namespace: {}",
+        namespace
+    );
 
     debug!("Loading controller configuration from mounted file...");
 
@@ -69,23 +72,19 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
 
     // Run both controllers concurrently
     info!("Starting DocsRun and CodeRun controllers...");
-    
+
     let docs_controller_handle = tokio::spawn({
         let context = context.clone();
         let client = client.clone();
         let namespace = namespace.clone();
-        async move {
-            run_docs_controller(client, namespace, context).await
-        }
+        async move { run_docs_controller(client, namespace, context).await }
     });
 
     let code_controller_handle = tokio::spawn({
         let context = context.clone();
         let client = client.clone();
         let namespace = namespace.clone();
-        async move {
-            run_code_controller(client, namespace, context).await
-        }
+        async move { run_code_controller(client, namespace, context).await }
     });
 
     debug!("Both controllers started, waiting for completion...");
@@ -142,7 +141,8 @@ async fn run_docs_controller(
                         );
                     }
                 }
-            }.instrument(docs_span)
+            }
+            .instrument(docs_span)
         })
         .await;
 
@@ -183,7 +183,8 @@ async fn run_code_controller(
                         );
                     }
                 }
-            }.instrument(code_span)
+            }
+            .instrument(code_span)
         })
         .await;
 

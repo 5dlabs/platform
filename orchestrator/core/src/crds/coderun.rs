@@ -79,11 +79,9 @@ pub struct CodeRunSpec {
     #[serde(rename = "githubUser")]
     pub github_user: String,
 
-
     /// Context version for retry attempts (incremented on each retry)
     #[serde(default = "default_context_version", rename = "contextVersion")]
     pub context_version: u32,
-
 
     /// Docs branch to use (e.g., "main", "feature/branch")
     #[serde(default = "default_docs_branch", rename = "docsBranch")]
