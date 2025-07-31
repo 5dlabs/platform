@@ -1,0 +1,118 @@
+{{!-- 
+Toolman Catalog Markdown Template for Docs Agent
+================================================
+
+This template renders the toolman catalog data into markdown format for embedding
+in the docs agent's prompt. The agent uses this information to select appropriate
+tools when generating task-specific toolman-config.json files.
+
+Template Variables:
+- toolman_catalog: Complete tool catalog from toolman-tool-catalog ConfigMap
+- total_tool_count: Total number of available tools
+- generated_timestamp: Unix timestamp of generation
+--}}
+
+# Available Tools Catalog
+
+**Total Tools Available**: {{total_tool_count}}  
+**Generated**: {{generated_timestamp}}
+
+Use this catalog to select appropriate tools for each task based on implementation requirements.
+
+## Local Servers
+
+Local servers run within the agent's environment and provide file system and local operations.
+
+{{#each toolman_catalog.local}}
+### {{@key}} Server
+
+**Description**: {{this.description}}  
+**Command**: `{{this.command}}`  
+**Arguments**: {{#each this.args}}`{{this}}`{{#unless @last}} {{/unless}}{{/each}}  
+**Working Directory**: {{this.working_directory}}
+
+**Available Tools**:
+{{#each this.tools}}
+- **`{{this.name}}`** ({{this.category}})
+  - **Description**: {{this.description}}
+  - **Use Cases**: {{#each this.use_cases}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+{{/each}}
+
+{{/each}}
+
+## Remote Tools
+
+Remote tools are available via MCP servers running in the cluster.
+
+{{#each toolman_catalog.remote}}
+### {{@key}} Server
+
+**Description**: {{this.description}}  
+**Endpoint**: {{this.endpoint}}
+
+**Available Tools**:
+{{#each this.tools}}
+- **`{{this.name}}`** ({{this.category}})
+  - **Description**: {{this.description}}
+  - **Use Cases**: {{#each this.use_cases}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+{{/each}}
+
+{{/each}}
+
+## Tool Selection Guidelines
+
+### How to Select Tools
+
+1. **Analyze Task Requirements**: Read the task description and implementation details carefully
+2. **Match Categories**: Look for tools whose categories align with your task needs:
+   {{#each toolman_catalog.local}}
+     {{#each this.tools}}
+   - **{{this.category}}**: {{this.description}}
+     {{/each}}
+   {{/each}}
+   {{#each toolman_catalog.remote}}
+     {{#each this.tools}}
+   - **{{this.category}}**: {{this.description}}
+     {{/each}}
+   {{/each}}
+3. **Check Use Cases**: Match tool use cases to your specific task requirements
+4. **Be Selective**: Only include tools relevant to the specific task
+
+### Configuration Format
+
+Generate `toolman-config.json` files using this structure:
+
+```json
+{
+  "remoteTools": [
+    "tool_name_1",
+    "tool_name_2"
+  ],
+  "localServers": {
+    "server_name": {
+      "command": "copy_from_above",
+      "args": ["copy", "from", "above"],
+      "tools": ["selected_tool_names"],
+      "workingDirectory": "project_root"
+    }
+  }
+}
+```
+
+### Example Tool Selections
+
+**For file operations**: Include tools from local filesystem server like `read_file`, `write_file`, `list_directory`
+
+**For research/documentation**: Include remote tools like search and documentation tools
+
+**For infrastructure tasks**: Include Kubernetes and system management tools
+
+**For development tasks**: Include relevant language-specific documentation tools
+
+### Validation Requirements
+
+- ✅ Use specific tool names from this catalog (never wildcards)
+- ✅ Include complete server configuration for local servers
+- ✅ Only select tools relevant to the specific task
+- ✅ Use `workingDirectory: "project_root"` for local filesystem servers
+- ✅ Verify all tool names exist in this catalog

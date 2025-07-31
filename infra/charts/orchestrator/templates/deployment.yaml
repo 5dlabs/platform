@@ -20,6 +20,8 @@ spec:
         controller-config/checksum: {{ include (print $.Template.BasePath "/task-controller-config.yaml") . | sha256sum }}
         # Force pod restart when main config changes
         config/checksum: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        # Force pod restart when toolman catalog changes
+        toolman-catalog/checksum: {{ include "orchestrator.toolmanCatalogChecksum" . }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -87,6 +89,10 @@ spec:
             - name: controller-config
               mountPath: /config
               readOnly: true
+            # Mount toolman catalog ConfigMap
+            - name: toolman-catalog
+              mountPath: /toolman-catalog
+              readOnly: true
           {{- if .Values.healthCheck.enabled }}
           livenessProbe:
             httpGet:
@@ -118,6 +124,11 @@ spec:
         - name: controller-config
           configMap:
             name: {{ include "orchestrator.fullname" . }}-task-controller-config
+        # Mount toolman catalog ConfigMap
+        - name: toolman-catalog
+          configMap:
+            name: toolman-tool-catalog
+            optional: true
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

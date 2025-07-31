@@ -1,0 +1,100 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Implement Task-Specific Toolman Configuration Generation for Docs Jobs",
+        "description": "Extend the documentation generation system to create task-specific Toolman client configurations, enabling precise tool selection for code implementation agents based on task requirements.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "details": "This task involves enhancing the documentation generation pipeline to produce tailored Toolman configurations for each task. The implementation should follow these steps:\n\n1. Create a new Handlebars template to render the toolman catalog data into markdown format for inclusion in the docs agent's prompt.\n\n2. Update the orchestrator deployment configuration to mount the `toolman-tool-catalog` ConfigMap, making the complete tool catalog available to the orchestration system.\n\n3. Modify the documentation generation process to:\n   - Read and parse the mounted tool catalog\n   - Render the toolman catalog data into markdown format using the template\n   - Embed this rendered markdown into the docs agent's prompt.md file\n   - Instruct the docs agent to generate a `toolman-config.json` file based on the catalog information in its prompt\n   - Ensure the docs agent selects appropriate tools based on task implementation needs\n   - Generate configurations with only specific tool selections (no wildcards)\n   - Include complete server configuration details for local servers\n\n4. Ensure the generated configuration files are placed at `.taskmaster/docs/task-{id}/toolman-config.json` for each task.\n\n5. Provide clear instructions in the docs agent prompt for analyzing task requirements and selecting appropriate tools from the catalog information embedded in the prompt.\n\n6. Update the docs agent interface to provide a clean catalog view that reduces cognitive load while ensuring access to the complete tool ecosystem.\n\nThe implementation should focus on maintainability and extensibility, allowing for easy updates to the tool selection logic as new tools are added to the catalog or as task requirements evolve.",
+        "testStrategy": "To verify the correct implementation of task-specific Toolman configuration generation:\n\n1. Unit Tests:\n   - Create tests for the markdown template rendering logic using sample catalog data\n   - Verify that the embedded catalog information in the prompt is correctly formatted\n   - Test edge cases such as tasks with minimal or extensive tool requirements\n\n2. Integration Tests:\n   - Run a complete documentation generation job with multiple tasks of different types\n   - Verify that `.taskmaster/docs/task-{id}/toolman-config.json` files are generated for each task\n   - Validate the structure of generated files against the expected schema\n   - Confirm that server configurations for local tools are complete and correct\n   - Verify that the catalog information is correctly embedded in the docs agent's prompt\n\n3. Validation Tests:\n   - Load the generated configurations into a Toolman client\n   - Verify that the client can successfully connect to and use the specified tools\n   - Check that the tool selection is appropriate for the corresponding task requirements\n\n4. Manual Review:\n   - Inspect a sample of generated configurations to ensure they follow the format in `toolman-example-config.json`\n   - Verify that no wildcard selections are used, only specific tool selections\n   - Confirm that the cognitive load on the docs agent is reduced while maintaining access to necessary tools\n   - Review the embedded catalog information in the prompt for clarity and usability\n\n5. Performance Testing:\n   - Measure the impact on documentation generation time\n   - Ensure the configuration generation process scales efficiently with a large number of tasks",
+        "subtasks": [
+          {
+            "id": 6,
+            "title": "Implement Testing and Validation Framework",
+            "description": "Create comprehensive tests and validation mechanisms to ensure the task-specific Toolman configuration generation works correctly across different task types.",
+            "status": "done",
+            "dependencies": [],
+            "details": "1. Develop unit tests for each component of the system\n2. Create integration tests that verify the end-to-end flow from task analysis to configuration generation\n3. Implement validation checks for the generated Toolman configurations\n4. Create a test suite with diverse task examples covering different requirements\n5. Add regression tests to catch potential issues with future updates\n6. Implement monitoring for the tool selection process in production\n7. Create documentation for the testing framework and validation procedures",
+            "testStrategy": "Execute the test suite against a variety of task types and verify that appropriate tools are selected and valid configurations are generated in all cases. Include performance testing to ensure the process doesn't significantly impact documentation generation time."
+          },
+          {
+            "id": 7,
+            "title": "Create Markdown Template for Toolman Catalog",
+            "description": "Create a Handlebars template to render the toolman catalog data into markdown format for inclusion in the docs agent's prompt.",
+            "status": "done",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "1. Create a new file `toolman-catalog-markdown.hbs` in the docs job template directory\n2. Design the template to render JSON catalog data into well-formatted markdown\n3. Structure the markdown to present tool information in a clear, organized manner\n4. Include sections for tool categories, capabilities, and usage examples\n5. Format the markdown to optimize readability and reduce cognitive load\n6. Add clear headings and navigation elements to help the docs agent locate relevant tools\n7. Include metadata formatting that helps the agent understand tool selection criteria\n8. Add comments explaining the template structure for maintainability",
+            "testStrategy": "Validate the template by rendering it with sample catalog data and verifying the output markdown is well-formatted, readable, and contains all necessary information for tool selection."
+          },
+          {
+            "id": 8,
+            "title": "Update Prompt Template to Embed Toolman Catalog",
+            "description": "Modify the docs agent prompt template to embed the rendered toolman catalog markdown and provide clear instructions for using this information.",
+            "status": "done",
+            "dependencies": [
+              7
+            ],
+            "details": "1. Update the prompt.md.hbs template to include a section for the toolman catalog\n2. Add a template variable to inject the rendered toolman catalog markdown\n3. Write clear instructions for the docs agent on how to use the catalog information\n4. Include guidance on analyzing task requirements to select appropriate tools\n5. Add examples showing how to translate catalog information into toolman-config.json\n6. Ensure the embedded catalog information is properly formatted and readable\n7. Update the prompt validation section to verify the agent understands how to use the catalog",
+            "testStrategy": "Generate sample prompts with the updated template and verify the toolman catalog information is correctly embedded and the instructions are clear and actionable."
+          },
+          {
+            "id": 1,
+            "title": "Create Handlebars Template for Toolman Configuration",
+            "description": "Create a new Handlebars template file `toolman-catalog.json.hbs` in the docs job template system that will generate task-specific Toolman configurations.",
+            "dependencies": [],
+            "details": "1. Create a new file `toolman-catalog.json.hbs` in the docs job template directory\n2. Design the template to generate valid Toolman configuration JSON\n3. Include placeholders for server configuration and tool selections\n4. Reference the format from `toolman-example-config.json`\n5. Ensure the template supports dynamic tool inclusion based on task requirements\n6. Add comments explaining the template structure for maintainability\n<info added on 2025-07-31T15:10:00.857Z>\n1. Create a new file `toolman-catalog.json.hbs` in the docs job template directory\n2. Design the template to provide the complete tool catalog data to the docs agent\n3. Structure the catalog to include all available tools with their capabilities and requirements\n4. Reference the format from `toolman-example-config.json` for tool definitions\n5. Include metadata for each tool to help the docs agent make intelligent tool selections\n6. Add comments explaining the catalog structure for maintainability\n7. Ensure the catalog is comprehensive enough for the docs agent to make appropriate tool selections based on task requirements\n</info added on 2025-07-31T15:10:00.857Z>\n<info added on 2025-07-31T15:10:06.935Z>\nCreate Toolman Catalog Template for Docs Agent\n\nThis template provides a comprehensive catalog of available tools to the documentation agent, enabling intelligent tool selection based on task requirements. The catalog includes detailed metadata about each tool's capabilities, requirements, and appropriate use cases, allowing the agent to make informed decisions when selecting tools for specific documentation tasks.\n</info added on 2025-07-31T15:10:06.935Z>",
+            "status": "done",
+            "testStrategy": "Validate the template by rendering it with sample data and verifying the output matches the expected Toolman configuration format."
+          },
+          {
+            "id": 2,
+            "title": "Update Orchestrator Deployment Configuration for Tool Catalog",
+            "description": "Modify the orchestrator deployment configuration to mount the `toolman-tool-catalog` ConfigMap, making the complete tool catalog available to the orchestration system.",
+            "dependencies": [],
+            "details": "1. Locate the orchestrator deployment configuration file\n2. Add volume configuration to mount the `toolman-tool-catalog` ConfigMap\n3. Configure the mount path to make the catalog accessible to the orchestration system\n4. Update any relevant environment variables to point to the mounted catalog location\n5. Ensure proper read permissions for the mounted ConfigMap\n6. Document the changes in deployment configuration",
+            "status": "done",
+            "testStrategy": "Deploy the updated configuration in a test environment and verify the ConfigMap is correctly mounted and accessible from the orchestrator."
+          },
+          {
+            "id": 3,
+            "title": "Implement Tool Selection Logic Based on Task Requirements",
+            "description": "Create a mechanism that analyzes task requirements and selects appropriate tools from the catalog for inclusion in the task-specific Toolman configuration.",
+            "dependencies": [],
+            "details": "1. Create a new module for tool selection logic\n2. Implement functions to parse and analyze task descriptions, types, and metadata\n3. Develop a mapping system that associates task characteristics with appropriate tools\n4. Create logic to extract keywords from task descriptions for tool matching\n5. Implement priority scoring for tools when multiple matches are found\n6. Add extensibility points to allow easy updates to selection criteria\n7. Include fallback mechanisms for when specific requirements aren't identified\n<info added on 2025-07-31T15:10:14.422Z>\n1. Provide the docs agent with access to the complete tool catalog data\n2. Create instructions for the docs agent on how to analyze task descriptions and requirements\n3. Develop guidelines for the agent to identify relevant tools based on task characteristics\n4. Include examples of effective tool selection patterns for common documentation tasks\n5. Provide criteria for prioritizing tools when multiple options are available\n6. Document fallback recommendations for when specific requirements can't be matched\n7. Create a feedback mechanism to improve tool selection over time\n</info added on 2025-07-31T15:10:14.422Z>\n<info added on 2025-07-31T15:10:38.359Z>\nProvide the docs agent with guidelines and criteria for intelligent tool selection based on task requirements, rather than implementing backend selection logic. The guidelines should enable the agent to analyze task descriptions, identify relevant tools from the catalog, and create appropriate Toolman configurations. This approach leverages the agent's reasoning capabilities instead of building complex selection algorithms in the backend.\n</info added on 2025-07-31T15:10:38.359Z>",
+            "status": "done",
+            "testStrategy": "Create unit tests with various task descriptions and verify the correct tools are selected based on the requirements. Include edge cases like tasks with minimal descriptions or conflicting requirements."
+          },
+          {
+            "id": 4,
+            "title": "Modify Documentation Generation Process for Toolman Config",
+            "description": "Update the documentation generation process to analyze task requirements, select appropriate tools, and generate task-specific Toolman configuration files.",
+            "dependencies": [],
+            "details": "1. Modify the docs generation pipeline to include Toolman config generation\n2. Implement logic to read and parse the mounted tool catalog\n3. For each task, call the tool selection logic to identify required tools\n4. Use the Handlebars template to generate a `toolman-config.json` file\n5. Ensure configurations include only specific tool selections (no wildcards)\n6. Include complete server configuration details for local servers\n7. Save the generated files at `.taskmaster/docs/task-{id}/toolman-config.json`\n8. Add logging for the tool selection process\n<info added on 2025-07-31T15:10:23.118Z>\n1. Update the docs agent prompt to instruct it to generate toolman-config.json as a 4th file alongside the standard documentation files (task.md, prompt.md, acceptance-criteria.md)\n2. Implement logic to read and parse the mounted tool catalog\n3. For each task, call the tool selection logic to identify required tools\n4. Use the Handlebars template to generate the toolman-config.json file\n5. Ensure configurations include only specific tool selections (no wildcards)\n6. Include complete server configuration details for local servers\n7. Save the generated files at `.taskmaster/docs/task-{id}/toolman-config.json`\n8. Add logging for the tool selection process\n</info added on 2025-07-31T15:10:23.118Z>\n<info added on 2025-07-31T15:10:46.386Z>\n1. Update the docs agent prompt template to include instructions for generating toolman-config.json as a fourth required output file\n2. Ensure the prompt clearly explains the purpose of the toolman-config.json file in relation to tool selection for implementation\n3. Add examples of properly formatted toolman-config.json in the prompt template\n4. Include guidance on how the agent should analyze task requirements to determine appropriate tool selections\n5. Update the prompt to explain that the toolman-config.json should contain specific tool selections rather than wildcards\n6. Modify the prompt validation section to verify the presence and format of the toolman-config.json file\n</info added on 2025-07-31T15:10:46.386Z>",
+            "status": "done",
+            "testStrategy": "Run the documentation generation process with sample tasks and verify the correct Toolman configuration files are generated with appropriate tool selections."
+          },
+          {
+            "id": 5,
+            "title": "Update Docs Agent Interface for Tool Catalog View",
+            "description": "Enhance the docs agent interface to provide a clean catalog view that reduces cognitive load while ensuring access to the complete tool ecosystem.",
+            "dependencies": [],
+            "details": "1. Update the docs agent prompt templates to reference the task-specific Toolman configuration\n2. Add instructions for agents on how to interpret and use the provided tool configurations\n3. Design a simplified view of available tools that reduces cognitive load\n4. Implement formatting improvements for tool descriptions and capabilities\n5. Add examples of tool usage in the agent interface\n6. Ensure the interface maintains access to the complete tool ecosystem when needed\n7. Update any related documentation for docs agents\n<info added on 2025-07-31T15:10:31.141Z>\n1. Update the docs agent prompt template (prompt.md.hbs) to include instructions for generating toolman-config.json files\n2. Add sections in the prompt template that explain the purpose and structure of toolman-config.json\n3. Include examples of well-formed toolman-config.json files in the prompt template\n4. Add guidance on how to select appropriate tools based on task requirements\n5. Incorporate instructions for specifying tool parameters and configurations\n6. Ensure the prompt template explains how to validate generated toolman-config.json files\n7. Update related documentation to reflect these prompt template changes\n</info added on 2025-07-31T15:10:31.141Z>\n<info added on 2025-07-31T15:10:53.322Z>\nModify the existing docs agent prompt template (prompt.md.hbs) to include instructions and examples for generating toolman-config.json files based on task requirements. The template should explain how to analyze task context to select appropriate tools, provide guidance on specifying tool parameters, and include examples of well-formed toolman-config.json files. The updated template should help docs agents understand the purpose and structure of these configuration files while ensuring they can properly validate the generated configurations before submission.\n</info added on 2025-07-31T15:10:53.322Z>",
+            "status": "done",
+            "testStrategy": "Conduct usability testing with sample agent prompts and verify the interface provides clear access to tools while reducing cognitive load."
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-31T15:07:40.108Z",
+      "description": "Default tasks context",
+      "updated": "2025-07-31T15:29:05.630Z"
+    }
+  }
+}

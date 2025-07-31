@@ -41,8 +41,9 @@ Before processing any task, check if ALL required files already exist:
 - `task.md` 
 - `prompt.md`
 - `acceptance-criteria.md`
+- `toolman-config.json`
 
-If ALL three files exist and have substantial content (not just stubs), SKIP that task to save tokens and time.
+If ALL four files exist and have substantial content (not just stubs), SKIP that task to save tokens and time.
 
 **YOU MUST CREATE DOCUMENTATION FOR EVERY TASK THAT NEEDS IT. DO NOT SKIP ANY INCOMPLETE TASKS.**
 
@@ -51,6 +52,7 @@ For each task that needs documentation (process ALL incomplete tasks, no excepti
 - `task.md` - Comprehensive task overview and implementation guide
 - `prompt.md` - Autonomous prompt for AI agents
 - `acceptance-criteria.md` - Clear acceptance criteria and test cases
+- `toolman-config.json` - Task-specific tool configuration for code implementation agents
 
 **Progress Requirements:**
 - Announce each task as you start it: "📝 Processing Task [ID]: [Title]"
@@ -58,6 +60,31 @@ For each task that needs documentation (process ALL incomplete tasks, no excepti
 - **For large projects: Provide periodic updates (every 5 tasks): "Progress: [X] of [Y] tasks completed"**
 
 Place all documentation in `.taskmaster/docs/task-{id}/` directories.
+
+### Step 2.1: Toolman Configuration Generation (MANDATORY)
+
+**🔧 CRITICAL: Generate Task-Specific Tool Configuration**
+
+For each task, you MUST create a `toolman-config.json` file that selects appropriate tools based on the task's implementation requirements.
+
+**Available Tool Catalog:**
+The complete toolman catalog is provided below with all available tools, their capabilities, and selection guidelines.
+
+**Tool Selection Process:**
+1. **Read the Catalog Below**: Start by examining the catalog section below to understand available tools and their capabilities
+2. **Analyze Task Requirements**: Read the task description and implementation details carefully
+3. **Match to Tool Categories**: Use tool categories to identify relevant capabilities
+4. **Apply Selection Guidelines**: Use the guidelines in the catalog below for common patterns
+5. **Select Specific Tools**: Choose individual tools (never wildcards) based on task needs
+6. **Include Server Configuration**: For local servers, include complete command/args details from the catalog
+
+---
+
+{{{toolman_catalog_markdown}}}
+
+---
+
+**Note**: All configuration format details, selection guidelines, examples, and validation requirements are provided in the tool catalog section above. Use that information to generate appropriate toolman-config.json files for each task.
 
 ### Step 3: Complete Documentation Generation
 **⚠️ CRITICAL: You MUST generate ALL documentation files as specified above.**
@@ -92,8 +119,9 @@ Place all documentation in `.taskmaster/docs/task-{id}/` directories.
 ```
 🎉 DOCUMENTATION GENERATION COMPLETE 🎉
 ✅ Generated documentation for {{#if task_id}}task {{task_id}}{{else}}ALL tasks{{/if}}
-✅ Created all required documentation files
+✅ Created all required documentation files (task.md, prompt.md, acceptance-criteria.md, toolman-config.json)
 📋 Total files created: [COUNT]
+🔧 Generated task-specific Toolman configurations for code implementation
 🔗 Git workflow and pull request will be handled automatically by orchestrator hook
 ```
 
