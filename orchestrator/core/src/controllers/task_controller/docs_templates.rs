@@ -229,8 +229,9 @@ impl DocsTemplateGenerator {
         handlebars.register_helper(
             "json",
             Box::new(|h: &handlebars::Helper, _: &Handlebars, _: &handlebars::Context, _: &mut handlebars::RenderContext, out: &mut dyn handlebars::Output| -> handlebars::HelperResult {
-                let param = h.param(0).ok_or_else(|| handlebars::RenderError::new("json helper requires a parameter"))?;
-                let json_str = serde_json::to_string(param.value()).map_err(|e| handlebars::RenderError::new(format!("Failed to serialize to JSON: {e}")))?;
+                let param = h.param(0).ok_or(handlebars::RenderErrorReason::ParamNotFoundForIndex("json", 0))?;
+                let json_str = serde_json::to_string(param.value())
+                    .map_err(|e| handlebars::RenderErrorReason::NestedError(Box::new(e)))?;
                 out.write(&json_str)?;
                 Ok(())
             }),
