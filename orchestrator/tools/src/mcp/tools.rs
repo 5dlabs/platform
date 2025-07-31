@@ -57,7 +57,7 @@ fn get_submit_implementation_task_schema() -> Value {
                     "description": "REQUIRED: Target repository in format 'org/repo' or 'user/repo' (e.g., '5dlabs/platform')"
                 },
                 "docs_repository": {
-                    "type": "string", 
+                    "type": "string",
                     "description": "REQUIRED: Documentation repository in format 'org/repo' or 'user/repo' where Task Master definitions are stored"
                 },
                 "docs_project_directory": {

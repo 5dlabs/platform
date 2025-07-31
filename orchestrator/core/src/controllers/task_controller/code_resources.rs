@@ -1,5 +1,5 @@
 use super::config::ControllerConfig;
-use super::types::{Context, Result, ssh_secret_name, github_token_secret_name};
+use super::types::{github_token_secret_name, ssh_secret_name, Context, Result};
 use crate::crds::CodeRun;
 use k8s_openapi::api::{
     batch::v1::Job,
@@ -8,7 +8,7 @@ use k8s_openapi::api::{
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::{ObjectMeta, OwnerReference};
 use kube::api::{Api, DeleteParams, ListParams, PostParams};
 use kube::runtime::controller::Action;
-use kube::{ResourceExt};
+use kube::ResourceExt;
 use serde_json::json;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -24,18 +24,27 @@ pub struct CodeResourceManager<'a> {
 
 impl<'a> CodeResourceManager<'a> {
     pub fn new(
-        jobs: &'a Api<Job>, 
+        jobs: &'a Api<Job>,
         configmaps: &'a Api<ConfigMap>,
         pvcs: &'a Api<PersistentVolumeClaim>,
         config: &'a Arc<ControllerConfig>,
         ctx: &'a Arc<Context>,
     ) -> Self {
-        Self { jobs, configmaps, pvcs, config, ctx }
+        Self {
+            jobs,
+            configmaps,
+            pvcs,
+            config,
+            ctx,
+        }
     }
 
     pub async fn reconcile_create_or_update(&self, code_run: &Arc<CodeRun>) -> Result<Action> {
         let name = code_run.name_any();
-        info!("🚀 CODE DEBUG: Creating/updating code resources for: {}", name);
+        info!(
+            "🚀 CODE DEBUG: Creating/updating code resources for: {}",
+            name
+        );
 
         // Ensure PVC exists for code tasks (persistent workspace)
         let service_name = &code_run.spec.service;
@@ -50,32 +59,49 @@ impl<'a> CodeResourceManager<'a> {
         // Create ConfigMap FIRST (without owner reference) so Job can mount it
         let cm_name = self.generate_configmap_name(code_run);
         info!("📄 CODE DEBUG: Generated ConfigMap name: {}", cm_name);
-        
+
         info!("🔧 CODE DEBUG: Creating ConfigMap template data...");
         let configmap = self.create_configmap(code_run, &cm_name, None)?;
         info!("✅ CODE DEBUG: ConfigMap template created successfully");
 
         // Always create or update ConfigMap to ensure latest template content
         info!("📤 CODE DEBUG: Attempting to create ConfigMap: {}", cm_name);
-        match self.configmaps.create(&PostParams::default(), &configmap).await {
+        match self
+            .configmaps
+            .create(&PostParams::default(), &configmap)
+            .await
+        {
             Ok(_) => {
                 info!("✅ CODE DEBUG: Created ConfigMap: {}", cm_name);
-            },
+            }
             Err(kube::Error::Api(ae)) if ae.code == 409 => {
                 // ConfigMap exists, update it with latest content
-                info!("📝 CODE DEBUG: ConfigMap exists, updating with latest content: {}", cm_name);
-                match self.configmaps.replace(&cm_name, &PostParams::default(), &configmap).await {
+                info!(
+                    "📝 CODE DEBUG: ConfigMap exists, updating with latest content: {}",
+                    cm_name
+                );
+                match self
+                    .configmaps
+                    .replace(&cm_name, &PostParams::default(), &configmap)
+                    .await
+                {
                     Ok(_) => {
                         info!("✅ CODE DEBUG: Updated ConfigMap: {}", cm_name);
-                    },
+                    }
                     Err(e) => {
-                        error!("❌ CODE DEBUG: Failed to update ConfigMap {}: {}", cm_name, e);
+                        error!(
+                            "❌ CODE DEBUG: Failed to update ConfigMap {}: {}",
+                            cm_name, e
+                        );
                         return Err(e.into());
                     }
                 }
             }
             Err(e) => {
-                error!("❌ CODE DEBUG: Failed to create ConfigMap {}: {}", cm_name, e);
+                error!(
+                    "❌ CODE DEBUG: Failed to create ConfigMap {}: {}",
+                    cm_name, e
+                );
                 return Err(e.into());
             }
         }
@@ -88,13 +114,17 @@ impl<'a> CodeResourceManager<'a> {
         // Update ConfigMap with Job as owner (for automatic cleanup on job deletion)
         if let Some(owner_ref) = job_ref {
             info!("🔗 CODE DEBUG: Updating ConfigMap owner reference");
-            self.update_configmap_owner(code_run, &cm_name, owner_ref).await?;
+            self.update_configmap_owner(code_run, &cm_name, owner_ref)
+                .await?;
             info!("✅ CODE DEBUG: ConfigMap owner reference updated");
         } else {
             info!("⚠️ CODE DEBUG: No job owner reference to set");
         }
 
-        info!("🎉 CODE DEBUG: Reconciliation completed successfully for: {}", name);
+        info!(
+            "🎉 CODE DEBUG: Reconciliation completed successfully for: {}",
+            name
+        );
         Ok(Action::await_change())
     }
 
@@ -156,7 +186,7 @@ impl<'a> CodeResourceManager<'a> {
                 "name": pvc_name,
                 "labels": {
                     "app": "orchestrator",
-                    "component": "code-runner", 
+                    "component": "code-runner",
                     "service": service_name
                 }
             },
@@ -182,7 +212,10 @@ impl<'a> CodeResourceManager<'a> {
         let mut data = BTreeMap::new();
 
         // Generate all templates for code
-        let templates = super::code_templates::CodeTemplateGenerator::generate_all_templates(code_run, self.config)?;
+        let templates = super::code_templates::CodeTemplateGenerator::generate_all_templates(
+            code_run,
+            self.config,
+        )?;
         for (filename, content) in templates {
             data.insert(filename, content);
         }
@@ -206,9 +239,13 @@ impl<'a> CodeResourceManager<'a> {
     }
 
     /// Idempotent job creation: create if doesn't exist, get if it does
-    async fn create_or_get_job(&self, code_run: &CodeRun, cm_name: &str) -> Result<Option<OwnerReference>> {
+    async fn create_or_get_job(
+        &self,
+        code_run: &CodeRun,
+        cm_name: &str,
+    ) -> Result<Option<OwnerReference>> {
         let job_name = self.generate_job_name(code_run);
-        
+
         // Try to get existing job first (idempotent check)
         match self.jobs.get(&job_name).await {
             Ok(existing_job) => {
@@ -230,7 +267,11 @@ impl<'a> CodeResourceManager<'a> {
         }
     }
 
-    async fn create_job(&self, code_run: &CodeRun, cm_name: &str) -> Result<Option<OwnerReference>> {
+    async fn create_job(
+        &self,
+        code_run: &CodeRun,
+        cm_name: &str,
+    ) -> Result<Option<OwnerReference>> {
         let job_name = self.generate_job_name(code_run);
         let job = self.build_job_spec(code_run, &job_name, cm_name)?;
 
@@ -238,10 +279,18 @@ impl<'a> CodeResourceManager<'a> {
             Ok(created_job) => {
                 info!("Created code job: {}", job_name);
                 // Update status
-                super::code_status::CodeStatusManager::update_job_started(&Arc::new(code_run.clone()), self.ctx, &job_name, cm_name).await?;
+                super::code_status::CodeStatusManager::update_job_started(
+                    &Arc::new(code_run.clone()),
+                    self.ctx,
+                    &job_name,
+                    cm_name,
+                )
+                .await?;
 
                 // Return owner reference for the created job
-                if let (Some(uid), Some(name)) = (created_job.metadata.uid, created_job.metadata.name) {
+                if let (Some(uid), Some(name)) =
+                    (created_job.metadata.uid, created_job.metadata.name)
+                {
                     Ok(Some(OwnerReference {
                         api_version: "batch/v1".to_string(),
                         kind: "Job".to_string(),
@@ -259,7 +308,9 @@ impl<'a> CodeResourceManager<'a> {
                 // Try to get existing job for owner reference
                 match self.jobs.get(&job_name).await {
                     Ok(existing_job) => {
-                        if let (Some(uid), Some(name)) = (existing_job.metadata.uid, existing_job.metadata.name) {
+                        if let (Some(uid), Some(name)) =
+                            (existing_job.metadata.uid, existing_job.metadata.name)
+                        {
                             Ok(Some(OwnerReference {
                                 api_version: "batch/v1".to_string(),
                                 kind: "Job".to_string(),
@@ -284,12 +335,15 @@ impl<'a> CodeResourceManager<'a> {
         // This ensures the same CodeRun always generates the same Job name
         let namespace = code_run.metadata.namespace.as_deref().unwrap_or("default");
         let name = code_run.metadata.name.as_deref().unwrap_or("unknown");
-        let uid_suffix = code_run.metadata.uid.as_deref()
+        let uid_suffix = code_run
+            .metadata
+            .uid
+            .as_deref()
             .map(|uid| &uid[..8]) // Use first 8 chars of UID for uniqueness
             .unwrap_or("nouid");
         let task_id = code_run.spec.task_id;
         let context_version = code_run.spec.context_version;
-        
+
         format!("code-{namespace}-{name}-{uid_suffix}-t{task_id}-v{context_version}")
             .replace(['_', '.'], "-")
             .to_lowercase()
@@ -323,7 +377,7 @@ impl<'a> CodeResourceManager<'a> {
             "name": "task-files",
             "mountPath": "/task-files"
         }));
-        
+
         // Mount settings.json as managed-settings.json for enterprise compatibility
         volume_mounts.push(json!({
             "name": "task-files",
@@ -340,7 +394,7 @@ impl<'a> CodeResourceManager<'a> {
             }
         }));
         volume_mounts.push(json!({
-            "name": "workspace", 
+            "name": "workspace",
             "mountPath": "/workspace"
         }));
 
@@ -349,8 +403,11 @@ impl<'a> CodeResourceManager<'a> {
         volumes.extend(ssh_volumes.volumes);
         volume_mounts.extend(ssh_volumes.volume_mounts);
 
-        let image = format!("{}:{}", self.config.agent.image.repository, self.config.agent.image.tag);
-        
+        let image = format!(
+            "{}:{}",
+            self.config.agent.image.repository, self.config.agent.image.tag
+        );
+
         // Build environment variables for code tasks
         let env_vars = vec![
             json!({
@@ -370,7 +427,7 @@ impl<'a> CodeResourceManager<'a> {
                         "key": self.config.secrets.api_key_secret_key
                     }
                 }
-            })
+            }),
         ];
 
         // Code-specific environment variables will be added here when needed
@@ -422,13 +479,22 @@ impl<'a> CodeResourceManager<'a> {
 
         labels.insert("app".to_string(), "orchestrator".to_string());
         labels.insert("component".to_string(), "code-runner".to_string());
-        labels.insert("github-user".to_string(), self.sanitize_label_value(&code_run.spec.github_user));
-        labels.insert("context-version".to_string(), code_run.spec.context_version.to_string());
+        labels.insert(
+            "github-user".to_string(),
+            self.sanitize_label_value(&code_run.spec.github_user),
+        );
+        labels.insert(
+            "context-version".to_string(),
+            code_run.spec.context_version.to_string(),
+        );
 
         // Code-specific labels
         labels.insert("task-type".to_string(), "code".to_string());
         labels.insert("task-id".to_string(), code_run.spec.task_id.to_string());
-        labels.insert("service".to_string(), self.sanitize_label_value(&code_run.spec.service));
+        labels.insert(
+            "service".to_string(),
+            self.sanitize_label_value(&code_run.spec.service),
+        );
 
         labels
     }
@@ -436,29 +502,28 @@ impl<'a> CodeResourceManager<'a> {
     fn generate_ssh_volumes(&self, code_run: &CodeRun) -> SshVolumes {
         let ssh_secret = ssh_secret_name(&code_run.spec.github_user);
 
-        let volumes = vec![
-            json!({
-                "name": "ssh-key",
-                "secret": {
-                    "secretName": ssh_secret,
-                    "defaultMode": 0o644,
-                    "items": [{
-                        "key": "ssh-privatekey",
-                        "path": "id_ed25519"
-                    }]
-                }
-            })
-        ];
+        let volumes = vec![json!({
+            "name": "ssh-key",
+            "secret": {
+                "secretName": ssh_secret,
+                "defaultMode": 0o644,
+                "items": [{
+                    "key": "ssh-privatekey",
+                    "path": "id_ed25519"
+                }]
+            }
+        })];
 
-        let volume_mounts = vec![
-            json!({
-                "name": "ssh-key",
-                "mountPath": "/workspace/.ssh",
-                "readOnly": true
-            })
-        ];
+        let volume_mounts = vec![json!({
+            "name": "ssh-key",
+            "mountPath": "/workspace/.ssh",
+            "readOnly": true
+        })];
 
-        SshVolumes { volumes, volume_mounts }
+        SshVolumes {
+            volumes,
+            volume_mounts,
+        }
     }
 
     async fn update_configmap_owner(
@@ -468,15 +533,20 @@ impl<'a> CodeResourceManager<'a> {
         owner_ref: OwnerReference,
     ) -> Result<()> {
         let mut existing_cm = self.configmaps.get(cm_name).await?;
-        
+
         // Add owner reference
-        let owner_refs = existing_cm.metadata.owner_references.get_or_insert_with(Vec::new);
+        let owner_refs = existing_cm
+            .metadata
+            .owner_references
+            .get_or_insert_with(Vec::new);
         owner_refs.push(owner_ref);
-        
+
         // Update the ConfigMap
-        self.configmaps.replace(cm_name, &PostParams::default(), &existing_cm).await?;
+        self.configmaps
+            .replace(cm_name, &PostParams::default(), &existing_cm)
+            .await?;
         info!("Updated ConfigMap {} with owner reference", cm_name);
-        
+
         Ok(())
     }
 
@@ -489,7 +559,7 @@ impl<'a> CodeResourceManager<'a> {
         ));
 
         let jobs = self.jobs.list(&list_params).await?;
-        
+
         for job in jobs {
             if let Some(job_name) = job.metadata.name {
                 info!("Deleting old code job: {}", job_name);
@@ -508,11 +578,14 @@ impl<'a> CodeResourceManager<'a> {
         ));
 
         let configmaps = self.configmaps.list(&list_params).await?;
-        
+
         for cm in configmaps {
             if let Some(cm_name) = cm.metadata.name {
                 info!("Deleting old code ConfigMap: {}", cm_name);
-                let _ = self.configmaps.delete(&cm_name, &DeleteParams::default()).await;
+                let _ = self
+                    .configmaps
+                    .delete(&cm_name, &DeleteParams::default())
+                    .await;
             }
         }
 
@@ -533,7 +606,10 @@ impl<'a> CodeResourceManager<'a> {
         // Ensure it starts and ends with alphanumeric
         let chars: Vec<char> = sanitized.chars().collect();
         let start = chars.iter().position(|c| c.is_alphanumeric()).unwrap_or(0);
-        let end = chars.iter().rposition(|c| c.is_alphanumeric()).unwrap_or(chars.len().saturating_sub(1));
+        let end = chars
+            .iter()
+            .rposition(|c| c.is_alphanumeric())
+            .unwrap_or(chars.len().saturating_sub(1));
 
         if start <= end {
             sanitized = chars[start..=end].iter().collect();

@@ -169,7 +169,7 @@ async fn handle_code_command(
     let working_dir = working_directory
         .ok_or_else(|| anyhow::anyhow!("working_directory is required"))?
         .to_string();
-        
+
     // Docs project directory is now required
     let docs_proj_dir = docs_project_directory
         .ok_or_else(|| anyhow::anyhow!("docs_project_directory is required"))?
@@ -178,10 +178,10 @@ async fn handle_code_command(
     // Auto-detect context version (always 1 for new tasks for now)
     // TODO: Query existing CodeRuns for this task+service and increment
     let context_version = 1u32;
-    
+
     // Set overwrite_memory to false (not user-configurable)
     let overwrite_memory = false;
-    
+
     // Auto-detect current git branch for docs
     let docs_branch = get_git_current_branch()?;
 
@@ -212,7 +212,9 @@ async fn handle_code_command(
     output.info(&format!("Docs project directory: {docs_proj_dir}"));
     output.info(&format!("Docs branch: {docs_branch} (auto-detected)"));
     output.info(&format!("Working directory: {working_dir}"));
-    output.info(&format!("Context version: {context_version} (auto-detected)"));
+    output.info(&format!(
+        "Context version: {context_version} (auto-detected)"
+    ));
     output.info(&format!("GitHub user: {github_user_name}"));
 
     match api_client.submit_code_task(&request).await {

@@ -1,14 +1,11 @@
 use super::docs_resources::DocsResourceManager;
 use super::types::{Context, Result, DOCS_FINALIZER_NAME};
 use crate::crds::DocsRun;
-use k8s_openapi::api::{
-    batch::v1::Job,
-    core::v1::ConfigMap,
-};
-use kube::runtime::finalizer::{finalizer, Event as FinalizerEvent};
-use kube::runtime::controller::Action;
-use kube::{Api, ResourceExt};
+use k8s_openapi::api::{batch::v1::Job, core::v1::ConfigMap};
 use kube::api::{Patch, PatchParams};
+use kube::runtime::controller::Action;
+use kube::runtime::finalizer::{finalizer, Event as FinalizerEvent};
+use kube::{Api, ResourceExt};
 use serde_json::json;
 use std::sync::Arc;
 use tracing::{debug, info, instrument};
@@ -29,16 +26,17 @@ pub async fn reconcile_docs_run(docs_run: Arc<DocsRun>, ctx: Arc<Context>) -> Re
     debug!("API clients created successfully");
 
     // Handle finalizers for cleanup
-    let result = finalizer(&docsruns, DOCS_FINALIZER_NAME, docs_run.clone(), |event| async {
-        match event {
-            FinalizerEvent::Apply(dr) => {
-                reconcile_docs_create_or_update(dr, &ctx).await
+    let result = finalizer(
+        &docsruns,
+        DOCS_FINALIZER_NAME,
+        docs_run.clone(),
+        |event| async {
+            match event {
+                FinalizerEvent::Apply(dr) => reconcile_docs_create_or_update(dr, &ctx).await,
+                FinalizerEvent::Cleanup(dr) => cleanup_docs_resources(dr, &ctx).await,
             }
-            FinalizerEvent::Cleanup(dr) => {
-                cleanup_docs_resources(dr, &ctx).await
-            }
-        }
-    })
+        },
+    )
     .await
     .map_err(|e| match e {
         kube::runtime::finalizer::Error::ApplyFailed(err) => err,
@@ -59,8 +57,11 @@ pub async fn reconcile_docs_run(docs_run: Arc<DocsRun>, ctx: Arc<Context>) -> Re
 #[instrument(skip(ctx), fields(docs_run_name = %docs_run.name_any(), namespace = %ctx.namespace))]
 async fn reconcile_docs_create_or_update(docs_run: Arc<DocsRun>, ctx: &Context) -> Result<Action> {
     let docs_run_name = docs_run.name_any();
-    info!("Starting status-first idempotent reconcile for DocsRun: {}", docs_run_name);
-    
+    info!(
+        "Starting status-first idempotent reconcile for DocsRun: {}",
+        docs_run_name
+    );
+
     // STEP 1: Check DocsRun status first (status-first idempotency)
     if let Some(status) = &docs_run.status {
         // Check for completion based on work_completed field (TTL-safe)
@@ -68,12 +69,19 @@ async fn reconcile_docs_create_or_update(docs_run: Arc<DocsRun>, ctx: &Context) 
             info!("Work already completed (work_completed=true), no further action needed");
             return Ok(Action::await_change());
         }
-        
+
         // Check legacy completion states
         match status.phase.as_str() {
             "Succeeded" => {
                 info!("Already succeeded, ensuring work_completed is set");
-                update_docs_status_with_completion(&docs_run, ctx, "Succeeded", "Documentation generation completed successfully", true).await?;
+                update_docs_status_with_completion(
+                    &docs_run,
+                    ctx,
+                    "Succeeded",
+                    "Documentation generation completed successfully",
+                    true,
+                )
+                .await?;
                 return Ok(Action::await_change());
             }
             "Failed" => {
@@ -92,60 +100,91 @@ async fn reconcile_docs_create_or_update(docs_run: Arc<DocsRun>, ctx: &Context) 
     } else {
         debug!("No status found, initializing");
     }
-    
+
     // STEP 2: Check job state for running jobs
     let jobs: Api<Job> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
     let configmaps: Api<ConfigMap> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
     let job_name = generate_job_name(&docs_run);
     debug!("Generated job name: {}", job_name);
-    
+
     let job_state = check_job_state(&jobs, &job_name).await?;
     debug!("Current job state: {:?}", job_state);
-    
+
     match job_state {
         JobState::NotFound => {
             debug!("No existing job found, using optimistic job creation");
-            
+
             // STEP 3: Optimistic job creation with conflict handling
-            let ctx_arc = Arc::new(ctx.clone()); 
-            let resource_manager = DocsResourceManager::new(&jobs, &configmaps, &ctx.config, &ctx_arc);
-            
+            let ctx_arc = Arc::new(ctx.clone());
+            let resource_manager =
+                DocsResourceManager::new(&jobs, &configmaps, &ctx.config, &ctx_arc);
+
             // This handles 409 conflicts gracefully
-            resource_manager.reconcile_create_or_update(&docs_run).await?;
-            
+            resource_manager
+                .reconcile_create_or_update(&docs_run)
+                .await?;
+
             // Update status to Running
-            update_docs_status_with_completion(&docs_run, ctx, "Running", "Documentation generation started", false).await?;
-            
+            update_docs_status_with_completion(
+                &docs_run,
+                ctx,
+                "Running",
+                "Documentation generation started",
+                false,
+            )
+            .await?;
+
             // Requeue to check job progress
             Ok(Action::requeue(std::time::Duration::from_secs(30)))
         }
-        
+
         JobState::Running => {
             debug!("Job is still running, monitoring progress");
-            
+
             // Update status to Running if needed
-            update_docs_status_with_completion(&docs_run, ctx, "Running", "Documentation generation in progress", false).await?;
-            
+            update_docs_status_with_completion(
+                &docs_run,
+                ctx,
+                "Running",
+                "Documentation generation in progress",
+                false,
+            )
+            .await?;
+
             // Continue monitoring
             Ok(Action::requeue(std::time::Duration::from_secs(30)))
         }
-        
+
         JobState::Completed => {
             info!("Job completed successfully - marking work as complete");
-            
+
             // Mark work as completed (TTL-safe)
-            update_docs_status_with_completion(&docs_run, ctx, "Succeeded", "Documentation generation completed successfully", true).await?;
-            
+            update_docs_status_with_completion(
+                &docs_run,
+                ctx,
+                "Succeeded",
+                "Documentation generation completed successfully",
+                true,
+            )
+            .await?;
+
             // CRITICAL: Use await_change() to stop reconciliation
             Ok(Action::await_change())
         }
-        
+
         JobState::Failed => {
             info!("Job failed - final state reached");
-            
+
             // Update to failed status (work_completed remains false for potential retry)
-            update_docs_status_with_completion(&docs_run, ctx, "Failed", "Documentation generation failed", false).await?;
-            
+            update_docs_status_with_completion(
+                &docs_run,
+                ctx,
+                "Failed",
+                "Documentation generation failed",
+                false,
+            )
+            .await?;
+
             // CRITICAL: Use await_change() to stop reconciliation
             Ok(Action::await_change())
         }
@@ -155,11 +194,11 @@ async fn reconcile_docs_create_or_update(docs_run: Arc<DocsRun>, ctx: &Context) 
 #[instrument(skip(ctx), fields(docs_run_name = %docs_run.name_any(), namespace = %ctx.namespace))]
 async fn cleanup_docs_resources(docs_run: Arc<DocsRun>, ctx: &Context) -> Result<Action> {
     debug!("Cleaning up resources for DocsRun");
-    
+
     // Create APIs
     let jobs: Api<Job> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
     let configmaps: Api<ConfigMap> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
-    
+
     // Create resource manager and delegate
     let ctx_arc = Arc::new(ctx.clone());
     let resource_manager = DocsResourceManager::new(&jobs, &configmaps, &ctx.config, &ctx_arc);
@@ -171,7 +210,7 @@ async fn cleanup_docs_resources(docs_run: Arc<DocsRun>, ctx: &Context) -> Result
 #[derive(Debug, Clone)]
 pub enum JobState {
     NotFound,
-    Running, 
+    Running,
     Completed,
     Failed,
 }
@@ -179,10 +218,13 @@ pub enum JobState {
 fn generate_job_name(docs_run: &DocsRun) -> String {
     let namespace = docs_run.metadata.namespace.as_deref().unwrap_or("default");
     let name = docs_run.metadata.name.as_deref().unwrap_or("unknown");
-    let uid_suffix = docs_run.metadata.uid.as_deref()
+    let uid_suffix = docs_run
+        .metadata
+        .uid
+        .as_deref()
         .map(|uid| &uid[..8])
         .unwrap_or("nouid");
-    
+
     format!("docs-{namespace}-{name}-{uid_suffix}")
         .replace(['_', '.'], "-")
         .to_lowercase()
@@ -214,20 +256,20 @@ fn determine_job_state(status: &k8s_openapi::api::batch::v1::JobStatus) -> JobSt
             }
         }
     }
-    
+
     // Check legacy status fields
     if let Some(succeeded) = status.succeeded {
         if succeeded > 0 {
             return JobState::Completed;
         }
     }
-    
+
     if let Some(failed) = status.failed {
         if failed > 0 {
             return JobState::Failed;
         }
     }
-    
+
     JobState::Running
 }
 
@@ -239,35 +281,53 @@ async fn update_docs_status_with_completion(
     work_completed: bool,
 ) -> Result<()> {
     // Only update if status actually changed
-    let current_phase = docs_run.status.as_ref().map(|s| s.phase.as_str()).unwrap_or("");
-    let current_work_completed = docs_run.status.as_ref().and_then(|s| s.work_completed).unwrap_or(false);
-    
+    let current_phase = docs_run
+        .status
+        .as_ref()
+        .map(|s| s.phase.as_str())
+        .unwrap_or("");
+    let current_work_completed = docs_run
+        .status
+        .as_ref()
+        .and_then(|s| s.work_completed)
+        .unwrap_or(false);
+
     if current_phase == new_phase && current_work_completed == work_completed {
-        debug!("Status already '{}' with work_completed={}, skipping update to prevent reconciliation", new_phase, work_completed);
+        debug!(
+            "Status already '{}' with work_completed={}, skipping update to prevent reconciliation",
+            new_phase, work_completed
+        );
         return Ok(());
     }
-    
-    debug!("Updating status from '{}' (work_completed={}) to '{}' (work_completed={})", 
-           current_phase, current_work_completed, new_phase, work_completed);
-    
+
+    debug!(
+        "Updating status from '{}' (work_completed={}) to '{}' (work_completed={})",
+        current_phase, current_work_completed, new_phase, work_completed
+    );
+
     let docsruns: Api<DocsRun> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
-    
+
     let status_patch = json!({
         "status": {
             "phase": new_phase,
-            "message": new_message,            
+            "message": new_message,
             "lastUpdate": chrono::Utc::now().to_rfc3339(),
             "workCompleted": work_completed,
         }
     });
-    
+
     // Use status subresource to avoid triggering spec reconciliation
-    docsruns.patch_status(
-        &docs_run.name_any(),
-        &PatchParams::default(),
-        &Patch::Merge(&status_patch)
-    ).await?;
-    
-    debug!("Status updated successfully to '{}' with work_completed={}", new_phase, work_completed);
+    docsruns
+        .patch_status(
+            &docs_run.name_any(),
+            &PatchParams::default(),
+            &Patch::Merge(&status_patch),
+        )
+        .await?;
+
+    debug!(
+        "Status updated successfully to '{}' with work_completed={}",
+        new_phase, work_completed
+    );
     Ok(())
 }

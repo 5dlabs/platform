@@ -115,13 +115,9 @@ pub enum TaskCommands {
         #[arg(long)]
         model: Option<String>,
 
-
-
-
         /// Whether to continue a previous session
         #[arg(long)]
         continue_session: bool,
-
 
         /// Environment variables (format: KEY=value,KEY2=value2)
         #[arg(long)]

@@ -22,10 +22,22 @@ impl DocsTemplateGenerator {
         let mut templates = BTreeMap::new();
 
         // Generate core docs templates
-        templates.insert("container.sh".to_string(), Self::generate_container_script(docs_run)?);
-        templates.insert("CLAUDE.md".to_string(), Self::generate_claude_memory(docs_run)?);
-        templates.insert("settings.json".to_string(), Self::generate_claude_settings(docs_run, config)?);
-        templates.insert("prompt.md".to_string(), Self::generate_docs_prompt(docs_run)?);
+        templates.insert(
+            "container.sh".to_string(),
+            Self::generate_container_script(docs_run)?,
+        );
+        templates.insert(
+            "CLAUDE.md".to_string(),
+            Self::generate_claude_memory(docs_run)?,
+        );
+        templates.insert(
+            "settings.json".to_string(),
+            Self::generate_claude_settings(docs_run, config)?,
+        );
+        templates.insert(
+            "prompt.md".to_string(),
+            Self::generate_docs_prompt(docs_run)?,
+        );
 
         // Generate hook scripts
         let hook_scripts = Self::generate_hook_scripts(docs_run)?;
@@ -42,7 +54,7 @@ impl DocsTemplateGenerator {
         handlebars.set_strict_mode(false);
 
         let template = Self::load_template("docs/container.sh.hbs")?;
-        
+
         handlebars
             .register_template_string("container_script", template)
             .map_err(|e| {
@@ -59,11 +71,13 @@ impl DocsTemplateGenerator {
             "service_name": "docs-generator"
         });
 
-        handlebars.render("container_script", &context).map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
-                "Failed to render container script: {e}"
-            ))
-        })
+        handlebars
+            .render("container_script", &context)
+            .map_err(|e| {
+                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                    "Failed to render container script: {e}"
+                ))
+            })
     }
 
     fn generate_claude_memory(docs_run: &DocsRun) -> Result<String> {
@@ -156,7 +170,10 @@ impl DocsTemplateGenerator {
         let mut hook_scripts = BTreeMap::new();
         let hooks_prefix = "docs_hooks_";
 
-        debug!("Scanning for docs hook templates with prefix: {}", hooks_prefix);
+        debug!(
+            "Scanning for docs hook templates with prefix: {}",
+            hooks_prefix
+        );
 
         // Read the ConfigMap directory and find files with the hook prefix
         match std::fs::read_dir(CLAUDE_TEMPLATES_PATH) {
@@ -168,17 +185,26 @@ impl DocsTemplateGenerator {
                             // Check if this is a hook template for docs
                             if filename.starts_with(hooks_prefix) && filename.ends_with(".hbs") {
                                 // Extract just the hook filename (remove prefix)
-                                let hook_name = filename.strip_prefix(hooks_prefix).unwrap_or(filename);
+                                let hook_name =
+                                    filename.strip_prefix(hooks_prefix).unwrap_or(filename);
 
                                 match std::fs::read_to_string(&path) {
                                     Ok(template_content) => {
-                                        debug!("Loaded docs hook template: {} (from {})", hook_name, filename);
-                                        
+                                        debug!(
+                                            "Loaded docs hook template: {} (from {})",
+                                            hook_name, filename
+                                        );
+
                                         let mut handlebars = Handlebars::new();
                                         handlebars.set_strict_mode(false);
 
-                                        if let Err(e) = handlebars.register_template_string("hook", template_content) {
-                                            debug!("Failed to register hook template {}: {}", hook_name, e);
+                                        if let Err(e) = handlebars
+                                            .register_template_string("hook", template_content)
+                                        {
+                                            debug!(
+                                                "Failed to register hook template {}: {}",
+                                                hook_name, e
+                                            );
                                             continue;
                                         }
 
@@ -193,16 +219,27 @@ impl DocsTemplateGenerator {
                                         match handlebars.render("hook", &context) {
                                             Ok(rendered_script) => {
                                                 // Remove .hbs extension for the final filename
-                                                let script_name = hook_name.strip_suffix(".hbs").unwrap_or(hook_name);
-                                                hook_scripts.insert(script_name.to_string(), rendered_script);
+                                                let script_name = hook_name
+                                                    .strip_suffix(".hbs")
+                                                    .unwrap_or(hook_name);
+                                                hook_scripts.insert(
+                                                    script_name.to_string(),
+                                                    rendered_script,
+                                                );
                                             }
                                             Err(e) => {
-                                                debug!("Failed to render docs hook script {}: {}", hook_name, e);
+                                                debug!(
+                                                    "Failed to render docs hook script {}: {}",
+                                                    hook_name, e
+                                                );
                                             }
                                         }
                                     }
                                     Err(e) => {
-                                        debug!("Failed to load docs hook template {}: {}", filename, e);
+                                        debug!(
+                                            "Failed to load docs hook template {}: {}",
+                                            filename, e
+                                        );
                                     }
                                 }
                             }

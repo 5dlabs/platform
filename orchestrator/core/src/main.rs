@@ -77,17 +77,21 @@ async fn main() -> Result<()> {
     // Initialize tracing with enhanced controller visibility
     tracing_subscriber::registry()
         .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| {
-                    // Default filter includes controller-specific tracing
-                    tracing_subscriber::EnvFilter::new("info,core::controllers=debug,kube_runtime=debug")
-                }),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                // Default filter includes controller-specific tracing
+                tracing_subscriber::EnvFilter::new(
+                    "info,core::controllers=debug,kube_runtime=debug",
+                )
+            }),
         )
         .with(
             tracing_subscriber::fmt::layer()
                 .with_target(true)
                 .with_thread_ids(true)
-                .with_span_events(tracing_subscriber::fmt::format::FmtSpan::NEW | tracing_subscriber::fmt::format::FmtSpan::CLOSE)
+                .with_span_events(
+                    tracing_subscriber::fmt::format::FmtSpan::NEW
+                        | tracing_subscriber::fmt::format::FmtSpan::CLOSE,
+                ),
         )
         .init();
 
@@ -112,7 +116,8 @@ async fn main() -> Result<()> {
             if let Err(e) = run_task_controller(client, namespace).await {
                 error!(error = ?e, "Task controller error");
             }
-        }.instrument(controller_span)
+        }
+        .instrument(controller_span)
     });
 
     // Build the application with middleware layers

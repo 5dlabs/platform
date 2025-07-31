@@ -32,7 +32,11 @@ impl CodeStatusManager {
                     }
                 }
                 Err(kube::Error::Api(ae)) if ae.code == 404 => {
-                    warn!("Job {} not found for CodeRun {}", job_name, code_run.name_any());
+                    warn!(
+                        "Job {} not found for CodeRun {}",
+                        job_name,
+                        code_run.name_any()
+                    );
                 }
                 Err(e) => {
                     error!(
@@ -61,7 +65,10 @@ impl CodeStatusManager {
 
         let code_api: Api<CodeRun> = Api::namespaced(client.clone(), namespace);
 
-        let current_retry_count = code_run.status.as_ref().map_or(0, |s| s.retry_count.unwrap_or(0));
+        let current_retry_count = code_run
+            .status
+            .as_ref()
+            .map_or(0, |s| s.retry_count.unwrap_or(0));
 
         let status_patch = json!({
             "status": {
@@ -89,19 +96,18 @@ impl CodeStatusManager {
         Ok(())
     }
 
-
     /// Increment retry count for failed attempts
     #[allow(dead_code)]
-    pub async fn increment_retry_count(
-        code_run: &Arc<CodeRun>,
-        ctx: &Arc<Context>,
-    ) -> Result<()> {
+    pub async fn increment_retry_count(code_run: &Arc<CodeRun>, ctx: &Arc<Context>) -> Result<()> {
         let namespace = &ctx.namespace;
         let client = &ctx.client;
         let name = code_run.name_any();
 
         let code_api: Api<CodeRun> = Api::namespaced(client.clone(), namespace);
-        let current_retry_count = code_run.status.as_ref().map_or(0, |s| s.retry_count.unwrap_or(0));
+        let current_retry_count = code_run
+            .status
+            .as_ref()
+            .map_or(0, |s| s.retry_count.unwrap_or(0));
         let new_retry_count = current_retry_count + 1;
 
         let status_patch = json!({
@@ -117,7 +123,10 @@ impl CodeStatusManager {
 
         match code_api.patch_status(&name, &pp, &patch).await {
             Ok(_) => {
-                info!("Updated CodeRun retry count: {} -> {}", name, new_retry_count);
+                info!(
+                    "Updated CodeRun retry count: {} -> {}",
+                    name, new_retry_count
+                );
             }
             Err(e) => {
                 error!("Failed to update CodeRun retry count for {}: {}", name, e);
@@ -177,8 +186,14 @@ impl CodeStatusManager {
         let current_time = chrono::Utc::now().to_rfc3339();
         let code_api: Api<CodeRun> = Api::namespaced(client.clone(), namespace);
 
-        let current_retry_count = code_run.status.as_ref().map_or(0, |s| s.retry_count.unwrap_or(0));
-        let session_id = code_run.status.as_ref().and_then(|s| s.session_id.as_deref());
+        let current_retry_count = code_run
+            .status
+            .as_ref()
+            .map_or(0, |s| s.retry_count.unwrap_or(0));
+        let session_id = code_run
+            .status
+            .as_ref()
+            .and_then(|s| s.session_id.as_deref());
 
         let mut status_patch = json!({
             "status": {
@@ -200,8 +215,14 @@ impl CodeStatusManager {
 
         match code_api.patch_status(&name, &pp, &patch).await {
             Ok(updated_code_run) => {
-                info!("✅ Successfully updated CodeRun status: {} -> {}", name, phase);
-                info!("✅ Updated resource version: {:?}", updated_code_run.metadata.resource_version);
+                info!(
+                    "✅ Successfully updated CodeRun status: {} -> {}",
+                    name, phase
+                );
+                info!(
+                    "✅ Updated resource version: {:?}",
+                    updated_code_run.metadata.resource_version
+                );
                 Ok(())
             }
             Err(e) => {
@@ -231,7 +252,10 @@ impl CodeStatusManager {
                                 "Code implementation completed successfully".to_string(),
                             );
                         } else if condition.type_ == "Failed" && condition.status == "True" {
-                            let message = condition.message.as_deref().unwrap_or("Code implementation failed");
+                            let message = condition
+                                .message
+                                .as_deref()
+                                .unwrap_or("Code implementation failed");
                             return ("Failed".to_string(), message.to_string());
                         }
                     }
@@ -241,19 +265,28 @@ impl CodeStatusManager {
             // Check if job is running
             if let Some(active) = status.active {
                 if active > 0 {
-                    return ("Running".to_string(), "Code implementation is running".to_string());
+                    return (
+                        "Running".to_string(),
+                        "Code implementation is running".to_string(),
+                    );
                 }
             }
 
             // Check for failure conditions
             if let Some(failed) = status.failed {
                 if failed > 0 {
-                    return ("Failed".to_string(), "Code implementation failed".to_string());
+                    return (
+                        "Failed".to_string(),
+                        "Code implementation failed".to_string(),
+                    );
                 }
             }
         }
 
-        ("Pending".to_string(), "Code implementation job pending".to_string())
+        (
+            "Pending".to_string(),
+            "Code implementation job pending".to_string(),
+        )
     }
 
     /// Build CodeRun conditions
@@ -304,8 +337,11 @@ impl CodeStatusManager {
         } else {
             // Clean up immediately
             let jobs: Api<Job> = Api::namespaced(ctx.client.clone(), &ctx.namespace);
-            
-            if let Err(e) = jobs.delete(job_name, &kube::api::DeleteParams::default()).await {
+
+            if let Err(e) = jobs
+                .delete(job_name, &kube::api::DeleteParams::default())
+                .await
+            {
                 warn!("Failed to delete completed code job {}: {}", job_name, e);
             } else {
                 info!("Successfully deleted completed code job: {}", job_name);
