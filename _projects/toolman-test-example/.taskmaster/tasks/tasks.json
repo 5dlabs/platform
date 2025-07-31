@@ -1,0 +1,311 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Setup Project Structure and Environment",
+        "description": "Initialize the project repository with React frontend and Node.js backend, configure TypeScript, and set up development environment with Docker. Research best practices for project structure and container deployment configurations. Use specific tools: conduct a Brave search for web research, use file system operations for creating files, and query Rust documentation for containerization patterns.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "details": "1. Conduct a Brave search to research best practices for React + Node.js project structure\n2. Query Rust documentation for containerization patterns and best practices\n3. Conduct a Brave search to research Kubernetes container orchestration requirements for future deployment\n4. Use file system operations to create a monorepo structure with separate folders for frontend and backend\n5. Use file system operations to initialize React 18+ with TypeScript using create-react-app or Vite\n6. Use file system operations to set up Node.js Express backend with TypeScript\n7. Use file system operations to configure ESLint and Prettier for code quality\n8. Use file system operations to create Docker and docker-compose files for development based on research findings\n9. Use file system operations to design container deployment configurations with Kubernetes compatibility in mind\n10. Use file system operations to set up environment variables for different environments\n11. Use file system operations to configure package.json scripts for development, testing, and building\n12. Use file system operations to initialize Git repository with appropriate .gitignore\n\nFolder structure:\n```\n/chat-application\n  /frontend\n    /src\n    package.json\n    tsconfig.json\n  /backend\n    /src\n    package.json\n    tsconfig.json\n  /kubernetes\n    /deployment-configs\n  docker-compose.yml\n  .gitignore\n  README.md\n```\n\nRequired tools:\n- FILE_SYSTEM: File operations for creating project structure and configuration files\n- BRAVE_SEARCH: Web search for React/Node.js best practices and Kubernetes documentation\n- RUST_DOCS: Query Rust documentation for containerization patterns",
+        "testStrategy": "Verify that all development scripts work correctly. Test Docker setup by building and running containers. Ensure hot reloading works for both frontend and backend development. Validate that container configurations align with Kubernetes best practices. Document research findings on project structure and deployment patterns.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Research modern React + Node.js project structures",
+            "description": "Conduct a Brave search to research best practices for structuring monorepo projects with React frontend and Node.js backend",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Use the Brave search tool to find current best practices and examples of monorepo structures for React and Node.js applications.",
+            "testStrategy": "Document findings in a structured format that can be referenced during implementation."
+          },
+          {
+            "id": 2,
+            "title": "Research containerization patterns in Rust documentation",
+            "description": "Query Rust documentation for containerization and deployment patterns that could be applied to our project",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Use the Rust documentation query tool to find information about containerization approaches, best practices, and deployment patterns in the Rust ecosystem.",
+            "testStrategy": "Compile findings into a reference document with specific patterns that can be applied to our project."
+          },
+          {
+            "id": 3,
+            "title": "Research Kubernetes orchestration requirements",
+            "description": "Conduct a Brave search to investigate Kubernetes documentation to understand container orchestration requirements for future deployment",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Use the Brave search tool to find Kubernetes documentation and best practices for container orchestration, focusing on requirements relevant to our chat application.",
+            "testStrategy": "Create a checklist of Kubernetes requirements that our container configurations must satisfy."
+          },
+          {
+            "id": 4,
+            "title": "Create project directory structure",
+            "description": "Use file system operations to set up the monorepo structure with frontend, backend, and kubernetes configuration directories",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Use file system operations to create the directory structure according to the folder structure outlined in the main task.",
+            "testStrategy": "Verify that all directories are created with correct permissions and structure."
+          },
+          {
+            "id": 5,
+            "title": "Configure Docker and deployment files",
+            "description": "Use file system operations to create Docker, docker-compose, and Kubernetes configuration files based on research findings",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Use file system operations to create Docker and deployment configuration files that incorporate best practices identified in the research subtasks.",
+            "testStrategy": "Test Docker configurations by building and running containers locally."
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Database Setup and Schema Design",
+        "description": "Set up PostgreSQL database with Redis for session management and design the database schema for users, chat rooms, and messages.",
+        "details": "1. Create PostgreSQL database schema with the following tables:\n   - users (id, email, password_hash, username, avatar_url, created_at, updated_at)\n   - rooms (id, name, description, created_by, created_at, updated_at)\n   - messages (id, room_id, user_id, content, created_at, read_by)\n   - room_users (room_id, user_id, joined_at)\n\n2. Set up Redis for session management and real-time features:\n   - Configure Redis for storing JWT refresh tokens\n   - Set up Redis channels for Socket.io communication\n   - Configure Redis for typing indicators and presence status\n\n3. Create database migration scripts\n\n4. Implement database connection pooling for optimal performance\n\n5. Set up data models and repositories in the backend\n\nExample user model:\n```typescript\ninterface User {\n  id: string;\n  email: string;\n  username: string;\n  passwordHash: string;\n  avatarUrl?: string;\n  createdAt: Date;\n  updatedAt: Date;\n}\n```",
+        "testStrategy": "Write unit tests for database models and repositories. Test database migrations. Verify Redis connection and operations. Ensure proper indexing for query performance.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "User Authentication System",
+        "description": "Implement user registration, login, JWT token generation, refresh tokens, and password reset functionality.",
+        "details": "1. Create authentication controller with endpoints:\n   - POST /api/auth/register\n   - POST /api/auth/login\n   - POST /api/auth/refresh\n   - GET /api/auth/profile\n   - POST /api/auth/reset-password\n\n2. Implement JWT token generation and validation:\n   - Access tokens (short-lived)\n   - Refresh tokens (long-lived, stored in Redis)\n\n3. Create middleware for protected routes\n\n4. Implement password hashing using bcrypt\n\n5. Set up email service for password reset functionality\n\n6. Create user profile management endpoints\n\nExample JWT implementation:\n```typescript\nconst generateTokens = (userId: string) => {\n  const accessToken = jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '15m' });\n  const refreshToken = jwt.sign({ userId }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });\n  \n  // Store refresh token in Redis\n  redisClient.set(`refresh_token:${userId}`, refreshToken, 'EX', 60 * 60 * 24 * 7);\n  \n  return { accessToken, refreshToken };\n};\n```",
+        "testStrategy": "Write unit tests for authentication controllers and middleware. Test JWT token generation, validation, and refresh flow. Test password hashing and verification. Implement integration tests for the complete authentication flow.",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Chat Room API Implementation",
+        "description": "Develop REST API endpoints for creating, joining, and managing chat rooms with message history persistence. Use specific tools for research and implementation: query rust documentation for API patterns, conduct Brave searches for Express.js and Kubernetes best practices, and use file system operations for creating API files and configurations.",
+        "status": "pending",
+        "dependencies": [
+          2,
+          3
+        ],
+        "priority": "high",
+        "details": "1. Create room controller with endpoints (use file system operations to create these files):\n   - GET /api/rooms (list all rooms)\n   - POST /api/rooms (create new room)\n   - GET /api/rooms/:id (get room details)\n   - PUT /api/rooms/:id (update room)\n   - DELETE /api/rooms/:id (delete room)\n   - POST /api/rooms/:id/join (join room)\n   - POST /api/rooms/:id/leave (leave room)\n\n2. Create message controller with endpoints (use file system operations):\n   - GET /api/rooms/:id/messages (get message history with pagination)\n   - POST /api/rooms/:id/messages (post new message)\n   - DELETE /api/rooms/:id/messages/:messageId (delete message)\n\n3. Implement authorization checks for room operations\n\n4. Add pagination for message history\n\n5. Implement message persistence in PostgreSQL\n\n6. Query rust documentation for HTTP server patterns and API design best practices for inspiration\n\n7. Conduct a Brave search for Kubernetes API service deployment and ingress configurations\n\n8. Conduct a Brave search for Express.js REST API best practices and security patterns\n\n9. Use file system operations to create and update configuration files\n\nExample room creation endpoint:\n```typescript\nconst createRoom = async (req: Request, res: Response) => {\n  try {\n    const { name, description } = req.body;\n    const userId = req.user.id; // From auth middleware\n    \n    const room = await roomRepository.create({\n      name,\n      description,\n      createdBy: userId\n    });\n    \n    await roomUserRepository.addUserToRoom(room.id, userId);\n    \n    return res.status(201).json(room);\n  } catch (error) {\n    return res.status(500).json({ error: 'Failed to create room' });\n  }\n};\n```",
+        "testStrategy": "Write unit tests for room and message controllers. Test authorization logic for room operations. Implement integration tests for the complete room and message API flow. Test pagination and filtering of messages. Verify API endpoints conform to best practices found in Rust ecosystem research. Test API deployment configurations in a Kubernetes environment.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Query rust documentation for HTTP server patterns and API design best practices",
+            "description": "Use the 'query rust documentation' tool to research HTTP server patterns and API design best practices in the Rust ecosystem",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Focus on researching popular Rust web frameworks like Actix, Rocket, and Warp. Look for patterns in API design, error handling, middleware implementation, and authentication strategies that could be applied to our Express.js implementation.",
+            "testStrategy": "Document findings in a structured format that can be referenced during implementation."
+          },
+          {
+            "id": 2,
+            "title": "Conduct a Brave search for Express.js REST API best practices and security patterns",
+            "description": "Use the 'conduct a Brave search' tool to research Express.js REST API best practices and security patterns",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Search for recent articles, tutorials, and documentation on Express.js REST API development. Focus on middleware patterns, error handling, validation, authentication, and security best practices that can be applied to our chat room API.",
+            "testStrategy": "Compile a list of best practices and security patterns to be implemented in the API."
+          },
+          {
+            "id": 3,
+            "title": "Conduct a Brave search for Kubernetes API service deployment and ingress configurations",
+            "description": "Use the 'conduct a Brave search' tool to research Kubernetes API service deployment and ingress configurations",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Research Kubernetes deployment strategies for REST APIs, focusing on service configurations, ingress rules, scaling policies, and environment variable management. Look for examples of Node.js/Express.js applications deployed in Kubernetes.",
+            "testStrategy": "Document deployment patterns and create sample configuration files that can be used as templates."
+          },
+          {
+            "id": 4,
+            "title": "Use file system operations to create API route files, controllers, and middleware",
+            "description": "Use the 'use file system operations' tool to create and organize the API structure",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Create the following file structure:\n- routes/roomRoutes.js\n- routes/messageRoutes.js\n- controllers/roomController.js\n- controllers/messageController.js\n- middleware/auth.js\n- middleware/validation.js\n- models/room.js\n- models/message.js",
+            "testStrategy": "Verify file structure is correctly created and follows project conventions."
+          },
+          {
+            "id": 5,
+            "title": "Use file system operations to update configuration files and add new dependencies",
+            "description": "Use the 'use file system operations' tool to update package.json and configuration files",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Update package.json to include necessary dependencies for API development. Create or update configuration files for database connections, environment variables, and API settings.",
+            "testStrategy": "Verify configuration files are correctly set up and dependencies are properly installed."
+          },
+          {
+            "id": 6,
+            "title": "Implement room and message controllers with endpoints",
+            "description": "Implement the controllers and endpoints for room and message management",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Use file system operations to create and edit the controller files. Implement all endpoints listed in the main task description, following the best practices researched earlier.",
+            "testStrategy": "Write unit tests for each endpoint to verify functionality."
+          },
+          {
+            "id": 7,
+            "title": "Implement PostgreSQL persistence for messages and rooms",
+            "description": "Create database models and repositories for message and room persistence",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Use file system operations to create model files and database access code. Implement proper error handling and transaction management.",
+            "testStrategy": "Test database operations with both valid and invalid data to ensure proper handling."
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Real-time Communication with Socket.io",
+        "description": "Implement Socket.io for real-time messaging, typing indicators, user presence, and read receipts.",
+        "details": "1. Set up Socket.io server in the backend\n\n2. Implement socket authentication using JWT\n\n3. Create socket event handlers for:\n   - Joining/leaving rooms\n   - Sending/receiving messages\n   - Typing indicators\n   - User presence status\n   - Read receipts\n\n4. Integrate Redis adapter for Socket.io to support horizontal scaling\n\n5. Implement error handling and reconnection logic\n\nExample Socket.io server setup:\n```typescript\nimport { Server } from 'socket.io';\nimport { createAdapter } from '@socket.io/redis-adapter';\n\nconst io = new Server(httpServer, {\n  cors: {\n    origin: process.env.FRONTEND_URL,\n    credentials: true\n  }\n});\n\n// Redis adapter setup\nconst pubClient = createClient({ url: process.env.REDIS_URL });\nconst subClient = pubClient.duplicate();\nio.adapter(createAdapter(pubClient, subClient));\n\n// Socket authentication middleware\nio.use((socket, next) => {\n  const token = socket.handshake.auth.token;\n  if (!token) return next(new Error('Authentication error'));\n  \n  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {\n    if (err) return next(new Error('Authentication error'));\n    socket.user = decoded;\n    next();\n  });\n});\n\n// Socket event handlers\nio.on('connection', (socket) => {\n  console.log(`User connected: ${socket.user.id}`);\n  \n  // Update user presence\n  userService.setUserOnline(socket.user.id);\n  \n  socket.on('join-room', (roomId) => {\n    socket.join(roomId);\n  });\n  \n  socket.on('send-message', async (data) => {\n    const { roomId, content } = data;\n    const message = await messageService.createMessage({\n      roomId,\n      userId: socket.user.id,\n      content\n    });\n    \n    io.to(roomId).emit('new-message', message);\n  });\n  \n  socket.on('typing', (roomId) => {\n    socket.to(roomId).emit('user-typing', {\n      userId: socket.user.id,\n      username: socket.user.username\n    });\n  });\n  \n  socket.on('read-message', async (messageId) => {\n    await messageService.markAsRead(messageId, socket.user.id);\n    const message = await messageService.getMessage(messageId);\n    io.to(message.roomId).emit('message-read', {\n      messageId,\n      userId: socket.user.id\n    });\n  });\n  \n  socket.on('disconnect', () => {\n    userService.setUserOffline(socket.user.id);\n  });\n});\n```",
+        "testStrategy": "Write unit tests for Socket.io event handlers. Test real-time communication between multiple clients. Measure message delivery latency to ensure it meets the sub-100ms requirement. Test reconnection scenarios and error handling.",
+        "priority": "high",
+        "dependencies": [
+          3,
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Frontend Authentication and User Profile",
+        "description": "Implement user registration, login, profile management, and authentication state management in the React frontend.",
+        "details": "1. Create authentication context and provider for global auth state\n\n2. Implement login and registration forms with validation\n\n3. Create protected route component for authenticated routes\n\n4. Implement JWT token storage and refresh logic\n\n5. Create user profile page with edit functionality\n\n6. Implement password reset flow\n\nExample authentication context:\n```typescript\ninterface AuthContextType {\n  user: User | null;\n  isAuthenticated: boolean;\n  isLoading: boolean;\n  login: (email: string, password: string) => Promise<void>;\n  register: (email: string, username: string, password: string) => Promise<void>;\n  logout: () => void;\n  updateProfile: (data: Partial<User>) => Promise<void>;\n}\n\nconst AuthContext = createContext<AuthContextType | undefined>(undefined);\n\nexport const AuthProvider: React.FC = ({ children }) => {\n  const [user, setUser] = useState<User | null>(null);\n  const [isLoading, setIsLoading] = useState(true);\n  \n  useEffect(() => {\n    // Check for existing token and validate on mount\n    const initAuth = async () => {\n      const token = localStorage.getItem('accessToken');\n      if (token) {\n        try {\n          const response = await api.get('/api/auth/profile');\n          setUser(response.data);\n        } catch (error) {\n          // Try to refresh token if access token is expired\n          try {\n            await refreshToken();\n            const response = await api.get('/api/auth/profile');\n            setUser(response.data);\n          } catch (refreshError) {\n            localStorage.removeItem('accessToken');\n            localStorage.removeItem('refreshToken');\n          }\n        }\n      }\n      setIsLoading(false);\n    };\n    \n    initAuth();\n  }, []);\n  \n  const login = async (email: string, password: string) => {\n    setIsLoading(true);\n    try {\n      const response = await api.post('/api/auth/login', { email, password });\n      const { accessToken, refreshToken, user } = response.data;\n      \n      localStorage.setItem('accessToken', accessToken);\n      localStorage.setItem('refreshToken', refreshToken);\n      setUser(user);\n    } finally {\n      setIsLoading(false);\n    }\n  };\n  \n  // Other auth methods...\n  \n  return (\n    <AuthContext.Provider value={{ \n      user, \n      isAuthenticated: !!user, \n      isLoading, \n      login, \n      register, \n      logout, \n      updateProfile \n    }}>\n      {children}\n    </AuthContext.Provider>\n  );\n};\n```",
+        "testStrategy": "Write unit tests for authentication components and context. Test form validation and error handling. Test protected routes. Implement integration tests for the complete authentication flow including token refresh.",
+        "priority": "high",
+        "dependencies": [
+          1,
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Chat UI Implementation",
+        "description": "Develop the chat interface with real-time messaging, room management, and responsive design for both mobile and desktop.",
+        "details": "1. Create main chat layout components:\n   - Sidebar with room list and user info\n   - Chat room component with message list and input\n   - Room creation and management modals\n\n2. Implement Socket.io client integration:\n   - Connect to Socket.io server with authentication\n   - Handle real-time events (messages, typing, presence)\n   - Implement reconnection logic\n\n3. Create message components:\n   - Message bubbles with user info and timestamp\n   - Message status indicators (sent, delivered, read)\n   - Support for emoji and markdown\n\n4. Implement responsive design:\n   - Desktop layout with sidebar and chat area\n   - Mobile layout with collapsible sidebar\n   - Touch-friendly interactions\n\n5. Add dark/light theme toggle with CSS variables\n\nExample Socket.io client setup:\n```typescript\nimport { io, Socket } from 'socket.io-client';\nimport { useAuth } from '../contexts/AuthContext';\n\nexport const useSocket = () => {\n  const { user, isAuthenticated } = useAuth();\n  const [socket, setSocket] = useState<Socket | null>(null);\n  const [isConnected, setIsConnected] = useState(false);\n  \n  useEffect(() => {\n    if (!isAuthenticated || !user) return;\n    \n    const token = localStorage.getItem('accessToken');\n    const newSocket = io(process.env.REACT_APP_SOCKET_URL, {\n      auth: { token },\n      reconnection: true,\n      reconnectionAttempts: 5,\n      reconnectionDelay: 1000,\n    });\n    \n    newSocket.on('connect', () => {\n      setIsConnected(true);\n      console.log('Socket connected');\n    });\n    \n    newSocket.on('disconnect', () => {\n      setIsConnected(false);\n      console.log('Socket disconnected');\n    });\n    \n    newSocket.on('connect_error', (error) => {\n      console.error('Connection error:', error);\n    });\n    \n    setSocket(newSocket);\n    \n    return () => {\n      newSocket.disconnect();\n    };\n  }, [isAuthenticated, user]);\n  \n  return { socket, isConnected };\n};\n```",
+        "testStrategy": "Write unit tests for UI components. Test responsive design across different screen sizes. Test real-time updates and Socket.io integration. Implement end-to-end tests for the complete chat flow. Test theme switching and accessibility.",
+        "priority": "medium",
+        "dependencies": [
+          5,
+          6
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "File and Image Sharing Implementation",
+        "description": "Add support for file and image sharing in chat messages with storage, preview, and download capabilities.",
+        "details": "1. Set up file storage solution (AWS S3 or similar)\n\n2. Create file upload API endpoint:\n   - POST /api/upload\n   - Support for multiple file types (images, documents, etc.)\n   - File size validation\n   - Virus scanning (optional)\n\n3. Extend message schema to support attachments:\n   - Add attachments field to messages table\n   - Store file metadata (URL, type, size, name)\n\n4. Implement frontend file upload components:\n   - Drag and drop support\n   - Upload progress indicator\n   - File type validation\n\n5. Create file preview components:\n   - Image previews with lightbox\n   - Document previews\n   - Download functionality\n\nExample file upload component:\n```typescript\nconst FileUpload: React.FC = () => {\n  const [files, setFiles] = useState<File[]>([]);\n  const [uploading, setUploading] = useState(false);\n  const [progress, setProgress] = useState(0);\n  \n  const handleDrop = useCallback((acceptedFiles: File[]) => {\n    setFiles(prev => [...prev, ...acceptedFiles]);\n  }, []);\n  \n  const { getRootProps, getInputProps, isDragActive } = useDropzone({\n    onDrop: handleDrop,\n    accept: {\n      'image/*': [],\n      'application/pdf': [],\n      'application/msword': [],\n      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': []\n    },\n    maxSize: 10 * 1024 * 1024 // 10MB\n  });\n  \n  const uploadFiles = async () => {\n    if (files.length === 0) return;\n    \n    setUploading(true);\n    setProgress(0);\n    \n    const formData = new FormData();\n    files.forEach(file => formData.append('files', file));\n    \n    try {\n      const response = await api.post('/api/upload', formData, {\n        onUploadProgress: (progressEvent) => {\n          const percentCompleted = Math.round(\n            (progressEvent.loaded * 100) / progressEvent.total\n          );\n          setProgress(percentCompleted);\n        }\n      });\n      \n      // Return uploaded file URLs\n      return response.data.files;\n    } catch (error) {\n      console.error('Upload failed:', error);\n      throw error;\n    } finally {\n      setUploading(false);\n      setFiles([]);\n    }\n  };\n  \n  return (\n    <div>\n      <div {...getRootProps()} className={`dropzone ${isDragActive ? 'active' : ''}`}>\n        <input {...getInputProps()} />\n        {isDragActive ? (\n          <p>Drop the files here...</p>\n        ) : (\n          <p>Drag & drop files here, or click to select files</p>\n        )}\n      </div>\n      \n      {files.length > 0 && (\n        <div className=\"file-list\">\n          {files.map((file, index) => (\n            <div key={index} className=\"file-item\">\n              <span>{file.name}</span>\n              <span>({(file.size / 1024).toFixed(2)} KB)</span>\n              <button onClick={() => setFiles(files.filter((_, i) => i !== index))}>\n                Remove\n              </button>\n            </div>\n          ))}\n        </div>\n      )}\n      \n      {uploading && <progress value={progress} max=\"100\" />}\n      \n      <button onClick={uploadFiles} disabled={files.length === 0 || uploading}>\n        {uploading ? 'Uploading...' : 'Upload'}\n      </button>\n    </div>\n  );\n};\n```",
+        "testStrategy": "Test file upload functionality with different file types and sizes. Test file preview components. Verify proper storage and retrieval of files. Test error handling for invalid files. Measure upload performance.",
+        "priority": "medium",
+        "dependencies": [
+          4,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Performance Optimization and Scaling",
+        "description": "Optimize the application for high performance, implement caching, and ensure it can scale to support 1000+ concurrent users.",
+        "details": "1. Implement caching strategies:\n   - Redis caching for API responses\n   - Browser caching for static assets\n   - Message pagination and lazy loading\n\n2. Optimize Socket.io configuration:\n   - Configure proper heartbeat intervals\n   - Implement room-based message broadcasting\n   - Use binary data transmission when appropriate\n\n3. Set up horizontal scaling:\n   - Stateless backend design\n   - Redis adapter for Socket.io\n   - Load balancer configuration\n\n4. Implement database optimizations:\n   - Proper indexing for frequent queries\n   - Query optimization\n   - Connection pooling\n\n5. Frontend performance optimizations:\n   - Code splitting and lazy loading\n   - Memoization of expensive computations\n   - Virtual scrolling for long message lists\n\nExample Redis caching middleware:\n```typescript\nimport { Request, Response, NextFunction } from 'express';\nimport { redisClient } from '../config/redis';\n\nexport const cacheMiddleware = (duration: number) => {\n  return async (req: Request, res: Response, next: NextFunction) => {\n    // Skip caching for non-GET requests\n    if (req.method !== 'GET') {\n      return next();\n    }\n    \n    const key = `cache:${req.originalUrl}`;\n    \n    try {\n      const cachedData = await redisClient.get(key);\n      \n      if (cachedData) {\n        return res.json(JSON.parse(cachedData));\n      }\n      \n      // Store the original res.json method\n      const originalJson = res.json;\n      \n      // Override res.json method to cache the response\n      res.json = function(data) {\n        redisClient.set(key, JSON.stringify(data), 'EX', duration);\n        return originalJson.call(this, data);\n      };\n      \n      next();\n    } catch (error) {\n      console.error('Cache error:', error);\n      next();\n    }\n  };\n};\n```",
+        "testStrategy": "Conduct load testing to verify support for 1000+ concurrent users. Measure message delivery latency to ensure it meets the sub-100ms requirement. Test caching effectiveness. Monitor memory usage and CPU load under stress. Test horizontal scaling with multiple instances.",
+        "priority": "medium",
+        "dependencies": [
+          5,
+          7,
+          8
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Deployment and Documentation",
+        "description": "Prepare the application for production deployment with Docker, CI/CD, and create comprehensive API and user documentation. Research deployment patterns from multiple sources and create comprehensive deployment configurations. Use specific tools: conduct a Brave search for deployment patterns and best practices, query Rust documentation for ecosystem patterns, and use file system operations for creating configuration files and documentation.",
+        "status": "pending",
+        "dependencies": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "priority": "medium",
+        "details": "1. Create production Docker setup (use file system operations):\n   - Multi-stage builds for frontend and backend\n   - Nginx configuration for serving the frontend\n   - Docker Compose for local deployment\n   - Kubernetes manifests (required, not optional)\n\n2. Research deployment patterns:\n   - Conduct a Brave search to study Kubernetes deployment patterns and service configurations\n   - Query Rust documentation for best practices from Rust ecosystem for deployment and monitoring\n   - Conduct a Brave search to analyze modern microservices deployment architectures\n   - Use file system operations to document findings to inform implementation decisions\n\n3. Set up CI/CD pipeline:\n   - Conduct a Brave search for modern CI/CD pipeline examples\n   - Use file system operations to create GitHub Actions or similar configuration files\n   - Use file system operations to set up automated testing\n   - Use file system operations to configure build and deployment steps\n   - Use file system operations to create environment-specific configurations\n\n4. Create API documentation (use file system operations):\n   - OpenAPI/Swagger specification\n   - API endpoint documentation\n   - Authentication flow documentation\n   - WebSocket events documentation\n\n5. Write user documentation (use file system operations):\n   - User guide with screenshots\n   - Feature explanations\n   - FAQ section\n\n6. Implement monitoring and logging:\n   - Conduct a Brave search for error tracking solutions (Sentry or similar)\n   - Conduct a Brave search for performance monitoring tools\n   - Conduct a Brave search for log aggregation systems\n   - Query Rust documentation for Rust ecosystem monitoring patterns\n   - Use file system operations to implement the selected monitoring solutions\n\nExample production Docker setup:\n```dockerfile\n# Frontend Dockerfile\nFROM node:18-alpine as build\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build\n\nFROM nginx:alpine\nCOPY --from=build /app/build /usr/share/nginx/html\nCOPY nginx.conf /etc/nginx/conf.d/default.conf\nEXPOSE 80\nCMD [\"nginx\", \"-g\", \"daemon off;\"]\n\n# Backend Dockerfile\nFROM node:18-alpine as build\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build\n\nFROM node:18-alpine\nWORKDIR /app\nCOPY --from=build /app/dist ./dist\nCOPY --from=build /app/node_modules ./node_modules\nCOPY --from=build /app/package*.json ./\nEXPOSE 3000\nCMD [\"node\", \"dist/index.js\"]\n```\n\nExample docker-compose.yml:\n```yaml\nversion: '3.8'\n\nservices:\n  frontend:\n    build: ./frontend\n    ports:\n      - \"80:80\"\n    depends_on:\n      - backend\n\n  backend:\n    build: ./backend\n    ports:\n      - \"3000:3000\"\n    environment:\n      - NODE_ENV=production\n      - DATABASE_URL=postgres://user:password@postgres:5432/chatapp\n      - REDIS_URL=redis://redis:6379\n      - JWT_SECRET=your-jwt-secret\n      - JWT_REFRESH_SECRET=your-refresh-secret\n    depends_on:\n      - postgres\n      - redis\n\n  postgres:\n    image: postgres:14-alpine\n    environment:\n      - POSTGRES_USER=user\n      - POSTGRES_PASSWORD=password\n      - POSTGRES_DB=chatapp\n    volumes:\n      - postgres-data:/var/lib/postgresql/data\n\n  redis:\n    image: redis:7-alpine\n    volumes:\n      - redis-data:/data\n\nvolumes:\n  postgres-data:\n  redis-data:\n```",
+        "testStrategy": "Test deployment process in staging environment. Verify zero-downtime deployments. Test database migrations in production-like environment. Validate documentation accuracy and completeness. Test monitoring and alerting systems. Verify Kubernetes configurations against best practices. Compare implemented deployment patterns with research findings from Rust ecosystem and other sources.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Research deployment patterns",
+            "description": "Conduct a Brave search to study Kubernetes deployment patterns and service configurations. Query Rust documentation for best practices from Rust ecosystem for deployment and monitoring.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Use Brave search to research modern Kubernetes deployment patterns and service mesh architectures. Query Rust documentation specifically for deployment patterns used in production Rust applications. Document findings using file system operations to create reference documents.",
+            "testStrategy": "Compare research findings against industry standards. Validate that the documented patterns are applicable to our application architecture."
+          },
+          {
+            "id": 2,
+            "title": "Create Kubernetes manifests",
+            "description": "Use file system operations to develop comprehensive Kubernetes configuration files for deployment, services, ingress, and scaling",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Create YAML files for Kubernetes resources including Deployments, Services, ConfigMaps, Secrets, and Ingress controllers. Implement horizontal pod autoscaling configuration. Document the purpose of each manifest file.",
+            "testStrategy": "Validate manifests with kubectl and kubeval. Test deployments in a local Kubernetes environment (minikube or kind)."
+          },
+          {
+            "id": 3,
+            "title": "Set up CI/CD pipeline with modern patterns",
+            "description": "Conduct a Brave search to research CI/CD best practices and use file system operations to implement CI/CD pipeline, including automated testing and deployment",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Conduct Brave searches for modern CI/CD patterns. Use file system operations to create GitHub Actions workflows or similar CI/CD configuration files. Implement stages for testing, building, and deploying to different environments.",
+            "testStrategy": "Test the CI/CD pipeline with sample commits. Verify that all stages execute correctly and that deployments are successful."
+          },
+          {
+            "id": 4,
+            "title": "Create comprehensive API documentation",
+            "description": "Use file system operations to develop detailed API documentation with OpenAPI/Swagger, including all endpoints and authentication flows",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Create OpenAPI specification files for all API endpoints. Document request/response formats, authentication requirements, and error codes. Generate interactive documentation using Swagger UI or similar tools.",
+            "testStrategy": "Validate OpenAPI specifications against the actual API implementation. Test documentation usability with potential API consumers."
+          },
+          {
+            "id": 5,
+            "title": "Implement monitoring based on Rust ecosystem patterns",
+            "description": "Conduct a Brave search and query Rust documentation to research monitoring solutions, then use file system operations to implement monitoring and logging based on Rust ecosystem best practices",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Query Rust documentation for monitoring patterns. Conduct Brave searches for compatible monitoring tools. Use file system operations to implement error tracking, performance monitoring, and log aggregation configurations.",
+            "testStrategy": "Test monitoring setup by simulating errors and performance issues. Verify that alerts are triggered appropriately and that logs are properly aggregated."
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-31T15:46:32.686Z",
+      "updated": "2025-07-31T15:46:32.686Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
