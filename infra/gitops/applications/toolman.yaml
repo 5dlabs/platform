@@ -16,16 +16,19 @@ spec:
   # Project configuration
   project: platform
   
-  # Source configuration - point to existing chart
+  # Source configuration - use 5dlabs Helm repository
   source:
-    repoURL: https://github.com/5dlabs/platform
-    targetRevision: argo
-    path: infra/charts/toolman
+    repoURL: https://5dlabs.github.io/platform
+    targetRevision: 1.1.0
+    chart: toolman
     
     # Helm configuration
     helm:
-      valueFiles:
-        - values.yaml
+      values: |
+        image:
+          tag: main-e9385b7
+        rbac:
+          create: true
   
   # Destination configuration
   destination:

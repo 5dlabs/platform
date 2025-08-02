@@ -16,16 +16,16 @@ spec:
   # Project configuration
   project: platform
   
-  # Source configuration
+  # Source configuration - use 5dlabs Helm repository
   source:
-    repoURL: https://github.com/5dlabs/platform
-    targetRevision: argo
-    path: infra/charts/k8s-mcp
+    repoURL: https://5dlabs.github.io/platform
+    targetRevision: 0.1.0
+    chart: k8s-mcp-server
     
     # Helm configuration
     helm:
-      valueFiles:
-        - values.yaml
+      values: |
+        useKubeconfigSecret: true
   
   # Destination configuration
   destination:
