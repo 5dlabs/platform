@@ -93,31 +93,44 @@ echo "🔐 AUTHENTICATION VERIFICATION"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
+# Repository URLs - Convert org/repo format to full URLs
+REPO_SSH_URL="git@github.com:{{repository_url}}.git"
+REPO_HTTP_URL="https://github.com/{{repository_url}}.git"
+DOCS_SSH_URL="git@github.com:{{docs_repository_url}}.git" 
+DOCS_HTTP_URL="https://github.com/{{docs_repository_url}}.git"
+
+# DEBUG: Show what URLs are being constructed
+echo "🔍 DEBUG: URL Construction"
+echo "  Input repository_url: '{{repository_url}}'"
+echo "  Input docs_repository_url: '{{docs_repository_url}}'"
+echo "  Constructed REPO_SSH_URL: '$REPO_SSH_URL'"
+echo "  Constructed DOCS_SSH_URL: '$DOCS_SSH_URL'"
+echo "  Constructed REPO_HTTP_URL: '$REPO_HTTP_URL'"
+echo "  Constructed DOCS_HTTP_URL: '$DOCS_HTTP_URL'"
+
 # Test SSH access to repository
 echo "Testing SSH repository access..."
-REPO_URL="{{repository_url}}"
-if git ls-remote "$REPO_URL" HEAD > /dev/null 2>&1; then
+if git ls-remote "$REPO_SSH_URL" HEAD > /dev/null 2>&1; then
   echo "✓ SSH repository access successful"
-  echo "  Repository: $REPO_URL"
+  echo "  Repository: {{repository_url}} ($REPO_SSH_URL)"
 else
   echo "❌ SSH repository access failed"
-  echo "  Repository: $REPO_URL"
+  echo "  Repository: {{repository_url}} ($REPO_SSH_URL)"
   echo ""
   echo "🚫 ABORTING: Cannot access repository via SSH"
   exit 1
 fi
 
-# Test platform repository access
-DOCS_URL="{{docs_repository_url}}"
+# Test docs repository access
 echo "Testing docs repository access..."
-if git ls-remote "$DOCS_URL" HEAD > /dev/null 2>&1; then
+if git ls-remote "$DOCS_SSH_URL" HEAD > /dev/null 2>&1; then
   echo "✓ Docs repository access successful"
-  echo "  Repository: $DOCS_URL"
+  echo "  Repository: {{docs_repository_url}} ($DOCS_SSH_URL)"
 else
   echo "❌ Docs repository access failed"
-  echo "  Repository: $DOCS_URL"
+  echo "  Repository: {{docs_repository_url}} ($DOCS_SSH_URL)"
   echo ""
-  echo "🚫 ABORTING: Cannot access platform repository via SSH"
+  echo "🚫 ABORTING: Cannot access docs repository via SSH"
   exit 1
 fi
 
@@ -128,23 +141,24 @@ echo "║                 DUAL REPOSITORY SETUP                        ║"
 echo "═══════════════════════════════════════════════════════════════"
 
 # Repository Information
-DOCS_URL="{{docs_repository_url}}"
-REPO_URL="{{repository_url}}"
 DOCS_BRANCH="{{docs_branch}}"
 GITHUB_USER="{{github_user}}"
 
-# Extract repository names from URLs
-DOCS_REPO_NAME=$(basename "$DOCS_URL" .git)
-TARGET_REPO_NAME=$(basename "$REPO_URL" .git)
+# Extract repository names from org/repo format
+DOCS_REPO_NAME="{{docs_repository_url}}"
+TARGET_REPO_NAME="{{repository_url}}"
+# Convert to directory-safe names
+DOCS_REPO_DIR=$(echo "$DOCS_REPO_NAME" | sed 's/\//-/g')
+TARGET_REPO_DIR=$(echo "$TARGET_REPO_NAME" | sed 's/\//-/g')
 
 echo "=== REPOSITORY SETUP ==="
-echo "Docs repository: $DOCS_URL"
-echo "Target repository: $REPO_URL"
+echo "Docs repository: {{docs_repository_url}} ($DOCS_SSH_URL)"
+echo "Target repository: {{repository_url}} ($REPO_SSH_URL)"
 echo "Docs branch: $DOCS_BRANCH"
 echo "GitHub user: $GITHUB_USER"
 
 # Determine workflow type
-if [ "$DOCS_URL" = "$REPO_URL" ]; then
+if [ "{{docs_repository_url}}" = "{{repository_url}}" ]; then
     echo "✓ Single-repo workflow detected (same repository for docs and implementation)"
     WORKFLOW_TYPE="single-repo"
 else
@@ -156,10 +170,10 @@ fi
 if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
     echo "=== SINGLE-REPO WORKFLOW ==="
     # Check if repository already exists (retry scenario)
-    if [ -d "$TARGET_REPO_NAME" ]; then
+    if [ -d "$TARGET_REPO_DIR" ]; then
         echo "🔄 REPOSITORY: UPDATE - directory already exists"
-        echo "📁 Found existing repository '$TARGET_REPO_NAME', updating..."
-        cd "$TARGET_REPO_NAME"
+        echo "📁 Found existing repository '$TARGET_REPO_DIR', updating..."
+        cd "$TARGET_REPO_DIR"
         git fetch origin
         git checkout "$DOCS_BRANCH"
         git reset --hard "origin/$DOCS_BRANCH"
@@ -167,16 +181,16 @@ if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
         echo "✓ Repository updated successfully"
     else
         echo "📥 REPOSITORY: CLONING - first time setup"
-        if ! git clone "$REPO_URL" "$TARGET_REPO_NAME"; then
-            echo "❌ Failed to clone repository: $REPO_URL"
+        if ! git clone "$REPO_SSH_URL" "$TARGET_REPO_DIR"; then
+            echo "❌ Failed to clone repository: {{repository_url}} ($REPO_SSH_URL)"
             exit 1
         fi
-        cd "$TARGET_REPO_NAME" && git checkout "$DOCS_BRANCH" && cd /workspace
+        cd "$TARGET_REPO_DIR" && git checkout "$DOCS_BRANCH" && cd /workspace
         echo "✓ Repository cloned successfully"
     fi
     
     # Set working directory to the repository root
-    REPO_NAME="$TARGET_REPO_NAME"
+    REPO_NAME="$TARGET_REPO_DIR"
     echo "✓ Working directory: /workspace/$REPO_NAME"
     echo "✓ Task files already available in repository"
 
@@ -194,8 +208,8 @@ else
         echo "✓ Docs repository updated"
     else
         echo "📥 DOCS REPOSITORY: CLONING - extracting task files"
-        if ! git clone "$DOCS_URL" /tmp/docs-repo; then
-            echo "❌ Failed to clone docs repository: $DOCS_URL"
+        if ! git clone "$DOCS_SSH_URL" /tmp/docs-repo; then
+            echo "❌ Failed to clone docs repository: {{docs_repository_url}} ($DOCS_SSH_URL)"
             exit 1
         fi
         cd /tmp/docs-repo && git checkout "$DOCS_BRANCH" && cd /workspace
@@ -203,18 +217,18 @@ else
     fi
     
     # Step 2: Clone or update target repository  
-    if [ -d "$TARGET_REPO_NAME" ]; then
+    if [ -d "$TARGET_REPO_DIR" ]; then
         echo "🔄 TARGET REPOSITORY: UPDATE - directory already exists"
-        echo "📁 Found existing target repository '$TARGET_REPO_NAME', updating..."
-        cd "$TARGET_REPO_NAME"
+        echo "📁 Found existing target repository '$TARGET_REPO_DIR', updating..."
+        cd "$TARGET_REPO_DIR"
         git fetch origin main
         git reset --hard origin/main
         cd /workspace
         echo "✓ Target repository updated successfully"
     else
         echo "📥 TARGET REPOSITORY: CLONING - first time setup"
-        if ! git clone "$REPO_URL" "$TARGET_REPO_NAME"; then
-            echo "❌ Failed to clone target repository: $REPO_URL"
+        if ! git clone "$REPO_SSH_URL" "$TARGET_REPO_DIR"; then
+            echo "❌ Failed to clone target repository: {{repository_url}} ($REPO_SSH_URL)"
             exit 1
         fi
         echo "✓ Target repository cloned successfully"
@@ -222,7 +236,7 @@ else
     
     # Step 3: Copy task files from docs repo to target repo
     echo "📋 TASK FILES: COPYING from docs to target repository"
-    mkdir -p "/workspace/$TARGET_REPO_NAME/task"
+    mkdir -p "/workspace/$TARGET_REPO_DIR/task"
     
     # Determine docs project directory path
     {{#if docs_project_directory}}
@@ -249,24 +263,24 @@ else
         ls -la "$TASK_DIR"
         
         echo "✅ Copying task.md..."
-        cp "$TASK_DIR/task.md" "/workspace/$TARGET_REPO_NAME/task/" && echo "✓ task.md copied" || echo "❌ task.md copy failed"
+        cp "$TASK_DIR/task.md" "/workspace/$TARGET_REPO_DIR/task/" && echo "✓ task.md copied" || echo "❌ task.md copy failed"
         
         echo "✅ Copying acceptance-criteria.md..."
-        cp "$TASK_DIR/acceptance-criteria.md" "/workspace/$TARGET_REPO_NAME/task/" && echo "✓ acceptance-criteria.md copied" || echo "❌ acceptance-criteria.md copy failed"
+        cp "$TASK_DIR/acceptance-criteria.md" "/workspace/$TARGET_REPO_DIR/task/" && echo "✓ acceptance-criteria.md copied" || echo "❌ acceptance-criteria.md copy failed"
         
         echo "✅ Copying prompt.md..."
-        cp "$TASK_DIR/prompt.md" "/workspace/$TARGET_REPO_NAME/task/" && echo "✓ prompt.md copied" || echo "❌ prompt.md copy failed"
+        cp "$TASK_DIR/prompt.md" "/workspace/$TARGET_REPO_DIR/task/" && echo "✓ prompt.md copied" || echo "❌ prompt.md copy failed"
         
         echo "✅ Copying toolman-config.json..."
         if [ -f "$TASK_DIR/toolman-config.json" ]; then
-            cp "$TASK_DIR/toolman-config.json" "/workspace/$TARGET_REPO_NAME/toolman-config.json" && echo "✓ toolman-config.json copied to workspace root" || echo "❌ toolman-config.json copy failed"
+            cp "$TASK_DIR/toolman-config.json" "/workspace/$TARGET_REPO_DIR/toolman-config.json" && echo "✓ toolman-config.json copied to workspace root" || echo "❌ toolman-config.json copy failed"
         else
             echo "⚠️ toolman-config.json not found - toolman may not work correctly"
         fi
         
         echo "✅ Copying toolman-guide.md..."
         if [ -f "$TASK_DIR/toolman-guide.md" ]; then
-            cp "$TASK_DIR/toolman-guide.md" "/workspace/$TARGET_REPO_NAME/task/" && echo "✓ toolman-guide.md copied" || echo "❌ toolman-guide.md copy failed"
+            cp "$TASK_DIR/toolman-guide.md" "/workspace/$TARGET_REPO_DIR/task/" && echo "✓ toolman-guide.md copied" || echo "❌ toolman-guide.md copy failed"
         else
             echo "⚠️ toolman-guide.md not found - code agent won't have tool usage guidance"
         fi
@@ -281,7 +295,7 @@ else
     # Copy architecture.md from docs root
     ARCH_FILE="$DOCS_PATH/docs/architecture.md"
     if [ -f "$ARCH_FILE" ]; then
-        cp "$ARCH_FILE" "/workspace/$TARGET_REPO_NAME/task/"
+        cp "$ARCH_FILE" "/workspace/$TARGET_REPO_DIR/task/"
         echo "✓ Architecture documentation copied"
     else
         echo "⚠️ architecture.md not found at: $ARCH_FILE"
@@ -289,7 +303,7 @@ else
     
     # Copy tasks.json if it exists
     if [ -f "$DOCS_PATH/tasks.json" ]; then
-        cp "$DOCS_PATH/tasks.json" "/workspace/$TARGET_REPO_NAME/task/"
+        cp "$DOCS_PATH/tasks.json" "/workspace/$TARGET_REPO_DIR/task/"
         echo "✓ tasks.json copied"
     fi
     
@@ -297,9 +311,9 @@ else
     
     # DEBUG: Verify files were copied successfully
     echo "🔍 DEBUG: Contents of target task directory after copy:"
-    ls -la "/workspace/$TARGET_REPO_NAME/task/" || echo "Task directory not found"
+    ls -la "/workspace/$TARGET_REPO_DIR/task/" || echo "Task directory not found"
     echo "🔍 DEBUG: Checking if prompt.md exists:"
-    [ -f "/workspace/$TARGET_REPO_NAME/task/prompt.md" ] && echo "✅ prompt.md exists" || echo "❌ prompt.md missing"
+    [ -f "/workspace/$TARGET_REPO_DIR/task/prompt.md" ] && echo "✅ prompt.md exists" || echo "❌ prompt.md missing"
     
     # Step 4: Clean up docs repository
     echo "🧹 CLEANUP: Removing temporary docs repository"
@@ -307,7 +321,7 @@ else
     echo "✓ Docs repository cleaned up"
     
     # Set working directory to the target repository root
-    REPO_NAME="$TARGET_REPO_NAME"
+    REPO_NAME="$TARGET_REPO_DIR"
     echo "✓ Working directory: /workspace/$REPO_NAME"
 fi
 
@@ -658,6 +672,7 @@ You have a DANGEROUS tendency to declare task completion before actually verifyi
 - **Service**: {{service}}
 - **Task ID**: {{task_id}}
 - **Repository**: {{repository_url}}
+- **Docs Repository**: {{docs_repository_url}}
 - **Working Directory**: {{working_directory}}
 
 {{#if continue_session}}
