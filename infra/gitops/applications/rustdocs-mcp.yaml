@@ -13,14 +13,12 @@ metadata:
 spec:
   project: platform
   source:
-    repoURL: https://5dlabs.github.io/platform
-    targetRevision: 0.1.0
-    chart: rust-docs-mcp-server
+    repoURL: https://github.com/5dlabs/platform
+    targetRevision: argo
+    path: infra/charts/rustdocs-mcp
     helm:
-      values: |
-        # Rust docs MCP server configuration
-        persistence:
-          enabled: true
+      valueFiles:
+        - values.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: mcp
