@@ -26,6 +26,13 @@ spec:
     helm:
       valueFiles:
         - values.yaml
+      values: |
+        useKubeconfigSecret: false
+        env:
+          SERVER_MODE: "sse"
+          SERVER_PORT: "8080"
+          KUBECONFIG: ""
+          K8S_CONTEXT: ""
   
   # Destination configuration
   destination:
