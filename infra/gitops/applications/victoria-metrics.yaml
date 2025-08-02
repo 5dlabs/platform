@@ -22,7 +22,7 @@ spec:
         server:
           persistentVolume:
             enabled: true
-            storageClass: local-path
+            storageClassName: local-path
           # Match Victoria Logs working configuration
           podSecurityContext:
             fsGroup: 2000
