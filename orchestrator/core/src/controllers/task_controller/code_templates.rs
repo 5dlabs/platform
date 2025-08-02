@@ -162,8 +162,6 @@ impl CodeTemplateGenerator {
         Self::load_template("code/mcp.json.hbs")
     }
 
-
-
     fn generate_coding_guidelines(code_run: &CodeRun) -> Result<String> {
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(false);
@@ -220,7 +218,6 @@ impl CodeTemplateGenerator {
                 ))
             })
     }
-
 
     fn generate_hook_scripts(code_run: &CodeRun) -> Result<BTreeMap<String, String>> {
         let mut hook_scripts = BTreeMap::new();
