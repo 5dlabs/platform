@@ -14,7 +14,7 @@ spec:
   project: platform
   source:
     repoURL: https://actions-runner-controller.github.io/actions-runner-controller
-    targetRevision: 0.23.7
+    targetRevision: 0.21.1
     chart: actions-runner-controller
     helm:
       values: |
@@ -27,7 +27,7 @@ spec:
   syncPolicy:
     automated:
       prune: true
-      selfHeal: true
+      selfHeal: false
     syncOptions:
       - CreateNamespace=true
       - Replace=true
