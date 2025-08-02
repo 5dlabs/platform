@@ -13,9 +13,9 @@ metadata:
 spec:
   project: platform
   source:
-    repoURL: https://github.com/5dlabs/platform
-    targetRevision: argo
-    path: infra/charts/rustdocs-mcp
+    repoURL: https://github.com/5dlabs/docs
+    targetRevision: main
+    path: charts/rust-docs-mcp-server
     helm:
       valueFiles:
         - values.yaml
