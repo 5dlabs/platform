@@ -18,10 +18,16 @@ spec:
     chart: victoria-logs-single
     helm:
       values: |
-        # Victoria Logs configuration
+        # Victoria Logs configuration with proper permissions
         server:
           persistentVolume:
             enabled: true
+            storageClass: local-path
+          # Fix permissions issue
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
   destination:
     server: https://kubernetes.default.svc
     namespace: telemetry
@@ -31,3 +37,4 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - Replace=true
