@@ -32,11 +32,4 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-      - Replace=true
-  
-  # Ignore differences for StatefulSet security context
-  ignoreDifferences:
-    - group: apps
-      kind: StatefulSet
-      jsonPointers:
-        - /spec/template/spec/securityContext
+      - RespectIgnoreDifferences=true
