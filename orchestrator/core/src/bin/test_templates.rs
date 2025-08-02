@@ -48,6 +48,7 @@ fn test_docs_templates(
         "docs/claude.md.hbs",
         "docs/settings.json.hbs",
         "docs/container.sh.hbs",
+        "docs/prompt.md.hbs",
     ];
 
     for template_name in &docs_templates {

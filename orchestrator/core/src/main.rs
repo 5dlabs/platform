@@ -96,7 +96,7 @@ async fn main() -> Result<()> {
         .init();
 
     info!(
-        "Starting Orchestrator service v{} with TaskRun CRD support",
+        "Starting Orchestrator service v{} with DocsRun and CodeRun CRD support",
         env!("CARGO_PKG_VERSION")
     );
 

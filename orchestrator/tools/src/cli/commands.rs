@@ -104,13 +104,13 @@ async fn handle_docs_command(
                 output.success(&response.message);
 
                 if let Some(data) = response.data {
-                    if let Some(taskrun_name) = data.get("taskrun_name").and_then(|n| n.as_str()) {
-                        output.info(&format!("TaskRun name: {taskrun_name}"));
+                    if let Some(docsrun_name) = data.get("docsrun_name").and_then(|n| n.as_str()) {
+                        output.info(&format!("DocsRun name: {docsrun_name}"));
                     }
                     if let Some(namespace) = data.get("namespace").and_then(|n| n.as_str()) {
                         output.info(&format!("Namespace: {namespace}"));
                         output.info("You can monitor the job with:");
-                        output.info(&format!("  kubectl -n {namespace} get taskrun"));
+                        output.info(&format!("  kubectl -n {namespace} get docsrun"));
                     }
                 }
             } else {

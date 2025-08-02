@@ -1,4 +1,4 @@
-//! HTTP API client for orchestrator `TaskRun` submissions
+//! HTTP API client for orchestrator `DocsRun` and `CodeRun` submissions
 
 use anyhow::{Context, Result};
 use common::models::{CodeRequest, DocsRequest};

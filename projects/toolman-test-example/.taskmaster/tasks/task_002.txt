@@ -1,0 +1,39 @@
+# Task ID: 2
+# Title: Database Setup and Schema Design
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Set up PostgreSQL database with Redis for session management and design the database schema for users, chat rooms, and messages.
+# Details:
+1. Create PostgreSQL database schema with the following tables:
+   - users (id, email, password_hash, username, avatar_url, created_at, updated_at)
+   - rooms (id, name, description, created_by, created_at, updated_at)
+   - messages (id, room_id, user_id, content, created_at, read_by)
+   - room_users (room_id, user_id, joined_at)
+
+2. Set up Redis for session management and real-time features:
+   - Configure Redis for storing JWT refresh tokens
+   - Set up Redis channels for Socket.io communication
+   - Configure Redis for typing indicators and presence status
+
+3. Create database migration scripts
+
+4. Implement database connection pooling for optimal performance
+
+5. Set up data models and repositories in the backend
+
+Example user model:
+```typescript
+interface User {
+  id: string;
+  email: string;
+  username: string;
+  passwordHash: string;
+  avatarUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+# Test Strategy:
+Write unit tests for database models and repositories. Test database migrations. Verify Redis connection and operations. Ensure proper indexing for query performance.
