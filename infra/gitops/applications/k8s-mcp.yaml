@@ -1,14 +1,14 @@
 ---
-# Argo CD Application for Argo Workflows
-# This manages the Argo Workflows installation via GitOps
+# Argo CD Application for Kubernetes MCP Server
+# Manages the Kubernetes MCP Server via GitOps
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: argo-workflows
+  name: k8s-mcp
   namespace: argocd
   labels:
-    app.kubernetes.io/name: argo-workflows
+    app.kubernetes.io/name: k8s-mcp
     app.kubernetes.io/part-of: platform
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -18,34 +18,19 @@ spec:
   
   # Source configuration
   source:
-    repoURL: https://argoproj.github.io/argo-helm
-    targetRevision: 0.45.21
-    chart: argo-workflows
+    repoURL: https://github.com/5dlabs/platform
+    targetRevision: argo
+    path: infra/charts/k8s-mcp
     
     # Helm configuration
     helm:
-      valueFiles: []
-      values: |
-        # Use values from our local configuration file
-        artifactRepository:
-          archiveLogs: true
-          filesystem:
-            archivePath: /tmp/artifacts
-        persistence: {}
-        server:
-          service:
-            type: NodePort
-            nodePort: 30081
-        workflow:
-          serviceAccount:
-            annotations: {}
-          rbac:
-            create: true
+      valueFiles:
+        - values.yaml
   
   # Destination configuration
   destination:
     server: https://kubernetes.default.svc
-    namespace: argo
+    namespace: mcp
   
   # Sync policy
   syncPolicy:

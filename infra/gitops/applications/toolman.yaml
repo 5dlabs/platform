@@ -1,14 +1,14 @@
 ---
-# App of Apps Pattern for Platform Infrastructure
-# This is the root application that manages all other platform applications
+# Argo CD Application for Toolman
+# Manages the Toolman service via GitOps
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: platform-apps
+  name: toolman
   namespace: argocd
   labels:
-    app.kubernetes.io/name: platform-apps
+    app.kubernetes.io/name: toolman
     app.kubernetes.io/part-of: platform
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -16,22 +16,21 @@ spec:
   # Project configuration
   project: platform
   
-  # Source configuration
+  # Source configuration - point to existing chart
   source:
     repoURL: https://github.com/5dlabs/platform
     targetRevision: argo
-    path: infra/gitops
+    path: infra/charts/toolman
     
-    # Directory configuration
-    directory:
-      recurse: true
-      include: "applications/*.yaml"
-      exclude: "*.md"
+    # Helm configuration
+    helm:
+      valueFiles:
+        - values.yaml
   
   # Destination configuration
   destination:
     server: https://kubernetes.default.svc
-    namespace: argocd
+    namespace: orchestrator
   
   # Sync policy
   syncPolicy:
@@ -43,14 +42,13 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - PrunePropagationPolicy=foreground
-      - PruneLast=true
     
     retry:
-      limit: 5
+      limit: 3
       backoff:
         duration: 5s
         factor: 2
-        maxDuration: 3m
+        maxDuration: 2m
   
   # Revision history
-  revisionHistoryLimit: 10
+  revisionHistoryLimit: 5

@@ -1,0 +1,354 @@
+---
+# Argo Workflow Template for DocsRun Tasks
+# This template manages documentation generation workflows
+
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: docsrun-template
+  namespace: argo
+  labels:
+    app.kubernetes.io/name: docsrun-template
+    app.kubernetes.io/part-of: platform
+    orchestrator.platform/template-type: docsrun
+spec:
+  # Define input parameters
+  arguments:
+    parameters:
+      # Task identification
+      - name: task-id
+        description: "Unique identifier for this DocsRun task"
+      - name: service-name
+        description: "Name of the service being documented"
+        default: "docs"
+      - name: repository-url
+        description: "Repository URL for the documentation source"
+      - name: branch
+        description: "Git branch to work on"
+        default: "main"
+      - name: project-directory
+        description: "Project directory within the repository"
+        default: "."
+      
+      # Task configuration
+      - name: github-user
+        description: "GitHub user for authentication"
+      - name: anthropic-api-key
+        description: "Anthropic API key for Claude"
+      
+      # Container configuration
+      - name: image
+        description: "Container image for docs generation"
+        default: "ghcr.io/5dlabs/claude-docs:latest"
+      - name: timeout
+        description: "Workflow timeout duration"
+        default: "1800s"  # 30 minutes
+      
+      # Resource limits
+      - name: cpu-limit
+        description: "CPU limit for the container"
+        default: "1000m"
+      - name: memory-limit
+        description: "Memory limit for the container"
+        default: "2Gi"
+      - name: cpu-request
+        description: "CPU request for the container"
+        default: "500m"
+      - name: memory-request
+        description: "Memory request for the container"
+        default: "1Gi"
+
+  # Service account for workflow execution
+  serviceAccountName: docsrun-workflow
+  
+  # Workflow timeout
+  activeDeadlineSeconds: 1800  # 30 minutes default
+  
+  # Define the workflow steps
+  entrypoint: docsrun-main
+  
+  templates:
+    # Main workflow orchestration
+    - name: docsrun-main
+      dag:
+        tasks:
+          # Step 1: Setup workspace and clone repository
+          - name: setup-docs-workspace
+            template: setup-docs-workspace
+          
+          # Step 2: Generate documentation
+          - name: generate-docs
+            template: generate-docs
+            depends: "setup-docs-workspace"
+            arguments:
+              artifacts:
+                - name: workspace
+                  from: "{{tasks.setup-docs-workspace.outputs.artifacts.workspace}}"
+          
+          # Step 3: Publish documentation
+          - name: publish-docs
+            template: publish-docs
+            depends: "generate-docs"
+            arguments:
+              artifacts:
+                - name: workspace
+                  from: "{{tasks.generate-docs.outputs.artifacts.workspace}}"
+
+    # Setup docs workspace template
+    - name: setup-docs-workspace
+      container:
+        image: ghcr.io/5dlabs/claude-docs:latest
+        command: ["/bin/bash"]
+        args:
+          - -c
+          - |
+            set -euo pipefail
+            echo "📚 Setting up docs workspace for DocsRun {{workflow.parameters.task-id}}"
+            
+            # Create workspace directory
+            mkdir -p /workspace/{{workflow.parameters.service-name}}
+            cd /workspace/{{workflow.parameters.service-name}}
+            
+            # Configure git
+            git config --global user.name "Claude Docs Agent"
+            git config --global user.email "docs-agent@5dlabs.com"
+            git config --global init.defaultBranch main
+            
+            # Clone repository
+            echo "📁 Cloning repository {{workflow.parameters.repository-url}}"
+            git clone {{workflow.parameters.repository-url}} repo
+            cd repo
+            git checkout {{workflow.parameters.branch}} || git checkout -b {{workflow.parameters.branch}}
+            
+            # Navigate to project directory
+            if [ "{{workflow.parameters.project-directory}}" != "." ]; then
+              cd {{workflow.parameters.project-directory}}
+            fi
+            
+            # Create docs directory if it doesn't exist
+            mkdir -p docs
+            
+            echo "✅ Docs workspace setup complete"
+        
+        env:
+          - name: GIT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: github-secrets-{{workflow.parameters.github-user}}
+                key: github_token
+        
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 256Mi
+        
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+      
+      outputs:
+        artifacts:
+          - name: workspace
+            path: /workspace
+            archive:
+              none: {}
+      
+      volumes:
+        - name: workspace
+          emptyDir: {}
+
+    # Generate documentation template
+    - name: generate-docs
+      inputs:
+        artifacts:
+          - name: workspace
+            path: /workspace
+      
+      container:
+        image: "{{workflow.parameters.image}}"
+        command: ["/container.sh"]
+        
+        env:
+          # Claude configuration
+          - name: ANTHROPIC_API_KEY
+            value: "{{workflow.parameters.anthropic-api-key}}"
+          - name: CLAUDE_MODEL
+            value: "claude-opus-4-20250514"  # Use Opus for docs
+          
+          # Task configuration
+          - name: TASK_ID
+            value: "{{workflow.parameters.task-id}}"
+          - name: SERVICE_NAME
+            value: "{{workflow.parameters.service-name}}"
+          - name: REPOSITORY_URL
+            value: "{{workflow.parameters.repository-url}}"
+          - name: BRANCH
+            value: "{{workflow.parameters.branch}}"
+          - name: PROJECT_DIRECTORY
+            value: "{{workflow.parameters.project-directory}}"
+          - name: GITHUB_USER
+            value: "{{workflow.parameters.github-user}}"
+          
+          # Docs-specific configuration
+          - name: DOCS_OUTPUT_DIR
+            value: "/workspace/{{workflow.parameters.service-name}}/docs"
+          - name: DOCS_FORMAT
+            value: "markdown"
+          
+          # GitHub authentication
+          - name: GIT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: github-secrets-{{workflow.parameters.github-user}}
+                key: github_token
+          - name: SSH_PRIVATE_KEY
+            valueFrom:
+              secretKeyRef:
+                name: github-secrets-{{workflow.parameters.github-user}}
+                key: ssh_private_key
+        
+        resources:
+          limits:
+            cpu: "{{workflow.parameters.cpu-limit}}"
+            memory: "{{workflow.parameters.memory-limit}}"
+          requests:
+            cpu: "{{workflow.parameters.cpu-request}}"
+            memory: "{{workflow.parameters.memory-request}}"
+        
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+          - name: ssh-keys
+            mountPath: /root/.ssh
+            readOnly: true
+      
+      outputs:
+        artifacts:
+          - name: workspace
+            path: /workspace
+            archive:
+              none: {}
+          - name: generated-docs
+            path: /workspace/{{workflow.parameters.service-name}}/docs
+            archive:
+              tar:
+                compressionLevel: 1
+      
+      volumes:
+        - name: workspace
+          emptyDir: {}
+        - name: ssh-keys
+          secret:
+            secretName: github-secrets-{{workflow.parameters.github-user}}
+            defaultMode: 0600
+            items:
+              - key: ssh_private_key
+                path: id_rsa
+              - key: ssh_public_key
+                path: id_rsa.pub
+
+    # Publish documentation template
+    - name: publish-docs
+      inputs:
+        artifacts:
+          - name: workspace
+            path: /workspace
+      
+      container:
+        image: ghcr.io/5dlabs/claude-docs:latest
+        command: ["/bin/bash"]
+        args:
+          - -c
+          - |
+            set -euo pipefail
+            echo "📤 Publishing documentation for task {{workflow.parameters.task-id}}"
+            
+            cd /workspace/{{workflow.parameters.service-name}}/repo
+            
+            # Add generated documentation to git
+            git add docs/
+            
+            # Check if there are changes to commit
+            if git diff --staged --quiet; then
+              echo "📄 No documentation changes to commit"
+            else
+              echo "💾 Committing documentation changes"
+              git commit -m "docs: auto-generated documentation for task {{workflow.parameters.task-id}}"
+              
+              # Push changes
+              git push origin {{workflow.parameters.branch}}
+              echo "✅ Documentation published successfully"
+            fi
+            
+            # Create summary
+            echo "📊 Documentation generation summary:" > /workspace/summary.txt
+            echo "Task ID: {{workflow.parameters.task-id}}" >> /workspace/summary.txt
+            echo "Repository: {{workflow.parameters.repository-url}}" >> /workspace/summary.txt
+            echo "Branch: {{workflow.parameters.branch}}" >> /workspace/summary.txt
+            echo "Files generated: $(find docs/ -name '*.md' | wc -l)" >> /workspace/summary.txt
+            echo "Timestamp: $(date)" >> /workspace/summary.txt
+        
+        env:
+          - name: GIT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: github-secrets-{{workflow.parameters.github-user}}
+                key: github_token
+          - name: SSH_PRIVATE_KEY
+            valueFrom:
+              secretKeyRef:
+                name: github-secrets-{{workflow.parameters.github-user}}
+                key: ssh_private_key
+        
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 256Mi
+        
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+          - name: ssh-keys
+            mountPath: /root/.ssh
+            readOnly: true
+      
+      outputs:
+        artifacts:
+          - name: summary
+            path: /workspace/summary.txt
+            archive:
+              none: {}
+      
+      volumes:
+        - name: workspace
+          emptyDir: {}
+        - name: ssh-keys
+          secret:
+            secretName: github-secrets-{{workflow.parameters.github-user}}
+            defaultMode: 0600
+            items:
+              - key: ssh_private_key
+                path: id_rsa
+              - key: ssh_public_key
+                path: id_rsa.pub
+
+  # Workflow-level volumes
+  volumes:
+    - name: workspace-pv
+      persistentVolumeClaim:
+        claimName: workspace-{{workflow.parameters.service-name}}
+
+  # Retry policy
+  retryStrategy:
+    limit: 2
+    retryPolicy: "Always"
+    backoff:
+      duration: "30s"
+      factor: 2
+      maxDuration: "5m"

@@ -1,0 +1,95 @@
+---
+# RBAC for Workflow Templates
+# This ensures workflow templates have proper permissions
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: workflow-template-manager
+rules:
+  # WorkflowTemplate management
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflowtemplates", "clusterworkflowtemplates"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  
+  # Workflow execution
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflows"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  
+  # Pod management for workflow steps
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "pods/exec"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  
+  # ConfigMap and Secret access
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+  
+  # PVC management for workspaces
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  
+  # Events for logging
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: workflow-template-manager-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: workflow-template-manager
+subjects:
+  # Bind to workflow service accounts
+  - kind: ServiceAccount
+    name: orchestrator-workflow
+    namespace: argo
+  - kind: ServiceAccount
+    name: coderun-workflow
+    namespace: argo
+  - kind: ServiceAccount
+    name: docsrun-workflow
+    namespace: argo
+
+---
+# Role for template submission from orchestrator
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: workflow-submitter
+rules:
+  # Submit workflows from templates
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflows"]
+    verbs: ["create", "get", "list", "watch", "update", "patch"]
+  
+  # Access templates
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflowtemplates", "clusterworkflowtemplates"]
+    verbs: ["get", "list"]
+  
+  # Monitor workflow status
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflows"]
+    verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: orchestrator-workflow-submitter
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: workflow-submitter
+subjects:
+  - kind: ServiceAccount
+    name: orchestrator
+    namespace: orchestrator

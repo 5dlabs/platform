@@ -1,0 +1,315 @@
+---
+# Argo Workflow Template for CodeRun Tasks
+# This template replaces direct Kubernetes job execution with a structured workflow
+
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: coderun-template
+  namespace: argo
+  labels:
+    app.kubernetes.io/name: coderun-template
+    app.kubernetes.io/part-of: platform
+    orchestrator.platform/template-type: coderun
+spec:
+  # Define input parameters
+  arguments:
+    parameters:
+      # Task identification
+      - name: task-id
+        description: "Unique identifier for this CodeRun task"
+      - name: service-name
+        description: "Name of the service being worked on"
+      - name: repository
+        description: "Repository URL in org/repo format"
+      - name: docs-repository
+        description: "Documentation repository URL in org/repo format"
+      - name: branch
+        description: "Git branch to work on"
+        default: "main"
+      - name: docs-branch
+        description: "Documentation branch to work from"
+        default: "main"
+      
+      # Task configuration
+      - name: working-directory
+        description: "Working directory within the repository"
+        default: "."
+      - name: github-user
+        description: "GitHub user for authentication"
+      - name: anthropic-api-key
+        description: "Anthropic API key for Claude"
+      
+      # Container configuration
+      - name: image
+        description: "Container image for Claude Code agent"
+        default: "ghcr.io/5dlabs/claude-code:latest"
+      - name: timeout
+        description: "Workflow timeout duration"
+        default: "3600s"  # 1 hour
+      
+      # Resource limits
+      - name: cpu-limit
+        description: "CPU limit for the container"
+        default: "2000m"
+      - name: memory-limit
+        description: "Memory limit for the container"
+        default: "4Gi"
+      - name: cpu-request
+        description: "CPU request for the container"
+        default: "1000m"
+      - name: memory-request
+        description: "Memory request for the container"
+        default: "2Gi"
+
+  # Service account for workflow execution
+  serviceAccountName: coderun-workflow
+  
+  # Workflow timeout
+  activeDeadlineSeconds: 3600  # 1 hour default
+  
+  # Define the workflow steps
+  entrypoint: coderun-main
+  
+  templates:
+    # Main workflow orchestration
+    - name: coderun-main
+      dag:
+        tasks:
+          # Step 1: Setup workspace and clone repositories
+          - name: setup-workspace
+            template: setup-workspace
+          
+          # Step 2: Execute Claude Code task
+          - name: execute-coderun
+            template: execute-coderun
+            depends: "setup-workspace"
+            arguments:
+              artifacts:
+                - name: workspace
+                  from: "{{tasks.setup-workspace.outputs.artifacts.workspace}}"
+          
+          # Step 3: Cleanup and publish results
+          - name: cleanup-workspace
+            template: cleanup-workspace
+            depends: "execute-coderun"
+            arguments:
+              artifacts:
+                - name: workspace
+                  from: "{{tasks.execute-coderun.outputs.artifacts.workspace}}"
+
+    # Setup workspace template
+    - name: setup-workspace
+      container:
+        image: ghcr.io/5dlabs/claude-code:latest
+        command: ["/bin/bash"]
+        args:
+          - -c
+          - |
+            set -euo pipefail
+            echo "🚀 Setting up workspace for CodeRun {{workflow.parameters.task-id}}"
+            
+            # Create workspace directory
+            mkdir -p /workspace/{{workflow.parameters.service-name}}
+            cd /workspace/{{workflow.parameters.service-name}}
+            
+            # Configure git
+            git config --global user.name "Claude Code Agent"
+            git config --global user.email "code-agent@5dlabs.com"
+            git config --global init.defaultBranch main
+            
+            # Clone main repository
+            echo "📁 Cloning repository {{workflow.parameters.repository}}"
+            git clone https://github.com/{{workflow.parameters.repository}}.git repo
+            cd repo
+            git checkout {{workflow.parameters.branch}} || git checkout -b {{workflow.parameters.branch}}
+            
+            # Clone docs repository if different
+            if [ "{{workflow.parameters.docs-repository}}" != "{{workflow.parameters.repository}}" ]; then
+              cd /workspace/{{workflow.parameters.service-name}}
+              echo "📚 Cloning docs repository {{workflow.parameters.docs-repository}}"
+              git clone https://github.com/{{workflow.parameters.docs-repository}}.git docs-repo
+              cd docs-repo
+              git checkout {{workflow.parameters.docs-branch}} || git checkout -b {{workflow.parameters.docs-branch}}
+            fi
+            
+            echo "✅ Workspace setup complete"
+        
+        env:
+          - name: GIT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: github-secrets-{{workflow.parameters.github-user}}
+                key: github_token
+        
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 256Mi
+        
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+      
+      outputs:
+        artifacts:
+          - name: workspace
+            path: /workspace
+            archive:
+              none: {}
+      
+      volumes:
+        - name: workspace
+          emptyDir: {}
+
+    # Execute CodeRun template
+    - name: execute-coderun
+      inputs:
+        artifacts:
+          - name: workspace
+            path: /workspace
+      
+      container:
+        image: "{{workflow.parameters.image}}"
+        command: ["/container.sh"]
+        
+        env:
+          # Claude configuration
+          - name: ANTHROPIC_API_KEY
+            value: "{{workflow.parameters.anthropic-api-key}}"
+          - name: CLAUDE_MODEL
+            value: "claude-sonnet-4-20250514"
+          
+          # Task configuration
+          - name: TASK_ID
+            value: "{{workflow.parameters.task-id}}"
+          - name: SERVICE_NAME
+            value: "{{workflow.parameters.service-name}}"
+          - name: REPOSITORY
+            value: "{{workflow.parameters.repository}}"
+          - name: DOCS_REPOSITORY
+            value: "{{workflow.parameters.docs-repository}}"
+          - name: BRANCH
+            value: "{{workflow.parameters.branch}}"
+          - name: DOCS_BRANCH
+            value: "{{workflow.parameters.docs-branch}}"
+          - name: WORKING_DIRECTORY
+            value: "{{workflow.parameters.working-directory}}"
+          - name: GITHUB_USER
+            value: "{{workflow.parameters.github-user}}"
+          
+          # GitHub authentication
+          - name: GIT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: github-secrets-{{workflow.parameters.github-user}}
+                key: github_token
+          - name: SSH_PRIVATE_KEY
+            valueFrom:
+              secretKeyRef:
+                name: github-secrets-{{workflow.parameters.github-user}}
+                key: ssh_private_key
+        
+        resources:
+          limits:
+            cpu: "{{workflow.parameters.cpu-limit}}"
+            memory: "{{workflow.parameters.memory-limit}}"
+          requests:
+            cpu: "{{workflow.parameters.cpu-request}}"
+            memory: "{{workflow.parameters.memory-request}}"
+        
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+          - name: ssh-keys
+            mountPath: /root/.ssh
+            readOnly: true
+      
+      outputs:
+        artifacts:
+          - name: workspace
+            path: /workspace
+            archive:
+              none: {}
+          - name: task-results
+            path: /workspace/{{workflow.parameters.service-name}}/results
+            optional: true
+            archive:
+              tar:
+                compressionLevel: 1
+      
+      volumes:
+        - name: workspace
+          emptyDir: {}
+        - name: ssh-keys
+          secret:
+            secretName: github-secrets-{{workflow.parameters.github-user}}
+            defaultMode: 0600
+            items:
+              - key: ssh_private_key
+                path: id_rsa
+              - key: ssh_public_key
+                path: id_rsa.pub
+
+    # Cleanup workspace template
+    - name: cleanup-workspace
+      inputs:
+        artifacts:
+          - name: workspace
+            path: /workspace
+      
+      container:
+        image: alpine:latest
+        command: ["/bin/sh"]
+        args:
+          - -c
+          - |
+            echo "🧹 Cleaning up workspace for task {{workflow.parameters.task-id}}"
+            
+            # Archive important artifacts
+            cd /workspace/{{workflow.parameters.service-name}}
+            if [ -d "results" ]; then
+              echo "📦 Archiving results"
+              tar -czf results.tar.gz results/
+            fi
+            
+            # Clean up large files but keep results
+            find . -name "node_modules" -type d -exec rm -rf {} + 2>/dev/null || true
+            find . -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
+            find . -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
+            
+            echo "✅ Cleanup complete"
+        
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+      
+      volumes:
+        - name: workspace
+          emptyDir: {}
+
+  # Workflow-level volumes
+  volumes:
+    - name: workspace-pv
+      persistentVolumeClaim:
+        claimName: workspace-{{workflow.parameters.service-name}}
+
+  # Retry policy
+  retryStrategy:
+    limit: 2
+    retryPolicy: "Always"
+    backoff:
+      duration: "1m"
+      factor: 2
+      maxDuration: "10m"

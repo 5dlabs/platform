@@ -1,0 +1,57 @@
+---
+# Artifact Repository Configuration for Argo Workflows
+# This configures where workflow artifacts (files, logs, etc.) are stored
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: artifact-repositories
+  namespace: argo
+  labels:
+    workflows.argoproj.io/configmap-type: artifactRepository
+data:
+  default-v1: |
+    # Default artifact repository configuration
+    # Using local filesystem for development - replace with S3/MinIO for production
+    artifactRepository:
+      archiveLogs: true
+      filesystem:
+        path: /tmp/argo-artifacts
+
+---
+# Artifact storage secret (for S3/MinIO)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: workflow-artifacts-secret
+  namespace: argo
+type: Opaque
+stringData:
+  # Replace with actual credentials for your storage backend
+  accessKey: "REPLACE_WITH_ACCESS_KEY"
+  secretKey: "REPLACE_WITH_SECRET_KEY"
+
+---
+# Alternative S3/MinIO configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: artifact-repositories-s3
+  namespace: argo
+  labels:
+    workflows.argoproj.io/configmap-type: artifactRepository
+data:
+  s3-v1: |
+    # S3-compatible artifact repository
+    artifactRepository:
+      archiveLogs: true
+      s3:
+        bucket: workflow-artifacts
+        endpoint: minio.default.svc.cluster.local:9000
+        insecure: true
+        accessKeySecret:
+          name: workflow-artifacts-secret
+          key: accessKey
+        secretKeySecret:
+          name: workflow-artifacts-secret
+          key: secretKey

@@ -1,0 +1,123 @@
+---
+# Enhanced RBAC for Argo Workflows
+# This provides the necessary permissions for workflows to manage platform resources
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: orchestrator-workflow
+  namespace: argo
+  labels:
+    app.kubernetes.io/name: orchestrator-workflow
+    app.kubernetes.io/part-of: platform
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: orchestrator-workflow-role
+rules:
+  # Core resources
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "pods/exec"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets", "services", "persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch", "create"]
+  
+  # Apps resources
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  
+  # Batch resources
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  
+  # Orchestrator CRDs
+  - apiGroups: ["orchestrator.platform"]
+    resources: ["coderuns", "docsruns"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  
+  # Argo Workflows
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflows", "workflowtemplates", "cronworkflows", "clusterworkflowtemplates"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  
+  # Events for logging
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  
+  # Metrics
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods", "nodes"]
+    verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: orchestrator-workflow-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: orchestrator-workflow-role
+subjects:
+  - kind: ServiceAccount
+    name: orchestrator-workflow
+    namespace: argo
+
+---
+# Service account for CodeRun workflows
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: coderun-workflow
+  namespace: argo
+  labels:
+    app.kubernetes.io/name: coderun-workflow
+    app.kubernetes.io/part-of: platform
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: coderun-workflow-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: orchestrator-workflow-role
+subjects:
+  - kind: ServiceAccount
+    name: coderun-workflow
+    namespace: argo
+
+---
+# Service account for DocsRun workflows
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: docsrun-workflow
+  namespace: argo
+  labels:
+    app.kubernetes.io/name: docsrun-workflow
+    app.kubernetes.io/part-of: platform
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: docsrun-workflow-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: orchestrator-workflow-role
+subjects:
+  - kind: ServiceAccount
+    name: docsrun-workflow
+    namespace: argo
