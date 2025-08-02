@@ -73,7 +73,8 @@ agent_*.md
 # cargo-dist research
 .repos/
 
+.claude/*
+
 # Task files
 # tasks.json
 # tasks/ 
-.claude/*

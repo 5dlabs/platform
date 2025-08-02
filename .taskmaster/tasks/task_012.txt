@@ -1,0 +1,11 @@
+# Task ID: 12
+# Title: Create ApplicationSet for Feature Branch Deployments
+# Status: pending
+# Dependencies: 11
+# Priority: medium
+# Description: Implement an ApplicationSet to dynamically create Argo CD Applications for feature branch deployments with namespace isolation.
+# Details:
+Create an ApplicationSet YAML in infra/gitops/appsets/ for feature branch deployments. Use the Git generator to detect branches. Configure template for dynamic application creation. Set up namespace creation and isolation. Define naming conventions for resources. Configure cleanup policies for deleted branches. Set appropriate sync windows and automated sync. Implement resource limits for feature environments. Configure network policies for namespace isolation. Add annotations for tracking branch information.
+
+# Test Strategy:
+Test with a new feature branch to verify application creation. Validate namespace isolation works correctly. Test cleanup when a branch is deleted. Verify resource limits are applied. Test network policies to ensure proper isolation. Validate that the correct version of the application is deployed for each branch.

@@ -1,0 +1,11 @@
+# Task ID: 18
+# Title: Update Documentation for New Architecture
+# Status: pending
+# Dependencies: 11, 12, 13, 14
+# Priority: medium
+# Description: Create comprehensive documentation for the new architecture, including deployment procedures, troubleshooting guides, and architecture diagrams.
+# Details:
+Create architecture diagrams showing the new system components and interactions. Write deployment documentation for Argo CD and Workflows. Develop troubleshooting guides for common issues. Create runbooks for operational tasks. Document the workflow template structure and parameters. Create user guides for developers interacting with the system. Document security considerations and best practices. Create API documentation for the Argo Workflows integration. Update READMEs in all relevant repositories. Create a glossary of terms for the new architecture.
+
+# Test Strategy:
+Review documentation with team members not involved in the implementation. Have new team members attempt to follow procedures to verify clarity. Validate troubleshooting guides against simulated issues. Verify all diagrams accurately reflect the implemented architecture. Test runbooks by having operations team follow them for common tasks.

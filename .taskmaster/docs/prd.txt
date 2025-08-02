@@ -1,0 +1,271 @@
+<context>
+# Overview  
+The 5D Labs Platform currently uses a combination of GitHub Actions, Helm, and a custom Rust API to deploy and manage AI coding agents. This PRD outlines the migration to Argo CD for GitOps-based deployments and Argo Workflows for job orchestration, simplifying the architecture and providing a more scalable, standardized approach to managing both deployments and workflows.
+
+# Core Features  
+## Argo CD GitOps Management
+- All Kubernetes applications managed declaratively through Argo CD
+- Automated sync from Git repository to cluster state
+- Support for both main branch and feature branch deployments
+- Elimination of manual Helm deployments via GitHub Actions
+
+## Argo Workflows Integration
+- Replace custom Rust API with Argo Workflows REST API
+- Handle CodeRun and DocsRun job execution through Workflows
+- Provide advanced workflow capabilities for future QA processes
+- Enable complex DAG-based job orchestration
+
+## Simplified Architecture
+- Remove Rust API server and CLI components
+- MCP Server directly calls Argo Workflows API
+- Pure reconciliation controller without API handlers
+- Reduced maintenance surface and complexity
+
+# User Experience  
+## Developer Workflow
+- Push code to GitHub
+- GitHub Actions builds and tags images
+- Argo CD automatically syncs new images to cluster
+- MCP tools submit jobs via Argo Workflows API
+- Real-time workflow status and logs via Argo UI
+
+## Feature Branch Support
+- Automatic deployment of feature branches to isolated namespaces
+- Preview environments for testing before merge
+- Automatic cleanup on branch deletion
+</context>
+<PRD>
+# Technical Architecture  
+
+## Component Removal
+### Rust API Server
+- Remove Axum-based HTTP API server from orchestrator/core/src/main.rs
+- Remove all handler implementations in orchestrator/core/src/handlers/
+- Remove API routing and endpoint definitions
+- Keep only controller functionality for CRD reconciliation
+
+### CLI Tool
+- Remove entire orchestrator/tools/src/cli/ directory
+- Remove command-line interface for submitting jobs
+- All job submission moves to MCP Server via Argo Workflows
+
+### Handler Layer
+- Remove code_handler.rs and docs_handler.rs
+- Remove common handler utilities
+- Move any reusable logic to controller or MCP server
+
+## New Architecture Components
+### MCP Server to Argo Workflows Integration
+- Implement Argo Workflows API client in MCP server
+- Submit WorkflowTemplates for CodeRun and DocsRun jobs
+- Monitor workflow status and retrieve logs
+- Handle authentication with Argo server
+
+### Argo Workflow Templates
+- Create WorkflowTemplate for code agent execution
+- Create WorkflowTemplate for docs agent execution
+- Define resource requirements and environment variables
+- Configure volume mounts for workspace persistence
+
+### Argo CD Application Structure
+- Convert existing Helm deployments to Argo CD Applications
+- Create ApplicationSet for feature branch deployments
+- Define sync policies and health checks
+- Configure automated image updates
+
+## GitHub Actions Modifications
+### Build-Only Workflows
+- Modify deploy.yml to only build and push images
+- Remove Helm deployment steps
+- Add Argo CD image update mechanism
+- Keep CI/testing workflows unchanged
+
+### Image Tagging Strategy
+- Tag images with commit SHA and branch name
+- Update Argo CD Application manifests with new tags
+- Trigger Argo CD sync via API or webhook
+
+## Infrastructure Requirements
+### Argo CD Configuration
+- Application manifests in infra/gitops/apps/
+- ApplicationSet for dynamic environments
+- RBAC policies for service accounts
+- Webhook configuration for GitHub
+
+### Argo Workflows Setup
+- Workflow templates in infra/workflows/
+- Service account with necessary permissions
+- Persistent volume claims for workspaces
+- Resource quotas and limits
+
+# Development Roadmap  
+
+## Phase 1: Architecture Simplification
+### Remove API Components
+- Delete API server code from main.rs
+- Remove all handler implementations
+- Clean up unused dependencies in Cargo.toml
+- Update controller to be standalone service
+
+### Remove CLI Tool
+- Delete CLI implementation
+- Remove CLI-related dependencies
+- Update documentation to reflect removal
+
+### Refactor MCP Server
+- Remove HTTP client code for old API
+- Implement Argo Workflows API client
+- Add workflow submission logic
+- Update error handling for new flow
+
+## Phase 2: Argo Workflows Integration
+### Create Workflow Templates
+- Design CodeRun workflow template
+- Design DocsRun workflow template
+- Configure resource requirements
+- Set up volume mounts and secrets
+
+### MCP Server Integration
+- Implement workflow submission from MCP tools
+- Add workflow status monitoring
+- Implement log streaming from workflows
+- Handle workflow failures and retries
+
+### Testing Infrastructure
+- Create test workflow templates
+- Verify MCP to Argo integration
+- Test error scenarios
+- Validate resource cleanup
+
+## Phase 3: GitOps Migration
+### Argo CD Applications
+- Create Application manifests for all services
+- Configure sync policies and automation
+- Set up health checks and notifications
+- Test rollback scenarios
+
+### GitHub Actions Updates
+- Modify build workflows to be build-only
+- Implement image tag updates to manifests
+- Remove Helm deployment logic
+- Add Argo CD sync triggers
+
+### Feature Branch Support
+- Create ApplicationSet for dynamic apps
+- Configure namespace isolation
+- Implement cleanup policies
+- Test preview environment creation
+
+## Phase 4: Production Readiness
+### Migration Execution
+- Deploy Argo CD applications alongside existing
+- Validate functionality in parallel
+- Switch traffic to new deployments
+- Remove old deployment mechanisms
+
+### Monitoring and Observability
+- Configure Argo CD metrics
+- Set up Argo Workflows monitoring
+- Create dashboards for job status
+- Implement alerting rules
+
+### Documentation and Training
+- Update all deployment documentation
+- Create Argo Workflows usage guide
+- Document troubleshooting procedures
+- Record architecture decisions
+
+# Logical Dependency Chain
+
+## Foundation Phase
+1. **Argo Infrastructure** - Ensure Argo CD and Workflows are properly configured
+2. **Service Accounts** - Create necessary RBAC and permissions
+3. **Persistent Storage** - Set up PVCs for workflow workspaces
+
+## Core Migration
+1. **Remove API/CLI** - Strip out unnecessary components first
+2. **Controller Isolation** - Ensure controller works standalone
+3. **MCP Adaptation** - Update MCP server before testing integration
+
+## Integration Phase
+1. **Workflow Templates** - Must exist before MCP can submit jobs
+2. **MCP Testing** - Verify job submission works before GitOps
+3. **Parallel Running** - Keep old system while validating new
+
+## Cutover Phase
+1. **GitOps Applications** - Deploy via Argo CD in parallel
+2. **Traffic Switch** - Move workloads to new deployments
+3. **Cleanup** - Remove old GitHub Actions and scripts
+
+# Risks and Mitigations  
+
+## Technical Risks
+### Workflow Complexity
+- **Risk**: Argo Workflows learning curve and template complexity
+- **Mitigation**: Start with simple templates, iterate based on needs
+- **Mitigation**: Maintain template library and examples
+
+### State Migration
+- **Risk**: Losing in-flight jobs during migration
+- **Mitigation**: Plan maintenance window for cutover
+- **Mitigation**: Implement job replay capability
+
+### Integration Failures
+- **Risk**: MCP to Argo Workflows integration issues
+- **Mitigation**: Comprehensive integration testing
+- **Mitigation**: Implement circuit breakers and fallbacks
+
+## Operational Risks
+### Deployment Failures
+- **Risk**: Argo CD sync issues causing outages
+- **Mitigation**: Gradual rollout with monitoring
+- **Mitigation**: Quick rollback procedures
+
+### Resource Management
+- **Risk**: Workflow resource consumption and limits
+- **Mitigation**: Set appropriate resource quotas
+- **Mitigation**: Monitor and adjust based on usage
+
+## Security Considerations
+### RBAC Configuration
+- **Risk**: Overly permissive service accounts
+- **Mitigation**: Principle of least privilege
+- **Mitigation**: Regular security audits
+
+### Secret Management
+- **Risk**: Exposure of sensitive credentials
+- **Mitigation**: Use Kubernetes secrets properly
+- **Mitigation**: Integrate with secret management system
+
+# Out of Scope
+- QA workflow implementation (future phase)
+- Advanced Argo Workflows features (parameters, artifacts)
+- Multi-cluster deployments
+- External webhook integrations
+- Argo Events integration
+
+# Success Metrics
+- Zero-downtime migration
+- Reduced deployment time by 50%
+- Simplified codebase (30% less code)
+- Improved developer experience
+- Enhanced observability and debugging
+
+# Appendix  
+## Current State Analysis
+- Argo CD deployed with 14 applications
+- Argo Workflows deployed but not utilized
+- Existing API handles CodeRun/DocsRun submissions
+- GitHub Actions performs builds and deployments
+
+## Migration Checklist
+- [ ] Remove API server code
+- [ ] Remove CLI implementation  
+- [ ] Update MCP server for Argo Workflows
+- [ ] Create workflow templates
+- [ ] Update GitHub Actions workflows
+- [ ] Create Argo CD applications
+- [ ] Test feature branch deployments
+- [ ] Document new procedures
+- [ ] Train team on new tools
+</PRD>

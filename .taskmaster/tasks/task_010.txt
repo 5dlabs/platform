@@ -1,0 +1,14 @@
+# Task ID: 10
+# Title: Implement Workflow Status Monitoring in MCP Server
+# Status: pending
+# Dependencies: 8, 9
+# Priority: medium
+# Description: Add functionality to the MCP server to monitor the status of submitted workflows and retrieve logs.
+# Details:
+Implement a workflow status monitoring service in the MCP server. Use the Kubernetes watch API to efficiently monitor workflow status changes. Create a caching layer to reduce API calls for frequently checked workflows. Implement log streaming from workflow pods. Add metrics collection for workflow execution times and success rates. Create a status mapping between Argo Workflows states and application-specific states. Implement notification mechanisms for completed workflows. Add error handling for terminated or failed workflows.
+<info added on 2025-08-02T17:21:05.996Z>
+Reference the Argo Workflows API specification at docs/argo-workflows-api-spec.json for implementation details. This specification provides comprehensive information about workflow status endpoints, event streaming capabilities, and log retrieval APIs that should be utilized when developing the monitoring service. The API spec will guide the implementation of status change detection, log streaming functionality, and event handling mechanisms.
+</info added on 2025-08-02T17:21:05.996Z>
+
+# Test Strategy:
+Test status monitoring with various workflow states. Verify log retrieval works for running and completed workflows. Test the caching mechanism for performance. Validate metrics collection. Test error handling for various failure scenarios. Verify notifications are sent correctly.

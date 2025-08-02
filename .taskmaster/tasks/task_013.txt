@@ -1,0 +1,17 @@
+# Task ID: 13
+# Title: Modify GitHub Actions for Build-Only Workflows
+# Status: pending
+# Dependencies: 11
+# Priority: high
+# Description: Update GitHub Actions workflows to only build and push images, removing Helm deployment steps and adding Argo CD image update mechanisms.
+# Details:
+Modify deploy.yml to remove Helm deployment steps. Update workflows to build and push images with appropriate tags (SHA and branch name). Implement image tag updates in Argo CD Application manifests. Use kustomize or a similar tool to update image tags in Git. Add Argo CD sync triggers via API or webhook. Retain CI/testing workflows unchanged. Optimize build process for speed. Add caching for dependencies and layers. Implement parallel builds where possible. Add proper error handling and notifications.
+<info added on 2025-08-02T17:21:16.829Z>
+Reference the Argo CD API specification at docs/argo-cd-api-spec.json when implementing Argo CD integration. This specification should be used to understand how to trigger syncs, update application manifests, and check sync status via the Argo CD API when implementing automated image updates.
+</info added on 2025-08-02T17:21:16.829Z>
+<info added on 2025-08-02T17:44:22.336Z>
+Remove the intake.yml workflow entirely as it will be replaced by Argo Workflows (Task 24). The intake functionality moves to Argo to avoid GitHub Actions timeout issues and consolidate all job execution in one platform.
+</info added on 2025-08-02T17:44:22.336Z>
+
+# Test Strategy:
+Run the modified workflows to verify they build and push images correctly. Test image tag updates in Application manifests. Verify Argo CD sync is triggered correctly. Test with feature branches to ensure correct tagging. Validate that CI/testing workflows still function as expected. Measure build times to ensure performance is acceptable.

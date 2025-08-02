@@ -1,0 +1,73 @@
+# Task ID: 4
+# Title: Remove CLI Tool Implementation
+# Status: pending
+# Dependencies: 6, 7, 14
+# Priority: high
+# Description: Remove the entire CLI tool directory and related dependencies, as job submission will now be handled by the MCP Server via Argo Workflows. This should be done after the new Argo Workflows system is fully working.
+# Details:
+This task should only be executed after tasks 6, 7, and 14 are completed and the new Argo Workflows system is proven to work reliably. Keep the old CLI running in parallel as a reference until the new system is proven.
+
+When ready to proceed:
+1. Delete the entire orchestrator/tools/src/cli/ directory
+2. Remove CLI-related dependencies from Cargo.toml
+3. Update any documentation that references the CLI tool
+4. Remove CLI build configurations from CI/CD pipelines
+5. Update any scripts or tools that might be calling the CLI
+6. If there's any shared code between CLI and other components that needs to be preserved, refactor it into a common library
+
+# Test Strategy:
+Before removing code, ensure the new Argo Workflows system is fully functional and tested. Once confirmed:
+1. Verify that the codebase builds successfully without the CLI components
+2. Ensure that no other components have dependencies on the removed CLI code
+3. Check CI/CD pipelines to confirm they no longer attempt to build or test the CLI
+4. Verify all functionality previously handled by the CLI is now properly managed by the Argo Workflows system
+
+# Subtasks:
+## 1. Verify Argo Workflows system functionality [pending]
+### Dependencies: None
+### Description: Before removing the CLI, thoroughly test the new Argo Workflows system to ensure it fully replaces all CLI functionality
+### Details:
+
+
+## 2. Document CLI functionality for reference [pending]
+### Dependencies: None
+### Description: Create documentation of current CLI behavior and commands to ensure all functionality is properly implemented in the new system
+### Details:
+
+
+## 3. Remove CLI directory and code [pending]
+### Dependencies: None
+### Description: Delete the entire orchestrator/tools/src/cli/ directory after confirming the new system works
+### Details:
+
+
+## 4. Update dependencies in Cargo.toml [pending]
+### Dependencies: None
+### Description: Remove CLI-related dependencies from Cargo.toml files
+### Details:
+
+
+## 5. Update documentation [pending]
+### Dependencies: None
+### Description: Update any documentation that references the CLI tool to point to the new Argo Workflows system
+### Details:
+
+
+## 6. Update CI/CD pipelines [pending]
+### Dependencies: None
+### Description: Remove CLI build configurations from CI/CD pipelines
+### Details:
+
+
+## 7. Update scripts and tools [pending]
+### Dependencies: None
+### Description: Identify and update any scripts or tools that might be calling the CLI
+### Details:
+
+
+## 8. Refactor shared code if needed [pending]
+### Dependencies: None
+### Description: If there's any shared code between CLI and other components that needs to be preserved, refactor it into a common library
+### Details:
+
+

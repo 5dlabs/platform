@@ -1,0 +1,11 @@
+# Task ID: 9
+# Title: Refactor MCP Server to Remove Old API Client
+# Status: pending
+# Dependencies: 8
+# Priority: high
+# Description: Remove the HTTP client code for the old Rust API and update the MCP server to use the new Argo Workflows API client.
+# Details:
+Remove the existing HTTP client that calls the Rust API. Update service methods to use the new Argo Workflows API client. Refactor job submission logic to work with workflow templates. Update error handling to account for Argo Workflows specific errors. Modify status checking and log retrieval to use Argo Workflows API. Update configuration loading to include Argo Workflows settings. Ensure backward compatibility for in-progress jobs during migration. Implement graceful degradation if Argo Workflows is temporarily unavailable.
+
+# Test Strategy:
+Run unit tests for the refactored code. Perform integration testing with Argo Workflows. Test error scenarios and recovery. Verify logs are correctly retrieved and processed. Test performance under load to ensure the new implementation meets requirements. Validate that all existing functionality is preserved.

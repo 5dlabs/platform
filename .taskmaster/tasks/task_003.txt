@@ -1,0 +1,87 @@
+# Task ID: 3
+# Title: Remove Rust API Server Code
+# Status: pending
+# Dependencies: 6, 7, 14
+# Priority: high
+# Description: Remove the Axum-based HTTP API server from the orchestrator core, keeping only the controller functionality for CRD reconciliation. This should be done after the new Argo Workflows system is fully working.
+# Details:
+This task should only be executed after tasks 6, 7, and 14 are completed and the new Argo Workflows system is proven to work reliably. Keep the old API running in parallel as a reference and fallback until the new system is proven.
+
+When ready to proceed:
+1. Remove the HTTP server initialization in orchestrator/core/src/main.rs
+2. Delete all API route definitions and middleware
+3. Remove handler implementations in orchestrator/core/src/handlers/
+4. Update the main function to only initialize and run the controller
+5. Clean up dependencies in Cargo.toml, removing axum, tower, and other API-related crates
+6. Ensure logging is properly configured for the controller-only service
+7. Update any configuration loading code to remove API-specific settings
+
+# Test Strategy:
+Before removing code, ensure the new Argo Workflows system is fully functional and tested. Once confirmed:
+1. Compile the modified code to ensure it builds successfully
+2. Run the controller in isolation to verify it still reconciles CRDs correctly
+3. Check logs to ensure no API-related code is being executed
+4. Verify that removing the API doesn't affect the controller's ability to watch and reconcile resources
+5. Confirm that all functionality previously handled by the API server is now properly handled by the Argo Workflows system
+
+# Subtasks:
+## 1. Verify Argo Workflows system functionality [pending]
+### Dependencies: None
+### Description: Before removing any code, thoroughly test the new Argo Workflows system to ensure it's fully functional and can replace the existing API server.
+### Details:
+
+
+## 2. Create backup of existing API code [pending]
+### Dependencies: None
+### Description: Create a backup branch or archive of the current API implementation for reference and potential rollback.
+### Details:
+
+
+## 3. Remove HTTP server initialization [pending]
+### Dependencies: None
+### Description: Remove the HTTP server initialization code from orchestrator/core/src/main.rs while keeping the controller initialization.
+### Details:
+
+
+## 4. Delete API routes and middleware [pending]
+### Dependencies: None
+### Description: Remove all API route definitions and middleware components from the codebase.
+### Details:
+
+
+## 5. Remove handler implementations [pending]
+### Dependencies: None
+### Description: Delete handler implementations in orchestrator/core/src/handlers/ directory.
+### Details:
+
+
+## 6. Update main function [pending]
+### Dependencies: None
+### Description: Refactor the main function to only initialize and run the controller without the API server.
+### Details:
+
+
+## 7. Clean up dependencies [pending]
+### Dependencies: None
+### Description: Update Cargo.toml to remove axum, tower, and other API-related dependencies that are no longer needed.
+### Details:
+
+
+## 8. Configure logging [pending]
+### Dependencies: None
+### Description: Ensure logging is properly configured for the controller-only service.
+### Details:
+
+
+## 9. Update configuration loading [pending]
+### Dependencies: None
+### Description: Modify configuration loading code to remove API-specific settings.
+### Details:
+
+
+## 10. Final testing [pending]
+### Dependencies: None
+### Description: Perform comprehensive testing to ensure the controller functions correctly without the API server.
+### Details:
+
+

@@ -1,0 +1,19 @@
+# Task ID: 22
+# Title: Implement Argo Events Integration for Event-Driven Orchestration
+# Status: pending
+# Dependencies: 2, 8, 14
+# Priority: medium
+# Description: Integrate Argo Events to enable event-driven orchestration, replacing polling with event-based triggers for workflows and multi-agent coordination.
+# Details:
+1. Install Argo Events in the 'argo-events' namespace using the official manifests, ensuring the EventBus (NATS or native) is deployed and highly available. 2. Create EventSources for GitHub webhooks to capture PR creation, updates, and comments; expose these as HTTP endpoints and configure GitHub to send events. 3. Define EventSources for Kubernetes resource events, specifically monitoring CRD status changes using the resource event source type. 4. Design CloudEvents-compliant schemas for all event payloads to standardize agent communication and facilitate future extensibility. 5. Implement Sensors that filter incoming events using CEL (Common Expression Language) expressions for sophisticated routing (e.g., only trigger on PRs with specific labels or CRD status transitions). 6. Configure Sensors to trigger appropriate Argo Workflows via WorkflowEventBinding, passing event data as workflow parameters. 7. Set up event-driven multi-agent coordination by chaining Sensors and Workflows, so completion of one agent's workflow emits an event that triggers the next agent. 8. Replace any existing polling mechanisms in the MCP server or agents with event-driven triggers. 9. Ensure all RBAC permissions are correctly set for Sensors to submit workflows and for EventSources to receive events. 10. Reference docs/argo-events/ and the latest Argo Events documentation for YAML examples and advanced configuration patterns.
+
+# Test Strategy:
+- Verify EventSources receive GitHub webhook events and Kubernetes resource events by sending test payloads and observing event logs.
+- Confirm Sensors correctly filter and route events using CEL expressions by testing with various event attributes.
+- Trigger PR creation, update, and comment events in GitHub and ensure the corresponding Argo Workflows are launched with correct parameters.
+- Simulate CRD status changes and validate that the appropriate workflows are triggered.
+- Inspect event payloads to ensure CloudEvents compliance and correct schema mapping.
+- Test multi-agent coordination by completing one workflow and verifying that the next agent is triggered via event chaining.
+- Confirm that polling mechanisms are disabled and all triggers are event-driven.
+- Review RBAC settings by attempting event delivery and workflow submission with least-privilege accounts.
+- Monitor system logs and Argo Events dashboards for errors, dropped events, or misrouted triggers.

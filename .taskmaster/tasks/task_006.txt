@@ -1,0 +1,14 @@
+# Task ID: 6
+# Title: Create CodeRun Workflow Template
+# Status: pending
+# Dependencies: 2
+# Priority: high
+# Description: Design and implement the Argo Workflow template for code agent execution, defining resource requirements, environment variables, and volume mounts.
+# Details:
+Create a WorkflowTemplate YAML in infra/workflows/code-run-template.yaml. Define the workflow steps that match the current code agent execution flow. Configure resource requirements (recommend 2CPU/4GB RAM per container). Set up environment variables needed by the code agent. Configure volume mounts for workspace persistence using PVCs. Add appropriate labels and annotations for monitoring. Include timeout and retry policies. Set up artifact handling for logs and outputs. Use Kubernetes secrets for sensitive information. Implement parameterization for dynamic inputs.
+<info added on 2025-08-02T17:21:36.940Z>
+Reference the Argo Workflows API specification at docs/argo-workflows-api-spec.json when creating the WorkflowTemplate. This specification contains the WorkflowTemplate schema definitions and examples that should be followed to ensure compliance with the Argo Workflows API requirements.
+</info added on 2025-08-02T17:21:36.940Z>
+
+# Test Strategy:
+Submit the workflow template to a test environment. Run a sample code agent job to verify execution. Check that volumes are correctly mounted and accessible. Verify environment variables are properly set. Test timeout and retry functionality. Validate that resources are correctly allocated and released.

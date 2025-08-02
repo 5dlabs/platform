@@ -1,0 +1,14 @@
+# Task ID: 11
+# Title: Create Argo CD Application Manifests
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Convert existing Helm deployments to Argo CD Application manifests with appropriate sync policies and health checks.
+# Details:
+Create Application YAML files in infra/gitops/apps/ for each service. Define source repository, path, and target cluster. Configure sync policies (recommend automated sync with prune and self-heal). Set up health checks appropriate for each service type. Configure resource exclusions if needed. Add annotations for notifications. Set up retry options for failed syncs. Define resource tracking method (prefer annotation+label). Create namespace-scoped applications where appropriate. Document the manifest structure and conventions.
+<info added on 2025-08-02T17:21:26.795Z>
+Reference the Argo CD API spec at docs/argo-cd-api-spec.json when creating the Application manifests. This spec provides the complete schema definitions for Application resources, sync policies, health checks, and other configuration options that should be used when creating the manifests.
+</info added on 2025-08-02T17:21:26.795Z>
+
+# Test Strategy:
+Apply the Application manifests to a test Argo CD instance. Verify sync works correctly for each application. Test health check functionality. Validate that prune and self-heal work as expected. Test manual and automated sync scenarios. Verify resource tracking is working correctly.

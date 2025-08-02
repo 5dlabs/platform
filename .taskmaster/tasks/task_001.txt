@@ -1,0 +1,61 @@
+# Task ID: 1
+# Title: Configure Argo CD Infrastructure
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Troubleshoot and fix existing Argo CD applications in the Kubernetes cluster, ensuring all applications are properly synced and healthy.
+# Details:
+Investigate and resolve sync issues for all 14 existing Argo CD applications, with special focus on applications currently showing OutOfSync status (arc) or Unknown status (k8s-mcp, rustdocs-mcp, twingate-pastoral, twingate-therapeutic). Verify application manifests against actual deployed resources. Check for configuration drift and correct as needed. Ensure proper connectivity between Argo CD and Git repositories. Validate resource definitions and fix any invalid Kubernetes objects. Update application health check configurations if needed. Document any recurring issues and their resolutions for future reference.
+
+# Test Strategy:
+Verify all 14 applications show Synced status in Argo CD UI. Confirm all applications report Healthy status. Validate that resources match the desired state in Git. Test manual sync operations to ensure they complete successfully. Document any applications requiring special handling or custom health checks.
+
+# Subtasks:
+## 1. Audit current application status [pending]
+### Dependencies: None
+### Description: Create a comprehensive inventory of all 14 Argo CD applications with their current sync and health status
+### Details:
+
+
+## 2. Fix OutOfSync application: arc [pending]
+### Dependencies: None
+### Description: Investigate why the 'arc' application is OutOfSync and resolve the underlying issues
+### Details:
+
+
+## 3. Fix Unknown status application: k8s-mcp [pending]
+### Dependencies: None
+### Description: Troubleshoot the 'k8s-mcp' application showing Unknown status and implement fixes
+### Details:
+
+
+## 4. Fix Unknown status application: rustdocs-mcp [pending]
+### Dependencies: None
+### Description: Troubleshoot the 'rustdocs-mcp' application showing Unknown status and implement fixes
+### Details:
+
+
+## 5. Fix Unknown status application: twingate-pastoral [pending]
+### Dependencies: None
+### Description: Troubleshoot the 'twingate-pastoral' application showing Unknown status and implement fixes
+### Details:
+
+
+## 6. Fix Unknown status application: twingate-therapeutic [pending]
+### Dependencies: None
+### Description: Troubleshoot the 'twingate-therapeutic' application showing Unknown status and implement fixes
+### Details:
+
+
+## 7. Verify remaining applications [pending]
+### Dependencies: None
+### Description: Check the status of all other applications and fix any minor issues to ensure they remain in Synced and Healthy state
+### Details:
+
+
+## 8. Document common issues and solutions [pending]
+### Dependencies: None
+### Description: Create documentation of common sync issues encountered and their resolutions for future reference
+### Details:
+
+

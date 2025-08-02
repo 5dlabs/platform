@@ -1,0 +1,14 @@
+# Task ID: 8
+# Title: Implement Argo Workflows API Client in MCP Server
+# Status: pending
+# Dependencies: 2
+# Priority: high
+# Description: Develop an API client in the MCP server to interact with the Argo Workflows API for job submission and monitoring.
+# Details:
+Create a new module for Argo Workflows API client in the MCP server. Use the official Kubernetes client library (client-go v0.26.x or newer) with the Argo Workflows CRD types. Implement authentication using service account tokens. Create methods for submitting workflows from templates. Implement functions to monitor workflow status. Develop log retrieval functionality. Add error handling and retries for API calls. Implement circuit breaker pattern using a library like gobreaker. Create a configuration structure for the client with timeouts, retry settings, and endpoint information.
+<info added on 2025-08-02T17:20:54.249Z>
+Reference the Argo Workflows API specification located at docs/argo-workflows-api-spec.json as the definitive source for implementing the API client. This OpenAPI spec contains the complete documentation of authentication methods, request/response schemas, and available endpoints. All API client implementation should strictly adhere to this specification to ensure compatibility and correct functionality when interacting with the Argo Workflows service.
+</info added on 2025-08-02T17:20:54.249Z>
+
+# Test Strategy:
+Write unit tests with mocked API responses. Create integration tests against a test Argo Workflows instance. Test error scenarios and retry logic. Verify authentication works correctly. Test log streaming functionality. Validate that workflow submission correctly applies parameters.
