@@ -27,12 +27,11 @@ spec:
       valueFiles:
         - values.yaml
       values: |
-        useKubeconfigSecret: false
+        useKubeconfigSecret: true
+        kubeconfigSecretName: k8s-mcp-kubeconfig-secret
         env:
           SERVER_MODE: "sse"
           SERVER_PORT: "8080"
-          KUBECONFIG: ""
-          K8S_CONTEXT: ""
   
   # Destination configuration
   destination:
