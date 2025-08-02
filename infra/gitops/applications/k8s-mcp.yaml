@@ -16,11 +16,11 @@ spec:
   # Project configuration
   project: platform
   
-  # Source configuration - use local chart from repository
+  # Source configuration - use chart from toolman repository
   source:
-    repoURL: https://github.com/5dlabs/platform
-    targetRevision: argo
-    path: infra/charts/k8s-mcp
+    repoURL: https://github.com/5dlabs/toolman
+    targetRevision: main
+    path: charts/k8s-mcp-server
     
     # Helm configuration
     helm:

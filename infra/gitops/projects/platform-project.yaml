@@ -20,6 +20,7 @@ spec:
   sourceRepos:
     - 'https://github.com/5dlabs/platform'
     - 'https://github.com/5dlabs/docs'
+    - 'https://github.com/5dlabs/toolman'
     - 'https://5dlabs.github.io/platform'
     - 'https://github.com/5dlabs/*'
     - 'https://argoproj.github.io/argo-helm'
