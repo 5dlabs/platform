@@ -19,6 +19,9 @@ spec:
     helm:
       valueFiles:
         - values.yaml
+      values: |
+        image:
+          tag: "latest"
   destination:
     server: https://kubernetes.default.svc
     namespace: mcp
