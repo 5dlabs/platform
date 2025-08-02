@@ -21,6 +21,7 @@ spec:
       values: |
         # Twingate connector configuration
         connector:
+          network: "maroonsnake"
           existingSecret: "twingate-pastoral-jaguar-connector"
   destination:
     server: https://kubernetes.default.svc
