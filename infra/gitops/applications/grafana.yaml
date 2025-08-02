@@ -18,9 +18,11 @@ spec:
     chart: grafana
     helm:
       values: |
-        # Use existing Grafana configuration
+        # Enable persistence with local-path storage class
         persistence:
           enabled: true
+          storageClassName: local-path
+          size: 10Gi
         adminPassword: admin
   destination:
     server: https://kubernetes.default.svc
