@@ -21,10 +21,7 @@ spec:
       values: |
         # Twingate connector configuration
         connector:
-          network: "your-network"
-          tokens:
-            access: "your-access-token"
-            refresh: "your-refresh-token"
+          existingSecret: "twingate-pastoral-jaguar-connector"
   destination:
     server: https://kubernetes.default.svc
     namespace: default

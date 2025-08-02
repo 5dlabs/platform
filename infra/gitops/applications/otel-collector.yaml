@@ -20,6 +20,9 @@ spec:
       values: |
         # OpenTelemetry collector configuration
         mode: deployment
+        # Required image configuration
+        image:
+          repository: otel/opentelemetry-collector-k8s
   destination:
     server: https://kubernetes.default.svc
     namespace: telemetry
