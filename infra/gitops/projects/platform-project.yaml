@@ -19,10 +19,15 @@ spec:
   # Source repositories that applications in this project can deploy from
   sourceRepos:
     - 'https://github.com/5dlabs/platform'
+    - 'https://5dlabs.github.io/platform'
     - 'https://github.com/5dlabs/*'
     - 'https://argoproj.github.io/argo-helm'
     - 'https://prometheus-community.github.io/helm-charts'
     - 'https://grafana.github.io/helm-charts'
+    - 'https://open-telemetry.github.io/opentelemetry-helm-charts'
+    - 'https://victoriametrics.github.io/helm-charts/'
+    - 'https://actions-runner-controller.github.io/actions-runner-controller'
+    - 'https://twingate.github.io/helm-charts'
   
   # Destinations that applications in this project can deploy to
   destinations:
@@ -35,6 +40,8 @@ spec:
     - namespace: monitoring
       server: https://kubernetes.default.svc
     - namespace: telemetry
+      server: https://kubernetes.default.svc
+    - namespace: mcp
       server: https://kubernetes.default.svc
     - namespace: arc-systems
       server: https://kubernetes.default.svc

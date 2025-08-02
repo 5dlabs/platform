@@ -1,0 +1,32 @@
+---
+# Argo CD Application for GitHub Actions Runner Controller
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: arc
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: arc
+    app.kubernetes.io/part-of: platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  source:
+    repoURL: https://actions-runner-controller.github.io/actions-runner-controller
+    targetRevision: 0.23.7
+    chart: actions-runner-controller
+    helm:
+      values: |
+        # GitHub Actions runner controller configuration
+        authSecret:
+          create: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: arc-systems
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

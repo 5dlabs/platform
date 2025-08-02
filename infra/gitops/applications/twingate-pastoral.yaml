@@ -1,0 +1,34 @@
+---
+# Argo CD Application for Twingate Pastoral Connector
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: twingate-pastoral
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: twingate-pastoral
+    app.kubernetes.io/part-of: platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  source:
+    repoURL: https://twingate.github.io/helm-charts
+    targetRevision: 0.1.31
+    chart: connector
+    helm:
+      releaseName: twingate-pastoral-jaguar
+      values: |
+        # Twingate connector configuration
+        connector:
+          network: "your-network"
+          tokens:
+            access: "your-access-token"
+            refresh: "your-refresh-token"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
