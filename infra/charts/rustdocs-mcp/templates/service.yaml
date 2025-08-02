@@ -13,7 +13,7 @@ metadata:
   name: rustdocs-mcp-rust-docs-mcp-server
   namespace: {{ .Release.Namespace }}
 spec:
-  - 10.109.85.158
+  clusterIP: 10.109.85.158
   internalTrafficPolicy: Cluster
   ipFamilies:
   - IPv4

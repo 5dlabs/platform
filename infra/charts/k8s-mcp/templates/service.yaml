@@ -13,7 +13,7 @@ metadata:
   name: k8s-mcp-k8s-mcp-server
   namespace: {{ .Release.Namespace }}
 spec:
-  - 10.97.101.50
+  clusterIP: 10.97.101.50
   internalTrafficPolicy: Cluster
   ipFamilies:
   - IPv4
