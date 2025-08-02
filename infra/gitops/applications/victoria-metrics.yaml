@@ -23,18 +23,12 @@ spec:
           persistentVolume:
             enabled: true
             storageClass: local-path
-          
-          # Pod security context (for fsGroup)
+          # Match Victoria Logs working configuration
           podSecurityContext:
-            enabled: true
-            fsGroup: 1000
-          
-          # Container security context  
-          securityContext:
-            enabled: true
-            runAsNonRoot: true
+            fsGroup: 2000
             runAsUser: 1000
             runAsGroup: 1000
+            runAsNonRoot: true
   destination:
     server: https://kubernetes.default.svc
     namespace: telemetry
