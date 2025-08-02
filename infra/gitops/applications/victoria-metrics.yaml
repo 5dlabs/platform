@@ -23,12 +23,14 @@ spec:
           persistentVolume:
             enabled: true
             storageClass: local-path
-          # Security context to fix permission issues
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 1000
-            runAsGroup: 1000
-            fsGroup: 1000
+        
+        # Pod security context to fix permission issues
+        podSecurityContext:
+          enabled: true
+          fsGroup: 1000
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
   destination:
     server: https://kubernetes.default.svc
     namespace: telemetry
