@@ -14,7 +14,7 @@ spec:
   project: platform
   source:
     repoURL: https://actions-runner-controller.github.io/actions-runner-controller
-    targetRevision: 0.23.7
+    targetRevision: 0.21.1
     chart: actions-runner-controller
     helm:
       values: |
@@ -24,10 +24,18 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: arc-systems
+  ignoreDifferences:
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      jsonPointers:
+        - /metadata/annotations
+        - /spec/preserveUnknownFields
   syncPolicy:
     automated:
       prune: true
       selfHeal: false
     syncOptions:
       - CreateNamespace=true
+      - Replace=true
       - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
