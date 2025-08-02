@@ -133,7 +133,7 @@ models:
 # Secret configuration for API keys
 secrets:
   # REQUIRED: Set your Anthropic API key
-  anthropicApiKey: ""
+  anthropicApiKey: "use-existing"
   # Note: GitHub secrets (SSH keys + tokens) are managed externally per agent
   # See infra/scripts/setup-agent-secrets.sh for setup instructions
 
