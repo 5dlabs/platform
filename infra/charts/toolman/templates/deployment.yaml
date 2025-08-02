@@ -1,0 +1,185 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "6"
+    meta.helm.sh/release-name: toolman
+    meta.helm.sh/release-namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/instance: toolman
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: toolman
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: toolman-1.1.0
+  name: toolman
+  namespace: {{ .Release.Namespace }}
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: toolman
+      app.kubernetes.io/name: toolman
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: "2025-07-26T15:11:59-07:00"
+      labels:
+        app.kubernetes.io/instance: toolman
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: toolman
+        app.kubernetes.io/version: 1.0.0
+        helm.sh/chart: toolman-1.1.0
+    spec:
+      containers:
+      - env:
+        - name: PORT
+          value: "3000"
+        - name: PROJECT_DIR
+          value: /config
+        - name: RUST_LOG
+          value: info
+        - name: BRAVE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: BRAVE_API_KEY
+              name: toolman-brave-search-secrets
+              optional: true
+        - name: REDDIT_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              key: REDDIT_CLIENT_ID
+              name: toolman-reddit-secrets
+              optional: true
+        - name: REDDIT_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: REDDIT_CLIENT_SECRET
+              name: toolman-reddit-secrets
+              optional: true
+        - name: REDDIT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: REDDIT_USERNAME
+              name: toolman-reddit-secrets
+              optional: true
+        - name: REDDIT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: REDDIT_PASSWORD
+              name: toolman-reddit-secrets
+              optional: true
+        image: ghcr.io/5dlabs/toolman:main-4f4c6e4
+        imagePullPolicy: Always
+        name: toolman
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 2375
+          runAsNonRoot: true
+          runAsUser: 1001
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config
+          name: config
+          readOnly: true
+        - mountPath: /tmp
+          name: tmp
+        - mountPath: /data
+          name: data
+        - mountPath: /home/mcp
+          name: home-mcp-pvc
+        - mountPath: /var/run
+          name: docker-sock-dir
+      - env:
+        - name: DOCKER_TLS_CERTDIR
+        image: docker:dind
+        imagePullPolicy: IfNotPresent
+        name: docker-daemon
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          privileged: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/run
+          name: docker-sock-dir
+        - mountPath: /var/lib/docker
+          name: docker-data
+        - mountPath: /data
+          name: data
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: ghcr-secret
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 1001
+        supplementalGroups:
+        - 2375
+      serviceAccount: toolman
+      serviceAccountName: toolman
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: toolman-config
+        name: config
+      - emptyDir: {}
+        name: tmp
+      - emptyDir: {}
+        name: docker-sock-dir
+      - emptyDir: {}
+        name: docker-data
+      - name: home-mcp-pvc
+        persistentVolumeClaim:
+          claimName: home-mcp-data
+      - name: data
+        persistentVolumeClaim:
+          claimName: toolman-data
+status:
+  availableReplicas: 1
+  conditions:
+  - lastTransitionTime: "2025-07-26T21:37:46Z"
+    lastUpdateTime: "2025-07-26T21:37:46Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  - lastTransitionTime: "2025-07-26T17:26:17Z"
+    lastUpdateTime: "2025-07-26T22:23:04Z"
+    message: ReplicaSet "toolman-d96fbf894" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  observedGeneration: 6
+  readyReplicas: 1
+  replicas: 1
+  updatedReplicas: 1
