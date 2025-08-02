@@ -53,7 +53,8 @@ spec:
   # Cluster resource whitelist
   clusterResourceWhitelist:
     - group: cert-manager.io
-      kind: '*'    - group: ''
+      kind: '*'
+    - group: ''
       kind: Namespace
     - group: 'rbac.authorization.k8s.io'
       kind: ClusterRole
