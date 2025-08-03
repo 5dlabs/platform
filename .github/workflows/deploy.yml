@@ -233,8 +233,8 @@ jobs:
           echo "🚀 Updating GitOps configuration with new image tag"
           echo "New image: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.short-sha }}"
 
-          # Update the GitOps configuration file with the new image tag
-          sed -i "s|value: [a-zA-Z0-9-]*$|value: ${{ needs.version.outputs.short-sha }}|g" infra/gitops/applications/orchestrator.yaml
+          # Update ONLY the image.tag value in the GitOps configuration file
+          sed -i '/name: image\.tag/,/value:/ s|value: .*|value: ${{ needs.version.outputs.short-sha }}|' infra/gitops/applications/orchestrator.yaml
           
           echo "📝 Updated GitOps configuration:"
           grep -A 2 -B 2 "image.tag" infra/gitops/applications/orchestrator.yaml
