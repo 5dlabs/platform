@@ -5,26 +5,36 @@ FROM ghcr.io/actions/actions-runner:latest
 # Switch to root for installations
 USER root
 
-# Add LLVM repository for modern clang/lld (early in build for better caching)
-RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
-    && echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-15 main" >> /etc/apt/sources.list.d/llvm.list
-
-# Install Docker CE repository and system dependencies in a single layer for better caching
+# Install system dependencies and repositories in a single layer for better caching
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    # Update and install basic tools first
+    apt-get update && apt-get install -y \
+    curl \
+    wget \
+    gnupg \
+    software-properties-common \
+    ca-certificates \
+    lsb-release \
+    && \
+    # Add LLVM repository for modern clang/lld
+    curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o /usr/share/keyrings/llvm-archive-keyring.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/llvm-archive-keyring.gpg] http://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-15 main" | tee /etc/apt/sources.list.d/llvm.list > /dev/null \
+    && \
     # Add Docker's official GPG key and repository
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
     && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
-    && apt-get update && apt-get install -y \
+    && \
+    # Update package lists and install all packages
+    apt-get update && apt-get install -y \
     # Build essentials (some may already be installed)
     build-essential \
     pkg-config \
     libssl-dev \
     # Modern tools
-    curl \
-    wget \
     git \
     unzip \
+    jq \
     # Docker Engine for container builds
     docker-ce \
     docker-ce-cli \
@@ -34,11 +44,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     # Clang for mold linker (from LLVM repo)
     clang-15 \
     lld-15 \
-    # Additional tools
-    jq \
-    ca-certificates \
-    gnupg \
-    software-properties-common \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /usr/bin/clang-15 /usr/bin/clang \
     && ln -sf /usr/bin/clang++-15 /usr/bin/clang++
