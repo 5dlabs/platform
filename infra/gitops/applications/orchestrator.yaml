@@ -35,21 +35,21 @@ spec:
         - name: image.repository
           value: ghcr.io/5dlabs/platform/orchestrator
         - name: image.tag
-          value: aafedcd
+          value: e14b5951
         - name: image.pullPolicy
-          value: aafedcd
+          value: Always
         
         # Skip CRDs - managed by existing Helm release
         
         # Resource configuration
         - name: resources.limits.cpu
-          value: aafedcd
+          value: 1000m
         - name: resources.limits.memory
-          value: aafedcd
+          value: 1Gi
         - name: resources.requests.cpu
-          value: aafedcd
+          value: 500m
         - name: resources.requests.memory
-          value: aafedcd
+          value: 512Mi
         
         # Monitoring
         - name: metrics.enabled
