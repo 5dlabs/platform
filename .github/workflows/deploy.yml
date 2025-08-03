@@ -7,6 +7,9 @@ on:
         description: 'Release tag to deploy (e.g., v0.1.4)'
         required: true
         type: string
+  push:
+    branches:
+      - argo
 
 env:
   REGISTRY: ghcr.io
@@ -224,20 +227,52 @@ jobs:
           fi
           echo "$HOME/bin" >> $GITHUB_PATH
 
-      - name: Deploy Orchestrator
+      - name: Update ArgoCD Application Image Tag
         run: |
-          echo "🚀 Deploying version ${{ needs.version.outputs.version }}"
+          echo "🚀 Updating ArgoCD orchestrator application with new image tag"
+          echo "New image: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.short-sha }}"
 
-          # Deploy release version
-          helm upgrade --install orchestrator ./infra/charts/orchestrator \
-            --namespace orchestrator \
-            --create-namespace \
-            --values infra/charts/orchestrator/values.yaml \
-            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator \
-            --set image.tag=latest \
-            --set secrets.anthropicApiKey="${{ secrets.ANTHROPIC_API_KEY }}" \
-            --timeout 5m \
-            --wait
+          # Update the ArgoCD application to use the new image tag
+          kubectl patch application orchestrator -n argocd --type merge -p '{
+            "spec": {
+              "source": {
+                "helm": {
+                  "parameters": [
+                    {
+                      "name": "image.repository",
+                      "value": "${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator"
+                    },
+                    {
+                      "name": "image.tag", 
+                      "value": "${{ needs.version.outputs.short-sha }}"
+                    },
+                    {
+                      "name": "image.pullPolicy",
+                      "value": "Always"
+                    }
+                  ]
+                }
+              }
+            }
+          }'
+
+      - name: Sync ArgoCD Application
+        run: |
+          echo "🔄 Triggering ArgoCD sync for orchestrator application"
+          
+          # Force refresh and sync the application
+          kubectl patch application orchestrator -n argocd --type merge -p '{
+            "operation": {
+              "sync": {
+                "syncStrategy": {
+                  "hook": {},
+                  "apply": {"force": true}
+                }
+              }
+            }
+          }'
+          
+          echo "✅ ArgoCD sync triggered"
 
       - name: Verify deployment
         run: |
