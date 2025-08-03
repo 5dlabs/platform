@@ -18,10 +18,10 @@ RUN useradd -r -u 1000 -m -d /app -s /bin/bash app
 WORKDIR /app
 
 # Copy the pre-built binary
-COPY controller /app/controller
+COPY agent-controller /app/agent-controller
 
-# Make binary executable and change ownership to app user
-RUN chmod +x /app/controller && \
+# Make binary executable and change ownership to app user  
+RUN chmod +x /app/agent-controller && \
     chown -R app:app /app
 
 # Switch to non-root user
@@ -35,4 +35,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
 # Run the application
-CMD ["./controller"]
+CMD ["./agent-controller"]

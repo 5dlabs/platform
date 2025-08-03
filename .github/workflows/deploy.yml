@@ -158,7 +158,7 @@ jobs:
 
                     # Build with detailed output
           echo "⏱️ Starting build..."
-          cargo build --release --bin controller
+          cargo build --release --bin agent-controller
 
           # Show final sccache stats
           echo "📊 Final sccache stats:"
@@ -173,12 +173,12 @@ jobs:
           find /cache/target -name "*controller*" -type f 2>/dev/null || echo "No controller files found in /cache/target/"
 
           # Copy binary from cache target dir (where CARGO_TARGET_DIR points)
-          cp /cache/target/release/controller controller
+          cp /cache/target/release/agent-controller agent-controller
 
           # Show binary info
           echo "📦 Built binary info:"
-          ls -lh controller
-          file controller
+          ls -lh agent-controller
+          file agent-controller
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
