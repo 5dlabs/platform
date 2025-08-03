@@ -24,12 +24,8 @@ spec:
     
     # Helm configuration
     helm:
-      valueFiles:
-        - values.yaml
-      
-      # Override values for agent-platform deployment  
       values: |
-        # Enable debug logging
+        # Enable debug logging and environment variables
         env:
           - name: PORT
             value: "3000"
@@ -37,24 +33,15 @@ spec:
             value: "/config"
           - name: RUST_LOG
             value: "debug"
-
-        # Override working directory for all servers to use /tmp instead of project_root
-        config:
-          servers:
-            brave-search:
-              workingDirectory: "/tmp"
-            memory:
-              workingDirectory: "/tmp"
-            terraform:
-              workingDirectory: "/tmp"
-            kubernetes:
-              workingDirectory: "/tmp"
-            solana:
-              workingDirectory: "/tmp"
-            rustdocs:
-              workingDirectory: "/tmp"
-            reddit:
-              workingDirectory: "/tmp"
+        
+        # Resource configuration
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
 
         # Persistence configuration
         persistence:
@@ -66,7 +53,21 @@ spec:
         serviceAccount:
           create: true
           name: toolman
-  
+        
+        # Secret store integration (External Secrets will inject these)
+        secretRefs:
+          - name: toolman-brave-search-secrets
+          - name: toolman-reddit-secrets
+          
+        # Security context (explicit configuration)
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
+          readOnlyRootFilesystem: true
+          runAsGroup: 2375
+          runAsNonRoot: true
+          runAsUser: 1001
   # Destination configuration
   destination:
     server: https://kubernetes.default.svc
