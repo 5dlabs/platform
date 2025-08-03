@@ -23,9 +23,7 @@
 
 pub mod controllers;
 pub mod crds;
-pub mod handlers;
 
 // Re-export commonly used types
 pub use controllers::task_controller::ControllerConfig;
 pub use crds::{CodeRun, CodeRunSpec, CodeRunStatus, DocsRun, DocsRunSpec, DocsRunStatus};
-pub use handlers::*;
