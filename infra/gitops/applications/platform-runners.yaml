@@ -33,6 +33,7 @@ spec:
         githubConfigUrl: "https://github.com/5dlabs"
         githubConfigSecret: "github-pat"
         runnerScaleSetName: "k8s-runner"
+        minRunners: 2
         maxRunners: 10
         
         controllerServiceAccount:
