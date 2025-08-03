@@ -139,6 +139,7 @@ jobs:
           SCCACHE_IDLE_TIMEOUT: "0"
           CARGO_NET_GIT_FETCH_WITH_CLI: "true"
           CARGO_REGISTRIES_CRATES_IO_PROTOCOL: "sparse"
+          CARGO_TARGET_DIR: "/cache/target"  # Build to cache directory for persistence
         run: |
           echo "🏗️ Building orchestrator binary with pre-warmed dependencies..."
 
