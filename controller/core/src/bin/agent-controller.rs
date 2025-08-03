@@ -72,7 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let controller_handle = {
         let client = client.clone();
         tokio::spawn(async move {
-            if let Err(e) = run_task_controller(client, "controller".to_string()).await {
+            if let Err(e) = run_task_controller(client, "agent-platform".to_string()).await {
                 tracing::error!("Controller error: {}", e);
             }
         })

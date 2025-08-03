@@ -60,7 +60,7 @@ spec:
   # Destination configuration
   destination:
     server: https://kubernetes.default.svc
-    namespace: controller
+    namespace: agent-platform
   
   # Sync policy
   syncPolicy:

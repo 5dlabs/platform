@@ -14,7 +14,7 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   # Description
-  description: Platform infrastructure project for orchestrator and related services
+  description: Platform infrastructure project for agent platform and related services
   
   # Source repositories that applications in this project can deploy from
   sourceRepos:
@@ -34,7 +34,7 @@ spec:
   
   # Destinations that applications in this project can deploy to
   destinations:
-    - namespace: orchestrator
+    - namespace: agent-platform
       server: https://kubernetes.default.svc
     - namespace: argo
       server: https://kubernetes.default.svc

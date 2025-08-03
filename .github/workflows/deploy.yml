@@ -1,4 +1,4 @@
-name: Deploy Orchestrator
+name: Deploy Agent Controller
 
 on:
   workflow_dispatch:
@@ -279,8 +279,8 @@ jobs:
       - name: Verify deployment
         run: |
           echo "🔍 Deployment verification..."
-          kubectl get pods -n controller -o wide
-          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=controller -n controller --timeout=120s || true
+          kubectl get pods -n agent-platform -o wide
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=controller -n agent-platform --timeout=120s || true
 
           echo ""
           echo "✅ Deployment complete!"

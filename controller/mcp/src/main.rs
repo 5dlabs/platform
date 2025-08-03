@@ -122,7 +122,7 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     let args = vec![
         "submit",
         "--from", "workflowtemplate/docsrun-template",
-        "-n", "orchestrator",
+        "-n", "agent-platform",
         "-p", &working_dir_param,
     ];
 
@@ -147,7 +147,7 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     let args = vec![
         "submit",
         "--from", "workflowtemplate/coderun-template", 
-        "-n", "orchestrator",
+        "-n", "agent-platform",
         "-p", &task_id_param,
     ];
 

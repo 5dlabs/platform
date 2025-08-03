@@ -6,7 +6,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
   name: docsrun-template
-  namespace: orchestrator
+  namespace: agent-platform
   labels:
     app.kubernetes.io/name: docsrun-template
     app.kubernetes.io/part-of: platform
@@ -65,7 +65,7 @@ spec:
           kind: DocsRun
           metadata:
             generateName: "docsrun-{{workflow.parameters.github-user}}-"
-            namespace: orchestrator
+            namespace: agent-platform
             labels:
               workflow-name: "{{workflow.name}}"
               github-user: "{{workflow.parameters.github-user}}"
@@ -87,7 +87,7 @@ spec:
           kind: DocsRun
           metadata:
             name: "{{inputs.parameters.docsrun-name}}"
-            namespace: orchestrator
+            namespace: agent-platform
         successCondition: status.phase == Succeeded
         failureCondition: status.phase == Failed
             

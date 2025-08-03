@@ -5,7 +5,7 @@
 set -euo pipefail
 
 # Default values
-NAMESPACE="orchestrator"
+NAMESPACE="agent-platform"
 DRY_RUN=""
 VERBOSE=""
 
@@ -23,7 +23,7 @@ REQUIRED:
     --token <token>         GitHub personal access token (ghp_xxxx)
 
 OPTIONS:
-    --namespace <name>      Kubernetes namespace (default: orchestrator)
+    --namespace <name>      Kubernetes namespace (default: agent-platform)
     --dry-run              Show commands without executing
     --verbose              Show detailed output
     --help                 Show this help message

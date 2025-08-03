@@ -64,7 +64,7 @@ subjects:
     namespace: argo
   - kind: ServiceAccount
     name: argo-workflow
-    namespace: orchestrator
+    namespace: agent-platform
 
 ---
 # Role for template submission from orchestrator
@@ -100,4 +100,4 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: orchestrator
-    namespace: orchestrator
+    namespace: agent-platform

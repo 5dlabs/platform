@@ -48,7 +48,7 @@ serviceAccount:
   annotations: {}
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
-  name: "orchestrator"
+  name: "agent-platform"
 
 podAnnotations:
   kubectl.kubernetes.io/restartedAt: ""
@@ -81,7 +81,7 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
   hosts:
-    - host: orchestrator.local
+    - host: agent-platform.local
       paths:
         - path: /
           pathType: Prefix
@@ -114,7 +114,7 @@ affinity: {}
 # Configuration for the orchestrator service
 config:
   # Kubernetes namespace (auto-populated in most cases)
-  kubernetesNamespace: "orchestrator"
+  kubernetesNamespace: "agent-platform"
 
   # Server configuration
   serverHost: "0.0.0.0"
@@ -151,7 +151,7 @@ rbac:
     - apiGroups: ["orchestrator.platform"]
       resources: ["coderuns/status", "docsruns/status"]
       verbs: ["get", "update", "patch"]
-    # Job management in orchestrator namespace
+    # Job management in agent-platform namespace
     - apiGroups: ["batch"]
       resources: ["jobs"]
       verbs: ["create", "get", "list", "watch", "delete", "patch", "update"]

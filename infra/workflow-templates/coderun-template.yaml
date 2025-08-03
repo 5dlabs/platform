@@ -6,7 +6,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
   name: coderun-template
-  namespace: orchestrator
+  namespace: agent-platform
   labels:
     app.kubernetes.io/name: coderun-template
     app.kubernetes.io/part-of: platform
@@ -83,7 +83,7 @@ spec:
           kind: CodeRun
           metadata:
             generateName: "coderun-{{workflow.parameters.task-id}}-{{workflow.parameters.service-id}}-"
-            namespace: orchestrator
+            namespace: agent-platform
             labels:
               workflow-name: "{{workflow.name}}"
               task-id: "{{workflow.parameters.task-id}}"
@@ -113,7 +113,7 @@ spec:
           kind: CodeRun
           metadata:
             name: "{{inputs.parameters.coderun-name}}"
-            namespace: orchestrator
+            namespace: agent-platform
         successCondition: status.phase == Succeeded
         failureCondition: status.phase == Failed
             

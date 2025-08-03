@@ -30,7 +30,7 @@ spec:
   # Destination configuration
   destination:
     server: https://kubernetes.default.svc
-    namespace: orchestrator
+    namespace: agent-platform
   
   # Sync policy
   syncPolicy:
