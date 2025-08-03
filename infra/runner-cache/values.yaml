@@ -42,14 +42,8 @@ template:
         subPath: general
     volumes:
     - name: work
-      ephemeral:
-        volumeClaimTemplate:
-          spec:
-            accessModes: [ "ReadWriteOnce" ]
-            storageClassName: "local-path"
-            resources:
-              requests:
-                storage: 1Gi
+      emptyDir:
+        sizeLimit: 1Gi
     - name: cache-volume
       persistentVolumeClaim:
         claimName: runner-cache-pvc
