@@ -756,12 +756,15 @@ dependencies = [
  "clap",
  "colored",
  "common",
+ "k8s-openapi",
+ "kube",
  "reqwest",
  "serde",
  "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

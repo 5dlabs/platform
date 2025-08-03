@@ -94,12 +94,20 @@ impl DocsTemplateGenerator {
                 ))
             })?;
 
+        let model = docs_run.spec.model.as_ref()
+            .filter(|m| !m.is_empty())
+            .cloned()
+            .unwrap_or_else(|| {
+                std::env::var("DEFAULT_DOCS_MODEL")
+                    .unwrap_or_else(|_| "claude-opus-4-20250514".to_string())
+            });
+
         let context = json!({
             "repository_url": docs_run.spec.repository_url,
             "source_branch": docs_run.spec.source_branch,
             "working_directory": docs_run.spec.working_directory,
             "github_user": docs_run.spec.github_user,
-            "model": docs_run.spec.model,
+            "model": model,
             "service_name": "docs-generator"
         });
 
@@ -124,8 +132,16 @@ impl DocsTemplateGenerator {
                 ))
             })?;
 
+        let model = docs_run.spec.model.as_ref()
+            .filter(|m| !m.is_empty())
+            .cloned()
+            .unwrap_or_else(|| {
+                std::env::var("DEFAULT_DOCS_MODEL")
+                    .unwrap_or_else(|_| "claude-opus-4-20250514".to_string())
+            });
+
         let context = json!({
-            "model": docs_run.spec.model,
+            "model": model,
             "github_user": docs_run.spec.github_user,
             "api_key_secret_name": config.secrets.api_key_secret_name,
             "api_key_secret_key": config.secrets.api_key_secret_key

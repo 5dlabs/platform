@@ -18,6 +18,11 @@ path = "src/cli/main.rs"
 name = "fdl-mcp"
 path = "src/mcp/main.rs"
 
+# Argo Workflows MCP server binary
+[[bin]]
+name = "fdl-mcp-argo"
+path = "src/mcp-argo/main.rs"
+
 [dependencies]
 # CLI
 clap = { workspace = true }
@@ -43,5 +48,14 @@ tokio = { workspace = true }
 # Time handling
 chrono = { workspace = true }
 
-# Internal dependencies
+# Kubernetes and Argo Workflows integration (for mcp-argo)
+kube = { workspace = true, optional = true }
+k8s-openapi = { workspace = true, optional = true }
+uuid = { workspace = true, optional = true }
+
+# Internal dependencies  
 common = { path = "../common" }
+
+[features]
+default = []
+argo = ["kube", "k8s-openapi", "uuid"]
