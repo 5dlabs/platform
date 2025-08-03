@@ -16,9 +16,9 @@ spec:
   project: platform
   
   source:
-    repoURL: oci://ghcr.io/actions/actions-runner-controller-charts
-    chart: gha-runner-scale-set-controller
-    targetRevision: "*"  # Latest version
+    repoURL: https://github.com/actions/actions-runner-controller
+    targetRevision: master
+    path: charts/gha-runner-scale-set-controller
     
     helm:
       valueFiles: []

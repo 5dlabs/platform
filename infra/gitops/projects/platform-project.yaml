@@ -30,7 +30,7 @@ spec:
     - 'https://victoriametrics.github.io/helm-charts/'
     - 'https://actions-runner-controller.github.io/actions-runner-controller'
     - 'https://twingate.github.io/helm-charts'
-    - 'oci://ghcr.io/actions/actions-runner-controller-charts'
+    - 'https://github.com/actions/actions-runner-controller'
   
   # Destinations that applications in this project can deploy to
   destinations:
