@@ -35,6 +35,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     git \
     unzip \
     jq \
+    file \
     # Docker Engine for container builds
     docker-ce \
     docker-ce-cli \
