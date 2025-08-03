@@ -1,0 +1,17 @@
+{
+  "remoteTools": [
+    "createResource",
+    "listResources",
+    "getResource",
+    "getEvents",
+    "getPodsLogs"
+  ],
+  "localServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      "tools": ["read_file", "write_file", "create_directory"],
+      "workingDirectory": "project_root"
+    }
+  }
+}
