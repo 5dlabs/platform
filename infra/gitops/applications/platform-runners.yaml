@@ -41,21 +41,44 @@ spec:
         containerMode:
           type: "dind"
         
-        # listenerTemplate is for additional configuration only
-        # ARC automatically creates the listener pod
+        # Listener configuration for stable runner management
+        listenerTemplate:
+          spec:
+            containers:
+            - name: listener
+              env:
+              - name: ACTIONS_RUNNER_CONTROLLER_IDLE_TIMEOUT
+                value: "3600"
+              resources:
+                requests:
+                  memory: "256Mi"
+                  cpu: "150m"
         
         controllerServiceAccount:
           name: "arc-gha-rs-controller"
           namespace: "arc-systems"
         
-        # Template will be auto-configured by containerMode: dind  
-        # Test with official runner image first
+        # Force persistent runner behavior with explicit configuration
         template:
           spec:
+            restartPolicy: OnFailure
+            activeDeadlineSeconds: 3600
             containers:
             - name: runner
               image: ghcr.io/actions/actions-runner:latest
               imagePullPolicy: Always
+              command: ["/home/runner/run.sh"]
+              env:
+              - name: ACTIONS_RUNNER_EPHEMERAL
+                value: "false"
+              - name: RUNNER_SCOPE
+                value: "org"
+              - name: RUNNER_LABELS
+                value: "k8s-runner,self-hosted,linux,x64"
+              - name: DISABLE_RUNNER_UPDATE
+                value: "true"
+              - name: ACTIONS_RUNNER_PRINT_LOG_TO_STDOUT
+                value: "true"
   
   destination:
     server: https://kubernetes.default.svc
