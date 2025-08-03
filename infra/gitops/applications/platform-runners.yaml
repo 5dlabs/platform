@@ -49,7 +49,7 @@ spec:
           value: "arc-gha-rs-controller"
         - name: controllerServiceAccount.namespace
           value: "arc-systems"
-        # Runner labels for compatibility with existing workflows
+        # Runner labels for compatibility with existing workflows  
         - name: runnerGroup
           value: "Default"
   
