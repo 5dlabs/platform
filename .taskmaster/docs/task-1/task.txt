@@ -1,0 +1,23 @@
+# Phase 1: Architecture Simplification
+
+## Objective
+Remove API server and CLI components while updating the controller to be standalone.
+
+## Subtasks
+1. Remove API server code from main.rs
+2. Remove all handler implementations
+3. Clean up unused dependencies in Cargo.toml
+4. Update controller to be standalone service
+5. Delete CLI implementation
+6. Remove CLI-related dependencies
+7. Update documentation to reflect removal
+8. Remove HTTP client code from MCP server
+9. Implement Argo Workflows API client
+10. Add workflow submission logic
+11. Update error handling for new flow
+
+## Implementation Details
+- Focus on clean removal of API components without disrupting controller
+- Ensure all dependencies are properly cleaned up
+- Maintain backwards compatibility during transition
+- Add proper error handling for new workflow

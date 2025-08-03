@@ -1,0 +1,24 @@
+{
+  "remoteTools": [
+    "brave_web_search",
+    "getEvents",
+    "helmGet",
+    "helmHistory",
+    "listResources",
+    "getResource",
+    "getPodMetrics"
+  ],
+  "localServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      "tools": [
+        "read_file",
+        "write_file",
+        "edit_file",
+        "list_directory"
+      ],
+      "workingDirectory": "project_root"
+    }
+  }
+}

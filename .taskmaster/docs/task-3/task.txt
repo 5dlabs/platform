@@ -1,0 +1,25 @@
+# Phase 3: GitOps Migration
+
+## Objective
+Migrate to GitOps-based deployment using Argo CD.
+
+## Subtasks
+1. Create Application manifests for all services
+2. Configure sync policies and automation
+3. Set up health checks and notifications
+4. Test rollback scenarios
+5. Modify build workflows to be build-only
+6. Implement image tag updates to manifests
+7. Remove Helm deployment logic
+8. Add Argo CD sync triggers
+9. Create ApplicationSet for dynamic apps
+10. Configure namespace isolation
+11. Implement cleanup policies
+12. Test preview environment creation
+
+## Implementation Details
+- Focus on zero-downtime migration
+- Ensure proper rollback capabilities
+- Set up efficient automation
+- Implement proper isolation
+- Validate all scenarios
