@@ -19,7 +19,7 @@ spec:
   # Source configuration - use official ToolMan chart
   source:
     repoURL: https://github.com/5dlabs/toolman
-    targetRevision: main
+    targetRevision: 8eaa1a1
     path: charts/toolman
     # Helm configuration
     helm:
@@ -82,17 +82,6 @@ spec:
               args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
               workingDirectory: "/tmp"
         
-        # Add volume mount for local tools ConfigMap
-        extraVolumes:
-          - name: local-tools-config
-            configMap:
-              name: toolman-local-tools
-        
-        extraVolumeMounts:
-          - name: local-tools-config
-            mountPath: /config/local-tools
-            readOnly: true
-
         # Secret store integration (External Secrets will inject these)
         secretRefs:
           - name: toolman-brave-search-secrets
