@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "orchestrator.fullname" . }}
+  name: {{ include "controller.fullname" . }}
   labels:
-    {{- include "orchestrator.labels" . | nindent 4 }}
+    {{- include "controller.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "orchestrator.selectorLabels" . | nindent 6 }}
+      {{- include "controller.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:
@@ -21,18 +21,18 @@ spec:
         # Force pod restart when main config changes
         config/checksum: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         # Force pod restart when toolman catalog changes
-        toolman-catalog/checksum: {{ include "orchestrator.toolmanCatalogChecksum" . }}
+        toolman-catalog/checksum: {{ include "controller.toolmanCatalogChecksum" . }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "orchestrator.selectorLabels" . | nindent 8 }}
+        {{- include "controller.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "orchestrator.serviceAccountName" . }}
+      serviceAccountName: {{ include "controller.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -41,7 +41,7 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["/app/orchestrator"]
+          command: ["/app/agent-controller"]
           ports:
             - name: {{ .Values.service.name }}
               containerPort: {{ .Values.service.targetPort }}
@@ -51,22 +51,22 @@ spec:
             - name: KUBERNETES_NAMESPACE
               valueFrom:
                 configMapKeyRef:
-                  name: {{ include "orchestrator.fullname" . }}-config
+                  name: {{ include "controller.fullname" . }}-config
                   key: KUBERNETES_NAMESPACE
             - name: RUST_LOG
               valueFrom:
                 configMapKeyRef:
-                  name: {{ include "orchestrator.fullname" . }}-config
+                  name: {{ include "controller.fullname" . }}-config
                   key: RUST_LOG
             - name: DEFAULT_DOCS_MODEL
               valueFrom:
                 configMapKeyRef:
-                  name: {{ include "orchestrator.fullname" . }}-config
+                  name: {{ include "controller.fullname" . }}-config
                   key: DEFAULT_DOCS_MODEL
             - name: DEFAULT_CODE_MODEL
               valueFrom:
                 configMapKeyRef:
-                  name: {{ include "orchestrator.fullname" . }}-config
+                  name: {{ include "controller.fullname" . }}-config
                   key: DEFAULT_CODE_MODEL
             # Secrets for agents
             {{- if .Values.secrets.anthropicApiKey }}
@@ -74,42 +74,42 @@ spec:
               valueFrom:
                 secretKeyRef:
                   {{- if eq .Values.secrets.anthropicApiKey "use-existing" }}
-                  name: orchestrator-secrets
+                  name: agent-platform-secrets
                   {{- else }}
-                  name: {{ include "orchestrator.fullname" . }}-secrets
+                  name: {{ include "controller.fullname" . }}-secrets
                   {{- end }}
                   key: ANTHROPIC_API_KEY
             {{- end }}
-            # Additional API keys from orchestrator-secrets
+            # Additional API keys from agent-platform-secrets
             {{- if eq .Values.secrets.anthropicApiKey "use-existing" }}
             - name: PERPLEXITY_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: orchestrator-secrets
+                  name: agent-platform-secrets
                   key: PERPLEXITY_API_KEY
                   optional: true
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: orchestrator-secrets
+                  name: agent-platform-secrets
                   key: OPENAI_API_KEY
                   optional: true
             - name: GOOGLE_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: orchestrator-secrets
+                  name: agent-platform-secrets
                   key: GOOGLE_API_KEY
                   optional: true
             - name: XAI_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: orchestrator-secrets
+                  name: agent-platform-secrets
                   key: XAI_API_KEY
                   optional: true
             - name: GEMINI_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: orchestrator-secrets
+                  name: agent-platform-secrets
                   key: GEMINI_API_KEY
                   optional: true
             {{- end }}
@@ -152,11 +152,11 @@ spec:
         # Mount claude templates ConfigMap
         - name: claude-templates
           configMap:
-            name: {{ include "orchestrator.fullname" . }}-claude-templates
+            name: {{ include "controller.fullname" . }}-claude-templates
         # Mount controller configuration ConfigMap
         - name: controller-config
           configMap:
-            name: {{ include "orchestrator.fullname" . }}-task-controller-config
+            name: {{ include "controller.fullname" . }}-task-controller-config
         # Mount toolman catalog ConfigMap
         - name: toolman-catalog
           configMap:

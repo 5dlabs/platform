@@ -3,49 +3,49 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ include "orchestrator.roleName" . }}
+  name: {{ include "controller.roleName" . }}
   labels:
-    {{- include "orchestrator.labels" . | nindent 4 }}
+    {{- include "controller.labels" . | nindent 4 }}
 rules:
 {{- toYaml .Values.rbac.rules | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "orchestrator.roleName" . }}
+  name: {{ include "controller.roleName" . }}
   labels:
-    {{- include "orchestrator.labels" . | nindent 4 }}
+    {{- include "controller.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ include "orchestrator.roleName" . }}
+  name: {{ include "controller.roleName" . }}
 subjects:
 - kind: ServiceAccount
-  name: {{ include "orchestrator.serviceAccountName" . }}
+  name: {{ include "controller.serviceAccountName" . }}
   namespace: {{ .Release.Namespace }}
 {{- else }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "orchestrator.roleName" . }}
+  name: {{ include "controller.roleName" . }}
   labels:
-    {{- include "orchestrator.labels" . | nindent 4 }}
+    {{- include "controller.labels" . | nindent 4 }}
 rules:
 {{- toYaml .Values.rbac.rules | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "orchestrator.roleName" . }}
+  name: {{ include "controller.roleName" . }}
   labels:
-    {{- include "orchestrator.labels" . | nindent 4 }}
+    {{- include "controller.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "orchestrator.roleName" . }}
+  name: {{ include "controller.roleName" . }}
 subjects:
 - kind: ServiceAccount
-  name: {{ include "orchestrator.serviceAccountName" . }}
+  name: {{ include "controller.serviceAccountName" . }}
   namespace: {{ .Release.Namespace }}
 {{- end }}
 {{- end }}

@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "orchestrator.name" -}}
+{{- define "controller.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "orchestrator.fullname" -}}
+{{- define "controller.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "orchestrator.chart" -}}
+{{- define "controller.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "orchestrator.labels" -}}
-helm.sh/chart: {{ include "orchestrator.chart" . }}
-{{ include "orchestrator.selectorLabels" . }}
+{{- define "controller.labels" -}}
+helm.sh/chart: {{ include "controller.chart" . }}
+{{ include "controller.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "orchestrator.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "orchestrator.name" . }}
+{{- define "controller.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "controller.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "orchestrator.serviceAccountName" -}}
+{{- define "controller.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "orchestrator.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "controller.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
@@ -64,18 +64,18 @@ Create the name of the service account to use
 {{/*
 Create the name of the RBAC role to use
 */}}
-{{- define "orchestrator.roleName" -}}
+{{- define "controller.roleName" -}}
 {{- if .Values.rbac.namespaced }}
-{{- include "orchestrator.fullname" . }}
+{{- include "controller.fullname" . }}
 {{- else }}
-{{- include "orchestrator.fullname" . }}
+{{- include "controller.fullname" . }}
 {{- end }}
 {{- end }}
 
 {{/*
 Create a checksum for the toolman catalog ConfigMap to force pod restart when it changes
 */}}
-{{- define "orchestrator.toolmanCatalogChecksum" -}}
+{{- define "controller.toolmanCatalogChecksum" -}}
 {{- $catalog := lookup "v1" "ConfigMap" .Release.Namespace "toolman-tool-catalog" -}}
 {{- if $catalog }}
 {{- $catalog.data | toYaml | sha256sum }}
