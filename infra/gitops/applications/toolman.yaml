@@ -16,16 +16,27 @@ spec:
   # Project configuration
   project: platform
   
-  # Source configuration - use local chart from repository
+  # Source configuration - use official ToolMan chart
   source:
-    repoURL: https://github.com/5dlabs/platform
-    targetRevision: argo
-    path: infra/charts/toolman
+    repoURL: https://github.com/5dlabs/toolman
+    targetRevision: main
+    path: charts/toolman
     
     # Helm configuration
     helm:
       valueFiles:
         - values.yaml
+      
+      # Override values for agent-platform deployment
+      parameters:
+        - name: persistence.enabled
+          value: "true"
+        - name: persistence.storageClassName
+          value: "local-path"
+        - name: persistence.size
+          value: "10Gi"
+        - name: serviceAccount.create
+          value: "true"
   
   # Destination configuration
   destination:
