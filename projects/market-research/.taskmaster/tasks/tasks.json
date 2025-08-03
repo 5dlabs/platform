@@ -1,0 +1,87 @@
+{
+  "projectName": "Market Research Tool",
+  "description": "Lightweight market research automation using local and remote MCP servers",
+  "version": "1.0.0",
+  "tasks": [
+    {
+      "id": 1,
+      "title": "Research AI Development Tools Landscape",
+      "description": "Conduct web research on current AI development tools and frameworks, focusing on code generation and developer productivity tools.",
+      "priority": "high",
+      "status": "pending",
+      "estimatedEffort": "2-3 hours",
+      "dependencies": [],
+      "tags": ["research", "ai-tools", "web-search"],
+      "acceptanceCriteria": [
+        "Use Brave Search to find top 5-7 AI development tools",
+        "Identify key features and pricing models",
+        "Document competitive advantages and market positioning",
+        "Generate structured findings in markdown format"
+      ],
+      "technicalRequirements": [
+        "Remote MCP server for Brave Search integration",
+        "Local MCP server for file operations and report generation",
+        "Web research and data extraction capabilities",
+        "Markdown report generation"
+      ],
+      "details": "This task requires using remote MCP servers to search the web for information about AI development tools like GitHub Copilot, Cursor, Claude Code, etc. The research should focus on market positioning, key features, and pricing. Results should be processed and saved locally using local MCP server capabilities.",
+      "testStrategy": "Verify that both remote (Brave Search) and local (file operations) MCP servers are working correctly. Confirm that research data is collected, processed, and saved as a structured report."
+    },
+    {
+      "id": 2,
+      "title": "Analyze Local Development Environment Tools",
+      "description": "Research and analyze tools for local development environments, focusing on setup automation and developer experience.",
+      "priority": "medium", 
+      "status": "pending",
+      "estimatedEffort": "1-2 hours",
+      "dependencies": [1],
+      "tags": ["research", "dev-tools", "local-environment"],
+      "acceptanceCriteria": [
+        "Research development environment tools and platforms",
+        "Compare local vs cloud-based solutions",
+        "Analyze developer workflow integration",
+        "Create comparative analysis report"
+      ],
+      "technicalRequirements": [
+        "Web search capabilities via remote MCP",
+        "Local file analysis and report generation",
+        "Data comparison and analysis tools",
+        "Integration with findings from Task 1"
+      ],
+      "details": "Focus on tools like Docker Desktop, VS Code Dev Containers, GitHub Codespaces, and similar platforms. Use web research to gather information, then combine with local file analysis to create a comprehensive comparison report.",
+      "testStrategy": "Ensure both remote research and local file processing work together. Test that the report integrates findings from the previous task and creates a coherent analysis."
+    },
+    {
+      "id": 3,
+      "title": "Generate Market Research Summary Report",
+      "description": "Synthesize research findings into a comprehensive market summary with recommendations.",
+      "priority": "high",
+      "status": "pending", 
+      "estimatedEffort": "1 hour",
+      "dependencies": [1, 2],
+      "tags": ["analysis", "reporting", "synthesis"],
+      "acceptanceCriteria": [
+        "Combine findings from previous research tasks",
+        "Generate executive summary of market landscape",
+        "Provide recommendations based on research",
+        "Create final presentation-ready report"
+      ],
+      "technicalRequirements": [
+        "Local MCP server for file operations and report compilation",
+        "Data synthesis and analysis capabilities",
+        "Markdown and potentially other format generation",
+        "Integration with previous task outputs"
+      ],
+      "details": "This task primarily uses local MCP server capabilities to read the previous research reports, analyze the data, and generate a comprehensive summary. Should include market trends, competitive analysis, and strategic recommendations.",
+      "testStrategy": "Verify that local MCP server can read and process files from previous tasks. Confirm that the final report synthesizes information correctly and provides valuable insights."
+    }
+  ],
+  "metadata": {
+    "createdAt": "2025-08-03T17:30:00Z",
+    "lastModified": "2025-08-03T17:30:00Z",
+    "totalTasks": 3,
+    "estimatedProjectDuration": "4-6 hours",
+    "requiredMCPServers": ["remote-brave-search", "local-file-operations"],
+    "testingNotes": "This project is designed to test both remote and local MCP server integration while keeping API usage minimal."
+  }
+}
