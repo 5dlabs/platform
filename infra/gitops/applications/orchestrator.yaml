@@ -35,7 +35,7 @@ spec:
         - name: image.repository
           value: ghcr.io/5dlabs/platform/orchestrator
         - name: image.tag
-          value: c87831c
+          value: 15cd28e
         - name: image.pullPolicy
           value: Always
         
