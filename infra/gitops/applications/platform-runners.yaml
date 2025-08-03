@@ -29,29 +29,34 @@ spec:
     path: charts/gha-runner-scale-set
     
     helm:
-      valueFiles:
-        - ../../infra/gitops/arc-runner-values.yaml
-      parameters:
-        # GitHub Configuration
-        - name: githubConfigUrl
-          value: "https://github.com/5dlabs"
-        - name: githubConfigSecret
-          value: "github-pat"
-        - name: runnerScaleSetName
-          value: "k8s-runner"
-        # Persistent runners configuration - always keep some runners ready
-        - name: minRunners
-          value: "2"
-        - name: maxRunners
-          value: "10"
-        # Controller Configuration
-        - name: controllerServiceAccount.name
-          value: "arc-gha-rs-controller"
-        - name: controllerServiceAccount.namespace
-          value: "arc-systems"
-        # Runner labels for compatibility with existing workflows  
-        - name: runnerGroup
-          value: "Default"
+      values: |
+        githubConfigUrl: "https://github.com/5dlabs"
+        githubConfigSecret: "github-pat"
+        runnerScaleSetName: "k8s-runner"
+        minRunners: 2
+        maxRunners: 10
+        runnerGroup: "Default"
+        
+        controllerServiceAccount:
+          name: "arc-gha-rs-controller"
+          namespace: "arc-systems"
+        
+        # Simplified template without complex volumes
+        template:
+          spec:
+            imagePullSecrets:
+            - name: ghcr-secret
+            containers:
+            - name: runner
+              image: ghcr.io/actions/actions-runner:2.327.1
+              imagePullPolicy: Always
+              volumeMounts:
+              - name: work
+                mountPath: /home/runner/_work
+            volumes:
+            - name: work
+              emptyDir:
+                sizeLimit: 1Gi
   
   destination:
     server: https://kubernetes.default.svc
