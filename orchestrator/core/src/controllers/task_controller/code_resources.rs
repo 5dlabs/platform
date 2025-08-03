@@ -197,10 +197,22 @@ impl<'a> CodeResourceManager<'a> {
     }
 
     fn generate_configmap_name(&self, code_run: &CodeRun) -> String {
+        // Generate unique ConfigMap name per CodeRun to prevent conflicts between sequential jobs
+        let namespace = code_run.metadata.namespace.as_deref().unwrap_or("default");
+        let name = code_run.metadata.name.as_deref().unwrap_or("unknown");
+        let uid_suffix = code_run
+            .metadata
+            .uid
+            .as_deref()
+            .map(|uid| &uid[..8]) // Use first 8 chars of UID for uniqueness
+            .unwrap_or("nouid");
         let task_id = code_run.spec.task_id;
         let service_name = code_run.spec.service.replace('_', "-");
         let context_version = code_run.spec.context_version;
-        format!("{service_name}-task{task_id}-v{context_version}-files")
+        
+        format!("code-{namespace}-{name}-{uid_suffix}-{service_name}-t{task_id}-v{context_version}-files")
+            .replace(['_', '.'], "-")
+            .to_lowercase()
     }
 
     fn create_configmap(

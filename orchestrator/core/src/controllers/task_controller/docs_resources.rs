@@ -161,10 +161,21 @@ impl<'a> DocsResourceManager<'a> {
         Ok(Action::await_change())
     }
 
-    fn generate_configmap_name(&self, _docs_run: &DocsRun) -> String {
-        let service_name = "docs-generator".replace('_', "-");
+    fn generate_configmap_name(&self, docs_run: &DocsRun) -> String {
+        // Generate unique ConfigMap name per DocsRun to prevent conflicts between sequential jobs
+        let namespace = docs_run.metadata.namespace.as_deref().unwrap_or("default");
+        let name = docs_run.metadata.name.as_deref().unwrap_or("unknown");
+        let uid_suffix = docs_run
+            .metadata
+            .uid
+            .as_deref()
+            .map(|uid| &uid[..8]) // Use first 8 chars of UID for uniqueness
+            .unwrap_or("nouid");
         let context_version = 1; // Docs don't have context versions, always 1
-        format!("{service_name}-docs-v{context_version}-files")
+        
+        format!("docs-{namespace}-{name}-{uid_suffix}-v{context_version}-files")
+            .replace(['_', '.'], "-")
+            .to_lowercase()
     }
 
     fn create_configmap(

@@ -25,6 +25,9 @@ spec:
       - name: source-branch
         description: "Source branch to work from"
         default: "main"
+      - name: model
+        description: "Claude model to use for documentation generation"
+        default: "claude-opus-4-20250514"
 
   # Service account for workflow execution
   serviceAccountName: argo-workflow
@@ -41,6 +44,12 @@ spec:
       steps:
       - - name: create-docsrun-resource
           template: create-docsrun-resource
+      - - name: wait-for-completion
+          template: wait-docsrun-completion
+          arguments:
+            parameters:
+            - name: docsrun-name
+              value: "{{steps.create-docsrun-resource.outputs.parameters.name}}"
           
     - name: create-docsrun-resource
       outputs:
@@ -65,6 +74,7 @@ spec:
             githubUser: "{{workflow.parameters.github-user}}"
             sourceBranch: "{{workflow.parameters.source-branch}}"
             repositoryUrl: "git@github.com:5dlabs/platform.git"
+            model: "{{workflow.parameters.model}}"
             
     - name: wait-docsrun-completion
       inputs:

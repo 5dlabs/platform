@@ -60,11 +60,25 @@ spec:
     # Main CodeRun execution - create CRD and wait for completion
     - name: coderun-main
       steps:
-      - - name: create-coderun
-          resource:
-            action: create
-            setOwnerReference: true
-            manifest: |
+      - - name: create-coderun-resource
+          template: create-coderun-resource
+      - - name: wait-for-completion
+          template: wait-coderun-completion
+          arguments:
+            parameters:
+            - name: coderun-name
+              value: "{{steps.create-coderun-resource.outputs.parameters.name}}"
+          
+    - name: create-coderun-resource
+      outputs:
+        parameters:
+        - name: name
+          valueFrom:
+            jsonPath: '{.metadata.name}'
+      resource:
+        action: create
+        setOwnerReference: true
+        manifest: |
               apiVersion: orchestrator.platform/v1
               kind: CodeRun
               metadata:
@@ -75,30 +89,33 @@ spec:
                   task-id: "{{workflow.parameters.task-id}}"
                   service: "{{workflow.parameters.service-id}}"
               spec:
-                task_id: {{workflow.parameters.task-id}}
+                taskId: {{workflow.parameters.task-id}}
                 service: "{{workflow.parameters.service-id}}"
-                repository: "{{workflow.parameters.repository-url}}"
-                docs_repository: "{{workflow.parameters.docs-repository-url}}"
-                docs_project_directory: "{{workflow.parameters.docs-project-directory}}"
-                working_directory: "{{workflow.parameters.working-directory}}"
-                github_user: "{{workflow.parameters.github-user}}"
+                repositoryUrl: "{{workflow.parameters.repository-url}}"
+                docsRepositoryUrl: "{{workflow.parameters.docs-repository-url}}"
+                docsProjectDirectory: "{{workflow.parameters.docs-project-directory}}"
+                workingDirectory: "{{workflow.parameters.working-directory}}"
+                githubUser: "{{workflow.parameters.github-user}}"
                 model: "{{workflow.parameters.model}}"
-                continue_session: {{workflow.parameters.continue-session}}
-                overwrite_memory: {{workflow.parameters.overwrite-memory}}
-                docs_branch: "{{workflow.parameters.docs-branch}}"
-                context_version: 1
-                
-      - - name: wait-for-completion
-          resource:
-            action: get
-            manifest: |
-              apiVersion: orchestrator.platform/v1
-              kind: CodeRun
-              metadata:
-                name: "{{steps.create-coderun.outputs.result.metadata.name}}"
-                namespace: orchestrator
-            successCondition: status.phase == Succeeded
-            failureCondition: status.phase == Failed
+                continueSession: {{workflow.parameters.continue-session}}
+                overwriteMemory: {{workflow.parameters.overwrite-memory}}
+                docsBranch: "{{workflow.parameters.docs-branch}}"
+                contextVersion: 1
+            
+    - name: wait-coderun-completion
+      inputs:
+        parameters:
+        - name: coderun-name
+      resource:
+        action: get
+        manifest: |
+          apiVersion: orchestrator.platform/v1
+          kind: CodeRun
+          metadata:
+            name: "{{inputs.parameters.coderun-name}}"
+            namespace: orchestrator
+        successCondition: status.phase == Succeeded
+        failureCondition: status.phase == Failed
             
   # Cleanup policy
   ttlStrategy:

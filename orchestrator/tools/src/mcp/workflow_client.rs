@@ -85,9 +85,9 @@ impl ArgoWorkflowsClient {
             format!("continue-session={}", continue_session),
         ];
 
-        if let Some(m) = model {
-            parameter_pairs.push(format!("model={}", m));
-        }
+        // Always include model parameter, use default if not provided
+        let model_value = model.unwrap_or("claude-3-5-sonnet-20241022");
+        parameter_pairs.push(format!("model={}", model_value));
 
         // TODO: Handle env and env_from_secrets parameters
         if let Some(env_obj) = env {
@@ -148,9 +148,9 @@ impl ArgoWorkflowsClient {
             format!("source-branch={}", source_branch),
         ];
 
-        if let Some(m) = model {
-            parameter_pairs.push(format!("model={}", m));
-        }
+        // Always include model parameter, use default if not provided
+        let model_value = model.unwrap_or("claude-opus-4-20250514");
+        parameter_pairs.push(format!("model={}", model_value));
 
         let submit_request = json!({
             "namespace": self.namespace,
