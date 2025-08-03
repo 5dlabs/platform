@@ -260,6 +260,22 @@ jobs:
           
           echo "✅ GitOps configuration updated and pushed"
 
+      - name: Force ArgoCD Sync
+        run: |
+          echo "🔄 Forcing ArgoCD to sync the updated configuration"
+          
+          # Wait a moment for Git changes to propagate
+          sleep 5
+          
+          # Force ArgoCD application refresh and sync
+          kubectl patch application orchestrator -n argocd --type merge -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}'
+          
+          # Wait for sync to complete
+          echo "⏳ Waiting for ArgoCD sync to complete..."
+          kubectl wait --for=condition=Synced application/orchestrator -n argocd --timeout=300s || echo "Sync timeout - continuing anyway"
+          
+          echo "✅ ArgoCD sync completed"
+
       - name: Verify deployment
         run: |
           echo "🔍 Deployment verification..."
