@@ -5,10 +5,10 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: platform-runners
+  name: k8s-runner
   namespace: argocd
   labels:
-    app.kubernetes.io/name: platform-runners
+    app.kubernetes.io/name: k8s-runner
     app.kubernetes.io/part-of: platform
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -38,7 +38,7 @@ spec:
         - name: githubConfigSecret
           value: "github-pat"
         - name: runnerScaleSetName
-          value: "platform-runners"
+          value: "k8s-runner"
         # Hot runners configuration - always keep some runners ready
         - name: minRunners
           value: "2"
