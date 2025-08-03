@@ -31,7 +31,7 @@ spec:
     helm:
       values: |
         githubConfigUrl: "https://github.com/5dlabs"
-        githubConfigSecret: "github-pat"
+        githubConfigSecret: github-pat
         runnerScaleSetName: "k8s-runner"
         minRunners: 2
         maxRunners: 10
@@ -41,18 +41,8 @@ spec:
         containerMode:
           type: "dind"
         
-        # Explicit runner labels for workflow targeting
-        listenerTemplate:
-          metadata:
-            labels:
-              runner-label: "k8s-runner"
-          spec:
-            imagePullSecrets:
-            - name: ghcr-secret
-            containers:
-            - name: listener
-              image: ghcr.io/actions/actions-runner-controller/gha-runner-scale-set-listener:0.12.1
-              imagePullPolicy: Always
+        # listenerTemplate is for additional configuration only
+        # ARC automatically creates the listener pod
         
         controllerServiceAccount:
           name: "arc-gha-rs-controller"
