@@ -9,24 +9,6 @@ metadata:
     app.kubernetes.io/part-of: platform
 
 ---
-# GitHub PAT secret for ARC authentication
-# This should be manually created with: kubectl create secret generic github-pat -n secret-store --from-literal=token=ghp_YOUR_TOKEN_HERE
-apiVersion: v1
-kind: Secret
-metadata:
-  name: github-pat
-  namespace: secret-store
-  labels:
-    app.kubernetes.io/name: github-pat
-    app.kubernetes.io/part-of: platform
-    external-secrets.io/source: "true"  # Mark as source for External Secrets
-type: Opaque
-stringData:
-  # This is a placeholder - replace with actual PAT token
-  # Or create manually: kubectl create secret generic github-pat -n secret-store --from-literal=token=ghp_YOUR_TOKEN_HERE
-  token: "PLACEHOLDER_REPLACE_WITH_ACTUAL_PAT"
-
----
 # Service account for External Secrets to access this namespace
 apiVersion: v1
 kind: ServiceAccount
