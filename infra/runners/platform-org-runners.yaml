@@ -39,10 +39,10 @@ rules:
     resources: ["customresourcedefinitions"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
   # Orchestrator CRDs
-  - apiGroups: ["orchestrator.platform"]
+  - apiGroups: ["agents.platform"]
     resources: ["coderuns", "docsruns"]
     verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
-  - apiGroups: ["orchestrator.platform"]
+  - apiGroups: ["agents.platform"]
     resources: ["coderuns/status", "docsruns/status"]
     verbs: ["get", "update", "patch"]
   # Helm resources

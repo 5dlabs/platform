@@ -24,7 +24,7 @@ The QA Agent is an autonomous quality assurance system that monitors pull reques
 ## 📋 **QAAgentRun CRD Specification**
 
 ```yaml
-apiVersion: orchestrator.platform/v1
+apiVersion: agents.platform/v1
 kind: QAAgentRun
 metadata:
   name: qa-simple-api
@@ -227,7 +227,7 @@ deployment:
 
 ### **Simple API Service**
 ```yaml
-apiVersion: orchestrator.platform/v1
+apiVersion: agents.platform/v1
 kind: QAAgentRun
 metadata:
   name: qa-simple-api
@@ -241,7 +241,7 @@ spec:
 
 ### **Complex Microservice**
 ```yaml
-apiVersion: orchestrator.platform/v1
+apiVersion: agents.platform/v1
 kind: QAAgentRun
 metadata:
   name: qa-trader-service

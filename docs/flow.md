@@ -124,7 +124,7 @@ rules:
 - apiGroups: ["argoproj.io"]
   resources: ["workflows", "workflowtemplates", "cronworkflows"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-- apiGroups: ["orchestrator.platform"]
+- apiGroups: ["agents.platform"]
   resources: ["coderuns", "docsruns"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 - apiGroups: [""]
@@ -509,7 +509,7 @@ spec:
     resource:
       action: create
       manifest: |
-        apiVersion: orchestrator.platform/v1
+        apiVersion: agents.platform/v1
         kind: CodeRun
         metadata:
           generateName: "task-{{inputs.parameters.task-id}}-"

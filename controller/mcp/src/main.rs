@@ -56,8 +56,8 @@ fn handle_mcp_methods(method: &str, _params_map: &HashMap<String, Value>) -> Opt
                     }
                 },
                 "serverInfo": {
-                    "name": "orchestrator-mcp",
-                    "title": "Orchestrator MCP Server",
+                    "name": "agent-platform-mcp",
+                    "title": "Agent Platform MCP Server",
                     "version": "1.0.0"
                 }
             })))

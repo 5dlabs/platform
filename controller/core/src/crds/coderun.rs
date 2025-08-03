@@ -40,7 +40,7 @@ fn default_overwrite_memory() -> bool {
 
 /// `CodeRun` CRD for code implementation tasks
 #[derive(CustomResource, Deserialize, Serialize, Clone, Debug, JsonSchema)]
-#[kube(group = "orchestrator.platform", version = "v1", kind = "CodeRun")]
+#[kube(group = "agents.platform", version = "v1", kind = "CodeRun")]
 #[kube(namespaced)]
 #[kube(status = "CodeRunStatus")]
 #[kube(printcolumn = r#"{"name":"Task","type":"integer","jsonPath":".spec.taskId"}"#)]

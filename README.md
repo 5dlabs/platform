@@ -23,7 +23,7 @@ This is an integrated platform with a clear data flow:
 
 **Component Architecture:**
 - **MCP Server (`fdl-mcp`)**: Handles MCP protocol calls from Cursor/Claude
-- **CLI (`fdl`)**: Makes REST API calls to the orchestrator service
+- **CLI (`fdl`)**: Makes REST API calls to the agent-platform service
 - **Orchestrator Service**: Kubernetes REST API that creates CodeRun/DocsRun CRDs
 - **Kubernetes Controllers**: Separate controllers for CodeRun and DocsRun resources with TTL-safe reconciliation
 - **Agent Workspaces**: Isolated persistent volumes for each service with session continuity
@@ -31,7 +31,7 @@ This is an integrated platform with a clear data flow:
 **Data Flow:**
 1. Cursor calls `docs()` or `task()` via MCP protocol
 2. MCP server receives call and internally executes CLI
-3. CLI makes HTTP requests to orchestrator REST API (`/pm/tasks`)
+3. CLI makes HTTP requests to agent-platform REST API (`/pm/tasks`)
 4. Orchestrator creates CodeRun/DocsRun custom resources
 5. Dedicated Kubernetes controllers reconcile CRDs with idempotent job management
 6. Controllers deploy Claude agents as Jobs with workspace isolation
@@ -45,10 +45,10 @@ helm repo add 5dlabs https://5dlabs.github.io/platform
 helm repo update
 
 # Install Custom Resource Definitions (CRDs) first
-kubectl apply -f https://raw.githubusercontent.com/5dlabs/platform/main/infra/charts/orchestrator/crds/platform-crds.yaml
+kubectl apply -f https://raw.githubusercontent.com/5dlabs/platform/main/infra/charts/agent-platform/crds/platform-crds.yaml
 
-# Install the orchestrator
-helm install orchestrator 5dlabs/orchestrator --namespace orchestrator --create-namespace
+# Install the agent-platform
+helm install agent-platform 5dlabs/agent-platform --namespace agent-platform --create-namespace
 
 # Setup agent secrets (interactive)
 wget https://raw.githubusercontent.com/5dlabs/platform/main/infra/scripts/setup-agent-secrets.sh
@@ -63,7 +63,7 @@ chmod +x setup-agent-secrets.sh
 - Anthropic API Key
 
 **What you get:**
-- Complete orchestrator platform deployed to Kubernetes
+- Complete agent-platform platform deployed to Kubernetes
 - REST API for task management
 - Separate Kubernetes controllers for CodeRun/DocsRun resources with TTL-safe reconciliation
 - Agent workspace management and isolation with persistent volumes
@@ -87,7 +87,7 @@ helm upgrade --install twingate-weightless-hummingbird twingate/connector \
   --set connector.refreshToken="your-refresh-token"
 ```
 
-**Important**: After installation, add your Kubernetes service CIDR as resources in TwinGate admin panel. This enables the MCP tools to reach the orchestrator service using internal Kubernetes service URLs (e.g., `http://orchestrator.orchestrator.svc.cluster.local`) from anywhere.
+**Important**: After installation, add your Kubernetes service CIDR as resources in TwinGate admin panel. This enables the MCP tools to reach the agent-platform service using internal Kubernetes service URLs (e.g., `http://agent-platform.agent-platform.svc.cluster.local`) from anywhere.
 
 ### Install CLI Tools
 
@@ -102,7 +102,7 @@ fdl --help       # CLI tool for direct API calls
 ```
 
 **What you get:**
-- `fdl` - Command-line tool for direct orchestrator API calls
+- `fdl` - Command-line tool for direct agent-platform API calls
 - `fdl-mcp` - MCP server that integrates with Cursor/Claude
 - Multi-platform support (Linux x64/ARM64, macOS Intel/Apple Silicon, Windows x64)
 - Automatic installation to system PATH
@@ -136,14 +136,14 @@ After installing the CLI tools, configure Cursor to use the MCP server by creati
 3. Restart Cursor to load the MCP server
 4. The `docs()` and `task()` functions will be available in Claude conversations
 
-**Important**: The MCP server connects to your deployed orchestrator service. Ensure your orchestrator is accessible from your development environment (either locally or via TwinGate for remote clusters).
+**Important**: The MCP server connects to your deployed agent-platform service. Ensure your agent-platform is accessible from your development environment (either locally or via TwinGate for remote clusters).
 
 ### Building from Source (Development)
 
 ```bash
 # Build from source
 git clone https://github.com/5dlabs/platform.git
-cd platform/orchestrator
+cd platform/agent-platform
 
 # Build both CLI and MCP server
 cargo build --release --bin fdl --bin fdl-mcp
@@ -259,7 +259,7 @@ Complete parameter reference for both MCP tools.
 
 The platform uses a template system to customize Claude agent behavior, settings, and prompts. Templates are Handlebars (`.hbs`) files that get rendered with task-specific data.
 
-**Model Defaults**: The orchestrator provides server-side model defaults (`claude-opus-4-20250514` for docs, `claude-sonnet-4-20250514` for code tasks) that can be overridden via MCP parameters or CLI arguments.
+**Model Defaults**: The agent-platform provides server-side model defaults (`claude-opus-4-20250514` for docs, `claude-sonnet-4-20250514` for code tasks) that can be overridden via MCP parameters or CLI arguments.
 
 ### Template Architecture
 
@@ -283,10 +283,10 @@ Edit the settings template files directly:
 
 ```bash
 # For docs generation agents
-vim infra/charts/orchestrator/claude-templates/docs/settings.json.hbs
+vim infra/charts/agent-platform/claude-templates/docs/settings.json.hbs
 
 # For code implementation agents
-vim infra/charts/orchestrator/claude-templates/code/settings.json.hbs
+vim infra/charts/agent-platform/claude-templates/code/settings.json.hbs
 ```
 
 Settings control:
@@ -304,7 +304,7 @@ See [Claude Code Settings](https://docs.anthropic.com/en/docs/claude-code/settin
 
 ```bash
 # Edit the docs prompt template
-vim infra/charts/orchestrator/claude-templates/docs/prompt.md.hbs
+vim infra/charts/agent-platform/claude-templates/docs/prompt.md.hbs
 ```
 
 **For code tasks** (affects specific task implementation):
@@ -322,10 +322,10 @@ Hooks are shell scripts that run during agent execution. Add new hook files to t
 
 ```bash
 # Create new hook script (docs example)
-vim infra/charts/orchestrator/claude-templates/docs/hooks/my-custom-hook.sh.hbs
+vim infra/charts/agent-platform/claude-templates/docs/hooks/my-custom-hook.sh.hbs
 
 # Create new hook script (code example)
-vim infra/charts/orchestrator/claude-templates/code/hooks/my-custom-hook.sh.hbs
+vim infra/charts/agent-platform/claude-templates/code/hooks/my-custom-hook.sh.hbs
 ```
 
 Hook files are automatically discovered and rendered. Ensure the hook name matches any references in your settings templates.
@@ -334,14 +334,14 @@ See [Claude Code Hooks Guide](https://docs.anthropic.com/en/docs/claude-code/hoo
 
 #### 4. Deploying Template Changes
 
-After editing any template files, redeploy the orchestrator:
+After editing any template files, redeploy the agent-platform:
 
 ```bash
 # Deploy template changes
-helm upgrade orchestrator . -n orchestrator
+helm upgrade agent-platform . -n agent-platform
 
 # Verify ConfigMap was updated
-kubectl get configmap claude-templates-configmap -n orchestrator -o yaml
+kubectl get configmap claude-templates-configmap -n agent-platform -o yaml
 ```
 
 **Important**: Template changes only affect new agent jobs. Running jobs continue with their original templates.
@@ -389,7 +389,7 @@ For more details, see the [LICENSE](LICENSE) file.
 
 ## Related Projects
 
-- **[Task Master AI](https://github.com/eyaltoledano/claude-task-master)** - The AI-powered task management system that works perfectly with this orchestrator platform. Task Master AI helps you break down complex projects into manageable tasks, which can then be implemented using this platform's `task()` MCP tool.
+- **[Task Master AI](https://github.com/eyaltoledano/claude-task-master)** - The AI-powered task management system that works perfectly with this agent-platform platform. Task Master AI helps you break down complex projects into manageable tasks, which can then be implemented using this platform's `task()` MCP tool.
 
 ## Roadmap
 

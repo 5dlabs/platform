@@ -10,7 +10,7 @@ metadata:
   labels:
     app.kubernetes.io/name: docsrun-template
     app.kubernetes.io/part-of: platform
-    orchestrator.platform/template-type: docsrun
+    agents.platform/template-type: docsrun
 spec:
   # Define input parameters that match the MCP server interface
   arguments:
@@ -61,7 +61,7 @@ spec:
         action: create
         setOwnerReference: true
         manifest: |
-          apiVersion: orchestrator.platform/v1
+          apiVersion: agents.platform/v1
           kind: DocsRun
           metadata:
             generateName: "docsrun-{{workflow.parameters.github-user}}-"
@@ -83,7 +83,7 @@ spec:
       resource:
         action: get
         manifest: |
-          apiVersion: orchestrator.platform/v1
+          apiVersion: agents.platform/v1
           kind: DocsRun
           metadata:
             name: "{{inputs.parameters.docsrun-name}}"

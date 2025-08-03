@@ -145,10 +145,10 @@ rbac:
   namespaced: true
   rules:
     # CodeRun and DocsRun CRD management
-    - apiGroups: ["orchestrator.platform"]
+    - apiGroups: ["agents.platform"]
       resources: ["coderuns", "docsruns"]
       verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
-    - apiGroups: ["orchestrator.platform"]
+    - apiGroups: ["agents.platform"]
       resources: ["coderuns/status", "docsruns/status"]
       verbs: ["get", "update", "patch"]
     # Job management in agent-platform namespace

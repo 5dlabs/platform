@@ -5,7 +5,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(CustomResource, Deserialize, Serialize, Clone, Debug, JsonSchema)]
-#[kube(group = "orchestrator.platform", version = "v1", kind = "DocsRun")]
+#[kube(group = "agents.platform", version = "v1", kind = "DocsRun")]
 #[kube(namespaced)]
 #[kube(status = "DocsRunStatus")]
 #[kube(printcolumn = r#"{"name":"Phase","type":"string","jsonPath":".status.phase"}"#)]

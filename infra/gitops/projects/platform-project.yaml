@@ -75,7 +75,7 @@ spec:
       kind: MutatingWebhookConfiguration
     - group: 'admissionregistration.k8s.io'
       kind: ValidatingWebhookConfiguration
-    - group: 'orchestrator.platform'
+    - group: 'agents.platform'
       kind: '*'
     - group: 'actions.github.com'
       kind: '*'
@@ -98,7 +98,7 @@ spec:
       kind: '*'
     - group: 'argoproj.io'
       kind: '*'
-    - group: 'orchestrator.platform'
+    - group: 'agents.platform'
       kind: '*'
     - group: 'monitoring.coreos.com'
       kind: '*'

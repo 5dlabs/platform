@@ -50,7 +50,7 @@ rules:
     verbs: ["get", "list", "watch"]
   
   # TaskRun monitoring
-  - apiGroups: ["orchestrator.platform"]
+  - apiGroups: ["agents.platform"]
     resources: ["coderuns", "docsruns"]
     verbs: ["get", "list", "watch"]
 ---

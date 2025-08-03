@@ -10,7 +10,7 @@ metadata:
   labels:
     app.kubernetes.io/name: coderun-template
     app.kubernetes.io/part-of: platform
-    orchestrator.platform/template-type: coderun
+    agents.platform/template-type: coderun
 spec:
   # Define input parameters that match the MCP server interface
   arguments:
@@ -79,7 +79,7 @@ spec:
         action: create
         setOwnerReference: true
         manifest: |
-          apiVersion: orchestrator.platform/v1
+          apiVersion: agents.platform/v1
           kind: CodeRun
           metadata:
             generateName: "coderun-{{workflow.parameters.task-id}}-{{workflow.parameters.service-id}}-"
@@ -109,7 +109,7 @@ spec:
       resource:
         action: get
         manifest: |
-          apiVersion: orchestrator.platform/v1
+          apiVersion: agents.platform/v1
           kind: CodeRun
           metadata:
             name: "{{inputs.parameters.coderun-name}}"

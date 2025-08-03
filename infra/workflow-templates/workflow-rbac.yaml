@@ -38,7 +38,7 @@ rules:
     verbs: ["create", "patch"]
   
   # Orchestrator CRDs (for creating DocsRun/CodeRun from workflows)
-  - apiGroups: ["orchestrator.platform"]
+  - apiGroups: ["agents.platform"]
     resources: ["docsruns", "coderuns"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
