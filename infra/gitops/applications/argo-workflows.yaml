@@ -33,6 +33,8 @@ spec:
             archivePath: /tmp/artifacts
         persistence: {}
         server:
+          authModes:
+            - server
           service:
             type: NodePort
             nodePort: 30081
