@@ -270,11 +270,11 @@ jobs:
           # Force ArgoCD application refresh and sync
           kubectl patch application orchestrator -n argocd --type merge -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}'
           
-          # Wait for sync to complete
-          echo "⏳ Waiting for ArgoCD sync to complete..."
-          kubectl wait --for=condition=Synced application/orchestrator -n argocd --timeout=300s || echo "Sync timeout - continuing anyway"
+          # Give ArgoCD time to process the sync (can't wait due to permissions)
+          echo "⏳ ArgoCD sync triggered, waiting 30s for processing..."
+          sleep 30
           
-          echo "✅ ArgoCD sync completed"
+          echo "✅ ArgoCD sync triggered successfully"
 
       - name: Verify deployment
         run: |
