@@ -1,6 +1,6 @@
 # Simplified Rust builder image for fast CI builds with PVC caching
-# Based on summerwind/actions-runner-dind to include GitHub Actions runner software
-FROM summerwind/actions-runner-dind:latest
+# Based on official GitHub Actions Runner Controller (ARC) image
+FROM ghcr.io/actions/actions-runner:latest
 
 # Switch to root for installations
 USER root
@@ -9,10 +9,13 @@ USER root
 RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
     && echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-15 main" >> /etc/apt/sources.list.d/llvm.list
 
-# Install system dependencies in a single layer for better caching
+# Install Docker CE repository and system dependencies in a single layer for better caching
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y \
+    # Add Docker's official GPG key and repository
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
+    && apt-get update && apt-get install -y \
     # Build essentials (some may already be installed)
     build-essential \
     pkg-config \
@@ -22,6 +25,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     wget \
     git \
     unzip \
+    # Docker Engine for container builds
+    docker-ce \
+    docker-ce-cli \
+    containerd.io \
+    docker-buildx-plugin \
+    docker-compose-plugin \
     # Clang for mold linker (from LLVM repo)
     clang-15 \
     lld-15 \
@@ -127,8 +136,9 @@ git-fetch-with-cli = true
 jobs = 16
 EOF
 
-# Set ownership
-RUN chown -R runner:runner /home/runner
+# Add runner to docker group and set ownership
+RUN usermod -aG docker runner \
+    && chown -R runner:runner /home/runner
 
 # Environment variables for PVC-based caching
 # These will be overridden by the workflow to point to PVC mounts
@@ -140,6 +150,7 @@ ENV RUSTC_WRAPPER="sccache"
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD which rustc && which cargo && which sccache || exit 1
+    CMD which rustc && which cargo && which sccache && which docker || exit 1
 
-# Use the default entrypoint from summerwind image
+# Use the default entrypoint from GitHub ARC image
+# The official ARC image already has the proper entrypoint for runner setup
