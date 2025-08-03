@@ -31,9 +31,10 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use core::controllers::task_controller::TaskController;
+use core::controllers::task_controller::run_task_controller;
+use kube::Client;
 use serde_json::{json, Value};
-use std::sync::Arc;
+use std::time::Duration;
 use tokio::signal;
 use tower::ServiceBuilder;
 use tower_http::{
@@ -41,12 +42,12 @@ use tower_http::{
     timeout::TimeoutLayer,
     trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
-use tracing::{info, warn, Level};
+use tracing::{info, Level};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Clone)]
 struct AppState {
-    controller: Arc<TaskController>,
+    client: Client,
 }
 
 #[tokio::main]
@@ -66,14 +67,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = kube::Client::try_default().await?;
     info!("Connected to Kubernetes cluster");
 
-    let controller = Arc::new(TaskController::new(client.clone()));
-    let state = AppState { controller: controller.clone() };
+    let state = AppState { client: client.clone() };
 
     // Start the controller in the background
     let controller_handle = {
-        let controller = controller.clone();
+        let client = client.clone();
         tokio::spawn(async move {
-            if let Err(e) = controller.run().await {
+            if let Err(e) = run_task_controller(client, "controller".to_string()).await {
                 tracing::error!("Controller error: {}", e);
             }
         })
@@ -94,7 +94,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .on_response(DefaultOnResponse::new().level(Level::INFO)),
                 )
                 .layer(CorsLayer::permissive())
-                .layer(TimeoutLayer::from_secs(60)),
+                .layer(TimeoutLayer::new(Duration::from_secs(60))),
         )
         .with_state(state);
 
@@ -122,7 +122,7 @@ async fn health_check() -> Json<Value> {
     }))
 }
 
-async fn readiness_check(State(state): State<AppState>) -> Result<Json<Value>, StatusCode> {
+async fn readiness_check(State(_state): State<AppState>) -> Result<Json<Value>, StatusCode> {
     // Check if controller is ready (basic check)
     Json(json!({
         "status": "ready",
