@@ -29,8 +29,6 @@ spec:
     path: charts/gha-runner-scale-set
     
     helm:
-      valueFiles: 
-        - https://raw.githubusercontent.com/5dlabs/platform/argo/infra/runner-cache/values.yaml
       parameters:
         # GitHub Configuration
         - name: githubConfigUrl
@@ -52,6 +50,20 @@ spec:
         # Runner labels for compatibility with existing workflows  
         - name: runnerGroup
           value: "Default"
+        # Custom rust-builder image configuration
+        - name: template.spec.containers[0].image
+          value: "ghcr.io/5dlabs/platform/rust-builder:latest"
+        - name: template.spec.containers[0].imagePullPolicy
+          value: "Always"
+        # Volume configuration - emptyDir for work, PVC for cache
+        - name: template.spec.volumes[0].name
+          value: "work"
+        - name: template.spec.volumes[0].emptyDir.sizeLimit
+          value: "1Gi"
+        - name: template.spec.volumes[1].name
+          value: "cache-volume"
+        - name: template.spec.volumes[1].persistentVolumeClaim.claimName
+          value: "runner-cache-pvc"
   
   destination:
     server: https://kubernetes.default.svc
