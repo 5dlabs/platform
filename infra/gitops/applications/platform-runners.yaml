@@ -38,6 +38,11 @@ spec:
           value: "github-pat"
         - name: runnerScaleSetName
           value: "platform-runners"
+        # Controller Configuration
+        - name: controllerServiceAccount.name
+          value: "arc-gha-rs-controller"
+        - name: controllerServiceAccount.namespace
+          value: "arc-systems"
   
   destination:
     server: https://kubernetes.default.svc
