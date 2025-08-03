@@ -79,6 +79,13 @@ spec:
                 value: "true"
               - name: ACTIONS_RUNNER_PRINT_LOG_TO_STDOUT
                 value: "true"
+              volumeMounts:
+              - name: rust-cache
+                mountPath: /cache
+            volumes:
+            - name: rust-cache
+              persistentVolumeClaim:
+                claimName: runner-cache-pvc
   
   destination:
     server: https://kubernetes.default.svc
