@@ -88,66 +88,100 @@
       {
         "id": 2,
         "title": "Configure Argo Workflows Infrastructure",
-        "description": "Configure Argo Workflows in the Kubernetes cluster with necessary service accounts, persistent volumes, and resource quotas for MCP server integration.",
+        "description": "Implement the complete Argo Workflows MCP server migration as outlined in docs/ARGO_WORKFLOWS_MCP_MIGRATION.md, including infrastructure configuration, new server implementation, and gradual migration strategy.",
         "status": "pending",
         "dependencies": [],
         "priority": "high",
-        "details": "Since Argo Workflows is already installed and running, focus on configuring it for our specific use case. Create service accounts with appropriate RBAC permissions following least privilege principle for workflow execution. Set up persistent volume claims for agent workspaces (using a StorageClass with ReadWriteMany access mode). Configure resource quotas and limits for the workflows namespace to ensure fair resource allocation. Ensure the Argo Workflows API is properly exposed and accessible for MCP server integration. Create the directory structure in infra/workflows/ for workflow templates. Configure metrics collection for Prometheus integration.",
-        "testStrategy": "Verify Argo Workflows API is accessible from the MCP server. Test running a simple workflow to validate configuration. Confirm persistent volumes are correctly mounted and accessible by agent workspaces. Validate resource quotas are enforced when running multiple workflows. Test service account permissions with various operations to ensure proper access control.",
+        "details": "This task now encompasses the full migration from the current Rust API architecture to an Argo Workflows-based system. Create a new fdl-mcp-argo server that will run alongside the existing fdl-mcp server. Configure Argo Workflows with necessary service accounts, persistent volumes, and resource quotas. Implement an Argo Workflows client for workflow submission and monitoring. Create workflow templates for CodeRun and DocsRun operations. Migrate CLI functionality into the MCP server, including auto-detection and file generation. Implement parallel operation for comparison testing between the old and new systems. Plan for gradual traffic shifting with the ability to roll back if issues arise. The migration strategy should enable a zero-risk transition with eventual cleanup of the legacy system once the migration is complete.",
+        "testStrategy": "Verify Argo Workflows API is accessible from the new MCP server. Test running workflows for both CodeRun and DocsRun operations. Confirm persistent volumes are correctly mounted and accessible by agent workspaces. Validate resource quotas are enforced when running multiple workflows. Test service account permissions with various operations to ensure proper access control. Implement comparison testing between old and new systems to verify identical outputs. Test traffic shifting mechanisms to ensure seamless transition. Validate rollback procedures in case of issues.",
         "subtasks": [
           {
             "id": 1,
-            "title": "Create service accounts for workflow execution",
-            "description": "Create dedicated service accounts with appropriate RBAC permissions following the least privilege principle.",
-            "status": "pending",
+            "title": "Set up Kubernetes Infrastructure for Argo Workflows",
+            "description": "Configure the necessary Kubernetes resources for Argo Workflows, including namespaces, service accounts, RBAC permissions, and resource quotas.",
             "dependencies": [],
-            "details": "",
-            "testStrategy": ""
+            "details": "Create a new namespace 'argo-workflows' for Argo Workflows components. Define service accounts with appropriate RBAC permissions for workflow execution. Configure resource quotas to limit CPU and memory usage per workflow. Set up network policies to secure workflow communication. Create persistent volume claims for workflow artifacts storage. Define ConfigMaps for Argo Workflows configuration settings.",
+            "status": "done",
+            "testStrategy": "Verify namespace creation and RBAC permissions using kubectl. Test service account permissions by running a simple workflow. Validate resource quotas by attempting to exceed limits. Confirm persistent volumes are correctly provisioned and accessible."
           },
           {
             "id": 2,
-            "title": "Set up persistent volumes for agent workspaces",
-            "description": "Configure persistent volume claims using a StorageClass with ReadWriteMany access mode for agent workspaces.",
-            "status": "pending",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
+            "title": "Install and Configure Argo Workflows Controller",
+            "description": "Deploy the Argo Workflows controller and UI components with production-ready configuration.",
+            "dependencies": [
+              "2.1"
+            ],
+            "details": "Deploy Argo Workflows controller using Helm chart or YAML manifests. Configure controller settings for high availability and performance. Set up the Argo Workflows UI with appropriate authentication. Configure artifact repository integration with MinIO or S3. Set up metrics collection for Prometheus integration. Configure logging with appropriate retention policies. Implement controller resource limits and requests.\n<info added on 2025-08-02T22:05:18.407Z>\n## Verification Results\n\n✅ VERIFIED WORKING:\n- Controller and server pods running and healthy in argo namespace\n- API accessible at argo-workflows-server.argo.svc.cluster.local:2746\n- Basic workflow execution tested successfully (test template created, submitted, completed)\n- Authentication configured (--auth-mode=server, no auth required)\n- Service accounts and RBAC properly configured for orchestrator namespace\n- Artifact repository configured with filesystem storage (/tmp/artifacts)\n- All CRDs installed (workflows, workflowtemplates, etc.)\n- Deployed via ArgoCD application with automated sync\n\n⚠️ PRODUCTION RECOMMENDATION:\n- Controller deployment currently has empty resource limits (resources: {})\n- For production use, should add resource requests/limits to controller deployment\n- This can be done via ArgoCD application Helm values if needed later\n\n✅ READY FOR NEXT PHASE:\nThe Argo Workflows infrastructure is production-functional and ready for workflow template creation and client implementation. The controller can successfully execute workflows as demonstrated by test execution.\n</info added on 2025-08-02T22:05:18.407Z>",
+            "status": "done",
+            "testStrategy": "Verify controller and UI pods are running correctly. Test UI access with authentication. Confirm artifact repository integration by uploading and downloading test files. Validate metrics are being collected by Prometheus."
           },
           {
             "id": 3,
-            "title": "Configure resource quotas for workflows namespace",
-            "description": "Set up resource quotas and limits to ensure fair resource allocation and prevent resource exhaustion.",
-            "status": "pending",
+            "title": "Create Project Structure for fdl-mcp-argo Server",
+            "description": "Set up the new fdl-mcp-argo server project structure, including directory layout, Cargo.toml configuration, and build system integration.",
             "dependencies": [],
-            "details": "",
-            "testStrategy": ""
+            "details": "Create a new directory 'fdl-mcp-argo' in the project root. Set up Cargo.toml with necessary dependencies including Argo Workflows client libraries. Configure build scripts and Dockerfile for the new server. Set up shared code modules between existing MCP server and new Argo-based server. Implement configuration loading from environment variables and files. Create initial server structure with health check endpoints.",
+            "status": "done",
+            "testStrategy": "Verify project builds successfully with cargo build. Test Docker image creation and execution. Validate configuration loading from different sources. Confirm health check endpoints respond correctly."
           },
           {
             "id": 4,
-            "title": "Ensure Argo Workflows API accessibility for MCP server",
-            "description": "Configure and test API access to ensure the MCP server can interact with Argo Workflows.",
-            "status": "pending",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
+            "title": "Implement Argo Workflows Client in Rust",
+            "description": "Develop a Rust client library for interacting with the Argo Workflows API, including workflow submission, monitoring, and log retrieval.",
+            "dependencies": [
+              "2.2",
+              "2.3"
+            ],
+            "details": "Implement Rust client for Argo Workflows API using reqwest or similar HTTP client. Create strongly-typed models for Argo Workflows resources (Workflow, WorkflowTemplate, etc.). Implement authentication using service account tokens. Create methods for submitting workflows from templates with parameters. Develop functions for monitoring workflow status and retrieving logs. Implement error handling with appropriate retry logic. Add circuit breaker pattern for API resilience.\n<info added on 2025-08-02T23:35:05.675Z>\nCOMPLETED: Argo Workflows Client implementation finished and tested successfully. API works perfectly with curl - workflows submit correctly, create DocsRun/CodeRun CRDs, and controller processes them. Authentication working with service account tokens. Ready for MCP server integration testing.\n\nNEXT: External Secrets Operator setup needed for API key management in GitOps workflow.\n</info added on 2025-08-02T23:35:05.675Z>",
+            "status": "done",
+            "testStrategy": "Write unit tests with mocked API responses. Create integration tests against the deployed Argo Workflows instance. Test error scenarios and retry logic. Verify authentication works correctly. Test log streaming functionality."
           },
           {
             "id": 5,
-            "title": "Create directory structure for workflow templates",
-            "description": "Set up the infra/workflows/ directory structure for organizing workflow templates.",
-            "status": "pending",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
+            "title": "Create Workflow Templates for CodeRun and DocsRun",
+            "description": "Design and implement Argo Workflow templates for CodeRun and DocsRun operations with appropriate resource configurations.",
+            "dependencies": [
+              "2.2"
+            ],
+            "details": "Create WorkflowTemplate CRDs for CodeRun operations with steps for git operations, compilation, and execution. Implement DocsRun workflow templates with documentation generation steps. Configure resource requests and limits for each template. Set up artifact handling for code and documentation outputs. Implement parameterization for different execution environments. Configure timeout and retry policies. Set up volume mounts for persistent storage.\n<info added on 2025-08-02T22:20:54.935Z>\nSuccessfully completed Task 2.5 - Created and deployed workflow templates for CodeRun and DocsRun operations. Both templates are now available in the orchestrator namespace and accessible through the Argo Workflows API. The templates use a single-container approach compatible with existing Handlebars container scripts and include proper parameterization matching the MCP server interface. Secret name resolution is confirmed working, with the controller correctly handling github-ssh-{user} and github-token-{user} mapping. Templates can be verified in the Argo Workflows UI, with volume mounts and resource limits appropriately configured. Implementation followed GitOps best practices to avoid sync drift, resolving an App of Apps sync issue in the process. Both coderun-template and docsrun-template are now ready for task implementation and documentation generation workflows respectively.\n</info added on 2025-08-02T22:20:54.935Z>",
+            "status": "done",
+            "testStrategy": "Deploy templates to Argo Workflows and verify they appear in the UI. Test template execution with sample parameters. Validate resource constraints are applied correctly. Confirm artifacts are properly stored and retrievable."
           },
           {
             "id": 6,
-            "title": "Configure metrics collection for Prometheus",
-            "description": "Set up metrics collection for Argo Workflows to enable monitoring via Prometheus.",
+            "title": "Migrate CLI Functionality to MCP Server",
+            "description": "Move git operations, parameter parsing, and documentation preparation from CLI to the MCP server.",
+            "dependencies": [
+              "2.3",
+              "2.4"
+            ],
+            "details": "Implement git operations (clone, checkout, etc.) in the MCP server. Migrate parameter parsing logic from CLI to server-side code. Implement documentation preparation and processing in the server. Create APIs for triggering these operations from clients. Set up environment variable handling and configuration. Implement file generation capabilities in the server. Add logging and monitoring for migrated operations.\n<info added on 2025-08-02T23:17:12.340Z>\nSCOPE CHANGE: Implement a hybrid approach instead of full migration to MCP server. Maintain the existing controller/MCP architecture while adding Argo Workflows client integration to the controller. This integration will enable the controller to submit multi-step workflows when complex orchestration is needed. The controller will gain the ability to trigger implementation → deploy → test sequences through Argo Workflows, while the MCP server will continue to function as-is by calling the controller API. Focus on building the necessary interfaces between the controller and Argo Workflows to support this hybrid architecture.\n</info added on 2025-08-02T23:17:12.340Z>",
             "status": "pending",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
+            "testStrategy": "Write unit tests for git operations and parameter parsing. Create integration tests for the complete workflow from API call to git operations. Test documentation preparation with various input formats. Verify file generation produces correct outputs."
+          },
+          {
+            "id": 7,
+            "title": "Implement Parallel Operation and Comparison Testing",
+            "description": "Set up both MCP servers to run simultaneously and implement comparison testing between old and new systems.",
+            "dependencies": [
+              "2.4",
+              "2.5",
+              "2.6"
+            ],
+            "details": "Configure both fdl-mcp and fdl-mcp-argo servers to run in parallel. Implement a proxy layer to route requests to both systems. Create comparison logic to validate matching results between systems. Set up logging and metrics to track differences. Implement alerting for discrepancies. Create dashboards for monitoring parallel operation. Develop tools for analyzing performance differences.\n<info added on 2025-08-02T23:17:25.267Z>\nSCOPE CHANGE: Implement a hybrid enhancement approach where the existing controller remains the primary system. Integrate Argo Workflows as an optional enhancement specifically for multi-step pipelines. Configure fdl-mcp-argo server to run alongside the existing fdl-mcp server, but only for handling complex workflow scenarios. Implement routing logic to direct multi-step pipeline requests to the Argo-based system while keeping simple jobs on the existing controller. Create comparison testing framework to validate both approaches, focusing on correctness and performance metrics between simple jobs (existing controller) and complex pipelines (Argo workflows). Set up logging and metrics to track system behavior and performance differences. Develop integration points between the two systems to ensure seamless operation from the user perspective. Create documentation explaining when each system is used and how they complement each other.\n</info added on 2025-08-02T23:17:25.267Z>",
+            "status": "pending",
+            "testStrategy": "Run identical workloads through both systems and compare results. Test edge cases and error scenarios in both systems. Measure and compare performance metrics. Validate logging and monitoring provides clear visibility into differences."
+          },
+          {
+            "id": 8,
+            "title": "Design and Implement Traffic Shifting Strategy",
+            "description": "Create a gradual migration plan with monitoring and rollback capabilities for transitioning from the old to the new MCP server.",
+            "dependencies": [
+              "2.7"
+            ],
+            "details": "Implement traffic splitting mechanism using Kubernetes services or an API gateway. Create configuration for gradually increasing traffic percentage to the new system. Develop monitoring dashboards specific to migration progress. Implement automated and manual rollback triggers. Set up alerting for migration-specific metrics. Create runbooks for common migration issues. Design cleanup process for the legacy system post-migration.\n<info added on 2025-08-02T23:17:37.299Z>\nImplement intelligent routing strategy between existing controller and Argo Workflows. Develop logic to detect multi-step pipeline workflows and route those to Argo Workflows while keeping single-job requests with the existing controller. Create configuration system to define and control which request types and characteristics trigger pipeline workflows versus simple jobs. Implement routing decision logic based on job complexity, resource requirements, and workflow dependencies. Design the system as an additive enhancement that extends capabilities rather than replacing existing functionality. Develop monitoring for routing decisions and workflow distribution. Create documentation for the routing rules and configuration options. Implement gradual adoption strategy allowing for controlled expansion of Argo Workflows usage over time.\n</info added on 2025-08-02T23:17:37.299Z>",
+            "status": "pending",
+            "testStrategy": "Test traffic shifting with controlled percentages. Verify monitoring correctly shows traffic distribution. Test rollback procedures under various failure scenarios. Validate alerts trigger appropriately when thresholds are exceeded."
           }
         ]
       },
@@ -781,11 +815,26 @@
         ],
         "priority": "high",
         "subtasks": []
+      },
+      {
+        "id": 25,
+        "title": "Document Argo Infrastructure Improvements and Configuration",
+        "description": "Create comprehensive documentation of the Argo infrastructure work completed, including Victoria Metrics fixes, Arc deployment solutions, GitHub runners configuration, and ArgoCD improvements.",
+        "details": "1. Create a dedicated documentation section in the project repository under `docs/infrastructure/argo/` with the following structure:\n   - `overview.md`: High-level summary of the Argo infrastructure components and their relationships\n   - `victoria-metrics.md`: Document the storage permission fixes with fsGroup: 2000 configuration\n   - `arc-deployment.md`: Detail the Actions Runner Controller deployment solutions including:\n     - CRD annotation size limit issues and resolutions\n     - Upgrade process from v0.21.1 to v0.27.6\n     - Runner processing and reconciliation improvements\n   - `github-runners.md`: Document the organization-level GitHub runners configuration:\n     - Setup process for the 3 organization-level runners\n     - GitHub CLI token generation with proper scopes\n     - Verification steps for runner functionality\n   - `argocd-configuration.md`: Document ArgoCD improvements:\n     - StatefulSet volume template modification with Replace=true sync option\n     - Project permissions for actions.summerwind.dev resources\n     - App-of-apps sync conflict resolutions\n     - Metadata version issue solutions\n   - `gitops-management.md`: Detail the GitOps approach for Arc controller and runner components\n   - `troubleshooting.md`: Common issues encountered and their solutions, including:\n     - Legacy namespace cleanup procedures\n     - Phantom pod resolution\n     - Sync conflict debugging\n\n2. Create infrastructure diagrams using a tool like draw.io or Mermaid:\n   - Overall Argo infrastructure architecture\n   - GitHub runners integration flow\n   - ArgoCD application dependency graph\n   - Save diagrams in `docs/infrastructure/argo/diagrams/` and reference them in documentation\n\n3. Document the exact YAML configurations used to resolve each issue, with annotations explaining key settings:\n   - Victoria Metrics storage configuration\n   - Arc controller deployment manifests\n   - GitHub runner configurations\n   - ArgoCD project and application settings\n\n4. Create a migration/upgrade guide for future infrastructure updates based on lessons learned\n\n5. Document the cleanup process for legacy infrastructure components:\n   - Legacy arc-systems-optimized namespace removal\n   - Unused file cleanup procedures\n   - Verification steps for complete removal\n\n6. Create a health check guide for verifying the Argo infrastructure:\n   - ArgoCD application health verification steps\n   - GitHub runner status checks\n   - Monitoring and alerting configuration\n\n7. Document the integration points between ArgoCD and other infrastructure components to provide context for Task 2 (Argo Workflows implementation)",
+        "testStrategy": "1. Have a team member not involved in the infrastructure work attempt to follow the documentation to understand the system:\n   - Ask them to identify each component and its purpose\n   - Have them explain the relationships between components\n   - Collect feedback on unclear sections\n\n2. Verify documentation accuracy by comparing with actual deployed resources:\n   - Run `kubectl get applications -n argocd -o yaml` and verify settings match documentation\n   - Check GitHub organization runners and confirm they match the documented configuration\n   - Verify Victoria Metrics storage configuration matches documentation\n\n3. Test troubleshooting guides by simulating common issues in a development environment:\n   - Intentionally create sync conflicts and follow resolution steps\n   - Modify permissions and use documentation to restore proper access\n   - Verify that all documented commands produce the expected results\n\n4. Create a documentation review checklist and have at least two team members review:\n   - Technical accuracy\n   - Completeness (all major infrastructure work covered)\n   - Clarity and organization\n   - Proper formatting and readability\n\n5. Validate diagrams against the actual deployed infrastructure:\n   - Confirm all components are represented\n   - Verify connection paths are accurate\n   - Ensure resource names and namespaces match actual deployment\n\n6. Test the health check guide by having a new team member perform the checks:\n   - Verify they can successfully determine system health\n   - Confirm all 15 ArgoCD applications show as healthy\n   - Validate GitHub runner visibility",
+        "status": "done",
+        "dependencies": [
+          1,
+          11,
+          18
+        ],
+        "priority": "high",
+        "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-08-02T17:05:40.207Z",
-      "updated": "2025-08-02T18:03:23.318Z",
+      "updated": "2025-08-02T22:31:31.929Z",
       "description": "Tasks for master context"
     }
   }
