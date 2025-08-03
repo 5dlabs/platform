@@ -356,9 +356,25 @@ impl<'a> CodeResourceManager<'a> {
         let task_id = code_run.spec.task_id;
         let context_version = code_run.spec.context_version;
 
-        format!("code-{namespace}-{name}-{uid_suffix}-t{task_id}-v{context_version}")
+        let job_name = format!("code-{namespace}-{name}-{uid_suffix}-t{task_id}-v{context_version}")
             .replace(['_', '.'], "-")
-            .to_lowercase()
+            .to_lowercase();
+
+        // Kubernetes has a 63-character limit for resource names and labels
+        // Truncate if necessary while preserving uniqueness
+        if job_name.len() > 63 {
+            let uid_and_suffix = format!("-{uid_suffix}-t{task_id}-v{context_version}");
+            let available_len = 63 - uid_and_suffix.len();
+            let prefix = format!("code-{namespace}-{name}").replace(['_', '.'], "-").to_lowercase();
+            
+            if prefix.len() > available_len {
+                format!("{}-{uid_suffix}-t{task_id}-v{context_version}", &prefix[..available_len])
+            } else {
+                job_name
+            }
+        } else {
+            job_name
+        }
     }
 
     fn build_job_spec(&self, code_run: &CodeRun, job_name: &str, cm_name: &str) -> Result<Job> {
