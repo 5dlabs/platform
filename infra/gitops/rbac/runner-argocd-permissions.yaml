@@ -12,6 +12,12 @@ rules:
   resources: ["secrets"]
   verbs: ["get", "list"]
   resourceNames: ["argocd-initial-admin-secret"]
+- apiGroups: [""]
+  resources: ["pods", "services", "deployments"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
 
 ---
 # ClusterRoleBinding to grant permissions to the runner service account
