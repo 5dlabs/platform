@@ -16,27 +16,17 @@ spec:
   # Project configuration
   project: platform
   
-  # Source configuration - use official ToolMan chart
-  source:
-    repoURL: https://github.com/5dlabs/toolman
-    targetRevision: main
-    path: charts/toolman
-    
-    # Helm configuration
-    helm:
-      valueFiles:
-        - values.yaml
-      
-      # Override values for agent-platform deployment
-      parameters:
-        - name: persistence.enabled
-          value: "true"
-        - name: persistence.storageClassName
-          value: "local-path"
-        - name: persistence.size
-          value: "10Gi"
-        - name: serviceAccount.create
-          value: "true"
+  # Source configuration - use official ToolMan chart with custom values
+  sources:
+    - repoURL: https://github.com/5dlabs/toolman
+      targetRevision: main
+      path: charts/toolman
+      helm:
+        valueFiles:
+          - $values/infra/charts/toolman-values.yaml
+    - repoURL: https://github.com/jonathonfritz/platform.git
+      targetRevision: argo
+      ref: values
   
   # Destination configuration
   destination:
