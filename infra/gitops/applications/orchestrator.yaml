@@ -37,19 +37,19 @@ spec:
         - name: image.tag
           value: d2b8249
         - name: image.pullPolicy
-          value: 8b168da
+          value: Always
         
         # Skip CRDs - managed by existing Helm release
         
         # Resource configuration
         - name: resources.limits.cpu
-          value: 8b168da
+          value: 1000m
         - name: resources.limits.memory
-          value: 8b168da
+          value: 1Gi
         - name: resources.requests.cpu
-          value: 8b168da
+          value: 500m
         - name: resources.requests.memory
-          value: 8b168da
+          value: 512Mi
         
         # Monitoring
         - name: metrics.enabled
