@@ -42,6 +42,11 @@ spec:
           metadata:
             labels:
               runner-label: "k8s-runner"
+          spec:
+            containers:
+            - name: listener
+              image: ghcr.io/actions/actions-runner-controller/gha-runner-scale-set-listener:0.12.1
+              imagePullPolicy: Always
         
         controllerServiceAccount:
           name: "arc-gha-rs-controller"
