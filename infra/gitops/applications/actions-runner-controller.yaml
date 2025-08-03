@@ -22,11 +22,7 @@ spec:
     
     helm:
       valueFiles: []
-      parameters:
-        - name: replicaCount
-          value: "1"
-        - name: metrics.enableAdditionalMetrics
-          value: "true"
+      parameters: []
   
   destination:
     server: https://kubernetes.default.svc
