@@ -524,22 +524,46 @@ if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
     echo "✓ Copying task documentation from repository's .taskmaster directory"
     
     # Copy task files from .taskmaster/docs/task-{id} to task/ directory
+    # Use docs_project_directory if specified
+    {{#if docs_project_directory}}
+    if [ "{{docs_project_directory}}" = "." ]; then
+        SINGLE_TASK_DIR="/workspace/$REPO_NAME/.taskmaster/docs/task-{{task_id}}"
+    else
+        SINGLE_TASK_DIR="/workspace/$REPO_NAME/{{docs_project_directory}}/.taskmaster/docs/task-{{task_id}}"
+    fi
+    {{else}}
     SINGLE_TASK_DIR="/workspace/$REPO_NAME/.taskmaster/docs/task-{{task_id}}"
+    {{/if}}
     echo "🔍 DEBUG: Looking for task files at: $SINGLE_TASK_DIR"
     
-    # Debug: Check if .taskmaster directory exists
-    echo "🔍 DEBUG: Checking if .taskmaster directory exists..."
-    if [ -d "/workspace/$REPO_NAME/.taskmaster" ]; then
+    # Debug: Check if .taskmaster directory exists (use correct path based on docs_project_directory)
+    {{#if docs_project_directory}}
+    if [ "{{docs_project_directory}}" = "." ]; then
+        TASKMASTER_DIR="/workspace/$REPO_NAME/.taskmaster"
+    else
+        TASKMASTER_DIR="/workspace/$REPO_NAME/{{docs_project_directory}}/.taskmaster"
+    fi
+    {{else}}
+    TASKMASTER_DIR="/workspace/$REPO_NAME/.taskmaster"
+    {{/if}}
+    
+    echo "🔍 DEBUG: Checking if .taskmaster directory exists at: $TASKMASTER_DIR"
+    if [ -d "$TASKMASTER_DIR" ]; then
         echo "✓ .taskmaster directory found"
         echo "🔍 DEBUG: Contents of .taskmaster directory:"
-        ls -la "/workspace/$REPO_NAME/.taskmaster/" || echo "Could not list .taskmaster contents"
+        ls -la "$TASKMASTER_DIR/" || echo "Could not list .taskmaster contents"
         
         echo "🔍 DEBUG: Contents of .taskmaster/docs directory:"
-        ls -la "/workspace/$REPO_NAME/.taskmaster/docs/" || echo "Could not list docs contents"
+        ls -la "$TASKMASTER_DIR/docs/" || echo "Could not list docs contents"
     else
-        echo "❌ .taskmaster directory NOT found at /workspace/$REPO_NAME/.taskmaster"
+        echo "❌ .taskmaster directory NOT found at $TASKMASTER_DIR"
         echo "🔍 DEBUG: Contents of repository root:"
         ls -la "/workspace/$REPO_NAME/" || echo "Could not list repo contents"
+        
+        {{#if docs_project_directory}}
+        echo "🔍 DEBUG: Contents of docs project directory:"
+        ls -la "/workspace/$REPO_NAME/{{docs_project_directory}}/" || echo "Could not list docs project directory contents"
+        {{/if}}
     fi
     
     if [ -d "$SINGLE_TASK_DIR" ]; then
@@ -585,12 +609,12 @@ if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
     else
         echo "❌ CRITICAL: Task {{task_id}} directory not found at: $SINGLE_TASK_DIR"
         echo "🔍 DEBUG: Available directories in .taskmaster/docs:"
-        find "/workspace/$REPO_NAME/.taskmaster" -name "task-*" -type d 2>/dev/null || echo "No task directories found"
+        find "$TASKMASTER_DIR" -name "task-*" -type d 2>/dev/null || echo "No task directories found"
         exit 1
     fi
     
     # Copy architecture.md from docs root
-    ARCH_FILE="/workspace/$REPO_NAME/.taskmaster/docs/architecture.md"
+    ARCH_FILE="$TASKMASTER_DIR/docs/architecture.md"
     if [ -f "$ARCH_FILE" ]; then
         cp "$ARCH_FILE" "$CLAUDE_WORK_DIR/task/"
         echo "✓ Architecture documentation copied"
@@ -599,8 +623,8 @@ if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
     fi
     
     # Copy tasks.json if it exists
-    if [ -f "/workspace/$REPO_NAME/.taskmaster/tasks/tasks.json" ]; then
-        cp "/workspace/$REPO_NAME/.taskmaster/tasks/tasks.json" "$CLAUDE_WORK_DIR/task/"
+    if [ -f "$TASKMASTER_DIR/tasks/tasks.json" ]; then
+        cp "$TASKMASTER_DIR/tasks/tasks.json" "$CLAUDE_WORK_DIR/task/"
         echo "✓ tasks.json copied"
     fi
     
