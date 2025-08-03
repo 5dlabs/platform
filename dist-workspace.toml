@@ -1,5 +1,5 @@
 [workspace]
-members = ["cargo:orchestrator/tools"]
+members = ["cargo:controller/mcp"]
 
 # Config for 'dist'
 [dist]

@@ -1,4 +1,4 @@
-# Orchestrator Production Image - Pre-built Binary
+# Controller Production Image - Pre-built Binary
 # This Dockerfile expects the binary to be pre-built and copied in
 FROM debian:bookworm-slim
 
@@ -18,10 +18,10 @@ RUN useradd -r -u 1000 -m -d /app -s /bin/bash app
 WORKDIR /app
 
 # Copy the pre-built binary
-COPY orchestrator /app/orchestrator
+COPY controller /app/controller
 
 # Make binary executable and change ownership to app user
-RUN chmod +x /app/orchestrator && \
+RUN chmod +x /app/controller && \
     chown -R app:app /app
 
 # Switch to non-root user
@@ -35,4 +35,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
 # Run the application
-CMD ["./orchestrator"]
+CMD ["./controller"]

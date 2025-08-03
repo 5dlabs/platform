@@ -1,3 +1,0 @@
-# Deploy ConfigMap fixes
-
-This commit triggers deployment of orchestrator with ConfigMap deletion fixes.

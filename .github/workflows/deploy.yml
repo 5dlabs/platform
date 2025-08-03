@@ -43,8 +43,8 @@ jobs:
           echo "📦 Deploy version: ${VERSION}"
 
 
-  # Build only orchestrator (skip Claude Code for now)
-  build-orchestrator:
+  # Build only controller (skip Claude Code for now)
+  build-controller:
     needs: [version]
     runs-on: [k8s-runner]
     # No container needed - the Arc runners now have the rust-builder image!
@@ -131,7 +131,7 @@ jobs:
           fi
 
       - name: Build release binary (ultra-fast)
-        working-directory: ./orchestrator
+        working-directory: ./controller
         env:
           CARGO_INCREMENTAL: "0"  # Disable for better sccache hits
           RUSTC_WRAPPER: "sccache"
@@ -141,7 +141,7 @@ jobs:
           CARGO_REGISTRIES_CRATES_IO_PROTOCOL: "sparse"
           CARGO_TARGET_DIR: "/cache/target"  # Build to cache directory for persistence
         run: |
-          echo "🏗️ Building orchestrator binary with pre-warmed dependencies..."
+          echo "🏗️ Building controller binary with pre-warmed dependencies..."
 
           # Show build environment
           echo "Build environment:"
@@ -169,16 +169,16 @@ jobs:
           echo "CARGO_TARGET_DIR is: ${CARGO_TARGET_DIR:-not set}"
           ls -la target/release/ || echo "target/release/ not found"
           ls -la /cache/target/release/ || echo "/cache/target/release/ not found"
-          find target -name "*orchestrator*" -type f 2>/dev/null || echo "No orchestrator files found in target/"
-          find /cache/target -name "*orchestrator*" -type f 2>/dev/null || echo "No orchestrator files found in /cache/target/"
+          find target -name "*controller*" -type f 2>/dev/null || echo "No controller files found in target/"
+          find /cache/target -name "*controller*" -type f 2>/dev/null || echo "No controller files found in /cache/target/"
 
           # Copy binary from cache target dir (where CARGO_TARGET_DIR points)
-          cp /cache/target/release/orchestrator-core orchestrator
+          cp /cache/target/release/controller-core controller
 
           # Show binary info
           echo "📦 Built binary info:"
-          ls -lh orchestrator
-          file orchestrator
+          ls -lh controller
+          file controller
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -193,14 +193,14 @@ jobs:
       - name: Build and push Orchestrator image
         uses: docker/build-push-action@v5
         with:
-          context: ./orchestrator
-          file: ./orchestrator/Dockerfile
+          context: ./controller
+          file: ./controller/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.version }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.short-sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/controller:${{ needs.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/controller:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/controller:${{ needs.version.outputs.short-sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -208,7 +208,7 @@ jobs:
 
   # Deploy immediately
   deploy:
-    needs: [version, build-orchestrator]
+    needs: [version, build-controller]
     runs-on: [k8s-runner]
     steps:
       - uses: actions/checkout@v4
@@ -231,13 +231,13 @@ jobs:
       - name: Update GitOps Configuration
         run: |
           echo "🚀 Updating GitOps configuration with new image tag"
-          echo "New image: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.short-sha }}"
+          echo "New image: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/controller:${{ needs.version.outputs.short-sha }}"
 
           # Update ONLY the image.tag value in the GitOps configuration file
-          sed -i '/name: image\.tag/,/value:/ s|value: .*|value: ${{ needs.version.outputs.short-sha }}|' infra/gitops/applications/orchestrator.yaml
+          sed -i '/name: image\.tag/,/value:/ s|value: .*|value: ${{ needs.version.outputs.short-sha }}|' infra/gitops/applications/controller.yaml
           
           echo "📝 Updated GitOps configuration:"
-          grep -A 2 -B 2 "image.tag" infra/gitops/applications/orchestrator.yaml
+          grep -A 2 -B 2 "image.tag" infra/gitops/applications/controller.yaml
 
       - name: Commit and Push GitOps Update
         run: |
@@ -248,10 +248,10 @@ jobs:
           git config --local user.name "GitHub Action"
           
           # Commit the change
-          git add infra/gitops/applications/orchestrator.yaml
-          git commit -m "deploy: update orchestrator to ${{ needs.version.outputs.short-sha }}
+          git add infra/gitops/applications/controller.yaml
+          git commit -m "deploy: update controller to ${{ needs.version.outputs.short-sha }}
 
-          Automated deployment of orchestrator image with tag ${{ needs.version.outputs.short-sha }}
+          Automated deployment of controller image with tag ${{ needs.version.outputs.short-sha }}
           
           🤖 Generated by GitHub Actions"
           
@@ -268,7 +268,7 @@ jobs:
           sleep 5
           
           # Force ArgoCD application refresh and sync
-          kubectl patch application orchestrator -n argocd --type merge -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}'
+          kubectl patch application controller -n argocd --type merge -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}'
           
           # Give ArgoCD time to process the sync (can't wait due to permissions)
           echo "⏳ ArgoCD sync triggered, waiting 30s for processing..."
@@ -279,12 +279,12 @@ jobs:
       - name: Verify deployment
         run: |
           echo "🔍 Deployment verification..."
-          kubectl get pods -n orchestrator -o wide
-          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=orchestrator -n orchestrator --timeout=120s || true
+          kubectl get pods -n controller -o wide
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=controller -n controller --timeout=120s || true
 
           echo ""
           echo "✅ Deployment complete!"
-          echo "📦 Deployed: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.version.outputs.version }}"
+          echo "📦 Deployed: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/controller:${{ needs.version.outputs.version }}"
           echo "🏷️ Tag: ${{ inputs.tag }}"
 
       - name: Show recent TaskRuns

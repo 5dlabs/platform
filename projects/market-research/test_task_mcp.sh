@@ -6,7 +6,7 @@
 echo "Testing MCP server task functionality for market-research project - Task 1..."
 
 # Path to fdl-mcp binary
-FDL_MCP="./orchestrator/target/release/fdl-mcp"
+FDL_MCP="./controller/target/release/fdl-mcp"
 
 if [[ ! -f "$FDL_MCP" ]]; then
     echo "Error: fdl-mcp binary not found at $FDL_MCP"

@@ -17,7 +17,7 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
-      orchestrator: ${{ steps.filter.outputs.orchestrator }}
+      controller: ${{ steps.filter.outputs.controller }}
       taskrun: ${{ steps.filter.outputs.taskrun }}
       infra: ${{ steps.filter.outputs.infra }}
     steps:
@@ -26,12 +26,12 @@ jobs:
         id: filter
         with:
           filters: |
-            orchestrator:
-              - 'orchestrator/**'
-              - '!orchestrator/**/*.md'
+            controller:
+              - 'controller/**'
+              - '!controller/**/*.md'
             taskrun:
-              - 'orchestrator/core/src/controllers/task_controller/**'
-              - 'orchestrator/core/src/crds/**'
+              - 'controller/core/src/controllers/task_controller/**'
+              - 'controller/core/src/crds/**'
               - 'infra/test-resources/crds/**'
             infra:
               - 'infra/**'
@@ -40,7 +40,7 @@ jobs:
   # Parallel linting and testing
   lint-rust:
     needs: changes
-    if: needs.changes.outputs.orchestrator == 'true' || needs.changes.outputs.taskrun == 'true' || github.event_name == 'push'
+    if: needs.changes.outputs.controller == 'true' || needs.changes.outputs.taskrun == 'true' || github.event_name == 'push'
     runs-on: ubuntu-22.04
     outputs:
       format-needed: ${{ steps.format-check.outputs.format-needed }}
@@ -51,12 +51,12 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: orchestrator -> target
+          workspaces: controller -> target
           shared-key: "rust-cache-ci"
 
       - name: Auto-format code
         id: format-check
-        working-directory: ./orchestrator
+        working-directory: ./controller
         run: |
           echo "🔧 Running cargo fmt to ensure consistent formatting..."
           if ! cargo fmt --all -- --check; then
@@ -70,7 +70,7 @@ jobs:
           fi
 
       - name: Run Clippy
-        working-directory: ./orchestrator
+        working-directory: ./controller
         run: cargo clippy --all-targets --all-features -- -D warnings
 
   # Commit formatting changes (runs on push events when formatting was needed)
@@ -93,7 +93,7 @@ jobs:
           components: rustfmt
 
       - name: Auto-format Rust code
-        working-directory: ./orchestrator
+        working-directory: ./controller
         run: |
           echo "🔧 Auto-formatting Rust code..."
           cargo fmt --all
@@ -125,24 +125,24 @@ jobs:
 
   test-rust:
     needs: changes
-    if: needs.changes.outputs.orchestrator == 'true' || needs.changes.outputs.taskrun == 'true' || github.event_name == 'push'
+    if: needs.changes.outputs.controller == 'true' || needs.changes.outputs.taskrun == 'true' || github.event_name == 'push'
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: orchestrator -> target
+          workspaces: controller -> target
           shared-key: "rust-cache-ci"
 
       - name: Run tests
-        working-directory: ./orchestrator
+        working-directory: ./controller
         run: cargo test --all-features --all-targets
 
   # Integration tests
   integration-tests:
     needs: [lint-rust, test-rust]
-    if: always() && !cancelled() && (needs.changes.outputs.orchestrator == 'true' || needs.changes.outputs.taskrun == 'true' || needs.changes.outputs.infra == 'true' || github.event_name == 'push')
+    if: always() && !cancelled() && (needs.changes.outputs.controller == 'true' || needs.changes.outputs.taskrun == 'true' || needs.changes.outputs.infra == 'true' || github.event_name == 'push')
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -163,7 +163,7 @@ jobs:
 
       - name: Test Helm Chart Structure
         run: |
-          echo "🎯 Testing orchestrator Helm chart..."
+          echo "🎯 Testing controller Helm chart..."
 
           # Install Helm
           curl -fsSL https://get.helm.sh/helm-v3.14.0-linux-amd64.tar.gz | tar xz
@@ -171,15 +171,15 @@ jobs:
           helm version
 
           # Lint the Helm chart
-          helm lint ./infra/charts/orchestrator
+          helm lint ./infra/charts/controller
 
           # Test template generation with different values
           echo "📋 Testing default values..."
-          helm template orchestrator ./infra/charts/orchestrator > /tmp/default.yaml
+          helm template controller ./infra/charts/controller > /tmp/default.yaml
           kubectl --dry-run=client apply -f /tmp/default.yaml
 
           echo "📋 Testing with secrets..."
-          helm template orchestrator ./infra/charts/orchestrator \
+          helm template controller ./infra/charts/controller \
             --set secrets.anthropicApiKey="test-key" \
             --set secrets.githubToken="test-token" > /tmp/with-secrets.yaml
           kubectl --dry-run=client apply -f /tmp/with-secrets.yaml
@@ -193,7 +193,7 @@ jobs:
 
           # Install CRD definitions first
           echo "🏗️  Installing CRD definitions..."
-          kubectl apply -f infra/charts/orchestrator/crds/platform-crds.yaml
+          kubectl apply -f infra/charts/controller/crds/platform-crds.yaml
 
           # Apply test CodeRun and DocsRun instances
           echo "🧪 Applying test CRD instances..."
@@ -201,8 +201,8 @@ jobs:
 
       - name: Verify CRD deployment
         run: |
-          kubectl get crd coderuns.orchestrator.platform
-          kubectl get crd docsruns.orchestrator.platform
+          kubectl get crd coderuns.controller.platform
+          kubectl get crd docsruns.controller.platform
           kubectl get coderuns,docsruns -A
 
   # Security scanning (non-blocking)
@@ -250,13 +250,13 @@ jobs:
         run: cargo install cargo-audit --version 0.21.2
 
       - name: Rust security audit
-        working-directory: ./orchestrator
+        working-directory: ./controller
         run: cargo audit || true  # Non-blocking
 
   # Test coverage reporting (non-blocking)
   test-coverage:
     needs: changes
-    if: needs.changes.outputs.orchestrator == 'true' || needs.changes.outputs.taskrun == 'true' || github.event_name == 'push'
+    if: needs.changes.outputs.controller == 'true' || needs.changes.outputs.taskrun == 'true' || github.event_name == 'push'
     runs-on: ubuntu-22.04
     continue-on-error: true  # Non-blocking
     steps:
@@ -266,7 +266,7 @@ jobs:
           components: llvm-tools-preview
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: orchestrator -> target
+          workspaces: controller -> target
           shared-key: "rust-cache-ci"
 
       - name: Cache cargo-llvm-cov
@@ -281,7 +281,7 @@ jobs:
         run: cargo install cargo-llvm-cov --version 0.6.8
 
       - name: Generate test coverage
-        working-directory: ./orchestrator
+        working-directory: ./controller
         run: |
           echo "📊 Generating test coverage report..."
           cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info || true
@@ -303,6 +303,6 @@ jobs:
         with:
           name: coverage-reports
           path: |
-            orchestrator/lcov.info
-            orchestrator/coverage-html/
-            orchestrator/coverage-summary.md
+            controller/lcov.info
+            controller/coverage-html/
+            controller/coverage-summary.md

@@ -1,22 +1,18 @@
 [package]
-name = "fivedlabs-tools"
+name = "fdl-mcp"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "5D Labs platform tools: Argo Workflows MCP server for AI development workflows"
+description = "5D Labs platform MCP server: Argo Workflows integration for AI development workflows"
 homepage = "https://github.com/5dlabs/platform"
 
-# MCP server binary
 [[bin]]
 name = "fdl-mcp"
-path = "src/mcp/main.rs"
+path = "src/main.rs"
 
 [dependencies]
-# HTTP Client
-reqwest = { workspace = true }
-
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -26,9 +22,6 @@ anyhow = { workspace = true }
 
 # Async runtime
 tokio = { workspace = true }
-
-# File system and process
-uuid = { workspace = true }
 
 # Internal dependencies  
 common = { path = "../common" }

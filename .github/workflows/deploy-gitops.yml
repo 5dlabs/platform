@@ -19,8 +19,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'orchestrator/**'
-      - 'infra/charts/orchestrator/**'
+      - 'controller/**'
+      - 'infra/charts/controller/**'
       - 'infra/gitops/**'
       - '.github/workflows/deploy-gitops.yml'
 
@@ -65,7 +65,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/controller
           tags: |
             type=ref,event=branch
             type=raw,value=latest,enable={{is_default_branch}}
@@ -75,8 +75,8 @@ jobs:
         id: build
         uses: docker/build-push-action@v5
         with:
-          context: ./orchestrator
-          file: ./orchestrator/Dockerfile
+          context: ./controller
+          file: ./controller/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -94,18 +94,18 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update orchestrator image tag
+      - name: Update controller image tag
         run: |
-          echo "📝 Updating orchestrator image tag to ${{ needs.build.outputs.version }}"
+          echo "📝 Updating controller image tag to ${{ needs.build.outputs.version }}"
           
           # Update the Argo CD Application with new image tag
           sed -i "s|value: latest|value: ${{ needs.build.outputs.version }}|g" \
-            infra/gitops/applications/orchestrator.yaml
+            infra/gitops/applications/controller.yaml
           
           # Alternative: Update values.yaml if using that approach
-          if [ -f "infra/charts/orchestrator/values.yaml" ]; then
+          if [ -f "infra/charts/controller/values.yaml" ]; then
             sed -i "s|tag: .*|tag: ${{ needs.build.outputs.version }}|g" \
-              infra/charts/orchestrator/values.yaml
+              infra/charts/controller/values.yaml
           fi
 
       - name: Commit and push GitOps changes
@@ -117,7 +117,7 @@ jobs:
             echo "📄 No GitOps changes to commit"
           else
             git add infra/gitops/ infra/charts/
-            git commit -m "chore: update orchestrator image to ${{ needs.build.outputs.version }}"
+            git commit -m "chore: update controller image to ${{ needs.build.outputs.version }}"
             git push
             echo "✅ GitOps configuration updated"
           fi
@@ -180,10 +180,10 @@ jobs:
           
           # Sync platform project applications
           argocd app sync platform-apps --timeout ${{ inputs.sync-timeout || '600s' }}
-          argocd app sync orchestrator --timeout ${{ inputs.sync-timeout || '600s' }}
+          argocd app sync controller --timeout ${{ inputs.sync-timeout || '600s' }}
           
           # Wait for sync to complete
-          argocd app wait orchestrator --timeout ${{ inputs.sync-timeout || '600s' }}
+          argocd app wait controller --timeout ${{ inputs.sync-timeout || '600s' }}
           
           echo "✅ Argo CD sync completed"
 
@@ -192,15 +192,15 @@ jobs:
           echo "🔍 Verifying deployment..."
           
           # Check pod status
-          kubectl get pods -n orchestrator -o wide
-          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=orchestrator -n orchestrator --timeout=120s
+          kubectl get pods -n controller -o wide
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=controller -n controller --timeout=120s
           
           # Check Argo CD application status
-          argocd app get orchestrator
+          argocd app get controller
           
           echo ""
           echo "✅ Deployment verification complete!"
-          echo "📦 Deployed: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/orchestrator:${{ needs.build.outputs.version }}"
+          echo "📦 Deployed: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/controller:${{ needs.build.outputs.version }}"
 
       - name: Show recent TaskRuns
         run: |
@@ -227,11 +227,11 @@ jobs:
           echo "🔄 Rolling back to previous version..."
           
           # Get previous successful revision
-          PREVIOUS_REVISION=$(argocd app history orchestrator --output json | jq -r '.[1].revision')
+          PREVIOUS_REVISION=$(argocd app history controller --output json | jq -r '.[1].revision')
           
           if [ "$PREVIOUS_REVISION" != "null" ]; then
-            argocd app rollback orchestrator $PREVIOUS_REVISION
-            argocd app wait orchestrator --timeout 300s
+            argocd app rollback controller $PREVIOUS_REVISION
+            argocd app wait controller --timeout 300s
             echo "✅ Rollback completed to revision $PREVIOUS_REVISION"
           else
             echo "❌ No previous revision found for rollback"

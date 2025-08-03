@@ -1,34 +1,34 @@
 {
-	"mcpServers": {
-		"fdl-mcp": {
-			"type": "stdio",
-			"command": "fdl-mcp",
-			"args": [],
-			"env": {
-				"FDL_DEFAULT_DOCS_USER": "pm0-5dlabs"
-			}
-		},
-		"rust-docs": {
-			"type": "sse",
-			"url": "http://rustdocs-mcp-rust-docs-mcp-server.mcp.svc.cluster.local:3000/sse"
-		},
-		"task-master-ai": {
-			"type": "stdio",
-			"command": "npx",
-			"args": [
-				"-y",
-				"--package=task-master-ai",
-				"task-master-ai"
-			]
-		},
-		"toolman": {
-			"type": "stdio",
-			"command": "/Users/jonathonfritz/.local/bin/toolman-client",
-			"args": [],
-			"env": {
-				"TOOLMAN_CONFIG": "/Users/jonathonfritz/platform/client-config.json",
-				"TOOLMAN_SERVER_URL": "http://toolman.orchestrator.svc.cluster.local:3000/mcp"
-			}
-		}
-	}
+  "mcpServers": {
+    "fdl-mcp": {
+      "type": "stdio",
+      "command": "/usr/local/bin/fdl-mcp",
+      "args": [],
+      "env": {
+        "FDL_DEFAULT_DOCS_USER": "pm0-5dlabs"
+      }
+    },
+    "rust-docs": {
+      "type": "sse",
+      "url": "http://rustdocs-mcp-rust-docs-mcp-server.mcp.svc.cluster.local:3000/sse"
+    },
+    "task-master-ai": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "--package=task-master-ai",
+        "task-master-ai"
+      ]
+    },
+    "toolman": {
+      "type": "stdio",
+      "command": "/Users/jonathonfritz/.local/bin/toolman-client",
+      "args": [],
+      "env": {
+        "TOOLMAN_CONFIG": "/Users/jonathonfritz/platform/client-config.json",
+        "TOOLMAN_SERVER_URL": "http://toolman.orchestrator.svc.cluster.local:3000/mcp"
+      }
+    }
+  }
 }

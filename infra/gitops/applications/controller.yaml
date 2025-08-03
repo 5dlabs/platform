@@ -1,14 +1,14 @@
 ---
 # Argo CD Application for Platform Orchestrator
-# This enables GitOps deployment of the orchestrator service
+# This enables GitOps deployment of the controller service
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: orchestrator
+  name: controller
   namespace: argocd
   labels:
-    app.kubernetes.io/name: orchestrator
+    app.kubernetes.io/name: controller
     app.kubernetes.io/part-of: platform
   annotations:
     # Exclude CRDs from GitOps management (managed by existing Helm release)
@@ -23,7 +23,7 @@ spec:
   source:
     repoURL: https://github.com/5dlabs/platform
     targetRevision: argo
-    path: infra/charts/orchestrator
+    path: infra/charts/controller
     
     # Helm configuration
     helm:
@@ -33,7 +33,7 @@ spec:
       # Override values for GitOps deployment
       parameters:
         - name: image.repository
-          value: ghcr.io/5dlabs/platform/orchestrator
+          value: ghcr.io/5dlabs/platform/controller
         - name: image.tag
           value: 62e0af2
         - name: image.pullPolicy
@@ -60,7 +60,7 @@ spec:
   # Destination configuration
   destination:
     server: https://kubernetes.default.svc
-    namespace: orchestrator
+    namespace: controller
   
   # Sync policy
   syncPolicy:
