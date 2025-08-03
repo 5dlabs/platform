@@ -79,28 +79,28 @@ spec:
         action: create
         setOwnerReference: true
         manifest: |
-              apiVersion: orchestrator.platform/v1
-              kind: CodeRun
-              metadata:
-                generateName: "coderun-{{workflow.parameters.task-id}}-{{workflow.parameters.service-id}}-"
-                namespace: orchestrator
-                labels:
-                  workflow-name: "{{workflow.name}}"
-                  task-id: "{{workflow.parameters.task-id}}"
-                  service: "{{workflow.parameters.service-id}}"
-              spec:
-                taskId: {{workflow.parameters.task-id}}
-                service: "{{workflow.parameters.service-id}}"
-                repositoryUrl: "{{workflow.parameters.repository-url}}"
-                docsRepositoryUrl: "{{workflow.parameters.docs-repository-url}}"
-                docsProjectDirectory: "{{workflow.parameters.docs-project-directory}}"
-                workingDirectory: "{{workflow.parameters.working-directory}}"
-                githubUser: "{{workflow.parameters.github-user}}"
-                model: "{{workflow.parameters.model}}"
-                continueSession: {{workflow.parameters.continue-session}}
-                overwriteMemory: {{workflow.parameters.overwrite-memory}}
-                docsBranch: "{{workflow.parameters.docs-branch}}"
-                contextVersion: 1
+          apiVersion: orchestrator.platform/v1
+          kind: CodeRun
+          metadata:
+            generateName: "coderun-{{workflow.parameters.task-id}}-{{workflow.parameters.service-id}}-"
+            namespace: orchestrator
+            labels:
+              workflow-name: "{{workflow.name}}"
+              task-id: "{{workflow.parameters.task-id}}"
+              service: "{{workflow.parameters.service-id}}"
+          spec:
+            taskId: {{workflow.parameters.task-id}}
+            service: "{{workflow.parameters.service-id}}"
+            repositoryUrl: "{{workflow.parameters.repository-url}}"
+            docsRepositoryUrl: "{{workflow.parameters.docs-repository-url}}"
+            docsProjectDirectory: "{{workflow.parameters.docs-project-directory}}"
+            workingDirectory: "{{workflow.parameters.working-directory}}"
+            githubUser: "{{workflow.parameters.github-user}}"
+            model: "{{workflow.parameters.model}}"
+            continueSession: {{workflow.parameters.continue-session}}
+            overwriteMemory: {{workflow.parameters.overwrite-memory}}
+            docsBranch: "{{workflow.parameters.docs-branch}}"
+            contextVersion: 1
             
     - name: wait-coderun-completion
       inputs:
