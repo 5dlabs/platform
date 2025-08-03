@@ -54,6 +54,24 @@ spec:
           create: true
           name: toolman
         
+        # Override working directory for all servers to use /tmp instead of project_root
+        config:
+          servers:
+            brave-search:
+              workingDirectory: "/tmp"
+            memory:
+              workingDirectory: "/tmp"
+            terraform:
+              workingDirectory: "/tmp"
+            kubernetes:
+              workingDirectory: "/tmp"
+            solana:
+              workingDirectory: "/tmp"
+            rustdocs:
+              workingDirectory: "/tmp"
+            reddit:
+              workingDirectory: "/tmp"
+        
         # Secret store integration (External Secrets will inject these)
         secretRefs:
           - name: toolman-brave-search-secrets
