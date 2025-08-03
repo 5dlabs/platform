@@ -118,7 +118,7 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .and_then(|v| v.as_str())
         .unwrap_or(".");
     
-    let working_dir_param = format!("workingDirectory={}", working_directory);
+    let working_dir_param = format!("workingDirectory={working_directory}");
     let args = vec![
         "submit",
         "--from", "workflowtemplate/docsrun-template",
@@ -143,7 +143,7 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .and_then(|v| v.as_u64())
         .ok_or(anyhow!("Missing required parameter: task_id"))?;
     
-    let task_id_param = format!("taskId={}", task_id);
+    let task_id_param = format!("taskId={task_id}");
     let args = vec![
         "submit",
         "--from", "workflowtemplate/coderun-template", 
@@ -222,6 +222,7 @@ fn handle_method(method: &str, params: Option<&Value>) -> Option<Result<Value>> 
     Some(Err(anyhow!("Unknown method: {}", method)))
 }
 
+#[allow(clippy::disallowed_macros)]
 async fn rpc_loop() -> Result<()> {
     eprintln!("Starting RPC loop");
     let stdin = tokio::io::stdin();
@@ -230,7 +231,7 @@ async fn rpc_loop() -> Result<()> {
     let mut stdout = tokio::io::stdout();
 
     while let Some(line) = lines.next_line().await? {
-        eprintln!("Received line: {}", line);
+        eprintln!("Received line: {line}");
         let request: RpcRequest = serde_json::from_str(&line).context("Invalid JSON request")?;
         eprintln!("Parsed request for method: {}", request.method);
 
@@ -265,6 +266,7 @@ async fn rpc_loop() -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::disallowed_macros)]
 fn main() -> Result<()> {
     eprintln!("Creating runtime...");
     let rt = Runtime::new()?;

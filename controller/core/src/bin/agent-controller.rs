@@ -32,7 +32,6 @@ use axum::{
     Router,
 };
 use core::controllers::task_controller::run_task_controller;
-use kube::Client;
 use serde_json::{json, Value};
 use std::time::Duration;
 use tokio::signal;
@@ -47,7 +46,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Clone)]
 struct AppState {
-    client: Client,
+    // Could be extended with shared state if needed
 }
 
 #[tokio::main]
@@ -67,7 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = kube::Client::try_default().await?;
     info!("Connected to Kubernetes cluster");
 
-    let state = AppState { client: client.clone() };
+    let state = AppState {};
 
     // Start the controller in the background
     let controller_handle = {
