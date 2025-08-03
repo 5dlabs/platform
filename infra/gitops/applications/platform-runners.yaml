@@ -37,6 +37,12 @@ spec:
         maxRunners: 10
         runnerGroup: "Default"
         
+        # Explicit runner labels for workflow targeting
+        listenerTemplate:
+          metadata:
+            labels:
+              runner-label: "k8s-runner"
+        
         controllerServiceAccount:
           name: "arc-gha-rs-controller"
           namespace: "arc-systems"
