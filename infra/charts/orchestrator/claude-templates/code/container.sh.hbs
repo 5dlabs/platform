@@ -510,22 +510,106 @@ fi
 
 # Copy Current Task Documentation to Working Directory
 echo "=== TASK DOCUMENTATION SETUP ==="
+echo "🔍 DEBUG: WORKFLOW_TYPE is: $WORKFLOW_TYPE"
+echo "🔍 DEBUG: REPO_NAME is: $REPO_NAME" 
+echo "🔍 DEBUG: CLAUDE_WORK_DIR is: $CLAUDE_WORK_DIR"
+echo "🔍 DEBUG: Task ID is: {{task_id}}"
 
 # Task directory should already exist from multi-repo workflow or be created as needed
 mkdir -p "$CLAUDE_WORK_DIR/task"
+echo "✓ Created task directory at: $CLAUDE_WORK_DIR/task"
 
 # Task documentation should already be available in the task/ directory
 if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
-    echo "✓ Task documentation available from repository's .taskmaster directory"
+    echo "✓ Copying task documentation from repository's .taskmaster directory"
     
-    # Copy toolman-config.json to workspace root for single-repo workflow
+    # Copy task files from .taskmaster/docs/task-{id} to task/ directory
     SINGLE_TASK_DIR="/workspace/$REPO_NAME/.taskmaster/docs/task-{{task_id}}"
-    if [ -f "$SINGLE_TASK_DIR/toolman-config.json" ]; then
-        cp "$SINGLE_TASK_DIR/toolman-config.json" "/workspace/$REPO_NAME/toolman-config.json"
-        echo "✓ toolman-config.json copied to workspace root"
+    echo "🔍 DEBUG: Looking for task files at: $SINGLE_TASK_DIR"
+    
+    # Debug: Check if .taskmaster directory exists
+    echo "🔍 DEBUG: Checking if .taskmaster directory exists..."
+    if [ -d "/workspace/$REPO_NAME/.taskmaster" ]; then
+        echo "✓ .taskmaster directory found"
+        echo "🔍 DEBUG: Contents of .taskmaster directory:"
+        ls -la "/workspace/$REPO_NAME/.taskmaster/" || echo "Could not list .taskmaster contents"
+        
+        echo "🔍 DEBUG: Contents of .taskmaster/docs directory:"
+        ls -la "/workspace/$REPO_NAME/.taskmaster/docs/" || echo "Could not list docs contents"
     else
-        echo "⚠️ toolman-config.json not found - toolman may not work correctly"
+        echo "❌ .taskmaster directory NOT found at /workspace/$REPO_NAME/.taskmaster"
+        echo "🔍 DEBUG: Contents of repository root:"
+        ls -la "/workspace/$REPO_NAME/" || echo "Could not list repo contents"
     fi
+    
+    if [ -d "$SINGLE_TASK_DIR" ]; then
+        echo "🔍 DEBUG: Task directory found, contents:"
+        ls -la "$SINGLE_TASK_DIR"
+        
+        echo "✅ Copying task.txt to task.md..."
+        if [ -f "$SINGLE_TASK_DIR/task.txt" ]; then
+            cp "$SINGLE_TASK_DIR/task.txt" "$CLAUDE_WORK_DIR/task/task.md" && echo "✓ task.txt copied as task.md" || echo "❌ task.txt copy failed"
+        else
+            echo "⚠️ task.txt not found"
+        fi
+        
+        echo "✅ Copying acceptance-criteria.md..."
+        if [ -f "$SINGLE_TASK_DIR/acceptance-criteria.md" ]; then
+            cp "$SINGLE_TASK_DIR/acceptance-criteria.md" "$CLAUDE_WORK_DIR/task/" && echo "✓ acceptance-criteria.md copied" || echo "❌ acceptance-criteria.md copy failed"
+        else
+            echo "⚠️ acceptance-criteria.md not found"
+        fi
+        
+        echo "✅ Copying prompt.md..."
+        if [ -f "$SINGLE_TASK_DIR/prompt.md" ]; then
+            cp "$SINGLE_TASK_DIR/prompt.md" "$CLAUDE_WORK_DIR/task/" && echo "✓ prompt.md copied" || echo "❌ prompt.md copy failed"
+        else
+            echo "⚠️ prompt.md not found"
+        fi
+        
+        echo "✅ Copying toolman-config.json..."
+        if [ -f "$SINGLE_TASK_DIR/toolman-config.json" ]; then
+            cp "$SINGLE_TASK_DIR/toolman-config.json" "/workspace/$REPO_NAME/toolman-config.json" && echo "✓ toolman-config.json copied to workspace root" || echo "❌ toolman-config.json copy failed"
+        else
+            echo "⚠️ toolman-config.json not found - toolman may not work correctly"
+        fi
+        
+        echo "✅ Copying toolman-guide.md..."
+        if [ -f "$SINGLE_TASK_DIR/toolman-guide.md" ]; then
+            cp "$SINGLE_TASK_DIR/toolman-guide.md" "$CLAUDE_WORK_DIR/task/" && echo "✓ toolman-guide.md copied" || echo "❌ toolman-guide.md copy failed"
+        else
+            echo "⚠️ toolman-guide.md not found - code agent won't have tool usage guidance"
+        fi
+        
+        echo "✓ Task {{task_id}} files copied from $SINGLE_TASK_DIR"
+    else
+        echo "❌ CRITICAL: Task {{task_id}} directory not found at: $SINGLE_TASK_DIR"
+        echo "🔍 DEBUG: Available directories in .taskmaster/docs:"
+        find "/workspace/$REPO_NAME/.taskmaster" -name "task-*" -type d 2>/dev/null || echo "No task directories found"
+        exit 1
+    fi
+    
+    # Copy architecture.md from docs root
+    ARCH_FILE="/workspace/$REPO_NAME/.taskmaster/docs/architecture.md"
+    if [ -f "$ARCH_FILE" ]; then
+        cp "$ARCH_FILE" "$CLAUDE_WORK_DIR/task/"
+        echo "✓ Architecture documentation copied"
+    else
+        echo "⚠️ architecture.md not found at: $ARCH_FILE"
+    fi
+    
+    # Copy tasks.json if it exists
+    if [ -f "/workspace/$REPO_NAME/.taskmaster/tasks/tasks.json" ]; then
+        cp "/workspace/$REPO_NAME/.taskmaster/tasks/tasks.json" "$CLAUDE_WORK_DIR/task/"
+        echo "✓ tasks.json copied"
+    fi
+    
+    # DEBUG: Verify files were copied successfully
+    echo "🔍 DEBUG: Contents of target task directory after copy:"
+    ls -la "$CLAUDE_WORK_DIR/task/" || echo "Task directory not found"
+    echo "🔍 DEBUG: Checking if prompt.md exists:"
+    [ -f "$CLAUDE_WORK_DIR/task/prompt.md" ] && echo "✅ prompt.md exists" || echo "❌ prompt.md missing"
+    
 else
     echo "✓ Task documentation copied from docs repository during multi-repo setup"
 fi
@@ -708,6 +792,13 @@ if [ "$SAFE_MODE" = "true" ]; then
     echo "🛡️ SAFE MODE ENABLED - Running simple test instead of full task"
     echo "What time is it? Please answer this simple question and exit immediately." | $CLAUDE_CMD
 else
+    # Debug: Show what's actually in the task directory before checking for prompt.md
+    echo "🔍 DEBUG: About to check for prompt.md at: $CLAUDE_WORK_DIR/task/prompt.md"
+    echo "🔍 DEBUG: Contents of task directory:"
+    ls -la "$CLAUDE_WORK_DIR/task/" || echo "Task directory not found or empty"
+    echo "🔍 DEBUG: Current working directory contents:"
+    ls -la "$CLAUDE_WORK_DIR/" || echo "Working directory not accessible"
+    
     # Check if prompt.md exists and use it as main prompt
     if [ -f "$CLAUDE_WORK_DIR/task/prompt.md" ]; then
         echo "✓ Using task-specific prompt from docs service: task/prompt.md"
