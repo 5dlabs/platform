@@ -47,22 +47,27 @@ spec:
           name: "arc-gha-rs-controller"
           namespace: "arc-systems"
         
-        # Simplified template without complex volumes
+        # Proper configuration with rust-builder image and Docker support
         template:
           spec:
             imagePullSecrets:
             - name: ghcr-secret
             containers:
             - name: runner
-              image: ghcr.io/actions/actions-runner:2.327.1
+              image: ghcr.io/5dlabs/platform/rust-builder:latest
               imagePullPolicy: Always
               volumeMounts:
               - name: work
                 mountPath: /home/runner/_work
+              - name: docker-sock
+                mountPath: /var/run/docker.sock
             volumes:
             - name: work
               emptyDir:
-                sizeLimit: 1Gi
+                sizeLimit: 10Gi
+            - name: docker-sock
+              hostPath:
+                path: /var/run/docker.sock
   
   destination:
     server: https://kubernetes.default.svc
