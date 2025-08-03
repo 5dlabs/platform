@@ -1,6 +1,6 @@
-# Simplified Rust builder image for fast CI builds with PVC caching
+# Rust builder image for fast CI builds
 # Based on official GitHub Actions Runner Controller (ARC) image
-FROM ghcr.io/actions/actions-runner:latest
+FROM ghcr.io/actions/actions-runner:2.327.1
 
 # Switch to root for installations
 USER root
@@ -101,10 +101,7 @@ RUN ~/.cargo/bin/rustup component add clippy rustfmt && \
         sccache \
         cargo-nextest
 
-# Switch back to root for final setup
-USER root
-
-# Set up optimized Cargo config for PVC caching
+# Set up optimized Cargo config (stay as runner user)
 RUN mkdir -p /home/runner/.cargo && cat > /home/runner/.cargo/config.toml << 'EOF'
 [build]
 rustc-wrapper = "sccache"
@@ -141,7 +138,8 @@ git-fetch-with-cli = true
 jobs = 16
 EOF
 
-# Add runner to docker group and set ownership
+# Add runner to docker group and set ownership (switch to root temporarily)
+USER root
 RUN usermod -aG docker runner \
     && chown -R runner:runner /home/runner
 
@@ -153,9 +151,12 @@ ENV SCCACHE_DIR="/cache/sccache"
 ENV SCCACHE_CACHE_SIZE="2G"
 ENV RUSTC_WRAPPER="sccache"
 
+# Switch back to runner user (required for ARC)
+USER runner
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD which rustc && which cargo && which sccache && which docker || exit 1
 
-# Use the default entrypoint from GitHub ARC image
-# The official ARC image already has the proper entrypoint for runner setup
+# Keep the default entrypoint from the base ARC image
+# Do not override ENTRYPOINT or CMD - let ARC handle runner lifecycle

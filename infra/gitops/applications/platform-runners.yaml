@@ -43,8 +43,8 @@ spec:
           spec:
             containers:
             - name: runner
-              image: ghcr.io/actions/actions-runner:latest
-              command: ["/home/runner/run.sh"]
+              image: ghcr.io/5dlabs/platform/rust-builder:latest
+              imagePullPolicy: Always
   
   destination:
     server: https://kubernetes.default.svc
