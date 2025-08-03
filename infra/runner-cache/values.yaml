@@ -1,0 +1,33 @@
+# ARC Runner Scale Set Values - Cache Configuration
+# This configures runners with shared cache PVC
+
+template:
+  spec:
+    containers:
+    - name: runner
+      image: ghcr.io/actions/actions-runner:latest
+      command: ["/home/runner/run.sh"]
+      volumeMounts:
+      - name: work
+        mountPath: /home/runner/_work
+      - name: cache-volume
+        mountPath: /cache
+      - name: cache-volume
+        mountPath: /home/runner/.cargo
+        subPath: cargo
+      - name: cache-volume
+        mountPath: /home/runner/.cache
+        subPath: general
+    volumes:
+    - name: work
+      ephemeral:
+        volumeClaimTemplate:
+          spec:
+            accessModes: [ "ReadWriteOnce" ]
+            storageClassName: "local-path"
+            resources:
+              requests:
+                storage: 1Gi
+    - name: cache-volume
+      persistentVolumeClaim:
+        claimName: runner-cache-pvc
