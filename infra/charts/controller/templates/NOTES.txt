@@ -6,26 +6,26 @@
   {{- end }}
 {{- end }}
 {{- else if contains "NodePort" .Values.service.type }}
-  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "orchestrator.fullname" . }})
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "controller.fullname" . }})
   export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
   echo http://$NODE_IP:$NODE_PORT
 {{- else if contains "LoadBalancer" .Values.service.type }}
      NOTE: It may take a few minutes for the LoadBalancer IP to be available.
-           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "orchestrator.fullname" . }}'
-  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "orchestrator.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "controller.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "controller.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
   echo http://$SERVICE_IP:{{ .Values.service.port }}
 {{- else if contains "ClusterIP" .Values.service.type }}
-  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "orchestrator.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "controller.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
   export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
   echo "Visit http://127.0.0.1:8080 to use your application"
   kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
 {{- end }}
 
-2. Check the orchestrator status:
-   kubectl get pods -n {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "orchestrator.name" . }}"
+2. Check the controller status:
+   kubectl get pods -n {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "controller.name" . }}"
 
-3. View orchestrator logs:
-   kubectl logs -n {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "orchestrator.name" . }}" -f
+3. View controller logs:
+   kubectl logs -n {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "controller.name" . }}" -f
 
 4. Health check endpoint:
 {{- if .Values.healthCheck.enabled }}
@@ -41,7 +41,7 @@
 
 6. Create your first task:
    kubectl apply -f - <<EOF
-   apiVersion: orchestrator.platform/v1
+   apiVersion: controller.platform/v1
    kind: DocsRun
    metadata:
      name: example-docs
@@ -50,7 +50,7 @@
      githubUser: "your-github-username"
    EOF
 
-For more information about configuring the orchestrator, see:
+For more information about configuring the controller, see:
 • Documentation: https://github.com/5dlabs/platform
 • Agent setup: ./infra/scripts/setup-agent-secrets.sh --help
-• CRD reference: kubectl explain coderuns.orchestrator.platform
+• CRD reference: kubectl explain coderuns.controller.platform
