@@ -27,6 +27,7 @@ template:
     containers:
     - name: runner
       image: ghcr.io/5dlabs/platform/rust-builder:latest
+      imagePullPolicy: Always
       command: ["/home/runner/run.sh"]
       volumeMounts:
       - name: work
