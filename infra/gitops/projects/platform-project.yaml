@@ -79,7 +79,7 @@ spec:
       kind: '*'
     - group: 'actions.github.com'
       kind: '*'
-  - group: 'external-secrets.io'
+    - group: 'external-secrets.io'
       kind: '*'
   
   # Namespace resource whitelist
