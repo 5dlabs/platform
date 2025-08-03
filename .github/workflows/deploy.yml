@@ -209,7 +209,7 @@ jobs:
   # Deploy immediately
   deploy:
     needs: [version, build-orchestrator]
-    runs-on: [self-hosted, k8s-runner]
+    runs-on: [k8s-runner]
     steps:
       - uses: actions/checkout@v4
         with:
