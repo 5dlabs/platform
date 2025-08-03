@@ -19,7 +19,7 @@ fn get_init_docs_schema() -> Value {
             "properties": {
                 "working_directory": {
                     "type": "string",
-                    "description": "Working directory containing .taskmaster folder (required). Use relative paths like '_projects/simple-api'."
+                    "description": "Working directory containing .taskmaster folder (optional, auto-detects from current directory if not provided). Use relative paths like '_projects/simple-api'."
                 },
                 "model": {
                     "type": "string",
@@ -30,7 +30,7 @@ fn get_init_docs_schema() -> Value {
                     "description": "GitHub username for authentication (optional if FDL_DEFAULT_DOCS_USER environment variable is set, which takes precedence)"
                 }
             },
-            "required": ["working_directory"]
+            "required": []
         }
     })
 }

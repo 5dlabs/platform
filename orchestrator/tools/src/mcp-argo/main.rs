@@ -21,6 +21,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::env;
+use std::fs;
+use std::path::Path;
+use std::process::Command;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::runtime::Runtime;
 
@@ -93,6 +96,196 @@ fn get_argo_config() -> Result<(String, String)> {
 fn create_argo_client() -> Result<ArgoWorkflowsClient> {
     let (base_url, namespace) = get_argo_config()?;
     Ok(ArgoWorkflowsClient::new(base_url, namespace))
+}
+
+/// Auto-detect git repository URL
+fn get_git_remote_url() -> Result<String> {
+    let output = Command::new("git")
+        .args(["remote", "get-url", "origin"])
+        .output()
+        .context("Failed to get git remote URL")?;
+
+    if !output.status.success() {
+        return Err(anyhow!(
+            "Failed to detect git repository URL. Make sure you're in a git repository with a remote origin."
+        ));
+    }
+
+    Ok(String::from_utf8(output.stdout)?.trim().to_string())
+}
+
+/// Auto-detect current git branch
+fn get_current_branch() -> Result<String> {
+    let output = Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .output()
+        .context("Failed to get current git branch")?;
+
+    if !output.status.success() {
+        return Ok("main".to_string());
+    }
+
+    Ok(String::from_utf8(output.stdout)?.trim().to_string())
+}
+
+/// Auto-detect working directory relative to git root
+fn get_working_directory(working_directory: Option<&str>) -> Result<String> {
+    if let Some(wd) = working_directory {
+        return Ok(wd.to_string());
+    }
+
+    let current_dir = std::env::current_dir()?;
+    let repo_root = Command::new("git")
+        .args(["rev-parse", "--show-toplevel"])
+        .output()
+        .context("Failed to get git repo root")?
+        .stdout;
+    let repo_root_string = String::from_utf8(repo_root)?;
+    let repo_root = repo_root_string.trim();
+
+    let rel_path = current_dir
+        .strip_prefix(repo_root)
+        .context("Current directory is not in git repository")?
+        .to_string_lossy()
+        .to_string();
+
+    Ok(if rel_path.is_empty() {
+        ".".to_string()
+    } else {
+        rel_path
+    })
+}
+
+/// Check and auto-commit .taskmaster changes if needed
+fn check_and_commit_taskmaster_changes(working_dir: &str, source_branch: &str) -> Result<()> {
+    let taskmaster_path = format!("{working_dir}/.taskmaster");
+
+    if !Path::new(&taskmaster_path).exists() {
+        return Err(anyhow!("No .taskmaster directory found in {}", working_dir));
+    }
+
+    eprintln!("Checking for uncommitted .taskmaster changes...");
+
+    let status_output = Command::new("git")
+        .args(["status", "--porcelain", &taskmaster_path])
+        .output()
+        .context("Failed to check git status")?;
+
+    if status_output.stdout.is_empty() {
+        eprintln!("No uncommitted changes in .taskmaster directory");
+    } else {
+        eprintln!("Found uncommitted changes in .taskmaster directory");
+
+        Command::new("git")
+            .args(["add", &taskmaster_path])
+            .status()
+            .context("Failed to add .taskmaster files")?;
+
+        Command::new("git")
+            .args([
+                "commit",
+                "-m",
+                "chore: auto-commit .taskmaster directory for documentation generation",
+            ])
+            .status()
+            .context("Failed to commit .taskmaster files")?;
+
+        eprintln!("Pushing commit to remote...");
+        let push_result = Command::new("git")
+            .args(["push", "origin", source_branch])
+            .status()
+            .context("Failed to push commits")?;
+
+        if !push_result.success() {
+            return Err(anyhow!("Failed to push .taskmaster commit"));
+        }
+
+        eprintln!("✓ Auto-committed and pushed .taskmaster directory");
+    }
+
+    Ok(())
+}
+
+/// Create documentation directory structure and copy task files
+fn create_docs_structure(working_dir: &str) -> Result<()> {
+    eprintln!("Creating documentation directory structure...");
+
+    let taskmaster_path = format!("{working_dir}/.taskmaster");
+    let tasks_json_path = format!("{taskmaster_path}/tasks/tasks.json");
+
+    if !Path::new(&tasks_json_path).exists() {
+        return Err(anyhow!("No tasks.json found at {}", tasks_json_path));
+    }
+
+    let content = fs::read_to_string(&tasks_json_path).context("Failed to read tasks.json")?;
+
+    let json: Value = serde_json::from_str(&content).context("Failed to parse tasks.json")?;
+
+    let tasks = json
+        .get("master")
+        .and_then(|m| m.get("tasks"))
+        .and_then(|t| t.as_array())
+        .context("No tasks found in tasks.json")?;
+
+    let docs_dir = format!("{taskmaster_path}/docs");
+    fs::create_dir_all(&docs_dir).context("Failed to create docs directory")?;
+
+    let mut created_count = 0;
+    for task in tasks {
+        if let Some(task_id) = task.get("id").and_then(serde_json::Value::as_u64) {
+            if let Some(title) = task.get("title").and_then(|t| t.as_str()) {
+                let task_dir = format!("{docs_dir}/task-{task_id}");
+                fs::create_dir_all(&task_dir)
+                    .context(format!("Failed to create directory for task {task_id}"))?;
+
+                let source_file = format!("{taskmaster_path}/tasks/task_{task_id:03}.txt");
+                let dest_file = format!("{task_dir}/task.txt");
+
+                if Path::new(&source_file).exists() {
+                    fs::copy(&source_file, &dest_file)
+                        .context(format!("Failed to copy task file for task {task_id}"))?;
+                    eprintln!("✓ Copied task file for task {}: {}", task_id, title);
+                } else {
+                    eprintln!(
+                        "⚠ No task file found for task {} (expected: {})",
+                        task_id, source_file
+                    );
+                }
+
+                created_count += 1;
+            }
+        }
+    }
+
+    eprintln!(
+        "✓ Created documentation structure for {} tasks",
+        created_count
+    );
+    Ok(())
+}
+
+/// Prepare documentation files and return info for submission
+fn prepare_for_submission(
+    working_directory: Option<&str>,
+) -> Result<(String, String, String)> {
+    eprintln!("Preparing documentation files for submission...");
+
+    // Auto-detect working directory (relative path from repo root to current dir)
+    let working_dir = get_working_directory(working_directory)?;
+
+    // Auto-detect source branch
+    let source_branch = get_current_branch()?;
+
+    eprintln!("Working directory: {}", working_dir);
+    eprintln!("Source branch: {}", source_branch);
+
+    // Check and commit .taskmaster changes if needed
+    check_and_commit_taskmaster_changes(&working_dir, &source_branch)?;
+
+    // Create documentation directory structure and copy task files
+    create_docs_structure(&working_dir)?;
+
+    Ok((working_dir, source_branch, "main".to_string()))
 }
 
 // Capabilities advertised by the server with full MCP tool schemas.
@@ -173,12 +366,8 @@ async fn handle_orchestrator_tools_async(
         "docs" => {
             // Initialize documentation for Task Master tasks using Argo Workflows
 
-            // Extract required working directory parameter
-            let working_directory =
-                match params_map.get("working_directory").and_then(|v| v.as_str()) {
-                    Some(wd) => wd,
-                    None => return Some(Err(anyhow!("working_directory parameter is required"))),
-                };
+            // Extract optional working directory parameter (will auto-detect if not provided)
+            let working_directory = params_map.get("working_directory").and_then(|v| v.as_str());
 
             // Extract model parameter (no default - let workflow template handle it)
             let model = params_map.get("model").and_then(|v| v.as_str());
@@ -191,6 +380,12 @@ async fn handle_orchestrator_tools_async(
             {
                 Some(user) => user,
                 None => return Some(Err(anyhow!("github_user parameter is required or FDL_DEFAULT_DOCS_USER environment variable must be set"))),
+            };
+
+            // Prepare documentation files and get git info
+            let (actual_working_dir, source_branch, _target_branch) = match prepare_for_submission(working_directory) {
+                Ok(result) => result,
+                Err(e) => return Some(Err(anyhow!("Failed to prepare documentation files: {}", e))),
             };
 
             // Validate model parameter if provided - allow any model that starts with "claude-"
@@ -207,11 +402,13 @@ async fn handle_orchestrator_tools_async(
             };
 
             // Submit DocsRun workflow
-            match client.submit_docsrun_workflow(working_directory, github_user, model).await {
+            match client.submit_docsrun_workflow(&actual_working_dir, github_user, model).await {
                 Ok(workflow_name) => Some(Ok(json!({
                     "success": true,
                     "message": "Documentation generation workflow submitted successfully",
                     "workflow_name": workflow_name,
+                    "working_directory": actual_working_dir,
+                    "source_branch": source_branch,
                     "parameters_used": {
                         "model": model.unwrap_or("default from workflow template"),
                         "working_directory": working_directory,
