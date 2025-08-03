@@ -17,7 +17,7 @@ spec:
   
   source:
     repoURL: https://github.com/actions/actions-runner-controller
-    targetRevision: master
+    targetRevision: gha-runner-scale-set-0.12.1
     path: charts/gha-runner-scale-set-controller
     
     helm:

@@ -17,17 +17,19 @@ spec:
   
   source:
     repoURL: https://github.com/actions/actions-runner-controller
-    targetRevision: master
+    targetRevision: gha-runner-scale-set-0.12.1
     path: charts/gha-runner-scale-set
     
     helm:
       valueFiles: []
       parameters:
-        # Basic required GitHub Configuration  
+        # GitHub Configuration
         - name: githubConfigUrl
           value: "https://github.com/5dlabs"
         - name: githubConfigSecret
           value: "github-pat"
+        - name: runnerScaleSetName
+          value: "platform-runners"
   
   destination:
     server: https://kubernetes.default.svc
