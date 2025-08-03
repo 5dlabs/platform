@@ -37,12 +37,18 @@ spec:
         maxRunners: 10
         runnerGroup: "Default"
         
+        # Docker-in-Docker configuration for container builds
+        containerMode:
+          type: "dind"
+        
         # Explicit runner labels for workflow targeting
         listenerTemplate:
           metadata:
             labels:
               runner-label: "k8s-runner"
           spec:
+            imagePullSecrets:
+            - name: ghcr-secret
             containers:
             - name: listener
               image: ghcr.io/actions/actions-runner-controller/gha-runner-scale-set-listener:0.12.1
@@ -52,7 +58,7 @@ spec:
           name: "arc-gha-rs-controller"
           namespace: "arc-systems"
         
-        # Proper configuration with rust-builder image and Docker support
+        # Template will be auto-configured by containerMode: dind
         template:
           spec:
             imagePullSecrets:
@@ -61,18 +67,6 @@ spec:
             - name: runner
               image: ghcr.io/5dlabs/platform/rust-builder:latest
               imagePullPolicy: Always
-              volumeMounts:
-              - name: work
-                mountPath: /home/runner/_work
-              - name: docker-sock
-                mountPath: /var/run/docker.sock
-            volumes:
-            - name: work
-              emptyDir:
-                sizeLimit: 10Gi
-            - name: docker-sock
-              hostPath:
-                path: /var/run/docker.sock
   
   destination:
     server: https://kubernetes.default.svc
