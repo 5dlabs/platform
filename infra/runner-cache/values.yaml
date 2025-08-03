@@ -1,6 +1,11 @@
 # ARC Runner Scale Set Values - Cache Configuration
 # This configures runners with shared cache PVC
 
+# Runner labels for GitHub Actions targeting
+githubConfigSecret: github-pat
+runnerLabels: 
+  - k8s-runner
+
 template:
   spec:
     # Node affinity to ensure all runners land on same node for ReadWriteOnce cache sharing
