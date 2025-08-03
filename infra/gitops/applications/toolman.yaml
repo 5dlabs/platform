@@ -54,7 +54,7 @@ spec:
           create: true
           name: toolman
         
-        # Override working directory for all servers to use /tmp instead of project_root
+        # Complete server configuration with working directories and local tools
         config:
           servers:
             brave-search:
@@ -70,6 +70,17 @@ spec:
             rustdocs:
               workingDirectory: "/tmp"
             reddit:
+              workingDirectory: "/tmp"
+        
+        # Local tools configuration for client-side operations
+        localTools:
+          servers:
+            filesystem:
+              name: "Filesystem"
+              description: "File system operations for reading, writing, and managing files"
+              transport: "stdio"
+              command: "npx"
+              args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
               workingDirectory: "/tmp"
         
         # Secret store integration (External Secrets will inject these)
