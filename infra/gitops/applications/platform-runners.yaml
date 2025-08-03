@@ -43,8 +43,7 @@ spec:
           spec:
             containers:
             - name: runner
-              image: ghcr.io/5dlabs/platform/rust-builder:latest
-              imagePullPolicy: Always
+              image: ghcr.io/actions/actions-runner:latest
               command: ["/home/runner/run.sh"]
   
   destination:
