@@ -35,7 +35,7 @@ spec:
         - name: image.repository
           value: ghcr.io/5dlabs/platform/controller
         - name: image.tag
-          value: 62e0af2
+          value: ce71823
         - name: image.pullPolicy
           value: Always
         
