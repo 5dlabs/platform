@@ -48,14 +48,13 @@ spec:
           name: "arc-gha-rs-controller"
           namespace: "arc-systems"
         
-        # Template will be auto-configured by containerMode: dind
+        # Template will be auto-configured by containerMode: dind  
+        # Test with official runner image first
         template:
           spec:
-            imagePullSecrets:
-            - name: ghcr-secret
             containers:
             - name: runner
-              image: ghcr.io/5dlabs/platform/rust-builder:latest
+              image: ghcr.io/actions/actions-runner:latest
               imagePullPolicy: Always
   
   destination:
