@@ -27,7 +27,7 @@ spec:
       valueFiles:
         - values.yaml
       
-      # Override values for agent-platform deployment
+      # Override values for agent-platform deployment  
       values: |
         # Enable debug logging
         env:
@@ -38,53 +38,23 @@ spec:
           - name: RUST_LOG
             value: "debug"
 
-        # Fix working directory for all MCP tools
+        # Override working directory for all servers to use /tmp instead of project_root
         config:
           servers:
             brave-search:
-              name: "Brave Search"
-              description: "Web search using Brave Search API"
-              transport: "stdio"
-              command: "npx"
-              args: ["-y","@modelcontextprotocol/server-brave-search"]
               workingDirectory: "/tmp"
-              env: {}
-            kubernetes:
-              name: "Kubernetes"
-              description: "Kubernetes cluster management and Helm operations"
-              transport: "sse"
-              command: ""
-              args: []
-              workingDirectory: "/tmp"
-              url: "http://k8s-mcp-k8s-mcp-server.mcp.svc.cluster.local:8080/sse"
-              env: {}
             memory:
-              name: "Memory"
-              description: "Persistent memory and knowledge graph for long-term information retention"
-              transport: "stdio"
-              command: "npx"
-              args: ["-y","@modelcontextprotocol/server-memory"]
               workingDirectory: "/tmp"
-              env:
-                MEMORY_FILE_PATH: "/home/mcp/memory.json"
-            rustdocs:
-              name: "Rust Docs"
-              description: "Rust documentation MCP server"
-              transport: "sse"
-              command: ""
-              args: []
+            terraform:
               workingDirectory: "/tmp"
-              url: "http://rustdocs-mcp-rust-docs-mcp-server.mcp.svc.cluster.local:3000/sse"
-              env: {}
+            kubernetes:
+              workingDirectory: "/tmp"
             solana:
-              name: "Solana"
-              description: "Solana blockchain development tools"
-              transport: "http"
-              command: ""
-              args: []
               workingDirectory: "/tmp"
-              url: "https://mcp.solana.com/mcp"
-              env: {}
+            rustdocs:
+              workingDirectory: "/tmp"
+            reddit:
+              workingDirectory: "/tmp"
 
         # Persistence configuration
         persistence:
