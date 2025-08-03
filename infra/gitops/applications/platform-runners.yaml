@@ -45,7 +45,7 @@ spec:
             - name: ghcr-secret
             containers:
             - name: runner
-              image: ghcr.io/5dlabs/platform/rust-builder:latest
+              image: ghcr.io/actions/actions-runner:2.327.1
               imagePullPolicy: Always
   
   destination:
