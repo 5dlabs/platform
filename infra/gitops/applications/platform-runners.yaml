@@ -65,7 +65,7 @@ spec:
             activeDeadlineSeconds: 3600
             containers:
             - name: runner
-              image: ghcr.io/actions/actions-runner:latest
+              image: ghcr.io/5dlabs/platform/rust-builder:latest
               imagePullPolicy: Always
               command: ["/home/runner/run.sh"]
               env:
