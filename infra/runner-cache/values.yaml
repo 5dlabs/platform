@@ -3,6 +3,22 @@
 
 template:
   spec:
+    # Node affinity to ensure all runners land on same node for ReadWriteOnce cache sharing
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: Exists
+      podAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                actions.github.com/scale-set-name: platform-runners
+            topologyKey: kubernetes.io/hostname
     containers:
     - name: runner
       image: ghcr.io/actions/actions-runner:latest

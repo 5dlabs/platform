@@ -15,7 +15,7 @@ metadata:
     app.kubernetes.io/component: cache
 spec:
   accessModes:
-    - ReadWriteMany  # Allow multiple runners to share cache
+    - ReadWriteOnce  # local-path limitation - use node affinity for sharing
   resources:
     requests:
       storage: 200Gi  # Large cache for Rust builds and dependencies
