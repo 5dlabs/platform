@@ -1,0 +1,101 @@
+# Task ID: 4
+# Title: Chat Room API Implementation
+# Status: pending
+# Dependencies: 2, 3
+# Priority: high
+# Description: Develop REST API endpoints for creating, joining, and managing chat rooms with message history persistence. Research API patterns from Rust ecosystem and Kubernetes service deployment configurations.
+# Details:
+1. Create room controller with endpoints:
+   - GET /api/rooms (list all rooms)
+   - POST /api/rooms (create new room)
+   - GET /api/rooms/:id (get room details)
+   - PUT /api/rooms/:id (update room)
+   - DELETE /api/rooms/:id (delete room)
+   - POST /api/rooms/:id/join (join room)
+   - POST /api/rooms/:id/leave (leave room)
+
+2. Create message controller with endpoints:
+   - GET /api/rooms/:id/messages (get message history with pagination)
+   - POST /api/rooms/:id/messages (post new message)
+   - DELETE /api/rooms/:id/messages/:messageId (delete message)
+
+3. Implement authorization checks for room operations
+
+4. Add pagination for message history
+
+5. Implement message persistence in PostgreSQL
+
+6. Research Rust HTTP server patterns and API design best practices for inspiration
+
+7. Research Kubernetes API service deployment and ingress configurations
+
+8. Apply Express.js REST API best practices and security patterns
+
+Example room creation endpoint:
+```typescript
+const createRoom = async (req: Request, res: Response) => {
+  try {
+    const { name, description } = req.body;
+    const userId = req.user.id; // From auth middleware
+    
+    const room = await roomRepository.create({
+      name,
+      description,
+      createdBy: userId
+    });
+    
+    await roomUserRepository.addUserToRoom(room.id, userId);
+    
+    return res.status(201).json(room);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to create room' });
+  }
+};
+```
+
+# Test Strategy:
+Write unit tests for room and message controllers. Test authorization logic for room operations. Implement integration tests for the complete room and message API flow. Test pagination and filtering of messages. Verify API endpoints conform to best practices found in Rust ecosystem research. Test API deployment configurations in a Kubernetes environment.
+
+# Subtasks:
+## 1. Research Rust HTTP server patterns and API design best practices [pending]
+### Dependencies: None
+### Description: 
+### Details:
+
+
+## 2. Research Express.js REST API best practices and security patterns [pending]
+### Dependencies: None
+### Description: 
+### Details:
+
+
+## 3. Research Kubernetes API service deployment and ingress configurations [pending]
+### Dependencies: None
+### Description: 
+### Details:
+
+
+## 4. Create API route files, controllers, and middleware [pending]
+### Dependencies: None
+### Description: 
+### Details:
+
+
+## 5. Update configuration files and add new dependencies [pending]
+### Dependencies: None
+### Description: 
+### Details:
+
+
+## 6. Implement room and message controllers with endpoints [pending]
+### Dependencies: None
+### Description: 
+### Details:
+
+
+## 7. Implement PostgreSQL persistence for messages and rooms [pending]
+### Dependencies: None
+### Description: 
+### Details:
+
+
