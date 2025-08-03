@@ -35,21 +35,21 @@ spec:
         - name: image.repository
           value: ghcr.io/5dlabs/platform/orchestrator
         - name: image.tag
-          value: 5521235
+          value: cce0d88
         - name: image.pullPolicy
-          value: 5521235
+          value: cce0d88
         
         # Skip CRDs - managed by existing Helm release
         
         # Resource configuration
         - name: resources.limits.cpu
-          value: 5521235
+          value: cce0d88
         - name: resources.limits.memory
-          value: 5521235
+          value: cce0d88
         - name: resources.requests.cpu
-          value: 5521235
+          value: cce0d88
         - name: resources.requests.memory
-          value: 5521235
+          value: cce0d88
         
         # Monitoring
         - name: metrics.enabled
