@@ -39,6 +39,8 @@ spec:
       - PrunePropagationPolicy=foreground
       - PruneLast=true
       - SkipDryRunOnMissingResource=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
     
     retry:
       limit: 5
