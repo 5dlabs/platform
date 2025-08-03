@@ -41,6 +41,8 @@ spec:
         
         template:
           spec:
+            imagePullSecrets:
+            - name: ghcr-secret
             containers:
             - name: runner
               image: ghcr.io/5dlabs/platform/rust-builder:latest
