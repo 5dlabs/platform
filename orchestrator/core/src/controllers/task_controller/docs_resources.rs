@@ -574,6 +574,9 @@ impl<'a> DocsResourceManager<'a> {
     }
 
     async fn cleanup_old_configmaps(&self, docs_run: &DocsRun) -> Result<()> {
+        // Generate current ConfigMap name to avoid deleting it
+        let current_cm_name = self.generate_configmap_name(docs_run);
+        
         let list_params = ListParams::default().labels(&format!(
             "app=orchestrator,component=docs-generator,github-user={}",
             self.sanitize_label_value(&docs_run.spec.github_user)
@@ -583,6 +586,28 @@ impl<'a> DocsResourceManager<'a> {
 
         for cm in configmaps {
             if let Some(cm_name) = cm.metadata.name {
+                // Skip deleting the current ConfigMap - this prevents deletion of active job's ConfigMap
+                if cm_name == current_cm_name {
+                    info!("Skipping deletion of current ConfigMap: {}", cm_name);
+                    continue;
+                }
+                
+                // Check if ConfigMap has an owner reference to a Job that's still running
+                let has_active_job = cm.metadata.owner_references
+                    .as_ref()
+                    .map(|owners| {
+                        owners.iter().any(|owner| {
+                            owner.kind == "Job" && owner.api_version.starts_with("batch/")
+                        })
+                    })
+                    .unwrap_or(false);
+                
+                if has_active_job {
+                    // If ConfigMap is owned by a Job, let Kubernetes handle cleanup when Job completes
+                    info!("Skipping cleanup of ConfigMap with active Job owner: {}", cm_name);
+                    continue;
+                }
+                
                 info!("Deleting old docs ConfigMap: {}", cm_name);
                 let _ = self
                     .configmaps

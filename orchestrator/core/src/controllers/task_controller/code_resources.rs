@@ -599,6 +599,9 @@ impl<'a> CodeResourceManager<'a> {
     }
 
     async fn cleanup_old_configmaps(&self, code_run: &CodeRun) -> Result<()> {
+        // Generate current ConfigMap name to avoid deleting it
+        let current_cm_name = self.generate_configmap_name(code_run);
+        
         let list_params = ListParams::default().labels(&format!(
             "app=orchestrator,component=code-runner,github-user={},service={}",
             self.sanitize_label_value(&code_run.spec.github_user),
@@ -609,6 +612,28 @@ impl<'a> CodeResourceManager<'a> {
 
         for cm in configmaps {
             if let Some(cm_name) = cm.metadata.name {
+                // Skip deleting the current ConfigMap - this prevents deletion of active job's ConfigMap
+                if cm_name == current_cm_name {
+                    info!("Skipping deletion of current ConfigMap: {}", cm_name);
+                    continue;
+                }
+                
+                // Check if ConfigMap has an owner reference to a Job that's still running
+                let has_active_job = cm.metadata.owner_references
+                    .as_ref()
+                    .map(|owners| {
+                        owners.iter().any(|owner| {
+                            owner.kind == "Job" && owner.api_version.starts_with("batch/")
+                        })
+                    })
+                    .unwrap_or(false);
+                
+                if has_active_job {
+                    // If ConfigMap is owned by a Job, let Kubernetes handle cleanup when Job completes
+                    info!("Skipping cleanup of ConfigMap with active Job owner: {}", cm_name);
+                    continue;
+                }
+                
                 info!("Deleting old code ConfigMap: {}", cm_name);
                 let _ = self
                     .configmaps
