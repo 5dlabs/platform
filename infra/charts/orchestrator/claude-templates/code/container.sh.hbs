@@ -189,10 +189,48 @@ if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
         echo "✓ Repository cloned successfully"
     fi
     
+    # Preserve Task Master files before branch switching (single-repo workflow)
+    echo "🔄 Preserving Task Master files from docs branch before switching to feature branch..."
+    TEMP_TASK_DIR="/tmp/taskmaster-preserve"
+    rm -rf "$TEMP_TASK_DIR"
+    mkdir -p "$TEMP_TASK_DIR"
+    
+    cd "/workspace/$TARGET_REPO_DIR"
+    # Copy Task Master files from docs branch to temporary location
+    {{#if docs_project_directory}}
+    if [ "{{docs_project_directory}}" = "." ]; then
+        PRESERVE_FROM="/workspace/$TARGET_REPO_DIR/.taskmaster/docs/task-{{task_id}}"
+    else
+        PRESERVE_FROM="/workspace/$TARGET_REPO_DIR/{{docs_project_directory}}/.taskmaster/docs/task-{{task_id}}"
+    fi
+    {{else}}
+    PRESERVE_FROM="/workspace/$TARGET_REPO_DIR/.taskmaster/docs/task-{{task_id}}"
+    {{/if}}
+    
+    echo "🔍 DEBUG: Attempting to preserve Task Master files from: $PRESERVE_FROM"
+    if [ -d "$PRESERVE_FROM" ]; then
+        cp -r "$PRESERVE_FROM"/* "$TEMP_TASK_DIR/" 2>/dev/null && echo "✓ Task Master files preserved to temporary location" || echo "⚠️ Some files may not have been preserved"
+        echo "🔍 DEBUG: Preserved files:"
+        ls -la "$TEMP_TASK_DIR/" || echo "No files in temp directory"
+    else
+        echo "❌ Task Master directory not found at: $PRESERVE_FROM"
+        echo "🔍 DEBUG: Checking available task directories in docs branch:"
+        {{#if docs_project_directory}}
+        if [ "{{docs_project_directory}}" = "." ]; then
+            ls -la "/workspace/$TARGET_REPO_DIR/.taskmaster/docs/" 2>/dev/null || echo "No .taskmaster/docs directory found"
+        else
+            ls -la "/workspace/$TARGET_REPO_DIR/{{docs_project_directory}}/.taskmaster/docs/" 2>/dev/null || echo "No docs project .taskmaster/docs directory found"
+        fi
+        {{else}}
+        ls -la "/workspace/$TARGET_REPO_DIR/.taskmaster/docs/" 2>/dev/null || echo "No .taskmaster/docs directory found"
+        {{/if}}
+    fi
+    cd /workspace
+    
     # Set working directory to the repository root
     REPO_NAME="$TARGET_REPO_DIR"
     echo "✓ Working directory: /workspace/$REPO_NAME"
-    echo "✓ Task files already available in repository"
+    echo "✓ Task files preserved from docs branch"
 
 else
     echo "=== MULTI-REPO WORKFLOW ==="
@@ -521,95 +559,61 @@ echo "✓ Created task directory at: $CLAUDE_WORK_DIR/task"
 
 # Task documentation should already be available in the task/ directory
 if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
-    echo "✓ Copying task documentation from repository's .taskmaster directory"
+    echo "✓ Restoring task documentation from preserved temporary location"
     
-    # Copy task files from .taskmaster/docs/task-{id} to task/ directory
-    # Use docs_project_directory if specified
-    {{#if docs_project_directory}}
-    if [ "{{docs_project_directory}}" = "." ]; then
-        SINGLE_TASK_DIR="/workspace/$REPO_NAME/.taskmaster/docs/task-{{task_id}}"
-    else
-        SINGLE_TASK_DIR="/workspace/$REPO_NAME/{{docs_project_directory}}/.taskmaster/docs/task-{{task_id}}"
-    fi
-    {{else}}
-    SINGLE_TASK_DIR="/workspace/$REPO_NAME/.taskmaster/docs/task-{{task_id}}"
-    {{/if}}
-    echo "🔍 DEBUG: Looking for task files at: $SINGLE_TASK_DIR"
+    # Use the preserved Task Master files from temporary location
+    TEMP_TASK_DIR="/tmp/taskmaster-preserve"
+    echo "🔍 DEBUG: Restoring task files from: $TEMP_TASK_DIR"
     
-    # Debug: Check if .taskmaster directory exists (use correct path based on docs_project_directory)
-    {{#if docs_project_directory}}
-    if [ "{{docs_project_directory}}" = "." ]; then
-        TASKMASTER_DIR="/workspace/$REPO_NAME/.taskmaster"
-    else
-        TASKMASTER_DIR="/workspace/$REPO_NAME/{{docs_project_directory}}/.taskmaster"
-    fi
-    {{else}}
-    TASKMASTER_DIR="/workspace/$REPO_NAME/.taskmaster"
-    {{/if}}
-    
-    echo "🔍 DEBUG: Checking if .taskmaster directory exists at: $TASKMASTER_DIR"
-    if [ -d "$TASKMASTER_DIR" ]; then
-        echo "✓ .taskmaster directory found"
-        echo "🔍 DEBUG: Contents of .taskmaster directory:"
-        ls -la "$TASKMASTER_DIR/" || echo "Could not list .taskmaster contents"
-        
-        echo "🔍 DEBUG: Contents of .taskmaster/docs directory:"
-        ls -la "$TASKMASTER_DIR/docs/" || echo "Could not list docs contents"
-    else
-        echo "❌ .taskmaster directory NOT found at $TASKMASTER_DIR"
-        echo "🔍 DEBUG: Contents of repository root:"
-        ls -la "/workspace/$REPO_NAME/" || echo "Could not list repo contents"
-        
-        {{#if docs_project_directory}}
-        echo "🔍 DEBUG: Contents of docs project directory:"
-        ls -la "/workspace/$REPO_NAME/{{docs_project_directory}}/" || echo "Could not list docs project directory contents"
-        {{/if}}
-    fi
-    
-    if [ -d "$SINGLE_TASK_DIR" ]; then
-        echo "🔍 DEBUG: Task directory found, contents:"
-        ls -la "$SINGLE_TASK_DIR"
+    if [ -d "$TEMP_TASK_DIR" ] && [ "$(ls -A $TEMP_TASK_DIR 2>/dev/null)" ]; then
+        echo "✓ Preserved Task Master files found"
+        echo "🔍 DEBUG: Preserved task files:"
+        ls -la "$TEMP_TASK_DIR/"
         
         echo "✅ Copying task.txt to task.md..."
-        if [ -f "$SINGLE_TASK_DIR/task.txt" ]; then
-            cp "$SINGLE_TASK_DIR/task.txt" "$CLAUDE_WORK_DIR/task/task.md" && echo "✓ task.txt copied as task.md" || echo "❌ task.txt copy failed"
+        if [ -f "$TEMP_TASK_DIR/task.txt" ]; then
+            cp "$TEMP_TASK_DIR/task.txt" "$CLAUDE_WORK_DIR/task/task.md" && echo "✓ task.txt copied as task.md" || echo "❌ task.txt copy failed"
         else
             echo "⚠️ task.txt not found"
         fi
         
         echo "✅ Copying acceptance-criteria.md..."
-        if [ -f "$SINGLE_TASK_DIR/acceptance-criteria.md" ]; then
-            cp "$SINGLE_TASK_DIR/acceptance-criteria.md" "$CLAUDE_WORK_DIR/task/" && echo "✓ acceptance-criteria.md copied" || echo "❌ acceptance-criteria.md copy failed"
+        if [ -f "$TEMP_TASK_DIR/acceptance-criteria.md" ]; then
+            cp "$TEMP_TASK_DIR/acceptance-criteria.md" "$CLAUDE_WORK_DIR/task/" && echo "✓ acceptance-criteria.md copied" || echo "❌ acceptance-criteria.md copy failed"
         else
             echo "⚠️ acceptance-criteria.md not found"
         fi
         
         echo "✅ Copying prompt.md..."
-        if [ -f "$SINGLE_TASK_DIR/prompt.md" ]; then
-            cp "$SINGLE_TASK_DIR/prompt.md" "$CLAUDE_WORK_DIR/task/" && echo "✓ prompt.md copied" || echo "❌ prompt.md copy failed"
+        if [ -f "$TEMP_TASK_DIR/prompt.md" ]; then
+            cp "$TEMP_TASK_DIR/prompt.md" "$CLAUDE_WORK_DIR/task/" && echo "✓ prompt.md copied" || echo "❌ prompt.md copy failed"
         else
             echo "⚠️ prompt.md not found"
         fi
         
         echo "✅ Copying toolman-config.json..."
-        if [ -f "$SINGLE_TASK_DIR/toolman-config.json" ]; then
-            cp "$SINGLE_TASK_DIR/toolman-config.json" "/workspace/$REPO_NAME/toolman-config.json" && echo "✓ toolman-config.json copied to workspace root" || echo "❌ toolman-config.json copy failed"
+        if [ -f "$TEMP_TASK_DIR/toolman-config.json" ]; then
+            cp "$TEMP_TASK_DIR/toolman-config.json" "/workspace/$REPO_NAME/toolman-config.json" && echo "✓ toolman-config.json copied to workspace root" || echo "❌ toolman-config.json copy failed"
         else
             echo "⚠️ toolman-config.json not found - toolman may not work correctly"
         fi
         
         echo "✅ Copying toolman-guide.md..."
-        if [ -f "$SINGLE_TASK_DIR/toolman-guide.md" ]; then
-            cp "$SINGLE_TASK_DIR/toolman-guide.md" "$CLAUDE_WORK_DIR/task/" && echo "✓ toolman-guide.md copied" || echo "❌ toolman-guide.md copy failed"
+        if [ -f "$TEMP_TASK_DIR/toolman-guide.md" ]; then
+            cp "$TEMP_TASK_DIR/toolman-guide.md" "$CLAUDE_WORK_DIR/task/" && echo "✓ toolman-guide.md copied" || echo "❌ toolman-guide.md copy failed"
         else
             echo "⚠️ toolman-guide.md not found - code agent won't have tool usage guidance"
         fi
         
-        echo "✓ Task {{task_id}} files copied from $SINGLE_TASK_DIR"
+        echo "✓ Task {{task_id}} files copied from preserved temporary location"
+        
+        # Clean up temporary directory
+        rm -rf "$TEMP_TASK_DIR"
+        echo "✓ Cleaned up temporary preservation directory"
     else
-        echo "❌ CRITICAL: Task {{task_id}} directory not found at: $SINGLE_TASK_DIR"
-        echo "🔍 DEBUG: Available directories in .taskmaster/docs:"
-        find "$TASKMASTER_DIR" -name "task-*" -type d 2>/dev/null || echo "No task directories found"
+        echo "❌ CRITICAL: No preserved Task Master files found at: $TEMP_TASK_DIR"
+        echo "🔍 DEBUG: This indicates the Task Master preservation step failed earlier"
+        echo "❌ Task {{task_id}} files are not available for this job"
         exit 1
     fi
     
