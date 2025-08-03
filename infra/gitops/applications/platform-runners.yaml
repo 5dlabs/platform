@@ -30,7 +30,7 @@ spec:
     
     helm:
       valueFiles:
-        - ../../infra/gitops/arc-runner-values.yaml
+        - https://raw.githubusercontent.com/5dlabs/platform/argo/infra/gitops/arc-runner-values.yaml
       parameters:
         # GitHub Configuration
         - name: githubConfigUrl
