@@ -35,7 +35,7 @@ spec:
         - name: image.repository
           value: ghcr.io/5dlabs/platform/orchestrator
         - name: image.tag
-          value: toolman-integration-ae3da7e
+          value: b398a6c
         - name: image.pullPolicy
           value: Always
         
