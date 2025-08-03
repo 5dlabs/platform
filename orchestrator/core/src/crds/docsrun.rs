@@ -17,6 +17,7 @@ pub struct DocsRunSpec {
     pub working_directory: String,
     #[serde(rename = "sourceBranch")]
     pub source_branch: String,
+    #[serde(default)]
     pub model: Option<String>,
     #[serde(rename = "githubUser")]
     pub github_user: String,

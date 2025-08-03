@@ -5,29 +5,15 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "5D Labs platform tools: CLI and MCP server for AI development workflows"
+description = "5D Labs platform tools: Argo Workflows MCP server for AI development workflows"
 homepage = "https://github.com/5dlabs/platform"
-
-# CLI binary
-[[bin]]
-name = "fdl"
-path = "src/cli/main.rs"
 
 # MCP server binary
 [[bin]]
 name = "fdl-mcp"
 path = "src/mcp/main.rs"
 
-# Argo Workflows MCP server binary
-[[bin]]
-name = "fdl-mcp-argo"
-path = "src/mcp-argo/main.rs"
-
 [dependencies]
-# CLI
-clap = { workspace = true }
-colored = { workspace = true }
-
 # HTTP Client
 reqwest = { workspace = true }
 
@@ -38,24 +24,11 @@ serde_json = { workspace = true }
 # Error handling
 anyhow = { workspace = true }
 
-# Logging
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-
 # Async runtime
 tokio = { workspace = true }
 
-# Time handling
-chrono = { workspace = true }
-
-# Kubernetes and Argo Workflows integration (for mcp-argo)
-kube = { workspace = true, optional = true }
-k8s-openapi = { workspace = true, optional = true }
-uuid = { workspace = true, optional = true }
+# File system and process
+uuid = { workspace = true }
 
 # Internal dependencies  
 common = { path = "../common" }
-
-[features]
-default = []
-argo = ["kube", "k8s-openapi", "uuid"]

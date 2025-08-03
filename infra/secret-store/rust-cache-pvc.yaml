@@ -1,0 +1,17 @@
+---
+# Persistent Volume Claim for Rust caching in ARC runners
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rust-cache-pvc
+  namespace: arc-runners
+  labels:
+    app.kubernetes.io/name: rust-cache-pvc
+    app.kubernetes.io/part-of: platform
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: local-path

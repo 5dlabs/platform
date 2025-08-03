@@ -30,6 +30,7 @@ spec:
     - 'https://victoriametrics.github.io/helm-charts/'
     - 'https://actions-runner-controller.github.io/actions-runner-controller'
     - 'https://twingate.github.io/helm-charts'
+    - 'oci://ghcr.io/actions/actions-runner-controller-charts'
   
   # Destinations that applications in this project can deploy to
   destinations:
@@ -46,6 +47,12 @@ spec:
     - namespace: mcp
       server: https://kubernetes.default.svc
     - namespace: arc-systems
+      server: https://kubernetes.default.svc
+    - namespace: arc-runners
+      server: https://kubernetes.default.svc
+    - namespace: secret-store
+      server: https://kubernetes.default.svc
+    - namespace: external-secrets
       server: https://kubernetes.default.svc
     - namespace: kube-system
       server: https://kubernetes.default.svc

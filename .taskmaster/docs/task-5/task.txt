@@ -1,0 +1,23 @@
+# Task ID: 5
+# Title: Remove Handler Layer
+# Status: pending
+# Dependencies: 6, 7, 14
+# Priority: high
+# Description: Remove code_handler.rs, docs_handler.rs, and common handler utilities, moving any reusable logic to the controller or MCP server. This should be done after the new Argo Workflows system is fully working.
+# Details:
+This task should only be executed after tasks 6, 7, and 14 are completed and the new Argo Workflows system is proven to work reliably. Keep the old handlers running in parallel as a reference until the new system is proven.
+
+When ready to proceed:
+1. Delete code_handler.rs and docs_handler.rs from the handlers directory
+2. Remove common handler utilities and middleware
+3. Identify any reusable business logic in the handlers that should be preserved
+4. Refactor valuable logic into appropriate modules in the controller or create utility libraries that can be used by both the controller and MCP server
+5. Update imports in any files that referenced the removed handlers
+6. Clean up any handler-specific tests
+
+# Test Strategy:
+Before removing code, ensure the new Argo Workflows system is fully functional and tested. Once confirmed:
+1. Compile the codebase to ensure it builds without the removed handlers
+2. Run existing tests for the controller to verify functionality is preserved
+3. If logic was moved to the controller, add or update tests to cover this functionality
+4. Verify that no references to the removed handlers remain in the codebase

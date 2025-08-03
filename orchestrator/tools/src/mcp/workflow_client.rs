@@ -74,19 +74,19 @@ impl ArgoWorkflowsClient {
         let uuid_str = Uuid::new_v4().to_string();
         let workflow_name = format!("coderun-{}-{}", service, &uuid_str[..8]);
         
-        let mut parameters = vec![
-            json!({"name": "task-id", "value": task_id.to_string()}),
-            json!({"name": "service-id", "value": service}),
-            json!({"name": "repository-url", "value": repository}),
-            json!({"name": "docs-repository-url", "value": docs_repository}),
-            json!({"name": "docs-project-directory", "value": docs_project_directory}),
-            json!({"name": "working-directory", "value": working_directory}),
-            json!({"name": "github-user", "value": github_user}),
-            json!({"name": "continue-session", "value": continue_session.to_string()}),
+        let mut parameter_pairs = vec![
+            format!("task-id={}", task_id),
+            format!("service-id={}", service),
+            format!("repository-url={}", repository),
+            format!("docs-repository-url={}", docs_repository),
+            format!("docs-project-directory={}", docs_project_directory),
+            format!("working-directory={}", working_directory),
+            format!("github-user={}", github_user),
+            format!("continue-session={}", continue_session),
         ];
 
         if let Some(m) = model {
-            parameters.push(json!({"name": "model", "value": m}));
+            parameter_pairs.push(format!("model={}", m));
         }
 
         // TODO: Handle env and env_from_secrets parameters
@@ -94,10 +94,7 @@ impl ArgoWorkflowsClient {
             if let Some(env_map) = env_obj.as_object() {
                 for (key, value) in env_map {
                     if let Some(val_str) = value.as_str() {
-                        parameters.push(json!({
-                            "name": format!("env-{}", key),
-                            "value": val_str
-                        }));
+                        parameter_pairs.push(format!("env-{}={}", key, val_str));
                     }
                 }
             }
@@ -112,10 +109,7 @@ impl ArgoWorkflowsClient {
                             secret_obj.get("secretName").and_then(|v| v.as_str()),
                             secret_obj.get("secretKey").and_then(|v| v.as_str()),
                         ) {
-                            parameters.push(json!({
-                                "name": format!("secret-{}-{}", i, name),
-                                "value": format!("{}:{}:{}", name, secret_name, secret_key)
-                            }));
+                            parameter_pairs.push(format!("secret-{}-{}={}:{}:{}", i, name, name, secret_name, secret_key));
                         }
                     }
                 }
@@ -127,7 +121,7 @@ impl ArgoWorkflowsClient {
             "resourceKind": "WorkflowTemplate",
             "resourceName": "coderun-template",
             "submitOptions": {
-                "parameters": parameters,
+                "parameters": parameter_pairs,
                 "name": workflow_name
             }
         });
@@ -142,18 +136,20 @@ impl ArgoWorkflowsClient {
         &self,
         working_directory: &str,
         github_user: &str,
+        source_branch: &str,
         model: Option<&str>,
     ) -> Result<String> {
         let uuid_str = Uuid::new_v4().to_string();
         let workflow_name = format!("docsrun-{}", &uuid_str[..8]);
         
-        let mut parameters = vec![
-            json!({"name": "working-directory", "value": working_directory}),
-            json!({"name": "github-user", "value": github_user}),
+        let mut parameter_pairs = vec![
+            format!("working-directory={}", working_directory),
+            format!("github-user={}", github_user),
+            format!("source-branch={}", source_branch),
         ];
 
         if let Some(m) = model {
-            parameters.push(json!({"name": "model", "value": m}));
+            parameter_pairs.push(format!("model={}", m));
         }
 
         let submit_request = json!({
@@ -161,7 +157,7 @@ impl ArgoWorkflowsClient {
             "resourceKind": "WorkflowTemplate", 
             "resourceName": "docsrun-template",
             "submitOptions": {
-                "parameters": parameters,
+                "parameters": parameter_pairs,
                 "name": workflow_name
             }
         });

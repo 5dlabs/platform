@@ -20,11 +20,17 @@ use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::process::{Command, Stdio};
+use std::env;
+use std::fs;
+use std::path::Path;
+use std::process::Command;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::runtime::Runtime;
 
 mod tools;
+mod workflow_client;
+
+use workflow_client::ArgoWorkflowsClient;
 
 // Custom error type for production-ready error handling.
 #[derive(Debug, Serialize)]
@@ -76,18 +82,210 @@ fn repo_to_https_url(repo: &str) -> String {
     format!("https://github.com/{repo}.git")
 }
 
-/// Run the orchestrator CLI command
-fn run_orchestrator_cli(args: &[&str]) -> Result<String> {
-    // Use the local build in the same directory as this MCP binary
-    let mut cmd = Command::new("fdl");
-    cmd.args(args);
-    cmd.stderr(Stdio::piped());
-    let output = cmd.output().context("Failed to execute orchestrator-cli")?;
+/// Get Argo Workflows client configuration from environment
+fn get_argo_config() -> Result<(String, String)> {
+    let base_url = env::var("ARGO_WORKFLOWS_URL")
+        .unwrap_or_else(|_| "http://argo-workflows-server.argo.svc.cluster.local:2746".to_string());
+    let namespace = env::var("ARGO_WORKFLOWS_NAMESPACE")
+        .unwrap_or_else(|_| "orchestrator".to_string());
+    
+    Ok((base_url, namespace))
+}
+
+/// Create an Argo Workflows client
+fn create_argo_client() -> Result<ArgoWorkflowsClient> {
+    let (base_url, namespace) = get_argo_config()?;
+    Ok(ArgoWorkflowsClient::new(base_url, namespace))
+}
+
+/// Auto-detect git repository URL
+fn get_git_remote_url() -> Result<String> {
+    let output = Command::new("git")
+        .args(["remote", "get-url", "origin"])
+        .output()
+        .context("Failed to get git remote URL")?;
+
     if !output.status.success() {
-        let err = String::from_utf8_lossy(&output.stderr).to_string();
-        return Err(anyhow!("orchestrator-cli failed: {}", err));
+        return Err(anyhow!(
+            "Failed to detect git repository URL. Make sure you're in a git repository with a remote origin."
+        ));
     }
-    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+
+    Ok(String::from_utf8(output.stdout)?.trim().to_string())
+}
+
+/// Auto-detect current git branch
+fn get_current_branch() -> Result<String> {
+    let output = Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .output()
+        .context("Failed to get current git branch")?;
+
+    if !output.status.success() {
+        return Ok("main".to_string());
+    }
+
+    Ok(String::from_utf8(output.stdout)?.trim().to_string())
+}
+
+/// Auto-detect working directory relative to git root
+fn get_working_directory(working_directory: Option<&str>) -> Result<String> {
+    if let Some(wd) = working_directory {
+        return Ok(wd.to_string());
+    }
+
+    let current_dir = std::env::current_dir()?;
+    let repo_root = Command::new("git")
+        .args(["rev-parse", "--show-toplevel"])
+        .output()
+        .context("Failed to get git repo root")?
+        .stdout;
+    let repo_root_string = String::from_utf8(repo_root)?;
+    let repo_root = repo_root_string.trim();
+
+    let rel_path = current_dir
+        .strip_prefix(repo_root)
+        .context("Current directory is not in git repository")?
+        .to_string_lossy()
+        .to_string();
+
+    Ok(if rel_path.is_empty() {
+        ".".to_string()
+    } else {
+        rel_path
+    })
+}
+
+/// Check and auto-commit .taskmaster changes if needed
+fn check_and_commit_taskmaster_changes(working_dir: &str, source_branch: &str) -> Result<()> {
+    let taskmaster_path = format!("{working_dir}/.taskmaster");
+
+    if !Path::new(&taskmaster_path).exists() {
+        return Err(anyhow!("No .taskmaster directory found in {}", working_dir));
+    }
+
+    eprintln!("Checking for uncommitted .taskmaster changes...");
+
+    let status_output = Command::new("git")
+        .args(["status", "--porcelain", &taskmaster_path])
+        .output()
+        .context("Failed to check git status")?;
+
+    if status_output.stdout.is_empty() {
+        eprintln!("No uncommitted changes in .taskmaster directory");
+    } else {
+        eprintln!("Found uncommitted changes in .taskmaster directory");
+
+        Command::new("git")
+            .args(["add", &taskmaster_path])
+            .status()
+            .context("Failed to add .taskmaster files")?;
+
+        Command::new("git")
+            .args([
+                "commit",
+                "-m",
+                "chore: auto-commit .taskmaster directory for documentation generation",
+            ])
+            .status()
+            .context("Failed to commit .taskmaster files")?;
+
+        eprintln!("Pushing commit to remote...");
+        let push_result = Command::new("git")
+            .args(["push", "origin", source_branch])
+            .status()
+            .context("Failed to push commits")?;
+
+        if !push_result.success() {
+            return Err(anyhow!("Failed to push .taskmaster commit"));
+        }
+
+        eprintln!("✓ Auto-committed and pushed .taskmaster directory");
+    }
+
+    Ok(())
+}
+
+/// Create documentation directory structure and copy task files
+fn create_docs_structure(working_dir: &str) -> Result<()> {
+    eprintln!("Creating documentation directory structure...");
+
+    let taskmaster_path = format!("{working_dir}/.taskmaster");
+    let tasks_json_path = format!("{taskmaster_path}/tasks/tasks.json");
+
+    if !Path::new(&tasks_json_path).exists() {
+        return Err(anyhow!("No tasks.json found at {}", tasks_json_path));
+    }
+
+    let content = fs::read_to_string(&tasks_json_path).context("Failed to read tasks.json")?;
+
+    let json: Value = serde_json::from_str(&content).context("Failed to parse tasks.json")?;
+
+    let tasks = json
+        .get("master")
+        .and_then(|m| m.get("tasks"))
+        .and_then(|t| t.as_array())
+        .context("No tasks found in tasks.json")?;
+
+    let docs_dir = format!("{taskmaster_path}/docs");
+    fs::create_dir_all(&docs_dir).context("Failed to create docs directory")?;
+
+    let mut created_count = 0;
+    for task in tasks {
+        if let Some(task_id) = task.get("id").and_then(serde_json::Value::as_u64) {
+            if let Some(title) = task.get("title").and_then(|t| t.as_str()) {
+                let task_dir = format!("{docs_dir}/task-{task_id}");
+                fs::create_dir_all(&task_dir)
+                    .context(format!("Failed to create directory for task {task_id}"))?;
+
+                let source_file = format!("{taskmaster_path}/tasks/task_{task_id:03}.txt");
+                let dest_file = format!("{task_dir}/task.txt");
+
+                if Path::new(&source_file).exists() {
+                    fs::copy(&source_file, &dest_file)
+                        .context(format!("Failed to copy task file for task {task_id}"))?;
+                    eprintln!("✓ Copied task file for task {}: {}", task_id, title);
+                } else {
+                    eprintln!(
+                        "⚠ No task file found for task {} (expected: {})",
+                        task_id, source_file
+                    );
+                }
+
+                created_count += 1;
+            }
+        }
+    }
+
+    eprintln!(
+        "✓ Created documentation structure for {} tasks",
+        created_count
+    );
+    Ok(())
+}
+
+/// Prepare documentation files and return info for submission
+fn prepare_for_submission(
+    working_directory: Option<&str>,
+) -> Result<(String, String, String)> {
+    eprintln!("Preparing documentation files for submission...");
+
+    // Auto-detect working directory (relative path from repo root to current dir)
+    let working_dir = get_working_directory(working_directory)?;
+
+    // Auto-detect source branch
+    let source_branch = get_current_branch()?;
+
+    eprintln!("Working directory: {}", working_dir);
+    eprintln!("Source branch: {}", source_branch);
+
+    // Check and commit .taskmaster changes if needed
+    check_and_commit_taskmaster_changes(&working_dir, &source_branch)?;
+
+    // Create documentation directory structure and copy task files
+    create_docs_structure(&working_dir)?;
+
+    Ok((working_dir, source_branch, "main".to_string()))
 }
 
 // Capabilities advertised by the server with full MCP tool schemas.
@@ -134,8 +332,8 @@ fn handle_mcp_protocol_methods(
                     }
                 },
                 "serverInfo": {
-                    "name": "orchestrator-mcp",
-                    "title": "Orchestrator MCP Server",
+                    "name": "orchestrator-mcp-argo",
+                    "title": "Orchestrator MCP Server (Argo Workflows)",
                     "version": "1.0.0"
                 }
             })))
@@ -159,34 +357,38 @@ fn handle_mcp_protocol_methods(
     }
 }
 
-// Handle orchestrator tool methods
-fn handle_orchestrator_tools(
+// Handle orchestrator tool methods (async version)
+async fn handle_orchestrator_tools_async(
     method: &str,
     params_map: &HashMap<String, Value>,
 ) -> Option<Result<Value>> {
     match method {
         "docs" => {
-            // Initialize documentation for Task Master tasks
-            // Debug output removed to satisfy clippy
+            // Initialize documentation for Task Master tasks using Argo Workflows
 
-            // Extract required working directory parameter
-            let working_directory =
-                match params_map.get("working_directory").and_then(|v| v.as_str()) {
-                    Some(wd) => wd,
-                    None => return Some(Err(anyhow!("working_directory parameter is required"))),
-                };
+            // Get working directory from environment variable (takes precedence) or parameter
+            let env_working_dir = env::var("FDL_DEFAULT_WORKING_DIR").ok();
+            let working_directory = env_working_dir
+                .as_deref()
+                .or_else(|| params_map.get("working_directory").and_then(|v| v.as_str()));
 
-            // Extract model parameter (no default - let CLI/backend handle it)
+            // Extract model parameter (no default - let workflow template handle it)
             let model = params_map.get("model").and_then(|v| v.as_str());
 
             // Get GitHub user from environment variable (takes precedence) or parameter
-            let env_user = std::env::var("FDL_DEFAULT_DOCS_USER").ok();
+            let env_user = env::var("FDL_DEFAULT_DOCS_USER").ok();
             let github_user = match env_user
                 .as_deref()
                 .or_else(|| params_map.get("github_user").and_then(|v| v.as_str()))
             {
                 Some(user) => user,
                 None => return Some(Err(anyhow!("github_user parameter is required or FDL_DEFAULT_DOCS_USER environment variable must be set"))),
+            };
+
+            // Prepare documentation files and get git info
+            let (actual_working_dir, source_branch, _target_branch) = match prepare_for_submission(working_directory) {
+                Ok(result) => result,
+                Err(e) => return Some(Err(anyhow!("Failed to prepare documentation files: {}", e))),
             };
 
             // Validate model parameter if provided - allow any model that starts with "claude-"
@@ -196,38 +398,31 @@ fn handle_orchestrator_tools(
                 }
             }
 
-            // Build CLI arguments
-            let mut args = vec!["task", "docs"];
+            // Create Argo Workflows client
+            let client = match create_argo_client() {
+                Ok(c) => c,
+                Err(e) => return Some(Err(anyhow!("Failed to create Argo client: {}", e))),
+            };
 
-            // Add required parameters
-            args.extend(&["--working-directory", working_directory]);
-            args.extend(&["--github-user", github_user]);
-
-            // Add model parameter only if provided
-            if let Some(m) = model {
-                args.extend(&["--model", m]);
-            }
-
-            // Debug output removed to satisfy clippy
-
-            // Execute the CLI command
-            match run_orchestrator_cli(&args) {
-                Ok(output) => Some(Ok(json!({
+            // Submit DocsRun workflow
+            match client.submit_docsrun_workflow(&actual_working_dir, github_user, &source_branch, model).await {
+                Ok(workflow_name) => Some(Ok(json!({
                     "success": true,
-                    "message": "Documentation generation initiated successfully",
-                    "output": output,
+                    "message": "Documentation generation workflow submitted successfully",
+                    "workflow_name": workflow_name,
+                    "working_directory": actual_working_dir,
+                    "source_branch": source_branch,
                     "parameters_used": {
-                        "model": model.unwrap_or("default from Helm configuration"),
+                        "model": model.unwrap_or("default from workflow template"),
                         "working_directory": working_directory,
                         "github_user": github_user
                     }
                 }))),
-                Err(e) => Some(Err(anyhow!("Failed to execute docs command: {}", e))),
+                Err(e) => Some(Err(anyhow!("Failed to submit docs workflow: {}", e))),
             }
         }
         "task" => {
-            // Submit a Task Master task for implementation
-            // Debug output removed to satisfy clippy
+            // Submit a Task Master task for implementation using Argo Workflows
 
             // Extract required parameters
             let task_id = match params_map
@@ -241,7 +436,7 @@ fn handle_orchestrator_tools(
             let service = params_map.get("service").and_then(|v| v.as_str());
 
             // Get service from environment variable (takes precedence) or parameter
-            let env_service = std::env::var("FDL_DEFAULT_SERVICE").ok();
+            let env_service = env::var("FDL_DEFAULT_SERVICE").ok();
             let service = match env_service.as_deref().or(service) {
                 Some(s) => s,
                 None => return Some(Err(anyhow!("Missing required parameter: service (can also be set via FDL_DEFAULT_SERVICE environment variable)"))),
@@ -292,7 +487,7 @@ fn handle_orchestrator_tools(
                 )));
             }
 
-            // Extract optional model parameter (no default - let CLI/backend handle it)
+            // Extract optional model parameter
             let model = params_map.get("model").and_then(|v| v.as_str());
 
             let github_user = match params_map.get("github_user").and_then(|v| v.as_str()) {
@@ -305,13 +500,10 @@ fn handle_orchestrator_tools(
                 .and_then(serde_json::Value::as_bool)
                 .unwrap_or(false);
 
-            let env = params_map.get("env").and_then(|v| v.as_object());
+            let env = params_map.get("env");
+            let env_from_secrets = params_map.get("env_from_secrets");
 
-            let env_from_secrets = params_map
-                .get("env_from_secrets")
-                .and_then(|v| v.as_array());
-
-            // Validate model parameter if provided - allow any model that starts with "claude-"
+            // Validate model parameter if provided
             if let Some(m) = model {
                 if !m.starts_with("claude-") {
                     return Some(Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name (e.g., 'claude-sonnet-4-20250514')", m)));
@@ -326,87 +518,30 @@ fn handle_orchestrator_tools(
                 return Some(Err(anyhow!("Invalid service name '{}'. Must contain only lowercase letters, numbers, and hyphens", service)));
             }
 
-            // Convert org/repo format to HTTPS URLs for CLI
-            let repository_url = repo_to_https_url(repository);
-            let docs_repository_url = repo_to_https_url(docs_repository);
+            // Create Argo Workflows client
+            let client = match create_argo_client() {
+                Ok(c) => c,
+                Err(e) => return Some(Err(anyhow!("Failed to create Argo client: {}", e))),
+            };
 
-            // Build CLI arguments using the new CLI interface
-            let mut args = vec!["task", "code"];
-
-            // Add required parameters (task_id is positional, not a flag)
-            let task_id_str = task_id.to_string();
-            args.push(&task_id_str);
-            args.extend(&["--service", service]);
-
-            // Add required repository URLs (converted from org/repo format)
-            args.extend(&["--repository-url", &repository_url]);
-            args.extend(&["--docs-repository-url", &docs_repository_url]);
-
-            // Add required directory parameters
-            args.extend(&["--docs-project-directory", docs_project_directory]);
-            args.extend(&["--working-directory", working_directory]);
-
-            // Add model parameter only if provided
-            if let Some(m) = model {
-                args.extend(&["--model", m]);
-            }
-
-            // Add GitHub user (now required)
-            args.extend(&["--github-user", github_user]);
-
-            // Docs branch will be auto-detected by CLI
-
-            // Add session flags
-            if continue_session {
-                args.push("--continue-session");
-            }
-
-            // Prepare environment variables string if specified
-            #[allow(unused_assignments)]
-            let mut env_string = String::new();
-            if let Some(env_obj) = env {
-                let mut env_pairs = Vec::new();
-                for (key, value) in env_obj {
-                    if let Some(val_str) = value.as_str() {
-                        env_pairs.push(format!("{key}={val_str}"));
-                    }
-                }
-                if !env_pairs.is_empty() {
-                    env_string = env_pairs.join(",");
-                    args.extend(&["--env", &env_string]);
-                }
-            }
-
-            // Prepare environment variables from secrets string if specified
-            #[allow(unused_assignments)]
-            let mut secrets_string = String::new();
-            if let Some(env_secrets_arr) = env_from_secrets {
-                let mut secret_specs = Vec::new();
-                for secret in env_secrets_arr {
-                    if let Some(secret_obj) = secret.as_object() {
-                        if let (Some(name), Some(secret_name), Some(secret_key)) = (
-                            secret_obj.get("name").and_then(|v| v.as_str()),
-                            secret_obj.get("secretName").and_then(|v| v.as_str()),
-                            secret_obj.get("secretKey").and_then(|v| v.as_str()),
-                        ) {
-                            secret_specs.push(format!("{name}:{secret_name}:{secret_key}"));
-                        }
-                    }
-                }
-                if !secret_specs.is_empty() {
-                    secrets_string = secret_specs.join(",");
-                    args.extend(&["--env-from-secrets", &secrets_string]);
-                }
-            }
-
-            // Debug output removed to satisfy clippy
-
-            // Execute the CLI command
-            match run_orchestrator_cli(&args) {
-                Ok(output) => Some(Ok(json!({
+            // Submit CodeRun workflow
+            match client.submit_coderun_workflow(
+                task_id,
+                service,
+                repository,
+                docs_repository,
+                docs_project_directory,
+                working_directory,
+                github_user,
+                model,
+                continue_session,
+                env,
+                env_from_secrets,
+            ).await {
+                Ok(workflow_name) => Some(Ok(json!({
                     "success": true,
-                    "message": "Implementation task submitted successfully",
-                    "output": output,
+                    "message": "Implementation task workflow submitted successfully",
+                    "workflow_name": workflow_name,
                     "parameters_used": {
                         "task_id": task_id,
                         "service": service,
@@ -414,22 +549,22 @@ fn handle_orchestrator_tools(
                         "docs_repository": docs_repository,
                         "docs_project_directory": docs_project_directory,
                         "working_directory": working_directory,
-                        "model": model.unwrap_or("default from Helm configuration"),
+                        "model": model.unwrap_or("default from workflow template"),
                         "github_user": github_user,
                         "continue_session": continue_session,
                         "env": env,
                         "env_from_secrets": env_from_secrets
                     }
                 }))),
-                Err(e) => Some(Err(anyhow!("Failed to execute submit task: {}", e))),
+                Err(e) => Some(Err(anyhow!("Failed to submit code workflow: {}", e))),
             }
         }
         _ => None,
     }
 }
 
-// Handle tool invocation
-fn handle_tool_invocation(params_map: &HashMap<String, Value>) -> Result<Value> {
+// Handle tool invocation (async version)
+async fn handle_tool_invocation_async(params_map: &HashMap<String, Value>) -> Result<Value> {
     let name = params_map
         .get("name")
         .and_then(|v| v.as_str())
@@ -441,7 +576,7 @@ fn handle_tool_invocation(params_map: &HashMap<String, Value>) -> Result<Value> 
     let args_map = extract_params(Some(arguments));
 
     // Try orchestrator tools
-    if let Some(result) = handle_orchestrator_tools(name, &args_map) {
+    if let Some(result) = handle_orchestrator_tools_async(name, &args_map).await {
         match result {
             Ok(content) => Ok(json!({
                 "content": [
@@ -458,16 +593,16 @@ fn handle_tool_invocation(params_map: &HashMap<String, Value>) -> Result<Value> 
     }
 }
 
-// Handle core MCP methods (including tool calls)
-fn handle_core_methods(method: &str, params_map: &HashMap<String, Value>) -> Option<Result<Value>> {
+// Handle core MCP methods (including tool calls) (async version)
+async fn handle_core_methods_async(method: &str, params_map: &HashMap<String, Value>) -> Option<Result<Value>> {
     match method {
-        "tools/call" => Some(handle_tool_invocation(params_map)),
+        "tools/call" => Some(handle_tool_invocation_async(params_map).await),
         _ => None,
     }
 }
 
-// Handler for each method (following MCP specification).
-fn handle_method(method: &str, params: Option<&Value>) -> Option<Result<Value>> {
+// Handler for each method (following MCP specification) (async version).
+async fn handle_method_async(method: &str, params: Option<&Value>) -> Option<Result<Value>> {
     let params_map = extract_params(params);
 
     // Try MCP protocol methods FIRST (ping, initialize, tools/list, etc.)
@@ -481,12 +616,12 @@ fn handle_method(method: &str, params: Option<&Value>) -> Option<Result<Value>> 
     }
 
     // Try core methods (tools/call)
-    if let Some(result) = handle_core_methods(method, &params_map) {
+    if let Some(result) = handle_core_methods_async(method, &params_map).await {
         return Some(result);
     }
 
     // Try orchestrator tools directly (for debugging)
-    if let Some(result) = handle_orchestrator_tools(method, &params_map) {
+    if let Some(result) = handle_orchestrator_tools_async(method, &params_map).await {
         return Some(result);
     }
 
@@ -503,7 +638,7 @@ async fn rpc_loop() -> Result<()> {
     while let Some(line) = lines.next_line().await? {
         let request: RpcRequest = serde_json::from_str(&line).context("Invalid JSON request")?;
 
-        let result = handle_method(&request.method, request.params.as_ref());
+        let result = handle_method_async(&request.method, request.params.as_ref()).await;
         if let Some(method_result) = result {
             let resp_json = match method_result {
                 Ok(res) => {

@@ -1,0 +1,27 @@
+# Task ID: 23
+# Title: Deploy and Configure Essential Kubernetes Operators via Argo CD
+# Status: pending
+# Dependencies: 1, 11
+# Priority: medium
+# Description: Install, configure, and manage essential infrastructure operators (TwinGate, PostgreSQL, Redis, QuestDB, MinIO) using Argo CD, ensuring production-grade settings, RBAC, resource limits, and monitoring.
+# Details:
+1. For each required operator (TwinGate, PostgreSQL, Redis, QuestDB, MinIO), review the official documentation (cloned in docs/) to determine production-ready configuration, high availability options, and required CRDs.
+2. Create a dedicated namespace for each operator, unless operator best practices recommend shared or global installation. Define namespace manifests in infra/gitops/operators/.
+3. Define Argo CD Application manifests for each operator in infra/gitops/operators/, specifying source repo, path, target namespace, and automated sync policies. Use sync waves (via argocd.argoproj.io/sync-wave annotation) to ensure correct installation order (e.g., CRDs before operator controllers, then custom resources) [1][3].
+4. Configure RBAC (Roles, RoleBindings, ServiceAccounts) for each operator, granting only the minimum required permissions per documentation. Include OperatorGroup and Subscription manifests if using OLM [1].
+5. Set resource requests and limits for operator deployments to ensure cluster stability. Use production-appropriate values based on operator documentation and expected workload.
+6. Enable high availability for operators that support it (e.g., multiple replicas, leader election) and configure persistent storage where required.
+7. Integrate monitoring and health checks: add Prometheus ServiceMonitors or PodMonitors if supported, and configure Argo CD health checks for each operator [2].
+8. Reference the operator documentation in docs/ for any operator-specific configuration, secrets, or CRDs needed for initial setup.
+9. Commit all manifests to Git and ensure they are tracked by Argo CD for continuous reconciliation.
+10. Document any manual steps or prerequisites in the repo README for future maintainers.
+
+# Test Strategy:
+- Apply the Argo CD Application manifests in a staging environment.
+- Verify each operator is deployed in the correct namespace and reaches a Healthy status in Argo CD.
+- Confirm all required CRDs are installed and operator controllers are running with the correct resource limits and RBAC.
+- Test creation of sample custom resources for each operator (e.g., a PostgreSQL cluster, Redis instance) to validate operator functionality.
+- Check that monitoring endpoints (ServiceMonitor/PodMonitor) are discovered by Prometheus and health checks are reported in Argo CD.
+- Simulate operator failure (e.g., delete a pod) and verify high availability and self-healing behavior.
+- Review Argo CD logs and UI for sync errors or drift.
+- Validate that all configuration matches production-readiness criteria from operator documentation.
