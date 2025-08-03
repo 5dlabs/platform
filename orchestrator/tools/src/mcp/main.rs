@@ -490,6 +490,9 @@ async fn handle_orchestrator_tools_async(
             // Extract optional model parameter
             let model = params_map.get("model").and_then(|v| v.as_str());
 
+            // Extract optional docs_branch parameter
+            let docs_branch = params_map.get("docs_branch").and_then(|v| v.as_str());
+
             let github_user = match params_map.get("github_user").and_then(|v| v.as_str()) {
                 Some(u) => u,
                 None => return Some(Err(anyhow!("Missing required parameter: github_user"))),
@@ -531,6 +534,7 @@ async fn handle_orchestrator_tools_async(
                 repository,
                 docs_repository,
                 docs_project_directory,
+                docs_branch,
                 working_directory,
                 github_user,
                 model,
@@ -548,6 +552,7 @@ async fn handle_orchestrator_tools_async(
                         "repository": repository,
                         "docs_repository": docs_repository,
                         "docs_project_directory": docs_project_directory,
+                        "docs_branch": docs_branch.unwrap_or("main"),
                         "working_directory": working_directory,
                         "model": model.unwrap_or("default from workflow template"),
                         "github_user": github_user,

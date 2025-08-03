@@ -64,6 +64,7 @@ impl ArgoWorkflowsClient {
         repository: &str,
         docs_repository: &str,
         docs_project_directory: &str,
+        docs_branch: Option<&str>,
         working_directory: &str,
         github_user: &str,
         model: Option<&str>,
@@ -84,7 +85,7 @@ impl ArgoWorkflowsClient {
             format!("github-user={}", github_user),
             format!("continue-session={}", continue_session),
             format!("overwrite-memory=false"), // Add missing overwrite-memory parameter
-            format!("docs-branch=main"), // Add missing docs-branch parameter
+            format!("docs-branch={}", docs_branch.unwrap_or("main")), // Add docs-branch parameter
         ];
 
         // Always include model parameter, use default if not provided
