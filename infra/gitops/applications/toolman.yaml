@@ -16,17 +16,86 @@ spec:
   # Project configuration
   project: platform
   
-  # Source configuration - use official ToolMan chart with custom values
-  sources:
-    - repoURL: https://github.com/5dlabs/toolman
-      targetRevision: main
-      path: charts/toolman
-      helm:
-        valueFiles:
-          - $values/infra/charts/toolman-values.yaml
-    - repoURL: https://github.com/jonathonfritz/platform.git
-      targetRevision: argo
-      ref: values
+  # Source configuration - use official ToolMan chart
+  source:
+    repoURL: https://github.com/5dlabs/toolman
+    targetRevision: main
+    path: charts/toolman
+    
+    # Helm configuration
+    helm:
+      valueFiles:
+        - values.yaml
+      
+      # Override values for agent-platform deployment
+      values: |
+        # Enable debug logging
+        env:
+          - name: PORT
+            value: "3000"
+          - name: PROJECT_DIR
+            value: "/config"
+          - name: RUST_LOG
+            value: "debug"
+
+        # Fix working directory for all MCP tools
+        config:
+          servers:
+            brave-search:
+              name: "Brave Search"
+              description: "Web search using Brave Search API"
+              transport: "stdio"
+              command: "npx"
+              args: ["-y","@modelcontextprotocol/server-brave-search"]
+              workingDirectory: "/tmp"
+              env: {}
+            kubernetes:
+              name: "Kubernetes"
+              description: "Kubernetes cluster management and Helm operations"
+              transport: "sse"
+              command: ""
+              args: []
+              workingDirectory: "/tmp"
+              url: "http://k8s-mcp-k8s-mcp-server.mcp.svc.cluster.local:8080/sse"
+              env: {}
+            memory:
+              name: "Memory"
+              description: "Persistent memory and knowledge graph for long-term information retention"
+              transport: "stdio"
+              command: "npx"
+              args: ["-y","@modelcontextprotocol/server-memory"]
+              workingDirectory: "/tmp"
+              env:
+                MEMORY_FILE_PATH: "/home/mcp/memory.json"
+            rustdocs:
+              name: "Rust Docs"
+              description: "Rust documentation MCP server"
+              transport: "sse"
+              command: ""
+              args: []
+              workingDirectory: "/tmp"
+              url: "http://rustdocs-mcp-rust-docs-mcp-server.mcp.svc.cluster.local:3000/sse"
+              env: {}
+            solana:
+              name: "Solana"
+              description: "Solana blockchain development tools"
+              transport: "http"
+              command: ""
+              args: []
+              workingDirectory: "/tmp"
+              url: "https://mcp.solana.com/mcp"
+              env: {}
+
+        # Persistence configuration
+        persistence:
+          enabled: true
+          storageClassName: "local-path"
+          size: "10Gi"
+
+        # Service account
+        serviceAccount:
+          create: true
+          name: toolman
   
   # Destination configuration
   destination:
