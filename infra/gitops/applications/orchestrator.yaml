@@ -22,7 +22,7 @@ spec:
   # Source configuration
   source:
     repoURL: https://github.com/5dlabs/platform
-    targetRevision: HEAD
+    targetRevision: argo
     path: infra/charts/orchestrator
     
     # Helm configuration
