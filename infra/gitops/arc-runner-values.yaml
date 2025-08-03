@@ -1,24 +1,7 @@
 githubConfigSecret: github-pat
-runnerLabels: 
-  - k8s-runner
 
 template:
   spec:
-    affinity:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-          - matchExpressions:
-            - key: kubernetes.io/hostname
-              operator: Exists
-      podAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-        - weight: 100
-          podAffinityTerm:
-            labelSelector:
-              matchLabels:
-                actions.github.com/scale-set-name: k8s-runner
-            topologyKey: kubernetes.io/hostname
     containers:
     - name: runner
       image: ghcr.io/5dlabs/platform/rust-builder:latest
@@ -42,3 +25,18 @@ template:
     - name: cache-volume
       persistentVolumeClaim:
         claimName: runner-cache-pvc
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: Exists
+      podAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                actions.github.com/scale-set-name: k8s-runner
+            topologyKey: kubernetes.io/hostname
