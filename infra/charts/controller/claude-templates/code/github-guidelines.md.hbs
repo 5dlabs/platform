@@ -9,7 +9,7 @@
 - ⭐ **COMMIT AND PUSH FREQUENTLY** - Ideally after every significant change or turn
 - ⭐ **SUBMIT A PULL REQUEST** when implementation meets all acceptance criteria
 - ⭐ **NEVER PUSH TO MAIN BRANCH** - Always work on your feature branch only
-- ⭐ **USE SSH AUTHENTICATION ONLY** - All git operations use SSH keys (already configured)
+- ⭐ **USE GITHUB APP AUTHENTICATION** - All git operations use GitHub App tokens (already configured)
 
 ## Git Workflow
 
@@ -17,7 +17,7 @@
 - **Repository**: {{repository_url}}
 - **Feature Branch**: feature/task-{{task_id}}-implementation
 - **Target Branch**: main (never push directly to this)
-- **Authentication**: SSH (pre-configured)
+- **Authentication**: GitHub App ({{github_app}} - pre-configured)
 
 ### **Required Git Pattern:**
 
@@ -137,12 +137,13 @@ gh pr create --title "feat: [brief summary of implementation]" \
 
 ## Authentication
 
-### SSH Configuration
-- SSH keys are pre-configured in the container
-- All git operations use SSH authentication automatically
+### GitHub App Configuration
+- GitHub App authentication is pre-configured in the container
+- All git operations use GitHub App tokens automatically
 - Repository access: `{{repository_url}}`
+- GitHub App: `{{github_app}}`
 
-### Git Commands (SSH-based)
+### Git Commands (GitHub App-based)
 ```bash
 # Check current status
 git status
@@ -153,7 +154,7 @@ git add .
 # Commit with message
 git commit -m "feat: describe your change"
 
-# Push to feature branch (SSH automatic)
+# Push to feature branch (GitHub App authentication automatic)
 git push origin feature/task-{{task_id}}-implementation
 
 # Create pull request (when implementation complete)
