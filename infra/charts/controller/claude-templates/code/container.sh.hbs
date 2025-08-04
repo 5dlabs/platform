@@ -604,15 +604,6 @@ else
   echo "⚠️  Warning: /task-files directory not found (ConfigMap not mounted?)"
 fi
 
-# Verify toolman-config.json is available in Claude's working directory
-echo "=== TOOLMAN CONFIG SETUP ==="
-CLAUDE_CONFIG="$CLAUDE_WORK_DIR/toolman-config.json"
-
-if [ -f "$CLAUDE_CONFIG" ]; then
-  echo "✓ toolman-config.json found in Claude working directory"
-else
-  echo "⚠️ toolman-config.json not found in Claude working directory - toolman may not work correctly"
-fi
 
 # Copy Current Task Documentation to Working Directory
 echo "=== TASK DOCUMENTATION SETUP ==="
@@ -685,8 +676,18 @@ if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
         exit 1
     fi
     
-    # Copy architecture.md from docs root
-    ARCH_FILE="$TASKMASTER_DIR/docs/architecture.md"
+    # Copy architecture.md from docs root (using the same DOCS_PATH logic as multi-repo)
+    {{#if docs_project_directory}}
+    if [ "{{docs_project_directory}}" = "." ]; then
+        TASKMASTER_DOCS_PATH="/workspace/$TARGET_REPO_DIR/.taskmaster"
+    else
+        TASKMASTER_DOCS_PATH="/workspace/$TARGET_REPO_DIR/{{docs_project_directory}}/.taskmaster"
+    fi
+    {{else}}
+    TASKMASTER_DOCS_PATH="/workspace/$TARGET_REPO_DIR/.taskmaster"
+    {{/if}}
+    
+    ARCH_FILE="$TASKMASTER_DOCS_PATH/docs/architecture.md"
     if [ -f "$ARCH_FILE" ]; then
         cp "$ARCH_FILE" "$CLAUDE_WORK_DIR/task/"
         echo "✓ Architecture documentation copied"
@@ -695,8 +696,8 @@ if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
     fi
     
     # Copy tasks.json if it exists
-    if [ -f "$TASKMASTER_DIR/tasks/tasks.json" ]; then
-        cp "$TASKMASTER_DIR/tasks/tasks.json" "$CLAUDE_WORK_DIR/task/"
+    if [ -f "$TASKMASTER_DOCS_PATH/tasks/tasks.json" ]; then
+        cp "$TASKMASTER_DOCS_PATH/tasks/tasks.json" "$CLAUDE_WORK_DIR/task/"
         echo "✓ tasks.json copied"
     fi
     
@@ -708,6 +709,16 @@ if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
     
 else
     echo "✓ Task documentation copied from docs repository during multi-repo setup"
+fi
+
+# Verify toolman-config.json is available in Claude's working directory
+echo "=== TOOLMAN CONFIG SETUP ==="
+CLAUDE_CONFIG="$CLAUDE_WORK_DIR/toolman-config.json"
+
+if [ -f "$CLAUDE_CONFIG" ]; then
+  echo "✓ toolman-config.json found in Claude working directory"
+else
+  echo "⚠️ toolman-config.json not found in Claude working directory - toolman may not work correctly"
 fi
 
 echo '=== WORKSPACE VALIDATION ==='
