@@ -1,0 +1,91 @@
+{
+  "tools_comparison": {
+    "pricing": {
+      "github_copilot": {
+        "cost": "$10/month",
+        "model": "Subscription"
+      },
+      "cursor": {
+        "cost": "$20/month",
+        "model": "Subscription + Usage fees"
+      },
+      "claude_code": {
+        "cost": "Varies",
+        "model": "API-based pricing"
+      },
+      "codeium": {
+        "cost": "Free tier available",
+        "model": "Freemium"
+      },
+      "tabnine": {
+        "tiers": {
+          "free": "Basic features",
+          "pro": "$12/user/month",
+          "enterprise": "$39/user/month"
+        }
+      }
+    },
+    "features": {
+      "language_support": {
+        "github_copilot": "Extensive",
+        "cursor": "Extensive",
+        "claude_code": "Extensive",
+        "codeium": "70+ languages",
+        "tabnine": "80+ languages"
+      },
+      "ide_integration": {
+        "github_copilot": ["VS Code", "IntelliJ", "Neovim", "CLI"],
+        "cursor": "Custom IDE",
+        "claude_code": ["Web", "Mobile"],
+        "codeium": ["VS Code", "JetBrains"],
+        "tabnine": ["VS Code", "JetBrains", "Visual Studio", "Eclipse"]
+      },
+      "key_capabilities": {
+        "github_copilot": [
+          "Real-time completion",
+          "Multi-language support",
+          "IDE integration"
+        ],
+        "cursor": [
+          "Codebase awareness",
+          "Refactoring",
+          "Multi-model support"
+        ],
+        "claude_code": [
+          "Clean code generation",
+          "Detailed explanations",
+          "Debugging support"
+        ],
+        "codeium": [
+          "Real-time completion",
+          "Search features",
+          "Chat integration",
+          "Fast performance"
+        ],
+        "tabnine": [
+          "Full-line completion",
+          "Full-function completion",
+          "AI chat",
+          "Unit testing",
+          "Documentation",
+          "Debugging",
+          "Refactoring"
+        ]
+      }
+    },
+    "security_compliance": {
+      "github_copilot": "Enterprise-grade",
+      "cursor": "Standard",
+      "claude_code": "Enterprise-grade",
+      "codeium": "VPC deployment option",
+      "tabnine": ["SOC 2 Type 2", "ISO 9001", "GDPR compliant"]
+    },
+    "target_audience": {
+      "github_copilot": "All developers",
+      "cursor": "Power users",
+      "claude_code": "Learning-focused developers",
+      "codeium": "Individual developers and small teams",
+      "tabnine": "Enterprise and large teams"
+    }
+  }
+}

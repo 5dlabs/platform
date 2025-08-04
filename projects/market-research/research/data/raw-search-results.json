@@ -1,0 +1,77 @@
+{
+  "tools": {
+    "github_copilot": {
+      "name": "GitHub Copilot",
+      "company": "GitHub/Microsoft",
+      "features": {
+        "models": ["GPT-4o", "GPT-4.1", "o3", "o3-mini", "o4-mini", "Claude 3.5", "Claude 3.7 Sonnet", "Gemini 2.0 Flash", "Gemini 2.5 Pro"],
+        "ide_integration": ["VS Code", "IntelliJ", "Neovim", "CLI"],
+        "key_capabilities": [
+          "Real-time code completion",
+          "Multi-language support",
+          "Seamless IDE integration",
+          "CLI functionality"
+        ]
+      },
+      "pricing": {
+        "base_plan": "$10/month",
+        "features": "Generous usage limits"
+      },
+      "strengths": [
+        "Speed and responsiveness",
+        "Wide IDE support",
+        "Cost-effective",
+        "Strong ecosystem integration"
+      ]
+    },
+    "cursor": {
+      "name": "Cursor",
+      "company": "Cursor Inc.",
+      "features": {
+        "models": ["GPT-4", "Claude 3.5", "Gemini"],
+        "capabilities": [
+          "Full codebase awareness",
+          "Intelligent refactoring",
+          "Multi-model chaining",
+          "Chat-like interactions"
+        ]
+      },
+      "pricing": {
+        "base_plan": "$20/month",
+        "notes": "Additional per-request fees beyond quota"
+      },
+      "strengths": [
+        "Deep codebase understanding",
+        "Multi-file editing",
+        "Advanced AI features",
+        "Power user focus"
+      ]
+    },
+    "claude_code": {
+      "name": "Claude Code",
+      "company": "Anthropic",
+      "features": {
+        "key_capabilities": [
+          "Clean code generation",
+          "Detailed explanations",
+          "Thorough debugging support",
+          "Documentation generation",
+          "Long-form reasoning"
+        ],
+        "platforms": ["Web", "iOS", "Android"]
+      },
+      "strengths": [
+        "Code quality and readability",
+        "Educational approach",
+        "Debugging capabilities",
+        "Cross-platform accessibility"
+      ]
+    }
+  },
+  "market_trends": {
+    "productivity_gains": "Up to 3x developer productivity increase",
+    "market_leader": "GitHub Copilot (features and ecosystem)",
+    "rising_star": "Cursor (developer experience)",
+    "future_outlook": "Focus on AI augmentation rather than replacement"
+  }
+}
