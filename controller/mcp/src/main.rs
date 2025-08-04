@@ -185,27 +185,18 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .and_then(|v| v.as_str())
         .ok_or(anyhow!("Missing required parameter: docs_project_directory"))?;
         
-    // GitHub App resolution with agent intelligence
-    let agents_config = load_agents_config()?;
-    
-    // Determine which agent to use for this task
+    // Use default code agent (Rex) for now - TODO: implement proper agent resolution
     let agent_name = arguments.get("agent")
         .and_then(|v| v.as_str())
-        .or_else(|| {
-            // Try to get default code agent from Helm configuration
-            agents_config.get_code_agent().map(|agent| agent.name.as_str())
-        })
         .unwrap_or("rex"); // Fallback to Rex as default code agent
     
-    // Get GitHub App from the selected agent
-    let github_app = if let Some(agent) = agents_config.agents.get(agent_name) {
-        agent.github_app.clone()
-    } else if let Ok(env_app) = std::env::var("FDL_DEFAULT_GITHUB_APP") {
-        env_app
-    } else if let Some(default_agent) = agents_config.get_code_agent() {
-        default_agent.github_app.clone()
-    } else {
-        return Err(anyhow!("No GitHub App configured for agent '{}' and no default code agent found", agent_name));
+    // Get GitHub App from the selected agent - simplified for now
+    let github_app = match agent_name {
+        "rex" => "5DLabs-Rex".to_string(),
+        "blaze" => "5DLabs-Blaze".to_string(),
+        "cipher" => "5DLabs-Cipher".to_string(),
+        "morgan" => "5DLabs-Morgan".to_string(),
+        _ => format!("5DLabs-{}", agent_name.chars().next().unwrap().to_uppercase().collect::<String>() + &agent_name[1..])
     };
     
     // For backward compatibility, check github_user but default to empty

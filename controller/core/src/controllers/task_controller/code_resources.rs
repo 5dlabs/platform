@@ -428,7 +428,10 @@ impl<'a> CodeResourceManager<'a> {
 
         // GitHub App authentication only - no SSH volumes needed
         let github_app = code_run.spec.github_app.as_ref()
-            .ok_or_else(|| anyhow::anyhow!("GitHub App is required for CodeRun authentication"))?;
+            .ok_or_else(|| {
+                tracing::error!("GitHub App is required for CodeRun authentication");
+                super::types::Error::ConfigError("GitHub App is required for CodeRun authentication".to_string())
+            })?;
         
         tracing::info!("Using GitHub App authentication for CodeRun: {}", github_app);
 
@@ -517,9 +520,12 @@ impl<'a> CodeResourceManager<'a> {
 
         labels.insert("app".to_string(), "orchestrator".to_string());
         labels.insert("component".to_string(), "code-runner".to_string());
+        let github_identifier = code_run.spec.github_app.as_deref()
+            .or(code_run.spec.github_user.as_deref())
+            .unwrap_or("unknown");
         labels.insert(
             "github-user".to_string(),
-            self.sanitize_label_value(&code_run.spec.github_user),
+            self.sanitize_label_value(github_identifier),
         );
         labels.insert(
             "context-version".to_string(),
@@ -564,9 +570,12 @@ impl<'a> CodeResourceManager<'a> {
 
     // Legacy cleanup method for backward compatibility
     async fn cleanup_old_jobs(&self, code_run: &CodeRun) -> Result<()> {
+        let github_identifier = code_run.spec.github_app.as_deref()
+            .or(code_run.spec.github_user.as_deref())
+            .unwrap_or("unknown");
         let list_params = ListParams::default().labels(&format!(
             "app=orchestrator,component=code-runner,github-user={},service={}",
-            self.sanitize_label_value(&code_run.spec.github_user),
+            self.sanitize_label_value(github_identifier),
             self.sanitize_label_value(&code_run.spec.service)
         ));
 
@@ -586,9 +595,12 @@ impl<'a> CodeResourceManager<'a> {
         // Generate current ConfigMap name to avoid deleting it
         let current_cm_name = self.generate_configmap_name(code_run);
         
+        let github_identifier = code_run.spec.github_app.as_deref()
+            .or(code_run.spec.github_user.as_deref())
+            .unwrap_or("unknown");
         let list_params = ListParams::default().labels(&format!(
             "app=orchestrator,component=code-runner,github-user={},service={}",
-            self.sanitize_label_value(&code_run.spec.github_user),
+            self.sanitize_label_value(github_identifier),
             self.sanitize_label_value(&code_run.spec.service)
         ));
 
