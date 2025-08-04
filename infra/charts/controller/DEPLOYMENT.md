@@ -1,4 +1,4 @@
-# Orchestrator Deployment Guide
+# Controller Deployment Guide
 
 This guide walks you through deploying the orchestrator using the Helm chart and migrating from the existing manifest-based deployment.
 

@@ -266,7 +266,7 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "Docker image version: ${VERSION}"
 
-      - name: Build and push Orchestrator image
+      - name: Build and push Controller image
         uses: docker/build-push-action@v5
         with:
           context: ./controller

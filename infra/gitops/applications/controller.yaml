@@ -1,5 +1,5 @@
 ---
-# Argo CD Application for Platform Orchestrator
+# Argo CD Application for Platform Controller
 # This enables GitOps deployment of the controller service
 
 apiVersion: argoproj.io/v1alpha1

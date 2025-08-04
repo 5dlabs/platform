@@ -24,7 +24,7 @@ This is an integrated platform with a clear data flow:
 **Component Architecture:**
 - **MCP Server (`fdl-mcp`)**: Handles MCP protocol calls from Cursor/Claude
 - **CLI (`fdl`)**: Makes REST API calls to the agent-platform service
-- **Orchestrator Service**: Kubernetes REST API that creates CodeRun/DocsRun CRDs
+- **Controller Service**: Kubernetes REST API that creates CodeRun/DocsRun CRDs
 - **Kubernetes Controllers**: Separate controllers for CodeRun and DocsRun resources with TTL-safe reconciliation
 - **Agent Workspaces**: Isolated persistent volumes for each service with session continuity
 
@@ -32,7 +32,7 @@ This is an integrated platform with a clear data flow:
 1. Cursor calls `docs()` or `task()` via MCP protocol
 2. MCP server receives call and internally executes CLI
 3. CLI makes HTTP requests to agent-platform REST API (`/pm/tasks`)
-4. Orchestrator creates CodeRun/DocsRun custom resources
+4. Controller creates CodeRun/DocsRun custom resources
 5. Dedicated Kubernetes controllers reconcile CRDs with idempotent job management
 6. Controllers deploy Claude agents as Jobs with workspace isolation
 7. Agents complete work and submit GitHub PRs with automatic cleanup

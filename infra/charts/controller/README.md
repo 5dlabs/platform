@@ -1,10 +1,10 @@
-# Orchestrator Helm Chart
+# Controller Helm Chart
 
-A Helm chart for deploying the Platform Orchestrator that manages Claude Code agents and task execution across Kubernetes clusters.
+A Helm chart for deploying the Platform Controller that manages Claude Code agents and task execution across Kubernetes clusters.
 
 ## Overview
 
-The Orchestrator is a Rust-based service that:
+The Controller is a Rust-based service that:
 - Processes PM task submissions via REST API
 - Deploys Claude Code jobs to Kubernetes clusters
 - Manages per-service workspaces and agent coordination
