@@ -35,6 +35,10 @@ spec:
         
         # Set working directory to writable location (not read-only config mount)
         workingDir: "/tmp"
+        
+        # Use latest image with local tools ConfigMap support
+        image:
+          tag: "v1.0.5"
 
         # Resource configuration
         resources:
