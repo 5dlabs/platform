@@ -144,7 +144,7 @@ impl Default for AgentsConfig {
             agents,
             defaults: Defaults {
                 docs_agent: "morgan".to_string(),
-                code_agent: "rex".to_string(),
+                code_agent: "morgan".to_string(), // Temporarily using Morgan until Rex is provisioned
             },
         }
     }
