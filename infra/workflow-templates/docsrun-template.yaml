@@ -96,7 +96,11 @@ spec:
         successCondition: status.phase == Succeeded
         failureCondition: status.phase == Failed
             
-  # Cleanup policy
+  # Cleanup policy - aggressive cleanup for development
   ttlStrategy:
-    secondsAfterCompletion: 86400  # Keep completed workflows for 24 hours
-    secondsAfterFailure: 259200    # Keep failed workflows for 72 hours
+    secondsAfterCompletion: 300    # Keep completed workflows for 5 minutes
+    secondsAfterFailure: 3600      # Keep failed workflows for 1 hour
+  
+  # Pod garbage collection
+  podGC:
+    strategy: OnPodCompletion      # Delete pods immediately when they complete
