@@ -79,3 +79,4 @@ agent_*.md
 # tasks.json
 # tasks/ 
 *.private-key.pem
+morgan-circle.png
