@@ -223,6 +223,8 @@ models:
 secrets:
   # REQUIRED: Set your Anthropic API key
   anthropicApiKey: "use-existing"
+  # External secrets name (created by External Secrets Operator)
+  externalSecretsName: "agent-platform-secrets"
   # Note: GitHub secrets (SSH keys + tokens) are managed externally per agent
   # See infra/scripts/setup-agent-secrets.sh for setup instructions
 

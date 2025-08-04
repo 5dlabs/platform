@@ -6,7 +6,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
   name: docsrun-template
-  namespace: agent-platform
+  namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/name: docsrun-template
     app.kubernetes.io/part-of: platform
@@ -70,7 +70,7 @@ spec:
           kind: DocsRun
           metadata:
             generateName: "docsrun-morgan-"
-            namespace: agent-platform
+            namespace: {{ .Release.Namespace }}
             labels:
               workflow-name: "{{workflow.name}}"
               github-app: "{{workflow.parameters.github-app}}"
@@ -92,7 +92,7 @@ spec:
           kind: DocsRun
           metadata:
             name: "{{inputs.parameters.docsrun-name}}"
-            namespace: agent-platform
+            namespace: {{ .Release.Namespace }}
         successCondition: status.phase == Succeeded
         failureCondition: status.phase == Failed
             

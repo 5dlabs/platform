@@ -74,42 +74,42 @@ spec:
               valueFrom:
                 secretKeyRef:
                   {{- if eq .Values.secrets.anthropicApiKey "use-existing" }}
-                  name: agent-platform-secrets
+                  name: {{ .Values.secrets.externalSecretsName }}
                   {{- else }}
                   name: {{ include "controller.fullname" . }}-secrets
                   {{- end }}
                   key: ANTHROPIC_API_KEY
             {{- end }}
-            # Additional API keys from agent-platform-secrets
+            # Additional API keys from {{ .Values.secrets.externalSecretsName }}
             {{- if eq .Values.secrets.anthropicApiKey "use-existing" }}
             - name: PERPLEXITY_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: agent-platform-secrets
+                  name: {{ .Values.secrets.externalSecretsName }}
                   key: PERPLEXITY_API_KEY
                   optional: true
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: agent-platform-secrets
+                  name: {{ .Values.secrets.externalSecretsName }}
                   key: OPENAI_API_KEY
                   optional: true
             - name: GOOGLE_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: agent-platform-secrets
+                  name: {{ .Values.secrets.externalSecretsName }}
                   key: GOOGLE_API_KEY
                   optional: true
             - name: XAI_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: agent-platform-secrets
+                  name: {{ .Values.secrets.externalSecretsName }}
                   key: XAI_API_KEY
                   optional: true
             - name: GEMINI_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: agent-platform-secrets
+                  name: {{ .Values.secrets.externalSecretsName }}
                   key: GEMINI_API_KEY
                   optional: true
             {{- end }}
