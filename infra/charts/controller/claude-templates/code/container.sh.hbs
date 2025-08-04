@@ -381,7 +381,7 @@ else
         
         echo "✅ Copying toolman-config.json..."
         if [ -f "$TASK_DIR/toolman-config.json" ]; then
-            cp "$TASK_DIR/toolman-config.json" "/workspace/$TARGET_REPO_DIR/toolman-config.json" && echo "✓ toolman-config.json copied to workspace root" || echo "❌ toolman-config.json copy failed"
+            cp "$TASK_DIR/toolman-config.json" "$CLAUDE_WORK_DIR/toolman-config.json" && echo "✓ toolman-config.json copied to Claude working directory" || echo "❌ toolman-config.json copy failed"
         else
             echo "⚠️ toolman-config.json not found - toolman may not work correctly"
         fi
@@ -604,16 +604,14 @@ else
   echo "⚠️  Warning: /task-files directory not found (ConfigMap not mounted?)"
 fi
 
-# Ensure toolman-config.json is available in Claude's working directory
+# Verify toolman-config.json is available in Claude's working directory
 echo "=== TOOLMAN CONFIG SETUP ==="
-WORKSPACE_CONFIG="/workspace/$TARGET_REPO_DIR/toolman-config.json"
 CLAUDE_CONFIG="$CLAUDE_WORK_DIR/toolman-config.json"
 
-if [ -f "$WORKSPACE_CONFIG" ]; then
-  cp "$WORKSPACE_CONFIG" "$CLAUDE_CONFIG"
-  echo "✓ toolman-config.json copied to Claude working directory"
+if [ -f "$CLAUDE_CONFIG" ]; then
+  echo "✓ toolman-config.json found in Claude working directory"
 else
-  echo "⚠️ toolman-config.json not found at $WORKSPACE_CONFIG - toolman may not work correctly"
+  echo "⚠️ toolman-config.json not found in Claude working directory - toolman may not work correctly"
 fi
 
 # Copy Current Task Documentation to Working Directory
@@ -663,7 +661,7 @@ if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
         
         echo "✅ Copying toolman-config.json..."
         if [ -f "$TEMP_TASK_DIR/toolman-config.json" ]; then
-            cp "$TEMP_TASK_DIR/toolman-config.json" "/workspace/$TARGET_REPO_DIR/toolman-config.json" && echo "✓ toolman-config.json copied to workspace root" || echo "❌ toolman-config.json copy failed"
+            cp "$TEMP_TASK_DIR/toolman-config.json" "$CLAUDE_WORK_DIR/toolman-config.json" && echo "✓ toolman-config.json copied to Claude working directory" || echo "❌ toolman-config.json copy failed"
         else
             echo "⚠️ toolman-config.json not found - toolman may not work correctly"
         fi
