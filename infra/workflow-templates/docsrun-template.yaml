@@ -78,7 +78,7 @@ spec:
             workingDirectory: "{{workflow.parameters.working-directory}}"
             githubApp: "{{workflow.parameters.github-app}}"
             sourceBranch: "{{workflow.parameters.source-branch}}"
-            repositoryUrl: "git@github.com:5dlabs/platform.git"
+            repositoryUrl: "{{workflow.parameters.repository-url}}"
             model: "{{workflow.parameters.model}}"
             
     - name: wait-docsrun-completion
