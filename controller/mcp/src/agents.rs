@@ -67,6 +67,7 @@ impl AgentsConfig {
     }
     
     /// Get the default code agent
+    #[allow(dead_code)]
     pub fn get_code_agent(&self) -> Option<&Agent> {
         self.agents.get(&self.defaults.code_agent)
     }
@@ -103,7 +104,8 @@ impl AgentsConfig {
             descriptions.push(format!("{} ({})", agent.name, agent.role));
         }
         
-        let example_key = self.agents.keys().next().unwrap_or(&"morgan".to_string());
+        let default_key = "morgan".to_string();
+        let example_key = self.agents.keys().next().unwrap_or(&default_key);
         let example_name = self.agents.values().next().map(|a| a.name.as_str()).unwrap_or("Morgan");
         
         format!(

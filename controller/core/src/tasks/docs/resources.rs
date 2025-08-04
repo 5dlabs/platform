@@ -1,5 +1,5 @@
-use crate::controllers::config::ControllerConfig;
-use crate::controllers::types::{github_app_secret_name, ssh_secret_name, Context, Result};
+use crate::tasks::config::ControllerConfig;
+use crate::tasks::types::{github_app_secret_name, ssh_secret_name, Context, Result};
 use crate::crds::DocsRun;
 use k8s_openapi::api::{batch::v1::Job, core::v1::ConfigMap};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::{ObjectMeta, OwnerReference};
@@ -274,7 +274,7 @@ impl<'a> DocsResourceManager<'a> {
                 );
                 Ok(owner_ref)
             }
-            Err(crate::controllers::types::Error::KubeError(kube::Error::Api(ae))) if ae.code == 409 => {
+            Err(crate::tasks::types::Error::KubeError(kube::Error::Api(ae))) if ae.code == 409 => {
                 // Job already exists due to race condition, get the existing one
                 error!("🔄 RESOURCE_MANAGER: Job {} already exists (409 conflict), getting existing job", job_name);
                 match self.jobs.get(&job_name).await {

@@ -1,5 +1,5 @@
-use crate::controllers::config::ControllerConfig;
-use crate::controllers::types::{github_app_secret_name, Context, Result};
+use crate::tasks::config::ControllerConfig;
+use crate::tasks::types::{github_app_secret_name, Context, Result};
 use crate::crds::CodeRun;
 use k8s_openapi::api::{
     batch::v1::Job,
@@ -430,7 +430,7 @@ impl<'a> CodeResourceManager<'a> {
         let github_app = code_run.spec.github_app.as_ref()
             .ok_or_else(|| {
                 tracing::error!("GitHub App is required for CodeRun authentication");
-                crate::controllers::types::Error::ConfigError("GitHub App is required for CodeRun authentication".to_string())
+                crate::tasks::types::Error::ConfigError("GitHub App is required for CodeRun authentication".to_string())
             })?;
         
         tracing::info!("Using GitHub App authentication for CodeRun: {}", github_app);
