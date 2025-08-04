@@ -1,0 +1,43 @@
+{
+  "search_queries": [
+    {
+      "query": "top AI code generation tools 2025 GitHub Copilot Cursor Claude Code comparison",
+      "timestamp": "2025-08-04",
+      "results": [
+        {
+          "title": "Claude Code vs GitHub Copilot vs Cursor: AI Coding Assistant Battle 2025",
+          "url": "https://pixelnoir.us/posts/claude-code-vs-github-copilot-cursor-2025"
+        },
+        {
+          "title": "2025s Best AI Coding Tools: Real Cost, Geeky Value & Honest Comparison",
+          "url": "https://dev.to/stevengonsalvez/2025s-best-ai-coding-tools-real-cost-geeky-value-honest-comparison-4d63"
+        }
+      ]
+    },
+    {
+      "query": "AI coding assistant pricing 2025 Copilot Claude Code Cursor enterprise features comparison",
+      "timestamp": "2025-08-04",
+      "results": [
+        {
+          "title": "AI coding assistant pricing 2025: Complete cost comparison",
+          "url": "https://getdx.com/blog/ai-coding-assistant-pricing/"
+        },
+        {
+          "title": "Cursor vs GitHub Copilot: Which AI Coding Assistant is better?",
+          "url": "https://www.builder.io/blog/cursor-vs-github-copilot"
+        }
+      ]
+    }
+  ],
+  "key_insights": {
+    "market_leaders": ["GitHub Copilot", "Cursor", "Claude Code"],
+    "pricing_range": {
+      "individual": "10-40 USD/month",
+      "enterprise": "Custom pricing based on team size"
+    },
+    "adoption_metrics": {
+      "productivity_gain": "2-3 hours per week",
+      "tool_usage": "2-3 AI tools per developer"
+    }
+  }
+}

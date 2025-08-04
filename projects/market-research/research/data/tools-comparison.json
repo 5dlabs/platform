@@ -1,0 +1,109 @@
+{
+  "tools": [
+    {
+      "name": "GitHub Copilot",
+      "company": "GitHub/Microsoft",
+      "launchYear": 2021,
+      "pricing": {
+        "individual": {
+          "basic": 10,
+          "unit": "USD/month"
+        },
+        "enterprise": {
+          "cost": 19,
+          "unit": "USD/user/month"
+        }
+      },
+      "features": [
+        "Code completion",
+        "Function suggestions",
+        "Natural language prompts",
+        "Multi-IDE support",
+        "Enterprise security features",
+        "Azure integration"
+      ],
+      "supported_ides": [
+        "VS Code",
+        "JetBrains",
+        "Vim",
+        "Neovim"
+      ],
+      "strengths": [
+        "Strong ecosystem integration",
+        "Enterprise-grade security",
+        "Regular model updates",
+        "Large user community"
+      ],
+      "target_audience": [
+        "Enterprise developers",
+        "Individual developers",
+        "Open source contributors"
+      ]
+    },
+    {
+      "name": "Cursor",
+      "company": "Anysphere",
+      "launchYear": 2023,
+      "pricing": {
+        "individual": {
+          "pro": 20,
+          "business": 40,
+          "unit": "USD/month"
+        },
+        "enterprise": {
+          "cost": 32,
+          "unit": "USD/user/month"
+        }
+      },
+      "features": [
+        "Standalone IDE",
+        "Multi-model support",
+        "File-aware navigation",
+        "Intelligent refactoring",
+        "Chat interface"
+      ],
+      "supported_models": [
+        "GPT-4",
+        "Claude 3.5",
+        "Gemini"
+      ],
+      "strengths": [
+        "Deep codebase awareness",
+        "Advanced AI integration",
+        "Modern developer experience",
+        "Multi-file context"
+      ],
+      "target_audience": [
+        "Power users",
+        "Startups",
+        "Individual developers"
+      ]
+    },
+    {
+      "name": "Claude Code",
+      "company": "Anthropic",
+      "pricing": {
+        "individual": "Contact for pricing",
+        "enterprise": "Custom pricing"
+      },
+      "features": [
+        "MCP integration",
+        "Advanced context management",
+        "Multi-repository support",
+        "Enterprise security",
+        "Custom tool integration"
+      ],
+      "strengths": [
+        "Flexible integration",
+        "Strong security",
+        "Context preservation",
+        "Advanced safety protocols"
+      ],
+      "target_audience": [
+        "Enterprise teams",
+        "Security-focused organizations",
+        "Large development teams"
+      ]
+    }
+  ]
+}
