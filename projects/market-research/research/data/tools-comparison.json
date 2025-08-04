@@ -1,0 +1,131 @@
+{
+  "last_updated": "2025-08-04",
+  "tools": {
+    "github_copilot": {
+      "name": "GitHub Copilot",
+      "company": "GitHub/Microsoft",
+      "features": {
+        "code_completion": true,
+        "multi_file_edits": true,
+        "ide_integration": ["VS Code", "IntelliJ", "Neovim"],
+        "cli_support": true
+      },
+      "pricing": {
+        "free_tier": {
+          "available": true,
+          "limits": "12,000 completions per month"
+        },
+        "pro": {
+          "price": "$10/month",
+          "features": ["Unlimited completions", "Advanced capabilities"]
+        }
+      },
+      "strengths": [
+        "Deep Microsoft ecosystem integration",
+        "Extensive training on public repositories",
+        "Strong in common programming patterns"
+      ]
+    },
+    "cursor": {
+      "name": "Cursor",
+      "company": "Cursor Inc",
+      "features": {
+        "code_completion": true,
+        "agent_capabilities": true,
+        "terminal_integration": true,
+        "semantic_search": true
+      },
+      "pricing": {
+        "hobby": {
+          "price": "Free",
+          "features": ["Limited features"]
+        },
+        "pro": {
+          "price": "$20/month",
+          "features": ["Full feature set"]
+        },
+        "business": {
+          "price": "$40/user/month",
+          "features": ["Enterprise features"]
+        }
+      },
+      "model_support": ["GPT-4", "Claude 3.5 Sonnet", "cursor-small"],
+      "strengths": [
+        "Editor-centric experience",
+        "Deep AI integration",
+        "Multiple model support"
+      ]
+    },
+    "claude_code": {
+      "name": "Claude Code",
+      "company": "Anthropic",
+      "features": {
+        "cli_interface": true,
+        "mcp_support": true,
+        "tool_integration": true,
+        "extended_context": true
+      },
+      "interface": "CLI only",
+      "pricing": {
+        "model": "Pay per use (Claude API)",
+        "features": ["CLI interface", "MCP capabilities"]
+      },
+      "strengths": [
+        "Strong language understanding",
+        "Extensible tool system",
+        "Custom workflow support"
+      ]
+    },
+    "codeium": {
+      "name": "Codeium",
+      "company": "Codeium",
+      "features": {
+        "code_completion": true,
+        "language_support": "70+ languages",
+        "privacy_focus": true,
+        "ide_plugins": true
+      },
+      "pricing": {
+        "free_tier": {
+          "available": true,
+          "limits": "No usage limits"
+        },
+        "teams": {
+          "features": ["SSO", "Audit logs"]
+        }
+      },
+      "strengths": [
+        "Genuine free tier",
+        "Strong privacy focus",
+        "Broad language support"
+      ]
+    },
+    "tabnine": {
+      "name": "Tabnine",
+      "company": "Tabnine",
+      "features": {
+        "code_completion": true,
+        "ai_chat": true,
+        "test_generation": true,
+        "documentation": true,
+        "debugging": true,
+        "refactoring": true
+      },
+      "pricing": {
+        "free_tier": {
+          "available": true,
+          "features": ["Basic completion"]
+        },
+        "dev": {
+          "price": "$9/month",
+          "features": ["AI chat", "Advanced features"]
+        }
+      },
+      "strengths": [
+        "Enterprise focus",
+        "On-device inference",
+        "Privacy emphasis"
+      ]
+    }
+  }
+}
