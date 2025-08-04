@@ -7,10 +7,14 @@ export GIT_TERMINAL_PROMPT=0
 export GIT_ASKPASS=/bin/true
 export SSH_ASKPASS=/bin/true
 
-# SSH-only authentication
+# Repository URL
 REPO_URL="{{repository_url}}"
 
-# SSH Setup
+{{#if github_app}}
+# GitHub App authentication is configured via environment variables
+echo "Using GitHub App authentication (SSH not required)"
+{{else}}
+# SSH Setup for user-based authentication
 if [ -f "/workspace/.ssh/id_ed25519" ]; then
   echo "✓ SSH private key found"
 
@@ -39,6 +43,7 @@ else
   echo "❌ SSH private key not found at /workspace/.ssh/id_ed25519"
   exit 1
 fi
+{{/if}}
 
 # Git configuration
 git config --global --add safe.directory /workspace
