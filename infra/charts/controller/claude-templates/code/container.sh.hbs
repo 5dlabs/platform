@@ -113,33 +113,50 @@ REPO_HTTP_URL="https://github.com/{{repository_url}}.git"
 DOCS_HTTP_URL="https://github.com/{{docs_repository_url}}.git"
 
 # DEBUG: Show what URLs are being constructed
-echo "🔍 DEBUG: URL Construction"
+echo "🔍 DEBUG: URL Construction & Parameters"
 echo "  Input repository_url: '{{repository_url}}'"
 echo "  Input docs_repository_url: '{{docs_repository_url}}'"
+echo "  Input docs_project_directory: '{{docs_project_directory}}'"
+echo "  Input working_directory: '{{working_directory}}'"
+echo "  Input docs_branch: '{{docs_branch}}'"
+echo "  Input github_app: '{{github_app}}'"
+echo "  Input task_id: '{{task_id}}'"
+echo "  Input service: '{{service}}'"
 echo "  Constructed REPO_HTTP_URL: '$REPO_HTTP_URL'"
 echo "  Constructed DOCS_HTTP_URL: '$DOCS_HTTP_URL'"
+echo "  Current working directory: $(pwd)"
+echo "  Available environment variables:"
+env | grep -E "(GITHUB|ANTHROPIC)" | sort
 
 # Test HTTPS access to repository
-echo "Testing HTTPS repository access..."
-if git ls-remote "$REPO_HTTP_URL" HEAD > /dev/null 2>&1; then
+echo "🔍 DEBUG: Testing HTTPS repository access..."
+echo "  Command: git ls-remote \"$REPO_HTTP_URL\" HEAD"
+if git ls-remote "$REPO_HTTP_URL" HEAD > /tmp/repo_test.out 2>&1; then
   echo "✓ HTTPS repository access successful"
   echo "  Repository: {{repository_url}} ($REPO_HTTP_URL)"
+  echo "  Output: $(cat /tmp/repo_test.out | head -1)"
 else
   echo "❌ HTTPS repository access failed"
   echo "  Repository: {{repository_url}} ($REPO_HTTP_URL)"
+  echo "  Error output: $(cat /tmp/repo_test.out)"
+  echo "  Git credential helper status:"
+  git config --list | grep credential || echo "  No credential helpers configured"
   echo ""
   echo "🚫 ABORTING: Cannot access repository via HTTPS"
   exit 1
 fi
 
 # Test docs repository access
-echo "Testing docs repository access..."
-if git ls-remote "$DOCS_HTTP_URL" HEAD > /dev/null 2>&1; then
+echo "🔍 DEBUG: Testing docs repository access..."
+echo "  Command: git ls-remote \"$DOCS_HTTP_URL\" HEAD"
+if git ls-remote "$DOCS_HTTP_URL" HEAD > /tmp/docs_test.out 2>&1; then
   echo "✓ Docs repository access successful"
   echo "  Repository: {{docs_repository_url}} ($DOCS_HTTP_URL)"
+  echo "  Output: $(cat /tmp/docs_test.out | head -1)"
 else
   echo "❌ Docs repository access failed"
   echo "  Repository: {{docs_repository_url}} ($DOCS_HTTP_URL)"
+  echo "  Error output: $(cat /tmp/docs_test.out)"
   echo ""
   echo "🚫 ABORTING: Cannot access docs repository via HTTPS"
   exit 1
@@ -169,35 +186,53 @@ echo "Docs branch: $DOCS_BRANCH"
 echo "GitHub App: $GITHUB_APP"
 
 # Determine workflow type
+echo "🔍 DEBUG: Workflow type detection"
+echo "  docs_repository_url: '{{docs_repository_url}}'"
+echo "  repository_url: '{{repository_url}}'"
+echo "  Comparison result: $( [ "{{docs_repository_url}}" = "{{repository_url}}" ] && echo 'EQUAL' || echo 'DIFFERENT' )"
+
 if [ "{{docs_repository_url}}" = "{{repository_url}}" ]; then
     echo "✓ Single-repo workflow detected (same repository for docs and implementation)"
     WORKFLOW_TYPE="single-repo"
+    echo "  └─ TaskMaster files expected at repository root"
 else
     echo "✓ Multi-repo workflow detected (separate docs and target repositories)"
     WORKFLOW_TYPE="multi-repo"
+    echo "  └─ TaskMaster files expected in docs repo at: {{docs_project_directory}}"
 fi
+echo "🔍 DEBUG: WORKFLOW_TYPE set to: $WORKFLOW_TYPE"
 
 # Repository Setup Based on Workflow Type
 if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
     echo "=== SINGLE-REPO WORKFLOW ==="
     # Check if repository already exists (retry scenario)
+    echo "🔍 DEBUG: Checking for existing repository directory: $TARGET_REPO_DIR"
+    echo "  Workspace contents: $(ls -la /workspace/ | grep -v '^total')"
+    
     if [ -d "$TARGET_REPO_DIR" ]; then
         echo "🔄 REPOSITORY: UPDATE - directory already exists"
         echo "📁 Found existing repository '$TARGET_REPO_DIR', updating..."
+        echo "  Directory contents: $(ls -la $TARGET_REPO_DIR | head -5)"
         cd "$TARGET_REPO_DIR"
+        echo "  Current branch: $(git branch --show-current 2>/dev/null || echo 'unknown')"
+        echo "  Git status before update: $(git status --porcelain | wc -l) files changed"
         git fetch origin
         git checkout "$DOCS_BRANCH"
         git reset --hard "origin/$DOCS_BRANCH"
         cd /workspace
-        echo "✓ Repository updated successfully"
+        echo "✓ Repository updated successfully to $DOCS_BRANCH"
     else
         echo "📥 REPOSITORY: CLONING - first time setup"
+        echo "  Clone command: git clone \"$REPO_HTTP_URL\" \"$TARGET_REPO_DIR\""
         if ! git clone "$REPO_HTTP_URL" "$TARGET_REPO_DIR"; then
             echo "❌ Failed to clone repository: {{repository_url}} ($REPO_HTTP_URL)"
+            echo "  Last git error: $(git config --get-regexp 'credential|remote')"
             exit 1
         fi
+        echo "  Clone successful, changing to directory and checking out $DOCS_BRANCH"
         cd "$TARGET_REPO_DIR" && git checkout "$DOCS_BRANCH" && cd /workspace
         echo "✓ Repository cloned successfully"
+        echo "  Final directory structure: $(ls -la $TARGET_REPO_DIR | head -5)"
     fi
     
     # Preserve Task Master files before branch switching (single-repo workflow)
@@ -207,33 +242,56 @@ if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
     mkdir -p "$TEMP_TASK_DIR"
     
     cd "/workspace/$TARGET_REPO_DIR"
+    echo "🔍 DEBUG: TaskMaster file preservation"
+    echo "  docs_project_directory: '{{docs_project_directory}}'"
+    echo "  task_id: '{{task_id}}'"
+    
     # Copy Task Master files from docs branch to temporary location
     {{#if docs_project_directory}}
     if [ "{{docs_project_directory}}" = "." ]; then
         PRESERVE_FROM="/workspace/$TARGET_REPO_DIR/.taskmaster/docs/task-{{task_id}}"
+        echo "  └─ Using root taskmaster path (docs_project_directory='.')"
     else
         PRESERVE_FROM="/workspace/$TARGET_REPO_DIR/{{docs_project_directory}}/.taskmaster/docs/task-{{task_id}}"
+        echo "  └─ Using project subdirectory: {{docs_project_directory}}"
     fi
     {{else}}
     PRESERVE_FROM="/workspace/$TARGET_REPO_DIR/.taskmaster/docs/task-{{task_id}}"
+    echo "  └─ Using default root taskmaster path (no docs_project_directory)"
     {{/if}}
     
+    echo "  PRESERVE_FROM resolved to: $PRESERVE_FROM"
+    
     echo "🔍 DEBUG: Attempting to preserve Task Master files from: $PRESERVE_FROM"
+    echo "  Checking if directory exists..."
     if [ -d "$PRESERVE_FROM" ]; then
+        echo "  ✓ TaskMaster directory found!"
+        echo "  Directory contents: $(ls -la "$PRESERVE_FROM" | wc -l) items"
+        ls -la "$PRESERVE_FROM"
         cp -r "$PRESERVE_FROM"/* "$TEMP_TASK_DIR/" 2>/dev/null && echo "✓ Task Master files preserved to temporary location" || echo "⚠️ Some files may not have been preserved"
         echo "🔍 DEBUG: Preserved files:"
         ls -la "$TEMP_TASK_DIR/" || echo "No files in temp directory"
     else
         echo "❌ Task Master directory not found at: $PRESERVE_FROM"
-        echo "🔍 DEBUG: Checking available task directories in docs branch:"
+        echo "🔍 DEBUG: Exploring directory structure to find TaskMaster files..."
+        echo "  Repository root contents:"
+        ls -la "/workspace/$TARGET_REPO_DIR/" | head -10
+        echo "  Looking for .taskmaster directories:"
+        find "/workspace/$TARGET_REPO_DIR" -name ".taskmaster" -type d 2>/dev/null | head -5 || echo "  No .taskmaster directories found"
+        echo "  Looking for any task-* directories:"
+        find "/workspace/$TARGET_REPO_DIR" -name "task-*" -type d 2>/dev/null | head -10 || echo "  No task-* directories found"
         {{#if docs_project_directory}}
         if [ "{{docs_project_directory}}" = "." ]; then
-            ls -la "/workspace/$TARGET_REPO_DIR/.taskmaster/docs/" 2>/dev/null || echo "No .taskmaster/docs directory found"
+            echo "  Checking root .taskmaster/docs/:"
+            ls -la "/workspace/$TARGET_REPO_DIR/.taskmaster/docs/" 2>/dev/null || echo "  └─ No .taskmaster/docs directory found at root"
         else
-            ls -la "/workspace/$TARGET_REPO_DIR/{{docs_project_directory}}/.taskmaster/docs/" 2>/dev/null || echo "No docs project .taskmaster/docs directory found"
+            echo "  Checking project subdirectory {{docs_project_directory}}:"
+            ls -la "/workspace/$TARGET_REPO_DIR/{{docs_project_directory}}/" 2>/dev/null || echo "  └─ Project directory not found"
+            ls -la "/workspace/$TARGET_REPO_DIR/{{docs_project_directory}}/.taskmaster/docs/" 2>/dev/null || echo "  └─ No .taskmaster/docs in project directory"
         fi
         {{else}}
-        ls -la "/workspace/$TARGET_REPO_DIR/.taskmaster/docs/" 2>/dev/null || echo "No .taskmaster/docs directory found"
+        echo "  Checking default root .taskmaster/docs/:"
+        ls -la "/workspace/$TARGET_REPO_DIR/.taskmaster/docs/" 2>/dev/null || echo "  └─ No .taskmaster/docs directory found"
         {{/if}}
     fi
     cd /workspace
