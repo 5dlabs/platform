@@ -65,7 +65,11 @@ impl AgentsConfig {
     pub fn get_docs_agent(&self) -> Option<&Agent> {
         self.agents.get(&self.defaults.docs_agent)
     }
-
+    
+    /// Get the default code agent
+    pub fn get_code_agent(&self) -> Option<&Agent> {
+        self.agents.get(&self.defaults.code_agent)
+    }
     
     /// Resolve an agent by human-friendly name, GitHub App name, or key
     /// Examples: "Morgan", "morgan", "5DLabs-Morgan" all resolve to Morgan
@@ -99,11 +103,14 @@ impl AgentsConfig {
             descriptions.push(format!("{} ({})", agent.name, agent.role));
         }
         
+        let example_key = self.agents.keys().next().unwrap_or(&"morgan".to_string());
+        let example_name = self.agents.values().next().map(|a| a.name.as_str()).unwrap_or("Morgan");
+        
         format!(
             "Available agents: {}. You can assign tasks by saying 'send to {}' or 'get {} to handle this'.",
             descriptions.join(", "),
-            self.agents.keys().next().unwrap_or(&"morgan".to_string()),
-            self.agents.values().next().map(|a| a.name.as_str()).unwrap_or("Morgan")
+            example_key,
+            example_name
         )
     }
 }
@@ -129,7 +136,7 @@ impl Default for AgentsConfig {
             agents,
             defaults: Defaults {
                 docs_agent: "morgan".to_string(),
-                code_agent: "morgan".to_string(), // Temporarily using Morgan until Rex is provisioned
+                code_agent: "rex".to_string(), // Updated to use Rex as default code agent
             },
         }
     }
