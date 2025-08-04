@@ -185,10 +185,34 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .and_then(|v| v.as_str())
         .ok_or(anyhow!("Missing required parameter: docs_project_directory"))?;
         
+    // GitHub App resolution with agent intelligence
+    let agents_config = load_agents_config()?;
+    
+    // Determine which agent to use for this task
+    let agent_name = arguments.get("agent")
+        .and_then(|v| v.as_str())
+        .or_else(|| {
+            // Try to get default code agent from Helm configuration
+            agents_config.get_code_agent().map(|agent| agent.name.as_str())
+        })
+        .unwrap_or("rex"); // Fallback to Rex as default code agent
+    
+    // Get GitHub App from the selected agent
+    let github_app = if let Some(agent) = agents_config.agents.get(agent_name) {
+        agent.github_app.clone()
+    } else if let Ok(env_app) = std::env::var("FDL_DEFAULT_GITHUB_APP") {
+        env_app
+    } else if let Some(default_agent) = agents_config.get_code_agent() {
+        default_agent.github_app.clone()
+    } else {
+        return Err(anyhow!("No GitHub App configured for agent '{}' and no default code agent found", agent_name));
+    };
+    
+    // For backward compatibility, check github_user but default to empty
     let github_user = arguments
         .get("github_user")
         .and_then(|v| v.as_str())
-        .ok_or(anyhow!("Missing required parameter: github_user"))?;
+        .unwrap_or("");
     
     let mut params = vec![
         format!("task-id={task_id}"),
@@ -196,6 +220,7 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         format!("repository-url={repository}"),
         format!("docs-repository-url={docs_repository}"),
         format!("docs-project-directory={docs_project_directory}"),
+        format!("github-app={github_app}"),
         format!("github-user={github_user}"),
     ];
     
@@ -246,6 +271,8 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
             "repository": repository,
             "docs_repository": docs_repository,
             "docs_project_directory": docs_project_directory,
+            "github_app": github_app,
+            "agent": agent_name,
             "github_user": github_user,
             "parameters": params
         })),

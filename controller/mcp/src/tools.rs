@@ -75,9 +75,13 @@ fn get_submit_implementation_task_schema() -> Value {
                     "type": "string",
                     "description": "REQUIRED: Project directory within docs repository (e.g., '_projects/simple-api', use '.' for repo root)"
                 },
+                "agent": {
+                    "type": "string",
+                    "description": "AI agent name to use for this task (optional, defaults to rex for code tasks)"
+                },
                 "github_user": {
                     "type": "string",
-                    "description": "REQUIRED: GitHub username for authentication and task assignment"
+                    "description": "GitHub username for authentication (optional, maintained for backward compatibility)"
                 },
                 "working_directory": {
                     "type": "string",
@@ -121,7 +125,7 @@ fn get_submit_implementation_task_schema() -> Value {
                     }
                 }
             },
-            "required": ["task_id", "service", "repository", "docs_repository", "docs_project_directory", "github_user"]
+            "required": ["task_id", "service", "repository", "docs_repository", "docs_project_directory"]
         }
     })
 }
