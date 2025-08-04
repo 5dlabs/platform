@@ -126,6 +126,10 @@ spec:
             - name: toolman-catalog
               mountPath: /toolman-catalog
               readOnly: true
+            # Mount agents ConfigMap for MCP server
+            - name: agents-config
+              mountPath: /agents
+              readOnly: true
           {{- if .Values.healthCheck.enabled }}
           livenessProbe:
             httpGet:
@@ -162,6 +166,10 @@ spec:
           configMap:
             name: toolman-tool-catalog
             optional: true
+        # Mount agents ConfigMap for MCP server
+        - name: agents-config
+          configMap:
+            name: {{ include "controller.fullname" . }}-agents
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

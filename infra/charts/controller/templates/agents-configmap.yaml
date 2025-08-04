@@ -1,0 +1,31 @@
+{{- if .Values.agents }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "controller.fullname" . }}-agents
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: agents-config
+data:
+  agents.yaml: |
+    agents:
+      {{- range $key, $agent := .Values.agents }}
+      {{ $key }}:
+        name: {{ $agent.name | quote }}
+        githubApp: {{ $agent.githubApp | quote }}
+        appId: {{ $agent.appId | quote }}
+        clientId: {{ $agent.clientId | quote }}
+        role: {{ $agent.role | quote }}
+        model: {{ $agent.model | quote }}
+        expertise: 
+          {{- range $expertise := $agent.expertise }}
+          - {{ $expertise | quote }}
+          {{- end }}
+        description: {{ $agent.description | quote }}
+        systemPrompt: {{ $agent.systemPrompt | quote }}
+      {{- end }}
+    defaults:
+      docsAgent: {{ .Values.defaults.docsAgent | quote }}
+      codeAgent: {{ .Values.defaults.codeAgent | quote }}
+{{- end }}

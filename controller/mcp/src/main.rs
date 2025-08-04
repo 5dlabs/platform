@@ -3,10 +3,17 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::process::Command;
+use std::sync::OnceLock;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::runtime::Runtime;
 
 mod tools;
+mod agents;
+
+use agents::AgentsConfig;
+
+// Global agents configuration loaded once at startup
+static AGENTS_CONFIG: OnceLock<AgentsConfig> = OnceLock::new();
 
 #[derive(Deserialize)]
 struct RpcRequest {
@@ -65,7 +72,9 @@ fn handle_mcp_methods(method: &str, _params_map: &HashMap<String, Value>) -> Opt
             })))
         }
         "tools/list" => {
-            Some(Ok(tools::get_all_tool_schemas()))
+            let default_config = AgentsConfig::default();
+            let agents_config = AGENTS_CONFIG.get().unwrap_or(&default_config);
+            Some(Ok(tools::get_enhanced_tool_schemas(agents_config)))
         }
         _ => None,
     }
@@ -100,9 +109,31 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     let model = arguments.get("model").and_then(|v| v.as_str()).unwrap_or("claude-opus-4-20250514");
     params.push(format!("model={model}"));
 
-    // Use GitHub App for authentication (Morgan is the default for docs)
-    params.push("github-app=5DLabs-Morgan".to_string());
-    params.push("github-user=".to_string()); // Empty to satisfy workflow template
+    // Handle GitHub App authentication with agent name resolution
+    let default_config = AgentsConfig::default();
+    let agents_config = AGENTS_CONFIG.get().unwrap_or(&default_config);
+    let github_app = if let Some(input) = arguments.get("github_app").and_then(|v| v.as_str()) {
+        // Try to resolve agent name (e.g., "Morgan" -> "5DLabs-Morgan")
+        if let Some(agent) = agents_config.resolve_agent(input) {
+            agent.github_app.clone()
+        } else {
+            input.to_string() // Use as-is if not found
+        }
+    } else if let Ok(env_app) = std::env::var("FDL_DEFAULT_GITHUB_APP") {
+        env_app
+    } else if let Some(default_agent) = agents_config.get_docs_agent() {
+        default_agent.github_app.clone()
+    } else {
+        return Err(anyhow!("No GitHub App configured for docs workflow and no default docs agent found"));
+    };
+    params.push(format!("github-app={github_app}"));
+    
+    // For backward compatibility, check github_user but default to empty
+    let github_user = arguments
+        .get("github_user")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    params.push(format!("github-user={github_user}"));
     
     let mut args = vec![
         "submit",
@@ -328,10 +359,22 @@ async fn rpc_loop() -> Result<()> {
 
 #[allow(clippy::disallowed_macros)]
 fn main() -> Result<()> {
+    eprintln!("🚀 Starting 5D Labs MCP Server...");
+    
+    // Initialize agents configuration
+    let agents_config = AgentsConfig::load().unwrap_or_else(|e| {
+        eprintln!("⚠️  Failed to load agents config: {}. Using defaults.", e);
+        AgentsConfig::default()
+    });
+    
+    // Store in global static
+    AGENTS_CONFIG.set(agents_config).map_err(|_| anyhow!("Failed to set agents config"))?;
+    eprintln!("✅ Agents configuration loaded");
+    
     eprintln!("Creating runtime...");
     let rt = Runtime::new()?;
-    eprintln!("Runtime created, starting block_on");
+    eprintln!("Runtime created, starting RPC loop");
     rt.block_on(rpc_loop())?;
-    eprintln!("block_on completed");
+    eprintln!("RPC loop completed");
     Ok(())
 }

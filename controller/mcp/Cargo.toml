@@ -16,6 +16,7 @@ path = "src/main.rs"
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
+serde_yaml = "0.9"
 
 # Error handling
 anyhow = { workspace = true }
