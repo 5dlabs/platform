@@ -1,0 +1,120 @@
+{
+  "last_updated": "2025-08-04",
+  "tools": {
+    "github_copilot": {
+      "name": "GitHub Copilot",
+      "company": "GitHub/Microsoft",
+      "pricing": {
+        "free_tier": {
+          "price": 0,
+          "features": ["50 agent/chat requests", "2,000 code completions per month"]
+        },
+        "pro": {
+          "price": 39,
+          "period": "monthly",
+          "features": ["Access to Claude Opus 4", "Access to o3", "Access to GPT-4.5"]
+        },
+        "business": {
+          "price": 19,
+          "period": "monthly per user"
+        },
+        "enterprise": {
+          "price": 39,
+          "period": "monthly per user",
+          "features": [
+            "Chat personalized to enterprise codebase",
+            "Documentation search and summaries",
+            "Pull request summaries",
+            "Code review capabilities"
+          ]
+        }
+      },
+      "key_features": [
+        "Deep Microsoft ecosystem integration",
+        "Extensive public repository training",
+        "46% code generation in enabled files",
+        "1.5M+ active users"
+      ],
+      "target_audience": ["Enterprise developers", "Individual developers", "Development teams"],
+      "market_position": "Market leader"
+    },
+    "cursor": {
+      "name": "Cursor",
+      "company": "Cursor Inc.",
+      "valuation": "2.6B USD",
+      "pricing": {
+        "free_tier": {
+          "price": 0,
+          "features": [
+            "50 premium model uses",
+            "500 fast uses monthly",
+            "Unlimited slow uses"
+          ]
+        },
+        "pro": {
+          "price": 20,
+          "period": "monthly",
+          "features": ["500 requests per month", "Usage-based pricing options"]
+        },
+        "business": {
+          "price": 40,
+          "period": "monthly per user"
+        }
+      },
+      "key_features": [
+        "AI-first code editor",
+        "Multiple AI model support",
+        "Natural language-driven development",
+        "Project-wide context awareness"
+      ],
+      "target_audience": ["Individual developers", "Startups", "Small teams"],
+      "market_position": "Fast-growing challenger"
+    },
+    "claude_code": {
+      "name": "Claude Code",
+      "company": "Anthropic",
+      "key_features": [
+        "MCP architecture integration",
+        "Enhanced workspace understanding",
+        "Independent code operations",
+        "Advanced security protocols"
+      ],
+      "target_audience": ["Enterprise teams", "Complex projects", "Custom workflows"],
+      "market_position": "Enterprise solution leader"
+    },
+    "codeium": {
+      "name": "Codeium (Windsurf)",
+      "company": "Codeium",
+      "valuation": "1.25B USD",
+      "revenue": "8+ figures annually",
+      "key_features": [
+        "40+ language support",
+        "Real-time completions",
+        "Unit test generation",
+        "On-premises deployment option"
+      ],
+      "enterprise_features": [
+        "Full on-premises deployment",
+        "Customer VPC deployment",
+        "No external network requirement",
+        "Hybrid setup support"
+      ],
+      "target_audience": ["Enterprise developers", "Security-conscious organizations"],
+      "market_position": "Enterprise-focused challenger"
+    }
+  },
+  "market_trends": {
+    "adoption_rate": "76% using or planning to use AI in development",
+    "security_concerns": {
+      "overall_vulnerability_rate": "40% of AI-generated code",
+      "language_specific": {
+        "python": "29.5% weakness rate",
+        "javascript": "24.2% weakness rate"
+      }
+    },
+    "market_size": {
+      "2024": "5.5B USD",
+      "2034_projected": "47.3B USD"
+    }
+  }
+}

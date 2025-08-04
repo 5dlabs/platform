@@ -1,0 +1,51 @@
+{
+  "search_date": "2025-08-04",
+  "queries": [
+    {
+      "query": "AI code generation tools market leaders 2024 2025 GitHub Copilot vs Cursor vs Claude Code vs Codeium",
+      "key_findings": {
+        "market_size": {
+          "current": "5.5B USD (2024)",
+          "projected": "47.3B USD (2034)"
+        },
+        "adoption_rate": "76% of developers using or planning to use AI",
+        "key_players": {
+          "github_copilot": {
+            "users": "1.5M+ active",
+            "code_generation": "46% in enabled files"
+          },
+          "cursor": {
+            "valuation": "2.6B USD",
+            "growth": "from 400M to 2.6B in 4 months"
+          },
+          "codeium": {
+            "valuation": "1.25B USD",
+            "revenue": "8+ figures annually"
+          }
+        }
+      }
+    },
+    {
+      "query": "2025 pricing comparison GitHub Copilot Cursor Claude Code Codeium enterprise features",
+      "pricing_data": {
+        "github_copilot": {
+          "tiers": ["Free", "Pro+", "Business", "Enterprise"],
+          "enterprise_price": "39 USD per user/month"
+        },
+        "cursor": {
+          "tiers": ["Free", "Pro", "Business"],
+          "pro_price": "20 USD/month"
+        }
+      },
+      "enterprise_features": {
+        "security_focus": "40% of AI-generated code contains vulnerabilities",
+        "deployment_options": {
+          "codeium": ["on-premises", "customer VPC", "hybrid setups"],
+          "github_copilot": ["cloud-based", "Microsoft/Azure hosted"],
+          "cursor": ["privacy mode", "local processing"],
+          "claude_code": ["MCP architecture", "custom security policies"]
+        }
+      }
+    }
+  ]
+}
