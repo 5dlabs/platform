@@ -30,8 +30,8 @@ spec:
       - name: working-directory
         description: "Working directory within target repository"
         default: "."
-      - name: github-user
-        description: "GitHub username for commits and authentication"
+      - name: github-app
+        description: "GitHub App name for authentication (e.g., '5DLabs-Rex')"
       
       # Optional parameters
       - name: model
@@ -88,6 +88,7 @@ spec:
               workflow-name: "{{`{{workflow.name}}`}}"
               task-id: "{{`{{workflow.parameters.task-id}}`}}"
               service: "{{`{{workflow.parameters.service-id}}`}}"
+              github-app: "{{`{{workflow.parameters.github-app}}`}}"
           spec:
             taskId: {{`{{workflow.parameters.task-id}}`}}
             service: "{{`{{workflow.parameters.service-id}}`}}"
@@ -95,7 +96,7 @@ spec:
             docsRepositoryUrl: "{{`{{workflow.parameters.docs-repository-url}}`}}"
             docsProjectDirectory: "{{`{{workflow.parameters.docs-project-directory}}`}}"
             workingDirectory: "{{`{{workflow.parameters.working-directory}}`}}"
-            githubUser: "{{`{{workflow.parameters.github-user}}`}}"
+            githubApp: "{{`{{workflow.parameters.github-app}}`}}"
             model: "{{`{{workflow.parameters.model}}`}}"
             continueSession: {{`{{workflow.parameters.continue-session}}`}}
             overwriteMemory: {{`{{workflow.parameters.overwrite-memory}}`}}

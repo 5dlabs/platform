@@ -75,8 +75,8 @@ agent_*.md
 
 .claude/*
 
+*.private-key.pem
+
 # Task files
 # tasks.json
 # tasks/ 
-*.private-key.pem
-morgan-circle.png

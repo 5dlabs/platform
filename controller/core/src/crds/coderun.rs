@@ -75,9 +75,13 @@ pub struct CodeRunSpec {
     /// Claude model to use (sonnet, opus)
     pub model: String,
 
-    /// GitHub username for authentication and commits
-    #[serde(rename = "githubUser")]
-    pub github_user: String,
+    /// GitHub username for authentication and commits (deprecated - use githubApp)
+    #[serde(rename = "githubUser", default)]
+    pub github_user: Option<String>,
+
+    /// GitHub App name for authentication (e.g., "5DLabs-Rex")
+    #[serde(rename = "githubApp", default)]
+    pub github_app: Option<String>,
 
     /// Context version for retry attempts (incremented on each retry)
     #[serde(default = "default_context_version", rename = "contextVersion")]

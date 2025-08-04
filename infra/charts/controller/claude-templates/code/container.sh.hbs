@@ -12,9 +12,8 @@ export SSH_ASKPASS=/bin/true
 # Repository URL
 REPO_URL="{{repository_url}}"
 
-{{#if github_app}}
 # GitHub App authentication is configured via environment variables
-echo "Using GitHub App authentication (SSH not required)"
+echo "Using GitHub App authentication"
 
 # Authenticate with GitHub App
 if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ]; then
@@ -39,8 +38,8 @@ if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ]; then
     JWT_TOKEN="$JWT_HEADER.$JWT_PAYLOAD.$JWT_SIGNATURE"
     
     # Get installation ID for the repository
-    REPO_OWNER=$(echo "{{repository_url}}" | sed -E 's|https://github.com/([^/]+)/.*|\1|')
-    REPO_NAME=$(echo "{{repository_url}}" | sed -E 's|https://github.com/[^/]+/([^/]+)(\.git)?|\1|')
+    REPO_OWNER=$(echo "{{repository_url}}" | cut -d'/' -f1)
+    REPO_NAME=$(echo "{{repository_url}}" | cut -d'/' -f2)
     
     echo "Getting installation ID for $REPO_OWNER/$REPO_NAME..."
     
@@ -93,47 +92,11 @@ else
     echo "❌ GITHUB_APP_PRIVATE_KEY or GITHUB_APP_ID not found"
     exit 1
 fi
-{{else}}
-# SSH Setup for user-based authentication
-if [ -f "/workspace/.ssh/id_ed25519" ]; then
-  echo "✓ SSH private key found"
-
-  # Create SSH directory in home
-  mkdir -p ~/.ssh
-  chmod 700 ~/.ssh
-
-  # Configure SSH to use the mounted key directly (no copying needed)
-  cat > ~/.ssh/config << EOF
-Host github.com
-    HostName github.com
-    User git
-    IdentityFile /workspace/.ssh/id_ed25519
-    IdentitiesOnly yes
-    StrictHostKeyChecking no
-EOF
-
-  chmod 600 ~/.ssh/config
-
-  # Test SSH connection
-  echo "Testing SSH connection to GitHub..."
-  ssh -T git@github.com 2>&1 | head -3 || echo "SSH test completed (expected to fail with 'successfully authenticated')"
-
-  echo "✓ SSH authentication configured"
-else
-  echo "❌ SSH private key not found at /workspace/.ssh/id_ed25519"
-  exit 1
-fi
-{{/if}}
 
 # Git configuration
 git config --global --add safe.directory /workspace
-{{#if github_app}}
 git config --global user.name "{{github_app}}"
 git config --global user.email "{{github_app}}@users.noreply.github.com"
-{{else}}
-git config --global user.name "{{github_user}}"
-git config --global user.email "{{github_user}}@users.noreply.github.com"
-{{/if}}
 echo "✓ Git configured"
 
 # =============================================================================
@@ -145,44 +108,40 @@ echo "🔐 AUTHENTICATION VERIFICATION"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
-# Repository URLs - Convert org/repo format to full URLs
-REPO_SSH_URL="git@github.com:{{repository_url}}.git"
+# Repository URLs - Use HTTPS URLs with GitHub App authentication
 REPO_HTTP_URL="https://github.com/{{repository_url}}.git"
-DOCS_SSH_URL="git@github.com:{{docs_repository_url}}.git" 
 DOCS_HTTP_URL="https://github.com/{{docs_repository_url}}.git"
 
 # DEBUG: Show what URLs are being constructed
 echo "🔍 DEBUG: URL Construction"
 echo "  Input repository_url: '{{repository_url}}'"
 echo "  Input docs_repository_url: '{{docs_repository_url}}'"
-echo "  Constructed REPO_SSH_URL: '$REPO_SSH_URL'"
-echo "  Constructed DOCS_SSH_URL: '$DOCS_SSH_URL'"
 echo "  Constructed REPO_HTTP_URL: '$REPO_HTTP_URL'"
 echo "  Constructed DOCS_HTTP_URL: '$DOCS_HTTP_URL'"
 
-# Test SSH access to repository
-echo "Testing SSH repository access..."
-if git ls-remote "$REPO_SSH_URL" HEAD > /dev/null 2>&1; then
-  echo "✓ SSH repository access successful"
-  echo "  Repository: {{repository_url}} ($REPO_SSH_URL)"
+# Test HTTPS access to repository
+echo "Testing HTTPS repository access..."
+if git ls-remote "$REPO_HTTP_URL" HEAD > /dev/null 2>&1; then
+  echo "✓ HTTPS repository access successful"
+  echo "  Repository: {{repository_url}} ($REPO_HTTP_URL)"
 else
-  echo "❌ SSH repository access failed"
-  echo "  Repository: {{repository_url}} ($REPO_SSH_URL)"
+  echo "❌ HTTPS repository access failed"
+  echo "  Repository: {{repository_url}} ($REPO_HTTP_URL)"
   echo ""
-  echo "🚫 ABORTING: Cannot access repository via SSH"
+  echo "🚫 ABORTING: Cannot access repository via HTTPS"
   exit 1
 fi
 
 # Test docs repository access
 echo "Testing docs repository access..."
-if git ls-remote "$DOCS_SSH_URL" HEAD > /dev/null 2>&1; then
+if git ls-remote "$DOCS_HTTP_URL" HEAD > /dev/null 2>&1; then
   echo "✓ Docs repository access successful"
-  echo "  Repository: {{docs_repository_url}} ($DOCS_SSH_URL)"
+  echo "  Repository: {{docs_repository_url}} ($DOCS_HTTP_URL)"
 else
   echo "❌ Docs repository access failed"
-  echo "  Repository: {{docs_repository_url}} ($DOCS_SSH_URL)"
+  echo "  Repository: {{docs_repository_url}} ($DOCS_HTTP_URL)"
   echo ""
-  echo "🚫 ABORTING: Cannot access docs repository via SSH"
+  echo "🚫 ABORTING: Cannot access docs repository via HTTPS"
   exit 1
 fi
 
@@ -194,7 +153,7 @@ echo "════════════════════════�
 
 # Repository Information
 DOCS_BRANCH="{{docs_branch}}"
-GITHUB_USER="{{github_user}}"
+GITHUB_APP="{{github_app}}"
 
 # Extract repository names from org/repo format
 DOCS_REPO_NAME="{{docs_repository_url}}"
@@ -204,10 +163,10 @@ DOCS_REPO_DIR=$(echo "$DOCS_REPO_NAME" | sed 's/\//-/g')
 TARGET_REPO_DIR=$(echo "$TARGET_REPO_NAME" | sed 's/\//-/g')
 
 echo "=== REPOSITORY SETUP ==="
-echo "Docs repository: {{docs_repository_url}} ($DOCS_SSH_URL)"
-echo "Target repository: {{repository_url}} ($REPO_SSH_URL)"
+echo "Docs repository: {{docs_repository_url}} ($DOCS_HTTP_URL)"
+echo "Target repository: {{repository_url}} ($REPO_HTTP_URL)"
 echo "Docs branch: $DOCS_BRANCH"
-echo "GitHub user: $GITHUB_USER"
+echo "GitHub App: $GITHUB_APP"
 
 # Determine workflow type
 if [ "{{docs_repository_url}}" = "{{repository_url}}" ]; then
@@ -233,8 +192,8 @@ if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
         echo "✓ Repository updated successfully"
     else
         echo "📥 REPOSITORY: CLONING - first time setup"
-        if ! git clone "$REPO_SSH_URL" "$TARGET_REPO_DIR"; then
-            echo "❌ Failed to clone repository: {{repository_url}} ($REPO_SSH_URL)"
+        if ! git clone "$REPO_HTTP_URL" "$TARGET_REPO_DIR"; then
+            echo "❌ Failed to clone repository: {{repository_url}} ($REPO_HTTP_URL)"
             exit 1
         fi
         cd "$TARGET_REPO_DIR" && git checkout "$DOCS_BRANCH" && cd /workspace
@@ -298,8 +257,8 @@ else
         echo "✓ Docs repository updated"
     else
         echo "📥 DOCS REPOSITORY: CLONING - extracting task files"
-        if ! git clone "$DOCS_SSH_URL" /tmp/docs-repo; then
-            echo "❌ Failed to clone docs repository: {{docs_repository_url}} ($DOCS_SSH_URL)"
+        if ! git clone "$DOCS_HTTP_URL" /tmp/docs-repo; then
+            echo "❌ Failed to clone docs repository: {{docs_repository_url}} ($DOCS_HTTP_URL)"
             exit 1
         fi
         cd /tmp/docs-repo && git checkout "$DOCS_BRANCH" && cd /workspace
@@ -317,8 +276,8 @@ else
         echo "✓ Target repository updated successfully"
     else
         echo "📥 TARGET REPOSITORY: CLONING - first time setup"
-        if ! git clone "$REPO_SSH_URL" "$TARGET_REPO_DIR"; then
-            echo "❌ Failed to clone target repository: {{repository_url}} ($REPO_SSH_URL)"
+        if ! git clone "$REPO_HTTP_URL" "$TARGET_REPO_DIR"; then
+            echo "❌ Failed to clone target repository: {{repository_url}} ($REPO_HTTP_URL)"
             exit 1
         fi
         echo "✓ Target repository cloned successfully"
@@ -474,11 +433,11 @@ echo "✓ Added repository to safe directories"
 # Set git config locally in the working repository (persistent on PVC)
 if [ -d "/workspace/$REPO_NAME/.git" ]; then
     cd "/workspace/$REPO_NAME"
-    git config --local user.name "$GITHUB_USER"
-    git config --local user.email "${GITHUB_USER}@users.noreply.github.com"
+    git config --local user.name "$GITHUB_APP"
+    git config --local user.email "${GITHUB_APP}@users.noreply.github.com"
     # Set up automatic upstream for new branches
     git config --local push.autoSetupRemote true
-    echo "✓ Configured git user in target repository: $GITHUB_USER"
+    echo "✓ Configured git user in target repository: $GITHUB_APP"
     echo "✓ Enabled automatic upstream setup for new branches"
 fi
 
@@ -767,10 +726,7 @@ echo '=== CLAUDE EXECUTION ==='
 # Export necessary variables
 export SERVICE_NAME="{{service}}"
 export TASK_ID="{{task_id}}"
-export GITHUB_USER="{{github_user}}"
-{{#if github_app}}
 export GITHUB_APP="{{github_app}}"
-{{/if}}
 
 # Change to project directory before running Claude
 cd "$CLAUDE_WORK_DIR"
@@ -842,6 +798,7 @@ You have a DANGEROUS tendency to declare task completion before actually verifyi
 - **Repository**: {{repository_url}}
 - **Docs Repository**: {{docs_repository_url}}
 - **Working Directory**: {{working_directory}}
+- **GitHub App**: {{github_app}}
 
 {{#if continue_session}}
 ## 🔄 CONTINUE SESSION - PR COMMENT RESOLUTION PRIORITY

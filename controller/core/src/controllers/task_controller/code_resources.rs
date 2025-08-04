@@ -1,5 +1,5 @@
 use super::config::ControllerConfig;
-use super::types::{github_token_secret_name, ssh_secret_name, Context, Result};
+use super::types::{github_app_secret_name, Context, Result};
 use crate::crds::CodeRun;
 use k8s_openapi::api::{
     batch::v1::Job,
@@ -426,10 +426,11 @@ impl<'a> CodeResourceManager<'a> {
             "mountPath": "/workspace"
         }));
 
-        // SSH volumes
-        let ssh_volumes = self.generate_ssh_volumes(code_run);
-        volumes.extend(ssh_volumes.volumes);
-        volume_mounts.extend(ssh_volumes.volume_mounts);
+        // GitHub App authentication only - no SSH volumes needed
+        let github_app = code_run.spec.github_app.as_ref()
+            .ok_or_else(|| anyhow::anyhow!("GitHub App is required for CodeRun authentication"))?;
+        
+        tracing::info!("Using GitHub App authentication for CodeRun: {}", github_app);
 
         let image = format!(
             "{}:{}",
@@ -439,11 +440,20 @@ impl<'a> CodeResourceManager<'a> {
         // Build environment variables for code tasks
         let env_vars = vec![
             json!({
-                "name": "GITHUB_TOKEN",
+                "name": "GITHUB_APP_ID",
                 "valueFrom": {
                     "secretKeyRef": {
-                        "name": github_token_secret_name(&code_run.spec.github_user),
-                        "key": "token"
+                        "name": github_app_secret_name(&github_app),
+                        "key": "app-id"
+                    }
+                }
+            }),
+            json!({
+                "name": "GITHUB_APP_PRIVATE_KEY",
+                "valueFrom": {
+                    "secretKeyRef": {
+                        "name": github_app_secret_name(&github_app),
+                        "key": "private-key"
                     }
                 }
             }),
@@ -527,32 +537,6 @@ impl<'a> CodeResourceManager<'a> {
         labels
     }
 
-    fn generate_ssh_volumes(&self, code_run: &CodeRun) -> SshVolumes {
-        let ssh_secret = ssh_secret_name(&code_run.spec.github_user);
-
-        let volumes = vec![json!({
-            "name": "ssh-key",
-            "secret": {
-                "secretName": ssh_secret,
-                "defaultMode": 0o644,
-                "items": [{
-                    "key": "ssh-privatekey",
-                    "path": "id_ed25519"
-                }]
-            }
-        })];
-
-        let volume_mounts = vec![json!({
-            "name": "ssh-key",
-            "mountPath": "/workspace/.ssh",
-            "readOnly": true
-        })];
-
-        SshVolumes {
-            volumes,
-            volume_mounts,
-        }
-    }
 
     async fn update_configmap_owner(
         &self,
@@ -681,7 +665,3 @@ impl<'a> CodeResourceManager<'a> {
     }
 }
 
-struct SshVolumes {
-    volumes: Vec<serde_json::Value>,
-    volume_mounts: Vec<serde_json::Value>,
-}
