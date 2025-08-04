@@ -91,19 +91,18 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .and_then(|v| v.as_str())
         .ok_or(anyhow!("Missing required parameter: working_directory"))?;
     
-    let mut params = vec![
-        format!("workingDirectory={working_directory}")
+        let mut params = vec![
+        format!("working-directory={working_directory}"),
+        format!("source-branch=main"), // Default branch
     ];
-    
-    // Add optional model parameter
-    if let Some(model) = arguments.get("model").and_then(|v| v.as_str()) {
-        params.push(format!("model={model}"));
-    }
-    
-    // Add optional github_user parameter
-    if let Some(github_user) = arguments.get("github_user").and_then(|v| v.as_str()) {
-        params.push(format!("githubUser={github_user}"));
-    }
+
+    // Add model parameter with default if not provided
+    let model = arguments.get("model").and_then(|v| v.as_str()).unwrap_or("claude-opus-4-20250514");
+    params.push(format!("model={model}"));
+
+    // Use GitHub App for authentication (Morgan is the default for docs)
+    params.push("github-app=5DLabs-Morgan".to_string());
+    params.push("github-user=".to_string()); // Empty to satisfy workflow template
     
     let mut args = vec![
         "submit",
@@ -161,17 +160,17 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .ok_or(anyhow!("Missing required parameter: github_user"))?;
     
     let mut params = vec![
-        format!("taskId={task_id}"),
-        format!("service={service}"),
-        format!("repository={repository}"),
-        format!("docsRepository={docs_repository}"),
-        format!("docsProjectDirectory={docs_project_directory}"),
-        format!("githubUser={github_user}"),
+        format!("task-id={task_id}"),
+        format!("service-id={service}"),
+        format!("repository-url={repository}"),
+        format!("docs-repository-url={docs_repository}"),
+        format!("docs-project-directory={docs_project_directory}"),
+        format!("github-user={github_user}"),
     ];
     
     // Add optional parameters
     if let Some(working_directory) = arguments.get("working_directory").and_then(|v| v.as_str()) {
-        params.push(format!("workingDirectory={working_directory}"));
+        params.push(format!("working-directory={working_directory}"));
     }
     
     if let Some(model) = arguments.get("model").and_then(|v| v.as_str()) {
@@ -179,7 +178,7 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     }
     
     if let Some(continue_session) = arguments.get("continue_session").and_then(|v| v.as_bool()) {
-        params.push(format!("continueSession={continue_session}"));
+        params.push(format!("continue-session={continue_session}"));
     }
     
     // Handle env object - convert to JSON string for workflow parameter

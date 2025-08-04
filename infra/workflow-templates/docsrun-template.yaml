@@ -18,8 +18,13 @@ spec:
       # Required parameters from MCP server  
       - name: working-directory
         description: "Working directory within the repository (Task Master project path)"
+      # Authentication (one required)
       - name: github-user
-        description: "GitHub username for commits and authentication"
+        description: "GitHub username for commits and authentication (deprecated - use github-app)"
+        default: ""
+      - name: github-app
+        description: "GitHub App name for authentication (e.g., '5DLabs-Morgan')"
+        default: "5DLabs-Morgan"
       
       # Optional parameters
       - name: source-branch
@@ -64,14 +69,14 @@ spec:
           apiVersion: agents.platform/v1
           kind: DocsRun
           metadata:
-            generateName: "docsrun-{{workflow.parameters.github-user}}-"
+            generateName: "docsrun-morgan-"
             namespace: agent-platform
             labels:
               workflow-name: "{{workflow.name}}"
-              github-user: "{{workflow.parameters.github-user}}"
+              github-app: "{{workflow.parameters.github-app}}"
           spec:
             workingDirectory: "{{workflow.parameters.working-directory}}"
-            githubUser: "{{workflow.parameters.github-user}}"
+            githubApp: "{{workflow.parameters.github-app}}"
             sourceBranch: "{{workflow.parameters.source-branch}}"
             repositoryUrl: "git@github.com:5dlabs/platform.git"
             model: "{{workflow.parameters.model}}"
