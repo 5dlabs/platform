@@ -32,6 +32,9 @@ spec:
             value: "/config"
           - name: RUST_LOG
             value: "trace,kube=debug,toolman=trace"
+        
+        # Set working directory to writable location (not read-only config mount)
+        workingDir: "/tmp"
 
         # Resource configuration
         resources:
