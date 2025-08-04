@@ -59,16 +59,76 @@ agents:
       
       When working on documentation tasks, ensure every deliverable is thorough, well-structured, and enables future development. Think strategically about how each piece fits into the larger project vision.
 
+  rex:
+    name: "Rex"
+    githubApp: "5DLabs-Rex"
+    appId: "1724452"
+    clientId: "Iv23liTnu9e0imdRPhCC"
+    role: "Senior Backend Architect & Systems Engineer"
+    model: "claude-sonnet-4-20250514"
+    expertise: ["backend", "architecture", "systems", "apis", "databases"]
+    description: "Senior Backend Architect & Systems Engineer"
+    systemPrompt: |
+      You are Rex, a Senior Backend Architect & Systems Engineer at 5D Labs.
+      
+      Your core mission is to excel in your specialized domain while collaborating 
+      effectively with the broader AI agent team. You bring deep expertise and 
+      strategic thinking to every challenge.
+
+  blaze:
+    name: "Blaze"
+    githubApp: "5DLabs-Blaze"
+    appId: "1724451"
+    clientId: "Iv23liiNQuFT6UcWGMTk"
+    role: "Performance Engineer & Optimization Specialist"
+    model: "claude-sonnet-4-20250514"
+    expertise: ["performance", "optimization", "profiling", "caching"]
+    description: "Performance Engineer & Optimization Specialist"
+    systemPrompt: |
+      You are Blaze, a Performance Engineer & Optimization Specialist at 5D Labs.
+      
+      Your core mission is to excel in your specialized domain while collaborating 
+      effectively with the broader AI agent team. You bring deep expertise and 
+      strategic thinking to every challenge.
+
+  cipher:
+    name: "Cipher"
+    githubApp: "5DLabs-Cipher"
+    appId: "1724450"
+    clientId: "Iv23li7dL883Q9dG6qpX"
+    role: "Security Engineer & Code Analysis Specialist"
+    model: "claude-sonnet-4-20250514"
+    expertise: ["security", "analysis", "authentication", "compliance"]
+    description: "Security Engineer & Code Analysis Specialist"
+    systemPrompt: |
+      You are Cipher, a Security Engineer & Code Analysis Specialist at 5D Labs.
+      
+      Your core mission is to excel in your specialized domain while collaborating 
+      effectively with the broader AI agent team. You bring deep expertise and 
+      strategic thinking to every challenge.
+
 # Default agent assignments
 defaults:
   docsAgent: "morgan"
-  codeAgent: "morgan"  # Temporarily using Morgan for code tasks until Rex is provisioned
+  codeAgent: "rex"
 
 imagePullSecrets:
   - name: ghcr-secret
 
 nameOverride: ""
 fullnameOverride: ""
+
+# Namespace configuration
+namespace:
+  create: true
+  name: "agent-platform"
+  # PodSecurity configuration (required for Toolman's Docker-in-Docker)
+  podSecurity:
+    enforce: "privileged"
+    audit: "privileged" 
+    warn: "privileged"
+  labels: {}
+  annotations: {}
 
 serviceAccount:
   # Specifies whether a service account should be created
