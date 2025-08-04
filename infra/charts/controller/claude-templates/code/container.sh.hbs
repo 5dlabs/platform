@@ -606,7 +606,7 @@ fi
 
 # Ensure toolman-config.json is available in Claude's working directory
 echo "=== TOOLMAN CONFIG SETUP ==="
-WORKSPACE_CONFIG="/workspace/$REPO_NAME/toolman-config.json"
+WORKSPACE_CONFIG="/workspace/$TARGET_REPO_DIR/toolman-config.json"
 CLAUDE_CONFIG="$CLAUDE_WORK_DIR/toolman-config.json"
 
 if [ -f "$WORKSPACE_CONFIG" ]; then
@@ -663,7 +663,7 @@ if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
         
         echo "✅ Copying toolman-config.json..."
         if [ -f "$TEMP_TASK_DIR/toolman-config.json" ]; then
-            cp "$TEMP_TASK_DIR/toolman-config.json" "/workspace/$REPO_NAME/toolman-config.json" && echo "✓ toolman-config.json copied to workspace root" || echo "❌ toolman-config.json copy failed"
+            cp "$TEMP_TASK_DIR/toolman-config.json" "/workspace/$TARGET_REPO_DIR/toolman-config.json" && echo "✓ toolman-config.json copied to workspace root" || echo "❌ toolman-config.json copy failed"
         else
             echo "⚠️ toolman-config.json not found - toolman may not work correctly"
         fi
