@@ -453,7 +453,9 @@ impl<'a> DocsResourceManager<'a> {
                                     "name": "GITHUB_APP_PRIVATE_KEY",
                                     "valueFrom": {
                                         "secretKeyRef": {
-                                            "name": github_app_secret_name(&docs_run.spec.github_app.as_deref().unwrap_or(&docs_run.spec.github_user)),
+                                            "name": github_app_secret_name(docs_run.spec.github_app.as_deref()
+                                                .or(docs_run.spec.github_user.as_deref())
+                                                .unwrap_or("")),
                                             "key": "private-key"
                                         }
                                     }
@@ -462,7 +464,9 @@ impl<'a> DocsResourceManager<'a> {
                                     "name": "GITHUB_APP_ID",
                                     "valueFrom": {
                                         "secretKeyRef": {
-                                            "name": github_app_secret_name(&docs_run.spec.github_app.as_deref().unwrap_or(&docs_run.spec.github_user)),
+                                            "name": github_app_secret_name(docs_run.spec.github_app.as_deref()
+                                                .or(docs_run.spec.github_user.as_deref())
+                                                .unwrap_or("")),
                                             "key": "app-id"
                                         }
                                     }
@@ -498,7 +502,8 @@ impl<'a> DocsResourceManager<'a> {
         labels.insert("component".to_string(), "docs-generator".to_string());
         // Use github_app if available, fallback to github_user for backward compatibility
         let github_identity = docs_run.spec.github_app.as_deref()
-            .unwrap_or(&docs_run.spec.github_user);
+            .or(docs_run.spec.github_user.as_deref())
+            .unwrap_or("");
         labels.insert(
             "github-identity".to_string(),
             self.sanitize_label_value(github_identity),
@@ -516,7 +521,7 @@ impl<'a> DocsResourceManager<'a> {
     }
 
     fn generate_ssh_volumes(&self, docs_run: &DocsRun) -> SshVolumes {
-        let ssh_secret = ssh_secret_name(&docs_run.spec.github_user);
+        let ssh_secret = ssh_secret_name(docs_run.spec.github_user.as_deref().unwrap_or(""));
 
         let volumes = vec![json!({
             "name": "ssh-key",
@@ -569,7 +574,8 @@ impl<'a> DocsResourceManager<'a> {
     // Legacy cleanup method for backward compatibility
     async fn cleanup_old_jobs(&self, docs_run: &DocsRun) -> Result<()> {
         let github_identity = docs_run.spec.github_app.as_deref()
-            .unwrap_or(&docs_run.spec.github_user);
+            .or(docs_run.spec.github_user.as_deref())
+            .unwrap_or("");
         let list_params = ListParams::default().labels(&format!(
             "app=orchestrator,component=docs-generator,github-identity={}",
             self.sanitize_label_value(github_identity)
@@ -592,7 +598,8 @@ impl<'a> DocsResourceManager<'a> {
         let current_cm_name = self.generate_configmap_name(docs_run);
         
         let github_identity = docs_run.spec.github_app.as_deref()
-            .unwrap_or(&docs_run.spec.github_user);
+            .or(docs_run.spec.github_user.as_deref())
+            .unwrap_or("");
         let list_params = ListParams::default().labels(&format!(
             "app=orchestrator,component=docs-generator,github-identity={}",
             self.sanitize_label_value(github_identity)

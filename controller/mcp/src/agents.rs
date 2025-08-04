@@ -65,16 +65,7 @@ impl AgentsConfig {
     pub fn get_docs_agent(&self) -> Option<&Agent> {
         self.agents.get(&self.defaults.docs_agent)
     }
-    
-    /// Get the default code agent
-    pub fn get_code_agent(&self) -> Option<&Agent> {
-        self.agents.get(&self.defaults.code_agent)
-    }
-    
-    /// Get an agent by key
-    pub fn get_agent(&self, name: &str) -> Option<&Agent> {
-        self.agents.get(name)
-    }
+
     
     /// Resolve an agent by human-friendly name, GitHub App name, or key
     /// Examples: "Morgan", "morgan", "5DLabs-Morgan" all resolve to Morgan
