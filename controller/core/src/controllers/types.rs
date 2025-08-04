@@ -23,7 +23,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 // Context shared across controller operations
 #[derive(Clone)]
-pub(crate) struct Context {
+pub struct Context {
     pub client: Client,
     pub namespace: String,
     pub config: Arc<ControllerConfig>,

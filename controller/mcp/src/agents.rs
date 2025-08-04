@@ -47,17 +47,17 @@ impl AgentsConfig {
             if let Ok(contents) = fs::read_to_string(path) {
                 match serde_yaml::from_str(&contents) {
                     Ok(config) => {
-                        eprintln!("✅ Loaded agents config from {}", path);
+                        tracing::info!("✅ Loaded agents config from {path}");
                         return Ok(config);
                     }
                     Err(e) => {
-                        eprintln!("⚠️  Failed to parse agents config from {}: {}", path, e);
+                        tracing::warn!("⚠️  Failed to parse agents config from {path}: {e}");
                     }
                 }
             }
         }
         
-        eprintln!("⚠️  No agents config found, using defaults");
+        tracing::warn!("⚠️  No agents config found, using defaults");
         Ok(Self::default())
     }
     
@@ -78,20 +78,14 @@ impl AgentsConfig {
         }
         
         // Then try to find by agent name (case-insensitive)
-        for (_, agent) in &self.agents {
+        for agent in self.agents.values() {
             if agent.name.to_lowercase() == normalized {
                 return Some(agent);
             }
         }
         
         // Finally, try to match GitHub App name
-        for (_, agent) in &self.agents {
-            if agent.github_app.to_lowercase() == normalized {
-                return Some(agent);
-            }
-        }
-        
-        None
+        self.agents.values().find(|agent| agent.github_app.to_lowercase() == normalized)
     }
     
     /// Generate a team description for tool descriptions
@@ -101,7 +95,7 @@ impl AgentsConfig {
         }
         
         let mut descriptions = Vec::new();
-        for (_key, agent) in &self.agents {
+        for agent in self.agents.values() {
             descriptions.push(format!("{} ({})", agent.name, agent.role));
         }
         

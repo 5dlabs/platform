@@ -1,5 +1,5 @@
-use super::config::ControllerConfig;
-use super::types::Result;
+use crate::controllers::config::ControllerConfig;
+use crate::controllers::types::Result;
 use crate::crds::CodeRun;
 use handlebars::Handlebars;
 use serde_json::json;
@@ -69,7 +69,7 @@ impl CodeTemplateGenerator {
         handlebars
             .register_template_string("container_script", template)
             .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                crate::controllers::types::Error::ConfigError(format!(
                     "Failed to register container script template: {e}"
                 ))
             })?;
@@ -90,7 +90,7 @@ impl CodeTemplateGenerator {
         handlebars
             .render("container_script", &context)
             .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                crate::controllers::types::Error::ConfigError(format!(
                     "Failed to render container script: {e}"
                 ))
             })
@@ -105,7 +105,7 @@ impl CodeTemplateGenerator {
         handlebars
             .register_template_string("claude_memory", template)
             .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                crate::controllers::types::Error::ConfigError(format!(
                     "Failed to register CLAUDE.md template: {e}"
                 ))
             })?;
@@ -123,7 +123,7 @@ impl CodeTemplateGenerator {
         });
 
         handlebars.render("claude_memory", &context).map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
+            crate::controllers::types::Error::ConfigError(format!(
                 "Failed to render CLAUDE.md: {e}"
             ))
         })
@@ -138,7 +138,7 @@ impl CodeTemplateGenerator {
         handlebars
             .register_template_string("claude_settings", template)
             .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                crate::controllers::types::Error::ConfigError(format!(
                     "Failed to register settings.json template: {e}"
                 ))
             })?;
@@ -151,7 +151,7 @@ impl CodeTemplateGenerator {
         });
 
         handlebars.render("claude_settings", &context).map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
+            crate::controllers::types::Error::ConfigError(format!(
                 "Failed to render settings.json: {e}"
             ))
         })
@@ -173,7 +173,7 @@ impl CodeTemplateGenerator {
         handlebars
             .register_template_string("coding_guidelines", template)
             .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                crate::controllers::types::Error::ConfigError(format!(
                     "Failed to register coding-guidelines.md template: {e}"
                 ))
             })?;
@@ -186,7 +186,7 @@ impl CodeTemplateGenerator {
         handlebars
             .render("coding_guidelines", &context)
             .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                crate::controllers::types::Error::ConfigError(format!(
                     "Failed to render coding-guidelines.md: {e}"
                 ))
             })
@@ -201,7 +201,7 @@ impl CodeTemplateGenerator {
         handlebars
             .register_template_string("github_guidelines", template)
             .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                crate::controllers::types::Error::ConfigError(format!(
                     "Failed to register github-guidelines.md template: {e}"
                 ))
             })?;
@@ -215,7 +215,7 @@ impl CodeTemplateGenerator {
         handlebars
             .render("github_guidelines", &context)
             .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                crate::controllers::types::Error::ConfigError(format!(
                     "Failed to render github-guidelines.md: {e}"
                 ))
             })
@@ -342,7 +342,7 @@ impl CodeTemplateGenerator {
         );
 
         fs::read_to_string(&full_path).map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
+            crate::controllers::types::Error::ConfigError(format!(
                 "Failed to load code template {relative_path} (key: {configmap_key}): {e}"
             ))
         })

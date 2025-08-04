@@ -31,7 +31,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use core::controllers::task_controller::run_task_controller;
+use core::controllers::run_task_controller;
 use serde_json::{json, Value};
 use std::time::Duration;
 use tokio::signal;

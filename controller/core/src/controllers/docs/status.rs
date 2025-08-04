@@ -1,4 +1,4 @@
-use super::types::{Context, Result};
+use crate::controllers::types::{Context, Result};
 use crate::crds::{DocsRun, DocsRunCondition};
 use k8s_openapi::api::batch::v1::Job;
 use kube::api::{Api, Patch, PatchParams};

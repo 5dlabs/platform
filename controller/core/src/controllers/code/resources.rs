@@ -1,5 +1,5 @@
-use super::config::ControllerConfig;
-use super::types::{github_app_secret_name, Context, Result};
+use crate::controllers::config::ControllerConfig;
+use crate::controllers::types::{github_app_secret_name, Context, Result};
 use crate::crds::CodeRun;
 use k8s_openapi::api::{
     batch::v1::Job,
@@ -224,7 +224,7 @@ impl<'a> CodeResourceManager<'a> {
         let mut data = BTreeMap::new();
 
         // Generate all templates for code
-        let templates = super::code_templates::CodeTemplateGenerator::generate_all_templates(
+        let templates = super::templates::CodeTemplateGenerator::generate_all_templates(
             code_run,
             self.config,
         )?;
@@ -291,7 +291,7 @@ impl<'a> CodeResourceManager<'a> {
             Ok(created_job) => {
                 info!("Created code job: {}", job_name);
                 // Update status
-                super::code_status::CodeStatusManager::update_job_started(
+                super::status::CodeStatusManager::update_job_started(
                     &Arc::new(code_run.clone()),
                     self.ctx,
                     &job_name,
@@ -430,7 +430,7 @@ impl<'a> CodeResourceManager<'a> {
         let github_app = code_run.spec.github_app.as_ref()
             .ok_or_else(|| {
                 tracing::error!("GitHub App is required for CodeRun authentication");
-                super::types::Error::ConfigError("GitHub App is required for CodeRun authentication".to_string())
+                crate::controllers::types::Error::ConfigError("GitHub App is required for CodeRun authentication".to_string())
             })?;
         
         tracing::info!("Using GitHub App authentication for CodeRun: {}", github_app);
@@ -446,7 +446,7 @@ impl<'a> CodeResourceManager<'a> {
                 "name": "GITHUB_APP_ID",
                 "valueFrom": {
                     "secretKeyRef": {
-                        "name": github_app_secret_name(&github_app),
+                        "name": github_app_secret_name(github_app),
                         "key": "app-id"
                     }
                 }
@@ -455,7 +455,7 @@ impl<'a> CodeResourceManager<'a> {
                 "name": "GITHUB_APP_PRIVATE_KEY",
                 "valueFrom": {
                     "secretKeyRef": {
-                        "name": github_app_secret_name(&github_app),
+                        "name": github_app_secret_name(github_app),
                         "key": "private-key"
                     }
                 }

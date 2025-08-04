@@ -1,5 +1,5 @@
-use super::config::ControllerConfig;
-use super::types::{github_app_secret_name, ssh_secret_name, Context, Result};
+use crate::controllers::config::ControllerConfig;
+use crate::controllers::types::{github_app_secret_name, ssh_secret_name, Context, Result};
 use crate::crds::DocsRun;
 use k8s_openapi::api::{batch::v1::Job, core::v1::ConfigMap};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::{ObjectMeta, OwnerReference};
@@ -191,7 +191,7 @@ impl<'a> DocsResourceManager<'a> {
             "🔧 RESOURCE_MANAGER: Generating templates for ConfigMap: {}",
             name
         );
-        let templates = match super::docs_templates::DocsTemplateGenerator::generate_all_templates(
+        let templates = match super::templates::DocsTemplateGenerator::generate_all_templates(
             docs_run,
             self.config,
         ) {
@@ -274,7 +274,7 @@ impl<'a> DocsResourceManager<'a> {
                 );
                 Ok(owner_ref)
             }
-            Err(super::types::Error::KubeError(kube::Error::Api(ae))) if ae.code == 409 => {
+            Err(crate::controllers::types::Error::KubeError(kube::Error::Api(ae))) if ae.code == 409 => {
                 // Job already exists due to race condition, get the existing one
                 error!("🔄 RESOURCE_MANAGER: Job {} already exists (409 conflict), getting existing job", job_name);
                 match self.jobs.get(&job_name).await {
@@ -318,7 +318,7 @@ impl<'a> DocsResourceManager<'a> {
         error!("✅ RESOURCE_MANAGER: Created docs job: {}", job_name);
 
         // Update status using legacy status manager if needed
-        if let Err(e) = super::docs_status::DocsStatusManager::update_job_started(
+                        if let Err(e) = super::status::DocsStatusManager::update_job_started(
             &Arc::new(docs_run.clone()),
             self.ctx,
             &job_name,

@@ -2,6 +2,7 @@ use serde_json::{json, Value};
 use crate::agents::AgentsConfig;
 
 /// Get all tool schemas with descriptions and parameter definitions
+#[allow(dead_code)]
 pub fn get_all_tool_schemas() -> Value {
     json!({
         "tools": [
@@ -21,6 +22,7 @@ pub fn get_enhanced_tool_schemas(agents_config: &AgentsConfig) -> Value {
     })
 }
 
+#[allow(dead_code)]
 fn get_init_docs_schema() -> Value {
     json!({
         "name": "docs",
@@ -46,6 +48,7 @@ fn get_init_docs_schema() -> Value {
     })
 }
 
+#[allow(dead_code)]
 fn get_submit_implementation_task_schema() -> Value {
     json!({
         "name": "task",
@@ -133,8 +136,7 @@ fn get_submit_implementation_task_schema() -> Value {
 fn get_enhanced_docs_schema(agents_config: &AgentsConfig) -> Value {
     let team_info = agents_config.get_team_description();
     let description = format!(
-        "Initialize documentation for Task Master tasks using Claude. {}",
-        team_info
+        "Initialize documentation for Task Master tasks using Claude. {team_info}"
     );
     
     json!({
@@ -168,8 +170,7 @@ fn get_enhanced_docs_schema(agents_config: &AgentsConfig) -> Value {
 fn get_enhanced_task_schema(agents_config: &AgentsConfig) -> Value {
     let team_info = agents_config.get_team_description();
     let description = format!(
-        "Submit a Task Master task for implementation using Claude with persistent workspace. {}",
-        team_info
+        "Submit a Task Master task for implementation using Claude with persistent workspace. {team_info}"
     );
     
     json!({

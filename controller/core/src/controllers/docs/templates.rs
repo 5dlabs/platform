@@ -1,5 +1,5 @@
-use super::config::ControllerConfig;
-use super::types::Result;
+use crate::controllers::config::ControllerConfig;
+use crate::controllers::types::Result;
 use crate::crds::DocsRun;
 use handlebars::Handlebars;
 use serde_json::json;
@@ -58,7 +58,7 @@ impl DocsTemplateGenerator {
         handlebars
             .register_template_string("container_script", template)
             .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                crate::controllers::types::Error::ConfigError(format!(
                     "Failed to register container script template: {e}"
                 ))
             })?;
@@ -75,7 +75,7 @@ impl DocsTemplateGenerator {
         handlebars
             .render("container_script", &context)
             .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                crate::controllers::types::Error::ConfigError(format!(
                     "Failed to render container script: {e}"
                 ))
             })
@@ -90,7 +90,7 @@ impl DocsTemplateGenerator {
         handlebars
             .register_template_string("claude_memory", template)
             .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                crate::controllers::types::Error::ConfigError(format!(
                     "Failed to register CLAUDE.md template: {e}"
                 ))
             })?;
@@ -113,7 +113,7 @@ impl DocsTemplateGenerator {
         });
 
         handlebars.render("claude_memory", &context).map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
+            crate::controllers::types::Error::ConfigError(format!(
                 "Failed to render CLAUDE.md: {e}"
             ))
         })
@@ -128,7 +128,7 @@ impl DocsTemplateGenerator {
         handlebars
             .register_template_string("claude_settings", template)
             .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                crate::controllers::types::Error::ConfigError(format!(
                     "Failed to register settings.json template: {e}"
                 ))
             })?;
@@ -149,7 +149,7 @@ impl DocsTemplateGenerator {
         });
 
         handlebars.render("claude_settings", &context).map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
+            crate::controllers::types::Error::ConfigError(format!(
                 "Failed to render settings.json: {e}"
             ))
         })
@@ -164,7 +164,7 @@ impl DocsTemplateGenerator {
         handlebars
             .register_template_string("docs_prompt", template)
             .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                crate::controllers::types::Error::ConfigError(format!(
                     "Failed to register docs prompt template: {e}"
                 ))
             })?;
@@ -182,7 +182,7 @@ impl DocsTemplateGenerator {
         });
 
         handlebars.render("docs_prompt", &context).map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
+            crate::controllers::types::Error::ConfigError(format!(
                 "Failed to render docs prompt: {e}"
             ))
         })
@@ -196,7 +196,7 @@ impl DocsTemplateGenerator {
         match fs::read_to_string(TOOLMAN_CATALOG_PATH) {
             Ok(catalog_json) => {
                 serde_json::from_str(&catalog_json).map_err(|e| {
-                    crate::controllers::task_controller::types::Error::ConfigError(format!(
+                    crate::controllers::types::Error::ConfigError(format!(
                         "Failed to parse toolman catalog JSON: {e}"
                     ))
                 })
@@ -259,7 +259,7 @@ impl DocsTemplateGenerator {
         handlebars
             .register_template_string("toolman_catalog_markdown", template)
             .map_err(|e| {
-                crate::controllers::task_controller::types::Error::ConfigError(format!(
+                crate::controllers::types::Error::ConfigError(format!(
                     "Failed to register toolman catalog markdown template: {e}"
                 ))
             })?;
@@ -274,7 +274,7 @@ impl DocsTemplateGenerator {
         });
 
         handlebars.render("toolman_catalog_markdown", &context).map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
+            crate::controllers::types::Error::ConfigError(format!(
                 "Failed to render toolman catalog markdown: {e}"
             ))
         })
@@ -381,7 +381,7 @@ impl DocsTemplateGenerator {
         );
 
         fs::read_to_string(&full_path).map_err(|e| {
-            crate::controllers::task_controller::types::Error::ConfigError(format!(
+            crate::controllers::types::Error::ConfigError(format!(
                 "Failed to load docs template {relative_path} (key: {configmap_key}): {e}"
             ))
         })

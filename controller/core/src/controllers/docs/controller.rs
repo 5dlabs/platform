@@ -1,5 +1,5 @@
-use super::docs_resources::DocsResourceManager;
-use super::types::{Context, Result, DOCS_FINALIZER_NAME};
+use super::resources::DocsResourceManager;
+use crate::controllers::types::{Context, Result, DOCS_FINALIZER_NAME};
 use crate::crds::DocsRun;
 use k8s_openapi::api::{batch::v1::Job, core::v1::ConfigMap};
 use kube::api::{Patch, PatchParams};
@@ -41,11 +41,11 @@ pub async fn reconcile_docs_run(docs_run: Arc<DocsRun>, ctx: Arc<Context>) -> Re
     .map_err(|e| match e {
         kube::runtime::finalizer::Error::ApplyFailed(err) => err,
         kube::runtime::finalizer::Error::CleanupFailed(err) => err,
-        kube::runtime::finalizer::Error::AddFinalizer(e) => super::types::Error::KubeError(e),
-        kube::runtime::finalizer::Error::RemoveFinalizer(e) => super::types::Error::KubeError(e),
-        kube::runtime::finalizer::Error::UnnamedObject => super::types::Error::MissingObjectKey,
+        kube::runtime::finalizer::Error::AddFinalizer(e) => crate::controllers::types::Error::KubeError(e),
+        kube::runtime::finalizer::Error::RemoveFinalizer(e) => crate::controllers::types::Error::KubeError(e),
+        kube::runtime::finalizer::Error::UnnamedObject => crate::controllers::types::Error::MissingObjectKey,
         kube::runtime::finalizer::Error::InvalidFinalizer => {
-            super::types::Error::ConfigError("Invalid finalizer name".to_string())
+            crate::controllers::types::Error::ConfigError("Invalid finalizer name".to_string())
         }
     })?;
 

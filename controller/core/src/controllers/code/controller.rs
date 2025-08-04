@@ -1,5 +1,5 @@
-use super::code_resources::CodeResourceManager;
-use super::types::{Context, Result, CODE_FINALIZER_NAME};
+use super::resources::CodeResourceManager;
+use crate::controllers::types::{Context, Result, CODE_FINALIZER_NAME};
 use crate::crds::CodeRun;
 use k8s_openapi::api::{
     batch::v1::Job,
@@ -47,11 +47,11 @@ pub async fn reconcile_code_run(code_run: Arc<CodeRun>, ctx: Arc<Context>) -> Re
     .map_err(|e| match e {
         kube::runtime::finalizer::Error::ApplyFailed(err) => err,
         kube::runtime::finalizer::Error::CleanupFailed(err) => err,
-        kube::runtime::finalizer::Error::AddFinalizer(e) => super::types::Error::KubeError(e),
-        kube::runtime::finalizer::Error::RemoveFinalizer(e) => super::types::Error::KubeError(e),
-        kube::runtime::finalizer::Error::UnnamedObject => super::types::Error::MissingObjectKey,
+        kube::runtime::finalizer::Error::AddFinalizer(e) => crate::controllers::types::Error::KubeError(e),
+        kube::runtime::finalizer::Error::RemoveFinalizer(e) => crate::controllers::types::Error::KubeError(e),
+        kube::runtime::finalizer::Error::UnnamedObject => crate::controllers::types::Error::MissingObjectKey,
         kube::runtime::finalizer::Error::InvalidFinalizer => {
-            super::types::Error::ConfigError("Invalid finalizer name".to_string())
+            crate::controllers::types::Error::ConfigError("Invalid finalizer name".to_string())
         }
     })?;
 

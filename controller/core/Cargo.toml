@@ -64,6 +64,15 @@ tempfile = "3.8"
 # Internal dependencies
 common = { path = "../common" }
 
+# Binary configurations with proper naming
+[[bin]]
+name = "agent-controller"  # Kebab-case binary name (good for K8s/CLI)
+path = "src/bin/agent_controller.rs"  # Snake-case file name (Rust convention)
+
+[[bin]]
+name = "test-templates"
+path = "src/bin/test_templates.rs"
+
 [dev-dependencies]
 tokio-test = "0.4"
 mockall = { workspace = true }

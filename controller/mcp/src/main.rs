@@ -381,7 +381,7 @@ fn main() -> Result<()> {
     
     // Initialize agents configuration
     let agents_config = AgentsConfig::load().unwrap_or_else(|e| {
-        eprintln!("⚠️  Failed to load agents config: {}. Using defaults.", e);
+        eprintln!("⚠️  Failed to load agents config: {e}. Using defaults.");
         AgentsConfig::default()
     });
     
