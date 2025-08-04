@@ -1,0 +1,67 @@
+{
+  "comparison_date": "2025-08-04",
+  "categories": {
+    "code_completion": {
+      "description": "Ability to suggest and complete code",
+      "leaders": ["github_copilot", "cursor"],
+      "tools": {
+        "cursor": 5,
+        "github_copilot": 5,
+        "claude_code": 4,
+        "tabnine": 4,
+        "codeium": 4
+      }
+    },
+    "codebase_understanding": {
+      "description": "Ability to comprehend full project context",
+      "leaders": ["cursor", "claude_code"],
+      "tools": {
+        "cursor": 5,
+        "github_copilot": 4,
+        "claude_code": 5,
+        "tabnine": 3,
+        "codeium": 3
+      }
+    },
+    "privacy_security": {
+      "description": "Focus on data privacy and security",
+      "leaders": ["tabnine", "claude_code"],
+      "tools": {
+        "cursor": 4,
+        "github_copilot": 3,
+        "claude_code": 5,
+        "tabnine": 5,
+        "codeium": 3
+      }
+    },
+    "pricing_accessibility": {
+      "description": "Cost-effectiveness and pricing flexibility",
+      "leaders": ["codeium", "github_copilot"],
+      "tools": {
+        "cursor": 3,
+        "github_copilot": 4,
+        "claude_code": 3,
+        "tabnine": 3,
+        "codeium": 5
+      }
+    },
+    "integration_options": {
+      "description": "IDE and tool integration capabilities",
+      "leaders": ["github_copilot", "tabnine"],
+      "tools": {
+        "cursor": 3,
+        "github_copilot": 5,
+        "claude_code": 2,
+        "tabnine": 5,
+        "codeium": 4
+      }
+    }
+  },
+  "rating_scale": {
+    "5": "Excellent",
+    "4": "Very Good",
+    "3": "Good",
+    "2": "Fair",
+    "1": "Poor"
+  }
+}
