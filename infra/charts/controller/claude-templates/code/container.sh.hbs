@@ -292,26 +292,14 @@ if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
         ls -la "$TEMP_TASK_DIR/" || echo "No files in temp directory"
     else
         echo "❌ Task Master directory not found at: $PRESERVE_FROM"
-        echo "🔍 DEBUG: Exploring directory structure to find TaskMaster files..."
-        echo "  Repository root contents:"
-        ls -la "/workspace/$TARGET_REPO_DIR/" | head -10
-        echo "  Looking for .taskmaster directories:"
-        find "/workspace/$TARGET_REPO_DIR" -name ".taskmaster" -type d 2>/dev/null | head -5 || echo "  No .taskmaster directories found"
-        echo "  Looking for any task-* directories:"
-        find "/workspace/$TARGET_REPO_DIR" -name "task-*" -type d 2>/dev/null | head -10 || echo "  No task-* directories found"
-        {{#if docs_project_directory}}
-        if [ "{{docs_project_directory}}" = "." ]; then
-            echo "  Checking root .taskmaster/docs/:"
-            ls -la "/workspace/$TARGET_REPO_DIR/.taskmaster/docs/" 2>/dev/null || echo "  └─ No .taskmaster/docs directory found at root"
-        else
-            echo "  Checking project subdirectory {{docs_project_directory}}:"
-            ls -la "/workspace/$TARGET_REPO_DIR/{{docs_project_directory}}/" 2>/dev/null || echo "  └─ Project directory not found"
-            ls -la "/workspace/$TARGET_REPO_DIR/{{docs_project_directory}}/.taskmaster/docs/" 2>/dev/null || echo "  └─ No .taskmaster/docs in project directory"
-        fi
-        {{else}}
-        echo "  Checking default root .taskmaster/docs/:"
-        ls -la "/workspace/$TARGET_REPO_DIR/.taskmaster/docs/" 2>/dev/null || echo "  └─ No .taskmaster/docs directory found"
-        {{/if}}
+        echo "❌ CRITICAL: TaskMaster files must exist at the specified location"
+        echo "❌ Expected location: $PRESERVE_FROM"
+        echo "❌ This job cannot continue without the specified TaskMaster files"
+        echo "❌ Verify that:"
+        echo "   1. The docs-project-directory parameter is correct"
+        echo "   2. The task-id exists in the TaskMaster directory"
+        echo "   3. The docs-branch contains the TaskMaster files"
+        exit 1
     fi
     cd /workspace
     
