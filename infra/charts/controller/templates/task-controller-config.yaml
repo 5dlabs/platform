@@ -26,7 +26,7 @@ data:
 
     # Secrets configuration (references Kubernetes secrets)
     secrets:
-      apiKeySecretName: "{{ include "controller.fullname" . }}-secrets"
+      apiKeySecretName: "agent-platform-secrets"
       apiKeySecretKey: "ANTHROPIC_API_KEY"
 
     # Tool permissions configuration (only used when agentToolsOverride=true)
