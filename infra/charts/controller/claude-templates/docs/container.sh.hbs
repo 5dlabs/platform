@@ -42,8 +42,13 @@ fi
 
 # Git configuration
 git config --global --add safe.directory /workspace
+{{#if github_app}}
+git config --global user.name "{{github_app}}"
+git config --global user.email "{{github_app}}@users.noreply.github.com"
+{{else}}
 git config --global user.name "{{github_user}}"
 git config --global user.email "{{github_user}}@users.noreply.github.com"
+{{/if}}
 echo "✓ Git configured"
 
 # Repository setup
@@ -160,6 +165,9 @@ export SERVICE_NAME="{{service_name}}"
 export SOURCE_BRANCH="{{source_branch}}"
 export WORKING_DIR="{{working_directory}}"
 export GITHUB_USER="{{github_user}}"
+{{#if github_app}}
+export GITHUB_APP="{{github_app}}"
+{{/if}}
 
 # Claude execution
 echo "Starting Claude execution..."
@@ -223,13 +231,30 @@ git push -u origin "$PR_BRANCH"
 
 # Create PR
 if command -v gh >/dev/null 2>&1; then
-    # Authenticate GitHub CLI with token
-    if [ -n "$GITHUB_TOKEN" ]; then
-        echo "Authenticating GitHub CLI..."
-        echo "$GITHUB_TOKEN" | gh auth login --with-token
-        echo "✓ GitHub CLI authenticated"
+    # Authenticate GitHub CLI with GitHub App
+    if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ]; then
+        echo "Authenticating GitHub CLI with GitHub App..."
+        
+        # Create temporary private key file
+        TEMP_KEY_FILE="/tmp/github-app-key.pem"
+        echo "$GITHUB_APP_PRIVATE_KEY" > "$TEMP_KEY_FILE"
+        chmod 600 "$TEMP_KEY_FILE"
+        
+        # Use GitHub CLI's built-in App authentication
+        if gh auth login --with-token < <(gh auth app-token --app-id "$GITHUB_APP_ID" --private-key-file "$TEMP_KEY_FILE"); then
+            echo "✓ GitHub CLI authenticated with GitHub App"
+        else
+            echo "❌ Failed to authenticate with GitHub App"
+            # Clean up and exit
+            rm -f "$TEMP_KEY_FILE"
+            echo "⚠️ Creating branch and pushing, but cannot create PR automatically"
+            exit 0
+        fi
+        
+        # Clean up temporary key file
+        rm -f "$TEMP_KEY_FILE"
     else
-        echo "❌ GITHUB_TOKEN not found - cannot authenticate GitHub CLI"
+        echo "❌ GITHUB_APP_PRIVATE_KEY or GITHUB_APP_ID not found - cannot authenticate GitHub CLI"
         echo "⚠️ Creating branch and pushing, but cannot create PR automatically"
         exit 0
     fi

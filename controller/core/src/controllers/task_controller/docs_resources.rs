@@ -1,5 +1,5 @@
 use super::config::ControllerConfig;
-use super::types::{github_token_secret_name, ssh_secret_name, Context, Result};
+use super::types::{github_app_secret_name, ssh_secret_name, Context, Result};
 use crate::crds::DocsRun;
 use k8s_openapi::api::{batch::v1::Job, core::v1::ConfigMap};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::{ObjectMeta, OwnerReference};
@@ -450,11 +450,20 @@ impl<'a> DocsResourceManager<'a> {
                             "image": image,
                             "env": [
                                 {
-                                    "name": "GITHUB_TOKEN",
+                                    "name": "GITHUB_APP_PRIVATE_KEY",
                                     "valueFrom": {
                                         "secretKeyRef": {
-                                            "name": github_token_secret_name(&docs_run.spec.github_user),
-                                            "key": "token"
+                                            "name": github_app_secret_name(&docs_run.spec.github_app.as_deref().unwrap_or(&docs_run.spec.github_user)),
+                                            "key": "private-key"
+                                        }
+                                    }
+                                },
+                                {
+                                    "name": "GITHUB_APP_ID",
+                                    "valueFrom": {
+                                        "secretKeyRef": {
+                                            "name": github_app_secret_name(&docs_run.spec.github_app.as_deref().unwrap_or(&docs_run.spec.github_user)),
+                                            "key": "app-id"
                                         }
                                     }
                                 },
@@ -487,9 +496,12 @@ impl<'a> DocsResourceManager<'a> {
 
         labels.insert("app".to_string(), "orchestrator".to_string());
         labels.insert("component".to_string(), "docs-generator".to_string());
+        // Use github_app if available, fallback to github_user for backward compatibility
+        let github_identity = docs_run.spec.github_app.as_deref()
+            .unwrap_or(&docs_run.spec.github_user);
         labels.insert(
-            "github-user".to_string(),
-            self.sanitize_label_value(&docs_run.spec.github_user),
+            "github-identity".to_string(),
+            self.sanitize_label_value(github_identity),
         );
         labels.insert("context-version".to_string(), "1".to_string()); // Docs always version 1
 
@@ -556,9 +568,11 @@ impl<'a> DocsResourceManager<'a> {
 
     // Legacy cleanup method for backward compatibility
     async fn cleanup_old_jobs(&self, docs_run: &DocsRun) -> Result<()> {
+        let github_identity = docs_run.spec.github_app.as_deref()
+            .unwrap_or(&docs_run.spec.github_user);
         let list_params = ListParams::default().labels(&format!(
-            "app=orchestrator,component=docs-generator,github-user={}",
-            self.sanitize_label_value(&docs_run.spec.github_user)
+            "app=orchestrator,component=docs-generator,github-identity={}",
+            self.sanitize_label_value(github_identity)
         ));
 
         let jobs = self.jobs.list(&list_params).await?;
@@ -577,9 +591,11 @@ impl<'a> DocsResourceManager<'a> {
         // Generate current ConfigMap name to avoid deleting it
         let current_cm_name = self.generate_configmap_name(docs_run);
         
+        let github_identity = docs_run.spec.github_app.as_deref()
+            .unwrap_or(&docs_run.spec.github_user);
         let list_params = ListParams::default().labels(&format!(
-            "app=orchestrator,component=docs-generator,github-user={}",
-            self.sanitize_label_value(&docs_run.spec.github_user)
+            "app=orchestrator,component=docs-generator,github-identity={}",
+            self.sanitize_label_value(github_identity)
         ));
 
         let configmaps = self.configmaps.list(&list_params).await?;

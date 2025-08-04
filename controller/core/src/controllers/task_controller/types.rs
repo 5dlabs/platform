@@ -41,3 +41,10 @@ pub fn ssh_secret_name(github_user: &str) -> String {
 pub fn github_token_secret_name(github_user: &str) -> String {
     format!("github-token-{github_user}")
 }
+
+// Helper function for GitHub App secret names
+pub fn github_app_secret_name(github_app: &str) -> String {
+    // Convert GitHub App name to secret name (e.g., "5DLabs-Morgan" -> "github-app-5dlabs-morgan")
+    let normalized = github_app.to_lowercase().replace(['_', ' '], "-");
+    format!("github-app-{normalized}")
+}

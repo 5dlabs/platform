@@ -21,6 +21,8 @@ pub struct DocsRunSpec {
     pub model: Option<String>,
     #[serde(rename = "githubUser")]
     pub github_user: String,
+    #[serde(rename = "githubApp", default)]
+    pub github_app: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
