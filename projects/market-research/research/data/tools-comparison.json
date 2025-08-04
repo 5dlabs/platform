@@ -1,0 +1,86 @@
+{
+  "tools": [
+    {
+      "name": "GitHub Copilot",
+      "company": "GitHub/Microsoft",
+      "pricing": {
+        "individual": "10/month",
+        "business": "19/month",
+        "enterprise": "39/month",
+        "free_tier": {
+          "code_completions": 2000,
+          "chat_requests": 50
+        }
+      },
+      "features": [
+        "Multi-IDE support",
+        "GitHub integration",
+        "Multiple AI models (GPT-4, Claude)",
+        "Enterprise security features"
+      ],
+      "target_audience": ["Professional developers", "Enterprise teams"],
+      "market_position": "Market leader"
+    },
+    {
+      "name": "Cursor",
+      "company": "Cursor Inc",
+      "features": [
+        "AI-first IDE",
+        "Multi-file editing",
+        "Project-wide context",
+        "Advanced tab completion",
+        "Auto-import functionality"
+      ],
+      "target_audience": ["Serious developers", "Startups"],
+      "market_position": "Premium AI-IDE"
+    },
+    {
+      "name": "Windsurf",
+      "formerly": "Codeium",
+      "features": [
+        "Chat mode for Q&A",
+        "Write mode for code changes",
+        "70+ language support",
+        "Auto-complete suggestions"
+      ],
+      "target_audience": ["Full-stack developers", "Teams"],
+      "market_position": "Rising challenger"
+    },
+    {
+      "name": "Claude Code",
+      "company": "Anthropic",
+      "features": [
+        "MCP architecture",
+        "Enterprise security",
+        "Custom workflows",
+        "Advanced safety protocols",
+        "Compliance features"
+      ],
+      "target_audience": ["Enterprise teams", "Security-focused organizations"],
+      "market_position": "Enterprise solution"
+    },
+    {
+      "name": "VS Code AI",
+      "company": "Microsoft",
+      "features": [
+        "Built-in IDE integration",
+        "Code suggestions",
+        "Basic completions",
+        "Extensions support"
+      ],
+      "target_audience": ["VS Code users", "General developers"],
+      "market_position": "Integrated solution"
+    }
+  ],
+  "market_trends": {
+    "developer_adoption": "76% using or planning to use AI",
+    "productivity_impact": {
+      "study_finding": "19% longer development time with AI tools",
+      "note": "May vary based on experience level and use case"
+    },
+    "pricing_trends": {
+      "model": "Shift to agentic seat pricing",
+      "cost_expectation": "Increasing for enterprise-grade tools"
+    }
+  }
+}

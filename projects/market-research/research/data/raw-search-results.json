@@ -1,0 +1,46 @@
+{
+  "search_queries": [
+    {
+      "query": "Best AI code generation tools 2025",
+      "key_findings": {
+        "major_players": [
+          "GitHub Copilot",
+          "Cursor",
+          "Windsurf (Codeium)",
+          "Claude Code",
+          "VS Code AI"
+        ],
+        "market_trends": [
+          "Increased enterprise adoption",
+          "Focus on security features",
+          "Integration with existing workflows"
+        ]
+      }
+    },
+    {
+      "query": "AI developer productivity tools pricing",
+      "key_findings": {
+        "pricing_models": [
+          "Tiered subscription",
+          "Usage-based",
+          "Agentic seat pricing"
+        ],
+        "cost_trends": [
+          "Rising enterprise costs",
+          "63% organizations investing in AI",
+          "22X ROI reported in first year"
+        ]
+      }
+    }
+  ],
+  "sources": [
+    "Kingy AI",
+    "DEV Community",
+    "PixelNoir",
+    "Digital Applied",
+    "METR Research",
+    "Fortune Tech",
+    "Zapier Blog"
+  ],
+  "timestamp": "2025-08-04"
+}
