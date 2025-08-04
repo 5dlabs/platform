@@ -1,0 +1,50 @@
+{
+  "last_updated": "2025-08-04",
+  "search_results": {
+    "github_copilot": {
+      "search_date": "2025-08-04",
+      "key_findings": {
+        "revenue_impact": "40% of GitHub's revenue growth in 2024",
+        "market_position": "Leader in enterprise AI code assistance",
+        "adoption_trends": "High enterprise adoption rate, particularly in large organizations",
+        "user_feedback": "Positive, especially for enterprise features and security"
+      }
+    },
+    "cursor": {
+      "search_date": "2025-08-04",
+      "key_findings": {
+        "differentiators": "Deep VS Code integration, advanced context management",
+        "user_feedback": "Strong positive feedback for error handling and bug fixing",
+        "challenges": "Cost concerns for larger teams",
+        "market_trends": "Growing adoption in mid-size development teams"
+      }
+    },
+    "claude_code": {
+      "search_date": "2025-08-04",
+      "key_findings": {
+        "model_capabilities": "Access to latest Claude models including Opus 4",
+        "enterprise_adoption": "Early adoption by companies like North Highland and Midjourney",
+        "usage_patterns": "High usage among power users, some exceeding $1000/day in API calls",
+        "market_position": "Strong in enterprise segment with flexible deployment options"
+      }
+    },
+    "codeium": {
+      "search_date": "2025-08-04",
+      "key_findings": {
+        "market_differentiation": "Free tier with unlimited usage",
+        "platform_support": "Broader IDE support than competitors",
+        "enterprise_value": "50% code automation potential",
+        "cost_efficiency": "Significant ROI potential given average developer costs"
+      }
+    },
+    "tabnine": {
+      "search_date": "2025-08-04",
+      "key_findings": {
+        "enterprise_focus": "Strong emphasis on privacy and security",
+        "deployment_options": "Flexible deployment including air-gapped installations",
+        "performance_metrics": "15-25% improvement in feature delivery speed",
+        "market_pricing": "Volume discounts of 20-40% available for enterprise"
+      }
+    }
+  }
+}

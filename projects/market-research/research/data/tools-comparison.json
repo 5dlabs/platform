@@ -1,67 +1,198 @@
 {
-  "comparison_date": "2025-08-04",
-  "categories": {
-    "code_completion": {
-      "description": "Ability to suggest and complete code",
-      "leaders": ["github_copilot", "cursor"],
-      "tools": {
-        "cursor": 5,
-        "github_copilot": 5,
-        "claude_code": 4,
-        "tabnine": 4,
-        "codeium": 4
-      }
+  "last_updated": "2025-08-04",
+  "tools": {
+    "github_copilot": {
+      "name": "GitHub Copilot",
+      "company": "GitHub (Microsoft)",
+      "pricing": {
+        "business": {
+          "price": 19,
+          "period": "monthly",
+          "currency": "USD"
+        },
+        "enterprise": {
+          "price": 39,
+          "period": "monthly",
+          "currency": "USD",
+          "requirements": ["GitHub Enterprise Cloud"]
+        }
+      },
+      "features": {
+        "ide_integration": ["VS Code", "Visual Studio", "Vim", "Neovim", "JetBrains IDEs", "Azure Data Studio"],
+        "key_capabilities": [
+          "Code completion",
+          "Custom private models",
+          "Organization codebase indexing",
+          "SAML SSO authentication",
+          "IP indemnity protection",
+          "Data exclusion from training"
+        ]
+      },
+      "target_audience": ["Enterprise developers", "Development teams"],
+      "security_features": [
+        "Private repository protection",
+        "Prompt privacy",
+        "No unauthorized model training",
+        "Enterprise-grade security"
+      ]
     },
-    "codebase_understanding": {
-      "description": "Ability to comprehend full project context",
-      "leaders": ["cursor", "claude_code"],
-      "tools": {
-        "cursor": 5,
-        "github_copilot": 4,
-        "claude_code": 5,
-        "tabnine": 3,
-        "codeium": 3
-      }
+    "cursor": {
+      "name": "Cursor",
+      "company": "Cursor",
+      "pricing": {
+        "free": {
+          "price": 0,
+          "period": "monthly",
+          "limitations": {
+            "completions": 2000,
+            "slow_requests": 50
+          }
+        },
+        "pro": {
+          "price": 20,
+          "period": "monthly",
+          "currency": "USD",
+          "features": [
+            "Unlimited completions",
+            "500 fast premium requests",
+            "Unlimited slow premium requests"
+          ]
+        },
+        "business": {
+          "features": [
+            "Organization privacy mode",
+            "Centralized billing",
+            "Admin dashboard",
+            "SAML/OIDC SSO"
+          ]
+        }
+      },
+      "features": {
+        "ai_integration": ["Claude 3.5 Sonnet integration", "Chat interface", "Code exploration"],
+        "editor_features": [
+          "VS Code based",
+          "Codebase understanding",
+          "File refactoring",
+          "Bug fixing with error traces"
+        ],
+        "languages": ["JavaScript", "TypeScript", "Python", "Go", "Java"]
+      },
+      "target_audience": ["Individual developers", "Development teams", "Enterprises"]
     },
-    "privacy_security": {
-      "description": "Focus on data privacy and security",
-      "leaders": ["tabnine", "claude_code"],
-      "tools": {
-        "cursor": 4,
-        "github_copilot": 3,
-        "claude_code": 5,
-        "tabnine": 5,
-        "codeium": 3
-      }
+    "codeium": {
+      "name": "Codeium",
+      "company": "Windsurf Technologies",
+      "pricing": {
+        "free": {
+          "price": 0,
+          "period": "unlimited",
+          "features": [
+            "Basic code completion",
+            "Multi-IDE support",
+            "No GitHub requirement"
+          ]
+        },
+        "enterprise": {
+          "features": [
+            "Custom deployment",
+            "Advanced security",
+            "Team management",
+            "Priority support"
+          ],
+          "price": "Custom pricing"
+        }
+      },
+      "features": {
+        "key_capabilities": [
+          "Context-aware suggestions",
+          "Open source",
+          "Cascade collaboration feature",
+          "Privacy-focused implementation"
+        ],
+        "ide_support": ["VS Code", "JetBrains", "Vim", "Emacs", "Sublime Text"]
+      },
+      "target_audience": ["Individual developers", "Open source projects", "Enterprise teams"]
     },
-    "pricing_accessibility": {
-      "description": "Cost-effectiveness and pricing flexibility",
-      "leaders": ["codeium", "github_copilot"],
-      "tools": {
-        "cursor": 3,
-        "github_copilot": 4,
-        "claude_code": 3,
-        "tabnine": 3,
-        "codeium": 5
-      }
+    "codewhisperer": {
+      "name": "Amazon CodeWhisperer",
+      "company": "Amazon Web Services",
+      "pricing": {
+        "free": {
+          "price": 0,
+          "period": "unlimited",
+          "features": [
+            "Basic code suggestions",
+            "AWS Toolkit integration",
+            "Security scanning"
+          ]
+        },
+        "professional": {
+          "price": 15,
+          "period": "monthly",
+          "currency": "USD",
+          "features": [
+            "Advanced code generation",
+            "Custom policies",
+            "Enterprise management"
+          ]
+        }
+      },
+      "features": {
+        "key_capabilities": [
+          "AWS service integration",
+          "Security vulnerability detection",
+          "Reference tracking",
+          "Documentation links"
+        ],
+        "ide_support": ["VS Code", "IntelliJ IDEA", "AWS Cloud9"]
+      },
+      "target_audience": ["AWS developers", "Enterprise development teams"]
     },
-    "integration_options": {
-      "description": "IDE and tool integration capabilities",
-      "leaders": ["github_copilot", "tabnine"],
-      "tools": {
-        "cursor": 3,
-        "github_copilot": 5,
-        "claude_code": 2,
-        "tabnine": 5,
-        "codeium": 4
-      }
+    "tabnine": {
+      "name": "Tabnine",
+      "company": "Tabnine",
+      "pricing": {
+        "basic": {
+          "price": 0,
+          "period": "unlimited",
+          "features": [
+            "Basic AI code completion",
+            "Public code training"
+          ]
+        },
+        "pro": {
+          "price": 12,
+          "period": "monthly",
+          "currency": "USD",
+          "features": [
+            "Advanced AI completion",
+            "Personalized models",
+            "Security tools"
+          ]
+        },
+        "enterprise": {
+          "price": 39,
+          "period": "monthly",
+          "currency": "USD",
+          "commitment": "1 year",
+          "features": [
+            "Private AI platform",
+            "Advanced admin tools",
+            "Priority support"
+          ]
+        }
+      },
+      "features": {
+        "key_capabilities": [
+          "AI code completion",
+          "Error detection",
+          "Refactoring assistance",
+          "Code documentation"
+        ],
+        "language_support": "80+ programming languages",
+        "ide_support": ["VS Code", "JetBrains", "Visual Studio", "Eclipse"]
+      },
+      "target_audience": ["Individual developers", "Development teams", "Enterprise organizations"]
     }
-  },
-  "rating_scale": {
-    "5": "Excellent",
-    "4": "Very Good",
-    "3": "Good",
-    "2": "Fair",
-    "1": "Poor"
   }
 }
