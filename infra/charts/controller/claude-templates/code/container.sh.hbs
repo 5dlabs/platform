@@ -589,13 +589,11 @@ if [ -d "/task-files" ]; then
 
   # Set up MCP configuration
   echo "Setting up MCP configuration..."
-  mkdir -p "$CLAUDE_WORK_DIR/.claude"
-  chmod 755 "$CLAUDE_WORK_DIR/.claude"
 
-  # Copy MCP configuration from ConfigMap
+  # Copy MCP configuration from ConfigMap to project root (project scope)
   if [ -f "/task-files/mcp.json" ]; then
-    cp /task-files/mcp.json "$CLAUDE_WORK_DIR/.claude/mcp.json"
-    echo "✓ Copied mcp.json to .claude/mcp.json"
+    cp /task-files/mcp.json "$CLAUDE_WORK_DIR/.mcp.json"
+    echo "✓ Copied mcp.json to .mcp.json (project scope)"
   else
     echo "⚠️  mcp.json template not found"
   fi
