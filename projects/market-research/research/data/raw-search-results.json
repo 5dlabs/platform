@@ -1,0 +1,57 @@
+{
+  "searches": [
+    {
+      "query": "best AI code generation tools 2025 GitHub Copilot alternatives comparison",
+      "results": [
+        {
+          "title": "18 Free GitHub Copilot Alternatives for VS Code 2025",
+          "url": "https://bito.ai/blog/free-github-copilot-alternatives-for-vs-code/"
+        },
+        {
+          "title": "Top 7 GitHub Copilot Alternatives (2025 List)",
+          "url": "https://www.qodo.ai/blog/top-github-copilot-alternatives/"
+        },
+        {
+          "title": "6 GitHub Copilot Alternatives You Should Know",
+          "url": "https://swimm.io/learn/ai-tools-for-developers/6-github-copilot-alternatives-you-should-know"
+        }
+      ]
+    },
+    {
+      "query": "Claude Code AI development tool features pricing 2025",
+      "results": [
+        {
+          "title": "Claude Code: Deep coding at terminal velocity \\ Anthropic",
+          "url": "https://www.anthropic.com/claude-code"
+        },
+        {
+          "title": "Anthropic unveils new rate limits to curb Claude Code power users",
+          "url": "https://techcrunch.com/2025/07/28/anthropic-unveils-new-rate-limits-to-curb-claude-code-power-users/"
+        },
+        {
+          "title": "Anthropic Releases Claude Code SDK to Power AI-Paired Programming",
+          "url": "https://www.infoq.com/news/2025/06/claude-code-sdk/"
+        }
+      ]
+    }
+  ],
+  "keyFindings": {
+    "pricing": {
+      "range": "10-20 USD/month individual",
+      "enterpriseModels": "Custom pricing based on usage"
+    },
+    "topTools": [
+      "GitHub Copilot",
+      "Claude Code",
+      "Tabnine",
+      "Cody",
+      "Amazon Q Developer"
+    ],
+    "marketTrends": [
+      "Enterprise focus",
+      "Workflow integration",
+      "Privacy features",
+      "Team collaboration"
+    ]
+  }
+}

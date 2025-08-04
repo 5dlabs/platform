@@ -1,0 +1,120 @@
+{
+  "tools": [
+    {
+      "name": "GitHub Copilot",
+      "company": "Microsoft/GitHub",
+      "pricing": {
+        "individual": {
+          "monthly": 10,
+          "annual": 100
+        }
+      },
+      "features": {
+        "codeCompletion": true,
+        "codebaseUnderstanding": "partial",
+        "offlineSupport": false,
+        "customModels": false,
+        "enterpriseFeatures": true,
+        "terminalIntegration": "partial",
+        "ideSupport": true
+      },
+      "targetAudience": ["Individual developers", "Enterprises"],
+      "keyDifferentiator": "Deep GitHub integration and extensive training data"
+    },
+    {
+      "name": "Claude Code",
+      "company": "Anthropic",
+      "pricing": {
+        "pro": {
+          "monthly": 20,
+          "features": "40-80 hours/week Sonnet 4"
+        },
+        "max": {
+          "tier1": {
+            "monthly": 100,
+            "features": "140-280 hours Sonnet 4, 15-35 hours Opus 4"
+          },
+          "tier2": {
+            "monthly": 200,
+            "features": "240-480 hours Sonnet 4, 24-40 hours Opus 4"
+          }
+        }
+      },
+      "features": {
+        "codeCompletion": true,
+        "codebaseUnderstanding": true,
+        "offlineSupport": false,
+        "customModels": false,
+        "enterpriseFeatures": true,
+        "terminalIntegration": true,
+        "ideSupport": true
+      },
+      "targetAudience": ["Professional developers", "Enterprises"],
+      "keyDifferentiator": "Advanced agentic capabilities and workflow integration"
+    },
+    {
+      "name": "Tabnine",
+      "company": "Tabnine",
+      "pricing": {
+        "hasFreetier": true,
+        "premiumPlans": "Contact for pricing"
+      },
+      "features": {
+        "codeCompletion": true,
+        "codebaseUnderstanding": "partial",
+        "offlineSupport": true,
+        "customModels": true,
+        "enterpriseFeatures": true,
+        "terminalIntegration": false,
+        "ideSupport": true
+      },
+      "targetAudience": ["Privacy-conscious developers", "Teams"],
+      "keyDifferentiator": "Customizable AI models and privacy features"
+    },
+    {
+      "name": "Cody",
+      "company": "Sourcegraph",
+      "pricing": {
+        "enterprise": "Contact for pricing"
+      },
+      "features": {
+        "codeCompletion": true,
+        "codebaseUnderstanding": true,
+        "offlineSupport": false,
+        "customModels": false,
+        "enterpriseFeatures": true,
+        "terminalIntegration": true,
+        "ideSupport": true
+      },
+      "targetAudience": ["Large development teams"],
+      "keyDifferentiator": "Specialized for large, complex codebases"
+    },
+    {
+      "name": "Amazon Q Developer",
+      "company": "Amazon",
+      "pricing": {
+        "pro": {
+          "monthly": 19
+        }
+      },
+      "features": {
+        "codeCompletion": true,
+        "codebaseUnderstanding": "partial",
+        "offlineSupport": false,
+        "customModels": false,
+        "enterpriseFeatures": true,
+        "terminalIntegration": "partial",
+        "ideSupport": true
+      },
+      "targetAudience": ["AWS developers", "Enterprises"],
+      "keyDifferentiator": "Integration with AWS ecosystem"
+    }
+  ],
+  "marketTrends": [
+    "Increased focus on enterprise features and team collaboration",
+    "Integration of more powerful AI models",
+    "Emphasis on workflow integration rather than standalone tools",
+    "Growing importance of privacy and security features",
+    "Shift towards understanding entire codebases rather than line-by-line suggestions"
+  ]
+}
