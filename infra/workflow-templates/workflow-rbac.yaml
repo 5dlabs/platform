@@ -1,4 +1,12 @@
 ---
+# ServiceAccount for workflows in agent-platform namespace
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argo-workflow
+  namespace: agent-platform
+
+---
 # RBAC for Workflow Templates
 # This ensures workflow templates have proper permissions
 
@@ -36,6 +44,11 @@ rules:
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["create", "patch"]
+  
+  # Workflow task results (required for Argo Workflows)
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflowtaskresults"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   
   # Orchestrator CRDs (for creating DocsRun/CodeRun from workflows)
   - apiGroups: ["agents.platform"]
