@@ -6,7 +6,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
   name: docsrun-template
-  namespace: {{ .Release.Namespace }}`}}
+  namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/name: docsrun-template
     app.kubernetes.io/part-of: platform
@@ -54,7 +54,7 @@ spec:
           arguments:
             parameters:
             - name: docsrun-name
-              value: "{{`{{steps.create-docsrun-resource.outputs.parameters.name}}`}}`}}`}}`}}`}}"
+              value: "{{steps.create-docsrun-resource.outputs.parameters.name}}"
           
     - name: create-docsrun-resource
       outputs:
@@ -70,16 +70,16 @@ spec:
           kind: DocsRun
           metadata:
             generateName: "docsrun-morgan-"
-            namespace: {{ .Release.Namespace }}`}}
+            namespace: {{ .Release.Namespace }}
             labels:
-              workflow-name: "{{`{{workflow.`}}`}}name}}`}}`}}`}}"
-              github-app: "{{`{{workflow.`}}`}}parameters.github-app}}`}}`}}`}}"
+              workflow-name: "{{workflow.name}}"
+              github-app: "{{workflow.parameters.github-app}}"
           spec:
-            workingDirectory: "{{`{{workflow.`}}`}}parameters.working-directory}}`}}`}}`}}"
-            githubApp: "{{`{{workflow.`}}`}}parameters.github-app}}`}}`}}`}}"
-            sourceBranch: "{{`{{workflow.`}}`}}parameters.source-branch}}`}}`}}`}}"
-            repositoryUrl: "{{`{{workflow.`}}`}}parameters.repository-url}}`}}`}}`}}"
-            model: "{{`{{workflow.`}}`}}parameters.model}}`}}`}}`}}"
+            workingDirectory: "{{workflow.parameters.working-directory}}"
+            githubApp: "{{workflow.parameters.github-app}}"
+            sourceBranch: "{{workflow.parameters.source-branch}}"
+            repositoryUrl: "{{workflow.parameters.repository-url}}"
+            model: "{{workflow.parameters.model}}"
             
     - name: wait-docsrun-completion
       inputs:
@@ -91,8 +91,8 @@ spec:
           apiVersion: agents.platform/v1
           kind: DocsRun
           metadata:
-            name: "{{`{{inputs.`}}`}}parameters.docsrun-name}}`}}`}}`}}"
-            namespace: {{ .Release.Namespace }}`}}
+            name: "{{inputs.parameters.docsrun-name}}"
+            namespace: {{ .Release.Namespace }}
         successCondition: status.phase == Succeeded
         failureCondition: status.phase == Failed
             

@@ -6,7 +6,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
   name: coderun-template
-  namespace: {{ .Release.Namespace }}`}}
+  namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/name: coderun-template
     app.kubernetes.io/part-of: platform
@@ -67,7 +67,7 @@ spec:
           arguments:
             parameters:
             - name: coderun-name
-              value: "{{`{{steps.`}}`}}create-coderun-resource.outputs.parameters.name}}`}}`}}`}}"
+              value: "{{steps.create-coderun-resource.outputs.parameters.name}}"
           
     - name: create-coderun-resource
       outputs:
@@ -82,24 +82,24 @@ spec:
           apiVersion: agents.platform/v1
           kind: CodeRun
           metadata:
-            generateName: "coderun-{{`{{workflow.`}}`}}parameters.task-id}}`}}-{{`{{workflow.`}}`}}parameters.service-id}}`}}-"
-            namespace: {{ .Release.Namespace }}`}}
+            generateName: "coderun-{{workflow.parameters.task-id}}-{{workflow.parameters.service-id}}-"
+            namespace: {{ .Release.Namespace }}
             labels:
-              workflow-name: "{{`{{workflow.`}}`}}name}}`}}`}}`}}"
-              task-id: "{{`{{workflow.`}}`}}parameters.task-id}}`}}`}}`}}"
-              service: "{{`{{workflow.`}}`}}parameters.service-id}}`}}`}}`}}"
+              workflow-name: "{{workflow.name}}"
+              task-id: "{{workflow.parameters.task-id}}"
+              service: "{{workflow.parameters.service-id}}"
           spec:
-            taskId: {{`{{workflow.`}}`}}parameters.task-id}}`}}
-            service: "{{`{{workflow.`}}`}}parameters.service-id}}`}}`}}`}}"
-            repositoryUrl: "{{`{{workflow.`}}`}}parameters.repository-url}}`}}`}}`}}"
-            docsRepositoryUrl: "{{`{{workflow.`}}`}}parameters.docs-repository-url}}`}}`}}`}}"
-            docsProjectDirectory: "{{`{{workflow.`}}`}}parameters.docs-project-directory}}`}}`}}`}}"
-            workingDirectory: "{{`{{workflow.`}}`}}parameters.working-directory}}`}}`}}`}}"
-            githubUser: "{{`{{workflow.`}}`}}parameters.github-user}}`}}`}}`}}"
-            model: "{{`{{workflow.`}}`}}parameters.model}}`}}`}}`}}"
-            continueSession: {{`{{workflow.`}}`}}parameters.continue-session}}`}}
-            overwriteMemory: {{`{{workflow.`}}`}}parameters.overwrite-memory}}`}}
-            docsBranch: "{{`{{workflow.`}}`}}parameters.docs-branch}}`}}`}}`}}"
+            taskId: {{workflow.parameters.task-id}}
+            service: "{{workflow.parameters.service-id}}"
+            repositoryUrl: "{{workflow.parameters.repository-url}}"
+            docsRepositoryUrl: "{{workflow.parameters.docs-repository-url}}"
+            docsProjectDirectory: "{{workflow.parameters.docs-project-directory}}"
+            workingDirectory: "{{workflow.parameters.working-directory}}"
+            githubUser: "{{workflow.parameters.github-user}}"
+            model: "{{workflow.parameters.model}}"
+            continueSession: {{workflow.parameters.continue-session}}
+            overwriteMemory: {{workflow.parameters.overwrite-memory}}
+            docsBranch: "{{workflow.parameters.docs-branch}}"
             contextVersion: 1
             
     - name: wait-coderun-completion
@@ -112,8 +112,8 @@ spec:
           apiVersion: agents.platform/v1
           kind: CodeRun
           metadata:
-            name: "{{`{{inputs.`}}`}}parameters.coderun-name}}`}}`}}`}}"
-            namespace: {{ .Release.Namespace }}`}}
+            name: "{{inputs.parameters.coderun-name}}"
+            namespace: {{ .Release.Namespace }}
         successCondition: status.phase == Succeeded
         failureCondition: status.phase == Failed
             
