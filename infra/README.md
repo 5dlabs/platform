@@ -77,7 +77,7 @@ helm install argo-workflows argo/argo-workflows \
 GitOps application definitions for Argo CD:
 
 #### `applications/`
-- `orchestrator.yaml` - Orchestrator service GitOps application
+- `controller.yaml` - Controller service GitOps application
 - `argo-workflows.yaml` - Argo Workflows GitOps application  
 - `monitoring-stack.yaml` - Monitoring infrastructure
 

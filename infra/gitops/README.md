@@ -10,7 +10,7 @@ gitops/
 ├── projects/
 │   └── platform-project.yaml # Platform project configuration
 └── applications/
-    ├── orchestrator.yaml     # Orchestrator service
+    ├── controller.yaml       # Controller service
     ├── argo-workflows.yaml   # Argo Workflows
     └── monitoring-stack.yaml # Monitoring infrastructure
 ```
@@ -37,9 +37,9 @@ kubectl apply -f infra/gitops/app-of-apps.yaml
 
 ## Applications
 
-### Orchestrator
-- **Path**: `infra/charts/orchestrator`
-- **Namespace**: `orchestrator`
+### Controller
+- **Path**: `infra/charts/controller`
+- **Namespace**: `agent-platform`
 - **Auto-sync**: Enabled
 - **Self-heal**: Enabled
 
@@ -85,16 +85,16 @@ Applications are automatically monitored by Argo CD:
 ### Check Application Status
 ```bash
 kubectl get applications -n argocd
-kubectl describe application orchestrator -n argocd
+kubectl describe application controller -n argocd
 ```
 
 ### Manual Sync
 ```bash
 # Via CLI
-argocd app sync orchestrator
+argocd app sync controller
 
 # Via kubectl
-kubectl patch application orchestrator -n argocd --type merge -p '{"operation":{"sync":{"revision":"HEAD"}}}'
+kubectl patch application controller -n argocd --type merge -p '{"operation":{"sync":{"revision":"HEAD"}}}'
 ```
 
 ### View Logs
