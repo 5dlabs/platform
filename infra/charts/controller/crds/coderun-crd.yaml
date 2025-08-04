@@ -40,7 +40,7 @@ spec:
         properties:
           spec:
             type: object
-            required: ["taskId", "service", "repositoryUrl", "docsRepositoryUrl", "workingDirectory", "model", "githubUser"]
+            required: ["taskId", "service", "repositoryUrl", "docsRepositoryUrl", "workingDirectory", "model"]
             properties:
               taskId:
                 type: integer
@@ -69,7 +69,10 @@ spec:
                 description: "Claude model to use (full model name like 'claude-3-5-sonnet-20241022')"
               githubUser:
                 type: string
-                description: "GitHub username for authentication and commits"
+                description: "GitHub username for authentication and commits (deprecated - use githubApp)"
+              githubApp:
+                type: string
+                description: "GitHub App name for authentication (e.g., '5DLabs-Rex')"
               localTools:
                 type: string
                 description: "Local MCP tools/servers to enable (comma-separated)"
