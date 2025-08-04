@@ -14,7 +14,7 @@ image:
 agent:
   image:
     repository: ghcr.io/5dlabs/platform/claude-code
-    tag: "1.0.56"
+    tag: "1.0.67"
     pullPolicy: Always
 
 # Storage configuration for workspace PVCs
