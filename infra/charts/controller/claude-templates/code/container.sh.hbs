@@ -695,11 +695,13 @@ if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
     fi
     
     # Copy architecture.md from preserved files
-    if [ -f "$TEMP_TASK_DIR/architecture.md" ]; then
-        cp "$TEMP_TASK_DIR/architecture.md" "$CLAUDE_WORK_DIR/task/"
+    if [ -f "/tmp/taskmaster-preserve/architecture.md" ]; then
+        cp "/tmp/taskmaster-preserve/architecture.md" "$CLAUDE_WORK_DIR/task/"
         echo "✓ Architecture documentation copied from preserved docs"
     else
-        echo "⚠️ architecture.md not found in preserved files"
+        echo "⚠️ architecture.md not found in preserved files at /tmp/taskmaster-preserve/"
+        echo "🔍 DEBUG: Contents of preserved directory:"
+        ls -la "/tmp/taskmaster-preserve/" 2>/dev/null || echo "  No preserved directory found"
     fi
     
     # Copy tasks.json if it exists in preserved docs
