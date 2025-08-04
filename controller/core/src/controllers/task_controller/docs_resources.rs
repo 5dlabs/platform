@@ -521,6 +521,15 @@ impl<'a> DocsResourceManager<'a> {
     }
 
     fn generate_ssh_volumes(&self, docs_run: &DocsRun) -> SshVolumes {
+        // Only mount SSH keys when using github_user authentication (not GitHub Apps)
+        if docs_run.spec.github_app.is_some() || docs_run.spec.github_user.is_none() {
+            // GitHub App authentication doesn't need SSH keys
+            return SshVolumes {
+                volumes: vec![],
+                volume_mounts: vec![],
+            };
+        }
+
         let ssh_secret = ssh_secret_name(docs_run.spec.github_user.as_deref().unwrap_or(""));
 
         let volumes = vec![json!({
