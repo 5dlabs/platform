@@ -1,0 +1,69 @@
+{
+  "ai_code_generation_tools": {
+    "search_date": "2025-08-04",
+    "tools": [
+      {
+        "name": "GitHub Copilot",
+        "company": "GitHub/Microsoft",
+        "features": [
+          "Context-aware code suggestions",
+          "Function completion",
+          "Built-in chat functionality",
+          "Multiple IDE support"
+        ],
+        "pricing": {
+          "monthly": 10,
+          "annual": 100
+        }
+      },
+      {
+        "name": "Bito",
+        "company": "Bito AI",
+        "features": [
+          "Bito Wingman AI agent",
+          "AI Code Review",
+          "CLI automation",
+          "Documentation generation"
+        ],
+        "market_position": "Highest-rated VS Code AI app"
+      },
+      {
+        "name": "Tabnine",
+        "company": "Tabnine",
+        "features": [
+          "Personalized AI models",
+          "Self-hosting option",
+          "Offline access",
+          "Enhanced privacy"
+        ],
+        "pricing": {
+          "has_free_plan": true
+        }
+      },
+      {
+        "name": "Cody",
+        "company": "Sourcegraph",
+        "features": [
+          "Code Graph integration",
+          "Technical chat interface",
+          "In-editor responses",
+          "Large codebase support"
+        ],
+        "type": "open-source"
+      },
+      {
+        "name": "Amazon Q Developer",
+        "company": "Amazon",
+        "features": [
+          "AWS ecosystem integration",
+          "Enhanced code assistance",
+          "Evolution of CodeWhisperer"
+        ],
+        "pricing": {
+          "pro_monthly": 19,
+          "has_free_plan": true
+        }
+      }
+    ]
+  }
+}

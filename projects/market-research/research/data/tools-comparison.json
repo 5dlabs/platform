@@ -1,0 +1,79 @@
+{
+  "last_updated": "2025-08-04",
+  "tools_comparison": {
+    "features": {
+      "code_completion": {
+        "GitHub Copilot": true,
+        "Bito": true,
+        "Tabnine": true,
+        "Cody": true,
+        "Amazon Q Developer": true,
+        "JetBrains AI": true,
+        "Gemini Code Assist": true,
+        "Windsurf": true,
+        "Cursor": true
+      },
+      "chat_interface": {
+        "GitHub Copilot": true,
+        "Bito": true,
+        "Tabnine": false,
+        "Cody": true,
+        "Amazon Q Developer": true,
+        "JetBrains AI": true,
+        "Gemini Code Assist": true,
+        "Windsurf": true,
+        "Cursor": true
+      },
+      "offline_support": {
+        "GitHub Copilot": false,
+        "Bito": false,
+        "Tabnine": true,
+        "Cody": false,
+        "Amazon Q Developer": false,
+        "JetBrains AI": false,
+        "Gemini Code Assist": false,
+        "Windsurf": false,
+        "Cursor": false
+      },
+      "self_hosting": {
+        "GitHub Copilot": false,
+        "Bito": false,
+        "Tabnine": true,
+        "Cody": true,
+        "Amazon Q Developer": false,
+        "JetBrains AI": false,
+        "Gemini Code Assist": false,
+        "Windsurf": false,
+        "Cursor": false
+      }
+    },
+    "pricing": {
+      "GitHub Copilot": {
+        "model": "subscription",
+        "has_free_tier": false,
+        "monthly": 10,
+        "annual": 100
+      },
+      "Cursor": {
+        "model": "freemium",
+        "has_free_tier": true,
+        "monthly": 20
+      },
+      "Amazon Q Developer": {
+        "model": "freemium",
+        "has_free_tier": true,
+        "monthly": 19
+      },
+      "Tabnine": {
+        "model": "freemium",
+        "has_free_tier": true
+      }
+    },
+    "market_position": {
+      "leaders": ["GitHub Copilot", "JetBrains AI"],
+      "challengers": ["Bito", "Tabnine", "Cursor"],
+      "emerging": ["Windsurf", "Gemini Code Assist"],
+      "specialized": ["Cody", "Amazon Q Developer"]
+    }
+  }
+}
