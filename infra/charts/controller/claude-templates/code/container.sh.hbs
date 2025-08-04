@@ -270,6 +270,24 @@ if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
         echo "  Directory contents: $(ls -la "$PRESERVE_FROM" | wc -l) items"
         ls -la "$PRESERVE_FROM"
         cp -r "$PRESERVE_FROM"/* "$TEMP_TASK_DIR/" 2>/dev/null && echo "✓ Task Master files preserved to temporary location" || echo "⚠️ Some files may not have been preserved"
+        
+        # Also preserve architecture.md from docs directory (one level up from task directory)
+        {{#if docs_project_directory}}
+        if [ "{{docs_project_directory}}" = "." ]; then
+            ARCH_SOURCE="/workspace/$TARGET_REPO_DIR/.taskmaster/docs/architecture.md"
+        else
+            ARCH_SOURCE="/workspace/$TARGET_REPO_DIR/{{docs_project_directory}}/.taskmaster/docs/architecture.md"
+        fi
+        {{else}}
+        ARCH_SOURCE="/workspace/$TARGET_REPO_DIR/.taskmaster/docs/architecture.md"
+        {{/if}}
+        
+        if [ -f "$ARCH_SOURCE" ]; then
+            cp "$ARCH_SOURCE" "$TEMP_TASK_DIR/" && echo "✓ architecture.md preserved from docs branch" || echo "⚠️ Failed to preserve architecture.md"
+        else
+            echo "⚠️ architecture.md not found at: $ARCH_SOURCE"
+        fi
+        
         echo "🔍 DEBUG: Preserved files:"
         ls -la "$TEMP_TASK_DIR/" || echo "No files in temp directory"
     else
@@ -676,29 +694,18 @@ if [ "$WORKFLOW_TYPE" = "single-repo" ]; then
         exit 1
     fi
     
-    # Copy architecture.md from docs root (using the same DOCS_PATH logic as multi-repo)
-    {{#if docs_project_directory}}
-    if [ "{{docs_project_directory}}" = "." ]; then
-        TASKMASTER_DOCS_PATH="/workspace/$TARGET_REPO_DIR/.taskmaster"
+    # Copy architecture.md from preserved files
+    if [ -f "$TEMP_TASK_DIR/architecture.md" ]; then
+        cp "$TEMP_TASK_DIR/architecture.md" "$CLAUDE_WORK_DIR/task/"
+        echo "✓ Architecture documentation copied from preserved docs"
     else
-        TASKMASTER_DOCS_PATH="/workspace/$TARGET_REPO_DIR/{{docs_project_directory}}/.taskmaster"
-    fi
-    {{else}}
-    TASKMASTER_DOCS_PATH="/workspace/$TARGET_REPO_DIR/.taskmaster"
-    {{/if}}
-    
-    ARCH_FILE="$TASKMASTER_DOCS_PATH/docs/architecture.md"
-    if [ -f "$ARCH_FILE" ]; then
-        cp "$ARCH_FILE" "$CLAUDE_WORK_DIR/task/"
-        echo "✓ Architecture documentation copied"
-    else
-        echo "⚠️ architecture.md not found at: $ARCH_FILE"
+        echo "⚠️ architecture.md not found in preserved files"
     fi
     
-    # Copy tasks.json if it exists
-    if [ -f "$TASKMASTER_DOCS_PATH/tasks/tasks.json" ]; then
-        cp "$TASKMASTER_DOCS_PATH/tasks/tasks.json" "$CLAUDE_WORK_DIR/task/"
-        echo "✓ tasks.json copied"
+    # Copy tasks.json if it exists in preserved docs
+    if [ -f "/tmp/taskmaster-preserve/../../tasks/tasks.json" ]; then
+        cp "/tmp/taskmaster-preserve/../../tasks/tasks.json" "$CLAUDE_WORK_DIR/task/"
+        echo "✓ tasks.json copied from preserved docs"
     fi
     
     # DEBUG: Verify files were copied successfully
