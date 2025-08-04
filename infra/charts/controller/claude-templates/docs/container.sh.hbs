@@ -14,20 +14,61 @@ REPO_URL="{{repository_url}}"
 # GitHub App authentication is configured via environment variables
 echo "Using GitHub App authentication (SSH not required)"
 
-# Authenticate GitHub CLI with GitHub App
+# Authenticate with GitHub App
 if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ]; then
-    echo "Authenticating GitHub CLI with GitHub App..."
+    echo "Authenticating with GitHub App..."
     
     # Create temporary private key file
     TEMP_KEY_FILE="/tmp/github-app-key.pem"
     echo "$GITHUB_APP_PRIVATE_KEY" > "$TEMP_KEY_FILE"
     chmod 600 "$TEMP_KEY_FILE"
     
-    # Use GitHub CLI's built-in App authentication
-    if gh auth login --with-token < <(gh auth app-token --app-id "$GITHUB_APP_ID" --private-key-file "$TEMP_KEY_FILE"); then
-        echo "✓ GitHub CLI authenticated with GitHub App"
-    else
-        echo "❌ Failed to authenticate with GitHub App"
+    # Generate JWT token for GitHub App
+    # JWT header
+    JWT_HEADER=$(echo -n '{"alg":"RS256","typ":"JWT"}' | base64 -w 0 | tr '+/' '-_' | tr -d '=')
+    
+    # JWT payload with current time and expiration (10 minutes)
+    NOW=$(date +%s)
+    EXP=$((NOW + 600))
+    JWT_PAYLOAD=$(echo -n "{\"iat\":$NOW,\"exp\":$EXP,\"iss\":\"$GITHUB_APP_ID\"}" | base64 -w 0 | tr '+/' '-_' | tr -d '=')
+    
+    # Sign the JWT
+    JWT_SIGNATURE=$(echo -n "$JWT_HEADER.$JWT_PAYLOAD" | openssl dgst -sha256 -sign "$TEMP_KEY_FILE" | base64 -w 0 | tr '+/' '-_' | tr -d '=')
+    JWT_TOKEN="$JWT_HEADER.$JWT_PAYLOAD.$JWT_SIGNATURE"
+    
+    # Get installation ID for the repository
+    REPO_OWNER=$(echo "{{repository_url}}" | sed -E 's|https://github.com/([^/]+)/.*|\1|')
+    REPO_NAME=$(echo "{{repository_url}}" | sed -E 's|https://github.com/[^/]+/([^/]+)(\.git)?|\1|')
+    
+    echo "Getting installation ID for $REPO_OWNER/$REPO_NAME..."
+    
+    # Get the installation access token
+    INSTALLATION_RESPONSE=$(curl -s -H "Authorization: Bearer $JWT_TOKEN" \
+        -H "Accept: application/vnd.github+json" \
+        "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/installation")
+    
+    INSTALLATION_ID=$(echo "$INSTALLATION_RESPONSE" | jq -r '.id')
+    
+    if [ "$INSTALLATION_ID" = "null" ] || [ -z "$INSTALLATION_ID" ]; then
+        echo "❌ Failed to get installation ID for repository"
+        echo "Response: $INSTALLATION_RESPONSE"
+        rm -f "$TEMP_KEY_FILE"
+        exit 1
+    fi
+    
+    echo "Installation ID: $INSTALLATION_ID"
+    
+    # Get installation access token
+    TOKEN_RESPONSE=$(curl -s -X POST \
+        -H "Authorization: Bearer $JWT_TOKEN" \
+        -H "Accept: application/vnd.github+json" \
+        "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens")
+    
+    GITHUB_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token')
+    
+    if [ "$GITHUB_TOKEN" = "null" ] || [ -z "$GITHUB_TOKEN" ]; then
+        echo "❌ Failed to get installation access token"
+        echo "Response: $TOKEN_RESPONSE"
         rm -f "$TEMP_KEY_FILE"
         exit 1
     fi
@@ -35,9 +76,17 @@ if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ]; then
     # Clean up temporary key file
     rm -f "$TEMP_KEY_FILE"
     
-    # Configure git to use GitHub CLI for authentication
-    git config --global credential.helper "!gh auth git-credential"
-    echo "✓ Git configured to use GitHub CLI authentication"
+    # Export the token for git to use
+    export GITHUB_TOKEN
+    
+    # Configure git to use the token
+    git config --global credential.helper store
+    git config --global --add credential.helper '!f() { echo "username=x-access-token"; echo "password=$GITHUB_TOKEN"; }; f'
+    
+    # Also authenticate gh CLI with the token
+    echo "$GITHUB_TOKEN" | gh auth login --with-token
+    
+    echo "✓ GitHub App authenticated successfully"
 else
     echo "❌ GITHUB_APP_PRIVATE_KEY or GITHUB_APP_ID not found"
     exit 1
