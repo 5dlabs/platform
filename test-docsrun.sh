@@ -12,7 +12,7 @@ kubectl delete jobs -n agent-platform -l workflows.argoproj.io/workflow 2>/dev/n
 argo submit --from workflowtemplate/docsrun-template \
   -n agent-platform \
   -p working-directory=projects/market-research \
-  -p repository-url=5dlabs/cto \
+  -p repository-url=https://github.com/5dlabs/cto \
   -p github-app=5DLabs-Morgan \
   -p github-user="" \
   -p source-branch=argo \
