@@ -71,7 +71,7 @@ RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhisto
 
 # Install toolman client globally
 RUN curl --proto '=https' --tlsv1.2 -LsSf \
-    https://github.com/5dlabs/toolman/releases/latest/download/toolman-installer.sh | \
+    https://raw.githubusercontent.com/5dlabs/toolman/main/scripts/install.sh | \
     TOOLMAN_NO_MODIFY_PATH=1 sh && \
     mv ~/.cargo/bin/toolman-client /usr/local/bin/toolman
 
