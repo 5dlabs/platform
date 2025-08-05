@@ -82,7 +82,7 @@ spec:
             sourceBranch: "{{`{{workflow.parameters.source-branch}}`}}"
             repositoryUrl: "{{`{{workflow.parameters.repository-url}}`}}"
             model: "{{`{{workflow.parameters.model}}`}}"
-            includeCodebase: "{{`{{workflow.parameters.include-codebase}}`}}"
+            includeCodebase: {{`{{workflow.parameters.include-codebase}}`}}
             
     - name: wait-docsrun-completion
       inputs:
