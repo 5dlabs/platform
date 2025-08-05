@@ -22,18 +22,16 @@ spec:
       - name: repository-url
         description: "Repository URL in org/repo format (e.g., 5dlabs/platform)"
         default: "{{ .Values.defaults.workflow.docs.repositoryUrl }}"
-      # Authentication
+      # Authentication (provided by MCP server with defaults from Helm values)
       - name: github-app
         description: "GitHub App name for authentication (e.g., '5DLabs-Morgan')"
-        default: "{{ index .Values.agents .Values.defaults.docsAgent "githubApp" }}"
       
       # Optional parameters
       - name: source-branch
         description: "Source branch to work from"
         default: "{{ .Values.defaults.workflow.docs.sourceBranch }}"
       - name: model
-        description: "Claude model to use for documentation generation"
-        default: "{{ .Values.defaults.workflow.docs.model }}"
+        description: "Claude model to use for documentation generation (provided by MCP server with defaults from Helm values)"
       - name: include-codebase
         description: "Include existing codebase as markdown context for existing projects"
         default: "false"
@@ -77,13 +75,13 @@ spec:
             namespace: {{ .Release.Namespace }}
             labels:
               workflow-name: "{{`{{workflow.name}}`}}"
-              github-app: "{{`{{= sprig.default \"5DLabs-Morgan\" workflow.parameters.github-app}}`}}"
+              github-app: "{{`{{workflow.parameters.github-app}}`}}"
           spec:
             workingDirectory: "{{`{{workflow.parameters.working-directory}}`}}"
-            githubApp: "{{`{{= sprig.default \"5DLabs-Morgan\" workflow.parameters.github-app}}`}}"
+            githubApp: "{{`{{workflow.parameters.github-app}}`}}"
             sourceBranch: "{{`{{workflow.parameters.source-branch}}`}}"
             repositoryUrl: "{{`{{workflow.parameters.repository-url}}`}}"
-            model: "{{`{{= sprig.default \"claude-opus-4-20250514\" workflow.parameters.model}}`}}"
+            model: "{{`{{workflow.parameters.model}}`}}"
             includeCodebase: "{{`{{workflow.parameters.include-codebase}}`}}"
             
     - name: wait-docsrun-completion
