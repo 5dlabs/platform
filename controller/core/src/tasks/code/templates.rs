@@ -84,7 +84,7 @@ impl CodeTemplateGenerator {
             "continue_session": Self::get_continue_session(code_run),
             "overwrite_memory": code_run.spec.overwrite_memory,
             "docs_project_directory": code_run.spec.docs_project_directory.as_deref().unwrap_or(""),
-            "github_user": code_run.spec.github_user,
+            "github_app": code_run.spec.github_app.as_deref().unwrap_or(""),
         });
 
         handlebars
@@ -117,7 +117,7 @@ impl CodeTemplateGenerator {
             "docs_repository_url": code_run.spec.docs_repository_url,
             "docs_branch": code_run.spec.docs_branch,
             "working_directory": Self::get_working_directory(code_run),
-            "github_user": code_run.spec.github_user,
+            "github_app": code_run.spec.github_app.as_deref().unwrap_or(""),
             "model": code_run.spec.model,
             "context_version": code_run.spec.context_version,
         });
@@ -145,7 +145,7 @@ impl CodeTemplateGenerator {
 
         let context = json!({
             "model": code_run.spec.model,
-            "github_user": code_run.spec.github_user,
+            "github_app": code_run.spec.github_app.as_deref().unwrap_or(""),
             "api_key_secret_name": config.secrets.api_key_secret_name,
             "api_key_secret_key": config.secrets.api_key_secret_key
         });
@@ -209,7 +209,7 @@ impl CodeTemplateGenerator {
         let context = json!({
             "service": code_run.spec.service,
             "working_directory": Self::get_working_directory(code_run),
-            "github_user": code_run.spec.github_user,
+            "github_app": code_run.spec.github_app.as_deref().unwrap_or(""),
         });
 
         handlebars
@@ -270,7 +270,7 @@ impl CodeTemplateGenerator {
                                             "repository_url": code_run.spec.repository_url,
                                             "docs_repository_url": code_run.spec.docs_repository_url,
                                             "working_directory": Self::get_working_directory(code_run),
-                                            "github_user": code_run.spec.github_user,
+                                            "github_app": code_run.spec.github_app.as_deref().unwrap_or(""),
                                         });
 
                                         match handlebars.render("hook", &context) {

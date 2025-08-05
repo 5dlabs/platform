@@ -67,7 +67,7 @@ impl DocsTemplateGenerator {
             "repository_url": docs_run.spec.repository_url,
             "source_branch": docs_run.spec.source_branch,
             "working_directory": docs_run.spec.working_directory,
-            "github_user": docs_run.spec.github_user.as_deref().unwrap_or(""),
+            "github_app": docs_run.spec.github_app.as_deref().unwrap_or(""),
             "github_app": docs_run.spec.github_app,
             "service_name": "docs-generator"
         });
@@ -99,7 +99,7 @@ impl DocsTemplateGenerator {
             "repository_url": docs_run.spec.repository_url,
             "source_branch": docs_run.spec.source_branch,
             "working_directory": docs_run.spec.working_directory,
-            "github_user": docs_run.spec.github_user.as_deref().unwrap_or(""),
+            "github_app": docs_run.spec.github_app.as_deref().unwrap_or(""),
             "model": docs_run.spec.model.as_deref().unwrap_or(""),
             "service_name": "docs-generator"
         });
@@ -127,7 +127,7 @@ impl DocsTemplateGenerator {
 
         let context = json!({
             "model": docs_run.spec.model.as_deref().unwrap_or(""),
-            "github_user": docs_run.spec.github_user.as_deref().unwrap_or(""),
+            "github_app": docs_run.spec.github_app.as_deref().unwrap_or(""),
             "api_key_secret_name": config.secrets.api_key_secret_name,
             "api_key_secret_key": config.secrets.api_key_secret_key
         });
@@ -310,7 +310,7 @@ impl DocsTemplateGenerator {
                                             "repository_url": docs_run.spec.repository_url,
                                             "source_branch": docs_run.spec.source_branch,
                                             "working_directory": docs_run.spec.working_directory,
-                                            "github_user": docs_run.spec.github_user.as_deref().unwrap_or(""),
+                                            "github_app": docs_run.spec.github_app.as_deref().unwrap_or(""),
                                             "service_name": "docs-generator"
                                         });
 

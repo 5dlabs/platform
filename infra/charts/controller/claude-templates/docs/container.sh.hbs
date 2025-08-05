@@ -10,7 +10,6 @@ export SSH_ASKPASS=/bin/true
 # Repository URL
 REPO_URL="{{repository_url}}"
 
-{{#if github_app}}
 # GitHub App authentication is configured via environment variables
 echo "Using GitHub App authentication (SSH not required)"
 
@@ -91,42 +90,11 @@ else
     echo "❌ GITHUB_APP_PRIVATE_KEY or GITHUB_APP_ID not found"
     exit 1
 fi
-{{else}}
-# SSH Setup for user-based authentication
-if [ -f "/workspace/.ssh/id_ed25519" ]; then
-  echo "✓ SSH private key found"
 
-  # Create SSH directory in home
-  mkdir -p ~/.ssh
-  chmod 700 ~/.ssh
-
-  # Configure SSH to use the mounted key directly (no copying needed)
-  cat > ~/.ssh/config << EOF
-Host github.com
-    HostName github.com
-    User git
-    IdentityFile /workspace/.ssh/id_ed25519
-    IdentitiesOnly yes
-    StrictHostKeyChecking no
-EOF
-
-  chmod 600 ~/.ssh/config
-
-  # Test SSH connection
-  echo "Testing SSH connection to GitHub..."
-  ssh -T git@github.com 2>&1 | head -3 || echo "SSH test completed (expected to fail with 'successfully authenticated')"
-
-  echo "✓ SSH authentication configured"
-else
-  echo "❌ SSH private key not found at /workspace/.ssh/id_ed25519"
-  exit 1
-fi
-{{/if}}
 
 # Git configuration with proper GitHub App attribution
 git config --global --add safe.directory /workspace
 
-{{#if github_app}}
 # Set GitHub App attribution based on the app name
 GITHUB_APP="{{github_app}}"
 case "$GITHUB_APP" in
@@ -158,11 +126,7 @@ export GIT_AUTHOR_NAME="$GIT_AUTHOR_NAME"
 export GIT_AUTHOR_EMAIL="$GIT_AUTHOR_EMAIL"
 export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
 export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
-{{else}}
-# Legacy user authentication
-git config --global user.name "{{github_user}}"
-git config --global user.email "{{github_user}}@users.noreply.github.com"
-{{/if}}
+
 echo "✓ Git configured"
 
 # Repository setup
@@ -278,10 +242,8 @@ echo "✓ Workspace validated"
 export SERVICE_NAME="{{service_name}}"
 export SOURCE_BRANCH="{{source_branch}}"
 export WORKING_DIR="{{working_directory}}"
-export GITHUB_USER="{{github_user}}"
-{{#if github_app}}
+export GITHUB_USER="{{github_app}}"
 export GITHUB_APP="{{github_app}}"
-{{/if}}
 
 # Claude execution
 echo "Starting Claude execution..."
@@ -377,7 +339,7 @@ if command -v gh >/dev/null 2>&1; then
     if [ "$PR_CREATED" = false ]; then
         echo "❌ Failed to create pull request after 3 attempts"
         echo "⚠️ Branch has been pushed, but PR creation failed"
-        echo "💡 You can manually create a PR at: https://github.com/{{github_user}}/platform/pull/new/$PR_BRANCH"
+        echo "💡 You can manually create a PR at: https://github.com/{{repository_url}}/pull/new/$PR_BRANCH"
         exit 1
     fi
 else
