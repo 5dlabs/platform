@@ -23,6 +23,8 @@ pub struct DocsRunSpec {
     pub github_user: Option<String>,
     #[serde(rename = "githubApp", default)]
     pub github_app: Option<String>,
+    #[serde(rename = "includeCodebase", default)]
+    pub include_codebase: Option<bool>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]

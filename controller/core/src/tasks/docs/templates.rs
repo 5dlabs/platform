@@ -69,7 +69,8 @@ impl DocsTemplateGenerator {
             "working_directory": docs_run.spec.working_directory,
             "github_app": docs_run.spec.github_app.as_deref().unwrap_or(""),
             "github_app": docs_run.spec.github_app,
-            "service_name": "docs-generator"
+            "service_name": "docs-generator",
+            "include_codebase": docs_run.spec.include_codebase.unwrap_or(false)
         });
 
         handlebars
@@ -162,7 +163,8 @@ impl DocsTemplateGenerator {
             "source_branch": docs_run.spec.source_branch,
             "working_directory": docs_run.spec.working_directory,
             "service_name": "docs-generator",
-            "toolman_catalog_markdown": catalog_markdown
+            "toolman_catalog_markdown": catalog_markdown,
+            "include_codebase": docs_run.spec.include_codebase.unwrap_or(false)
         });
 
         handlebars.render("docs_prompt", &context).map_err(|e| {

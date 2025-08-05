@@ -54,6 +54,9 @@ spec:
               githubApp:
                 type: string
                 description: "GitHub App name for authentication (e.g., '5DLabs-Morgan')"
+              includeCodebase:
+                type: boolean
+                description: "Include existing codebase as markdown context for existing projects"
           status:
             type: object
             properties:

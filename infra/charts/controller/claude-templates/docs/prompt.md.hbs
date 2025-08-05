@@ -23,7 +23,17 @@ Generate comprehensive documentation for {{#if task_id}}task {{task_id}}{{else}}
    - Individual task files have been pre-copied to `.taskmaster/docs/task-{id}/task.txt`
    - Each `task.txt` contains complete task information including subtasks and implementation details
 3. Review architecture.md and prd.txt for context
+{{#if include_codebase}}
+4. **EXISTING PROJECT CONTEXT:**
+   - **READ `.taskmaster/docs/codebase.md`** - This contains the complete existing codebase
+   - Understand the current implementation state and architecture
+   - Identify gaps between current code and task requirements
+   - Focus on building upon existing patterns and code structure
+   - Consider what's already implemented vs. what needs to be added
+5. **For large projects: Announce total task count and confirm you will process ALL of them**
+{{else}}
 4. **For large projects: Announce total task count and confirm you will process ALL of them**
+{{/if}}
 
 **🎯 IMPORTANT: Use individual `task.txt` files for each task**
 - Individual task files are available at: `.taskmaster/docs/task-{id}/task.txt`

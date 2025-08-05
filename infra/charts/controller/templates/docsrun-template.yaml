@@ -34,6 +34,9 @@ spec:
       - name: model
         description: "Claude model to use for documentation generation"
         default: "{{ .Values.defaults.workflow.docs.model }}"
+      - name: include-codebase
+        description: "Include existing codebase as markdown context for existing projects"
+        default: "false"
 
   # Service account for workflow execution
   serviceAccountName: argo-workflow
@@ -81,6 +84,7 @@ spec:
             sourceBranch: "{{`{{workflow.parameters.source-branch}}`}}"
             repositoryUrl: "{{`{{workflow.parameters.repository-url}}`}}"
             model: "{{`{{workflow.parameters.model}}`}}"
+            includeCodebase: "{{`{{workflow.parameters.include-codebase}}`}}"
             
     - name: wait-docsrun-completion
       inputs:
