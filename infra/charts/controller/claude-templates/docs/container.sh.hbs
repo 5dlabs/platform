@@ -211,13 +211,52 @@ if [ -d "/task-files" ]; then
   done
 
   {{#if include_codebase}}
-  # Copy codebase.md for existing project context (if available)
-  if [ -f "/task-files/codebase.md" ]; then
-    cp "/task-files/codebase.md" "$CLAUDE_WORK_DIR/.taskmaster/docs/codebase.md"
-    echo "✓ Copied codebase.md for existing project context"
-  else
-    echo "⚠️ include_codebase=true but codebase.md not found in ConfigMap - continuing without existing codebase context"
-  fi
+  # Generate codebase.md for existing project context
+  echo "Generating codebase.md from current workspace..."
+  mkdir -p "$CLAUDE_WORK_DIR/.taskmaster/docs"
+  
+  # Use a simple approach to generate codebase documentation
+  {
+    echo "# Codebase Overview"
+    echo ""
+    echo "Generated at: $(date)"
+    echo "Repository: {{repository_url}}"
+    echo "Branch: {{source_branch}}"
+    echo "Working Directory: {{working_directory}}"
+    echo ""
+    
+    # Add file tree
+    echo "## File Structure"
+    echo ""
+    echo "\`\`\`"
+    find "$CLAUDE_WORK_DIR" -type f -name "*.rs" -o -name "*.md" -o -name "*.toml" -o -name "*.yaml" -o -name "*.yml" -o -name "*.json" | \
+      grep -v target | grep -v .git | sort | sed "s|$CLAUDE_WORK_DIR/||" | head -50
+    echo "\`\`\`"
+    echo ""
+    
+    # Add key files content
+    echo "## Key Configuration Files"
+    echo ""
+    
+    if [ -f "$CLAUDE_WORK_DIR/Cargo.toml" ]; then
+      echo "### Cargo.toml"
+      echo ""
+      echo "\`\`\`toml"
+      cat "$CLAUDE_WORK_DIR/Cargo.toml"
+      echo "\`\`\`"
+      echo ""
+    fi
+    
+    if [ -f "$CLAUDE_WORK_DIR/README.md" ]; then
+      echo "### README.md"
+      echo ""
+      cat "$CLAUDE_WORK_DIR/README.md"
+      echo ""
+    fi
+    
+  } > "$CLAUDE_WORK_DIR/.taskmaster/docs/codebase.md"
+  
+  echo "✓ Generated codebase.md for existing project context"
   {{/if}}
 else
   echo "❌ ConfigMap not mounted at /task-files"
