@@ -123,12 +123,43 @@ else
 fi
 {{/if}}
 
-# Git configuration
+# Git configuration with proper GitHub App attribution
 git config --global --add safe.directory /workspace
+
 {{#if github_app}}
-git config --global user.name "{{github_app}}"
-git config --global user.email "{{github_app}}@users.noreply.github.com"
+# Set GitHub App attribution based on the app name
+GITHUB_APP="{{github_app}}"
+case "$GITHUB_APP" in
+    "morgan-5dlabs")
+        GIT_AUTHOR_NAME="Morgan Agent (Claude Code)"
+        GIT_AUTHOR_EMAIL="224488090+morgan-5dlabs[bot]@users.noreply.github.com"
+        ;;
+    "5DLabs-Blaze")
+        GIT_AUTHOR_NAME="Blaze Agent (Claude Code)"
+        GIT_AUTHOR_EMAIL="224516107+5DLabs-Blaze[bot]@users.noreply.github.com"
+        ;;
+    "5DLabs-Rex")
+        GIT_AUTHOR_NAME="Rex Agent (Claude Code)"
+        GIT_AUTHOR_EMAIL="224516160+5DLabs-Rex[bot]@users.noreply.github.com"
+        ;;
+    *)
+        # Fallback for unknown apps
+        GIT_AUTHOR_NAME="AI Agent (Claude Code)"
+        GIT_AUTHOR_EMAIL="$GITHUB_APP@users.noreply.github.com"
+        ;;
+esac
+
+# Configure git with proper GitHub App attribution
+git config --global user.name "$GIT_AUTHOR_NAME"
+git config --global user.email "$GIT_AUTHOR_EMAIL"
+
+# Set environment variables for Claude Code to use
+export GIT_AUTHOR_NAME="$GIT_AUTHOR_NAME"
+export GIT_AUTHOR_EMAIL="$GIT_AUTHOR_EMAIL"
+export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
+export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
 {{else}}
+# Legacy user authentication
 git config --global user.name "{{github_user}}"
 git config --global user.email "{{github_user}}@users.noreply.github.com"
 {{/if}}
