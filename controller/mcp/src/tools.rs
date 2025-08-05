@@ -68,7 +68,7 @@ fn get_submit_implementation_task_schema() -> Value {
                 },
                 "repository": {
                     "type": "string",
-                    "description": "REQUIRED: Target repository in format 'org/repo' or 'user/repo' (e.g., '5dlabs/platform')"
+                    "description": "REQUIRED: Target repository in format 'org/repo' or 'user/repo' (e.g., '5dlabs/cto')"
                 },
                 "docs_repository": {
                     "type": "string",
@@ -191,7 +191,7 @@ fn get_enhanced_task_schema(agents_config: &AgentsConfig) -> Value {
                 },
                 "repository": {
                     "type": "string",
-                    "description": "REQUIRED: Target repository in format 'org/repo' or 'user/repo' (e.g., '5dlabs/platform')"
+                    "description": "REQUIRED: Target repository in format 'org/repo' or 'user/repo' (e.g., '5dlabs/cto')"
                 },
                 "docs_repository": {
                     "type": "string",

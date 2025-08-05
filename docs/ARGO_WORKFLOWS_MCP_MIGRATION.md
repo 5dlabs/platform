@@ -57,7 +57,7 @@ Content-Type: application/json
     "parameters": [
       {"name": "task-id", "value": "1.2"},
       {"name": "service-id", "value": "unique-id"},
-      {"name": "target-repo", "value": "5dlabs/platform"}
+      {"name": "target-repo", "value": "5dlabs/cto"}
     ]
   }
 }
@@ -100,7 +100,7 @@ spec:
   templates:
   - name: code-agent
     container:
-      image: ghcr.io/5dlabs/platform/claude-code:latest
+      image: ghcr.io/5dlabs/cto/claude-code:latest
       env:
         - name: TASK_ID
           value: "{{workflow.parameters.task-id}}"
@@ -164,7 +164,7 @@ spec:
   templates:
   - name: docs-agent
     container:
-      image: ghcr.io/5dlabs/platform/claude-docs:latest
+      image: ghcr.io/5dlabs/cto/claude-docs:latest
       env:
         - name: WORKING_DIRECTORY
           value: "{{workflow.parameters.working-directory}}"

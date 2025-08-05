@@ -70,7 +70,7 @@ spec:
             name: grok-secrets
             key: api-key
       - name: REPO_URL
-        value: "git@github.com:5dlabs/platform.git"
+        value: "git@github.com:5dlabs/cto.git"
       script: |
         #!/bin/bash
         grok "Analyze the codebase and suggest improvements"

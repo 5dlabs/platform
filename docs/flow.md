@@ -315,7 +315,7 @@ spec:
         arguments:
           parameters:
           - name: repo
-            value: "git@github.com:5dlabs/platform.git"
+            value: "git@github.com:5dlabs/cto.git"
           - name: branch
             value: "main"
             
@@ -517,8 +517,8 @@ spec:
         spec:
           taskId: {{inputs.parameters.task-id}}
           service: "platform"
-          repository: "5dlabs/platform"
-          docsRepository: "5dlabs/platform"
+          repository: "5dlabs/cto"
+          docsRepository: "5dlabs/cto"
           docsProjectDirectory: "."
           workingDirectory: "."
           githubUser: "jonathonfritz"
@@ -865,12 +865,12 @@ spec:
           
   - name: project-setup
     container:
-      image: ghcr.io/5dlabs/platform/toolman:latest
+      image: ghcr.io/5dlabs/cto/toolman:latest
       command: [sh, -c]
       args:
         - |
           # Clone repository
-          git clone git@github.com:5dlabs/platform.git /workspace
+          git clone git@github.com:5dlabs/cto.git /workspace
           cd /workspace
           
           # Verify Task Master files

@@ -21,7 +21,7 @@ spec:
   
   # Source configuration
   source:
-    repoURL: https://github.com/5dlabs/platform
+    repoURL: https://github.com/5dlabs/cto
     targetRevision: argo
     path: infra/charts/controller
     
@@ -33,7 +33,7 @@ spec:
       # Override values for GitOps deployment
       parameters:
         - name: image.repository
-          value: ghcr.io/5dlabs/platform/controller
+          value: ghcr.io/5dlabs/cto/controller
         - name: image.tag
           value: latest
         - name: image.pullPolicy

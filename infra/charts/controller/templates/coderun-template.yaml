@@ -21,7 +21,7 @@ spec:
       - name: service-id
         description: "Service identifier for persistent workspace"
       - name: repository-url
-        description: "Target repository URL in org/repo format (e.g., 5dlabs/platform)"
+        description: "Target repository URL in org/repo format (e.g., 5dlabs/cto)"
       - name: docs-repository-url
         description: "Documentation repository URL in org/repo format"
       - name: docs-project-directory

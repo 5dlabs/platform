@@ -11,7 +11,7 @@ version = "0.2.0"
 edition = "2021"
 authors = ["5D team"]
 license = "AGPL-3.0"
-repository = "https://github.com/5dlabs/platform"
+repository = "https://github.com/5dlabs/cto"
 
 [workspace.dependencies]
 # Web framework

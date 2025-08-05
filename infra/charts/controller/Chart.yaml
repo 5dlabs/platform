@@ -13,12 +13,12 @@ keywords:
   - kubernetes
   - automation
 
-home: https://github.com/5dlabs/platform
+home: https://github.com/5dlabs/cto
 maintainers:
   - name: Platform Team
     email: platform@5dlabs.com
 
 sources:
-  - https://github.com/5dlabs/platform
+  - https://github.com/5dlabs/cto
 
 dependencies: []

@@ -26,7 +26,7 @@ Add the 5dlabs Helm repository to install the orchestrator chart:
 
 ```bash
 # Add the Helm repository
-helm repo add 5dlabs https://5dlabs.github.io/platform
+helm repo add 5dlabs https://5dlabs.github.io/cto
 helm repo update
 
 # Install the orchestrator chart
@@ -45,7 +45,7 @@ If you prefer to install from the source repository:
 
 ```bash
 # Install CRDs from GitHub (recommended)
-kubectl apply -f https://raw.githubusercontent.com/5dlabs/platform/main/infra/charts/orchestrator/crds/platform-crds.yaml
+kubectl apply -f https://raw.githubusercontent.com/5dlabs/cto/main/infra/charts/orchestrator/crds/platform-crds.yaml
 
 # Or install from local files
 kubectl apply -f crds/
@@ -94,7 +94,7 @@ helm install orchestrator ./infra/orchestrator-chart \
 
 ```bash
 # 1. First install CRDs and setup agent secrets (if not already done)
-kubectl apply -f https://raw.githubusercontent.com/5dlabs/platform/main/infra/charts/orchestrator/crds/platform-crds.yaml
+kubectl apply -f https://raw.githubusercontent.com/5dlabs/cto/main/infra/charts/orchestrator/crds/platform-crds.yaml
 ./infra/scripts/setup-agent-secrets.sh --user your-user --ssh-key ~/.ssh/key --token ghp_xxx
 
 # 2. Create a values file for production
@@ -152,7 +152,7 @@ helm install orchestrator ./infra/orchestrator-chart \
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `replicaCount` | Number of orchestrator replicas | `1` |
-| `image.repository` | Container image repository | `ghcr.io/5dlabs/platform/orchestrator` |
+| `image.repository` | Container image repository | `ghcr.io/5dlabs/cto/orchestrator` |
 | `image.tag` | Container image tag | `"latest"` |
 | `image.pullPolicy` | Image pull policy | `Always` |
 

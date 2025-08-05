@@ -41,17 +41,17 @@ This is an integrated platform with a clear data flow:
 
 ```bash
 # Add the 5dlabs Helm repository
-helm repo add 5dlabs https://5dlabs.github.io/platform
+helm repo add 5dlabs https://5dlabs.github.io/cto
 helm repo update
 
 # Install Custom Resource Definitions (CRDs) first
-kubectl apply -f https://raw.githubusercontent.com/5dlabs/platform/main/infra/charts/agent-platform/crds/platform-crds.yaml
+kubectl apply -f https://raw.githubusercontent.com/5dlabs/cto/main/infra/charts/agent-platform/crds/platform-crds.yaml
 
 # Install the agent-platform
 helm install agent-platform 5dlabs/agent-platform --namespace agent-platform --create-namespace
 
 # Setup agent secrets (interactive)
-wget https://raw.githubusercontent.com/5dlabs/platform/main/infra/scripts/setup-agent-secrets.sh
+wget https://raw.githubusercontent.com/5dlabs/cto/main/infra/scripts/setup-agent-secrets.sh
 chmod +x setup-agent-secrets.sh
 ./setup-agent-secrets.sh --help
 ```
@@ -95,7 +95,7 @@ For the MCP tools and CLI utilities, you can install pre-built binaries:
 
 ```bash
 # One-liner installer (Linux/macOS)
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/5dlabs/platform/releases/download/v0.2.0/tools-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/5dlabs/cto/releases/download/v0.2.0/tools-installer.sh | sh
 
 # Verify installation
 fdl --help       # CLI tool for direct API calls
@@ -142,7 +142,7 @@ After installing the CLI tools, configure Cursor to use the MCP server by creati
 
 ```bash
 # Build from source
-git clone https://github.com/5dlabs/platform.git
+git clone https://github.com/5dlabs/cto.git
 cd platform/agent-platform
 
 # Build both CLI and MCP server
@@ -242,7 +242,7 @@ Complete parameter reference for both MCP tools.
 **Required:**
 - `task_id` - Task ID to implement from task files (integer, minimum 1)
 - `service` - Target service name, creates workspace-{service} PVC (pattern: `^[a-z0-9-]+$`)
-- `repository` - Target repository in format 'org/repo' or 'user/repo' (e.g., `"5dlabs/platform"`)
+- `repository` - Target repository in format 'org/repo' or 'user/repo' (e.g., `"5dlabs/cto"`)
 - `docs_repository` - Documentation repository in format 'org/repo' or 'user/repo' where Task Master definitions are stored
 - `docs_project_directory` - Project directory within docs repository (e.g., `"_projects/simple-api"`, use `"."` for repo root)
 - `github_user` - GitHub username for authentication and task assignment

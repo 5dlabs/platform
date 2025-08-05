@@ -14,7 +14,7 @@ spec:
       - name: ghcr-secret
       containers:
       - name: claude-code
-        image: ghcr.io/5dlabs/platform/claude-code:latest
+        image: ghcr.io/5dlabs/cto/claude-code:latest
         command: ["claude"]
         args:
           - "-p"

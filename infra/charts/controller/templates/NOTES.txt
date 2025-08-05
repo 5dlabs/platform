@@ -51,6 +51,6 @@
    EOF
 
 For more information about configuring the controller, see:
-• Documentation: https://github.com/5dlabs/platform
+• Documentation: https://github.com/5dlabs/cto
 • Agent setup: ./infra/scripts/setup-agent-secrets.sh --help
 • CRD reference: kubectl explain coderuns.controller.platform

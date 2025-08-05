@@ -6,7 +6,7 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "5D Labs platform MCP server: Argo Workflows integration for AI development workflows"
-homepage = "https://github.com/5dlabs/platform"
+homepage = "https://github.com/5dlabs/cto"
 
 [[bin]]
 name = "fdl-mcp"
