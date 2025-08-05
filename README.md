@@ -1,3 +1,7 @@
+I actually really like Cognitive Task Orchestrator. I think that's brilliant. Can you look at the README that I currently have and spruce it up with some marketing speak using that as the new name of the product?
+ 
+
+````
 # 5D Labs Agent Platform
 
 An AI-powered development platform that helps you generate documentation and implement code using Claude agents through simple MCP (Model Context Protocol) tools.
@@ -397,4 +401,5 @@ See our [ROADMAP.md](ROADMAP.md) for upcoming features and planned enhancements 
 
 ---
 
-*The platform runs on Kubernetes and automatically manages Claude agent deployments, workspace isolation, and GitHub integration. All you need to do is call the MCP tools and review the resulting PRs.*
+*The platform runs on Kubernetes and automatically manages Coding agent deployments, workspace isolation, and GitHub integration. All you need to do is call the MCP tools and review the resulting PRs.*
+````
