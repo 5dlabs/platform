@@ -73,7 +73,7 @@ RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhisto
 RUN curl --proto '=https' --tlsv1.2 -LsSf \
     https://github.com/5dlabs/toolman/releases/download/v2.4.4/toolman-installer.sh | \
     TOOLMAN_NO_MODIFY_PATH=1 sh && \
-    mv ~/.cargo/bin/toolman /usr/local/bin/toolman
+    mv ~/.cargo/bin/toolman-client /usr/local/bin/toolman
 
 # Set `DEVCONTAINER` environment variable to help with orientation
 ENV DEVCONTAINER=true
