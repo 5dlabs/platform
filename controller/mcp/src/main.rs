@@ -18,14 +18,20 @@ fn load_agents_from_env() -> Result<HashMap<String, String>> {
     let mut agents = HashMap::new();
     
     for (key, value) in std::env::vars() {
-        if let Some(agent_name) = key.strip_prefix("AGENT_") {
-            let agent_name = agent_name.to_lowercase();
-            agents.insert(agent_name, value);
+        // Only load AGENT_{NAME}_GITHUB_APP environment variables
+        if let Some(suffix) = key.strip_prefix("AGENT_") {
+            if suffix.ends_with("_GITHUB_APP") {
+                let agent_name = suffix.strip_suffix("_GITHUB_APP")
+                    .unwrap()
+                    .to_lowercase();
+                agents.insert(agent_name, value);
+            }
         }
     }
     
+    // It's OK if no agents are configured - we'll use workflow defaults
     if agents.is_empty() {
-        return Err(anyhow!("No AGENT_* environment variables found. Required format: AGENT_MORGAN=5DLabs-Morgan"));
+        eprintln!("ℹ️ No AGENT_*_GITHUB_APP environment variables found - using workflow defaults");
     }
     
     Ok(agents)
@@ -300,19 +306,18 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         format!("source-branch={source_branch}"),
     ];
     
-    // Always add github-app parameter (use default from Helm values if no agent specified)
+    // Only add github-app parameter if agent specified (let workflow use backend default)
     if let Some(ref app) = github_app {
         params.push(format!("github-app={}", app));
     } else {
-        // Let workflow template use its default value
-        eprintln!("No agent specified - workflow will use default from Helm values");
+        eprintln!("No agent specified - workflow will use backend default: 5DLabs-Morgan");
     }
     
-    // Only add model parameter if specified - let workflow use defaults
+    // Only add model parameter if specified (let workflow use backend default)
     if let Some(m) = model {
         params.push(format!("model={}", m));
     } else {
-        eprintln!("No model specified - workflow will use default from Helm values");
+        eprintln!("No model specified - workflow will use backend default: claude-opus-4-20250514");
     }
     
     // Always add include_codebase parameter as boolean (required by workflow template)
@@ -741,6 +746,142 @@ fn process_source_files(
     }
     
     Ok(())
+}
+
+/// Generate individual task files from tasks.json (restore old CLI behavior)
+fn generate_task_files(project_dir: &std::path::Path) -> Result<()> {
+    let taskmaster_dir = project_dir.join(".taskmaster");
+    let tasks_dir = taskmaster_dir.join("tasks");
+    let tasks_json_path = tasks_dir.join("tasks.json");
+    
+    // Check if tasks.json exists
+    if !tasks_json_path.exists() {
+        eprintln!("⚠️ No tasks.json found at: {}", tasks_json_path.display());
+        return Ok(());
+    }
+    
+    eprintln!("📋 Reading tasks from: {}", tasks_json_path.display());
+    
+    // Read and parse tasks.json
+    let tasks_content = std::fs::read_to_string(&tasks_json_path)
+        .context("Failed to read tasks.json")?;
+    
+    let tasks: serde_json::Value = serde_json::from_str(&tasks_content)
+        .context("Failed to parse tasks.json")?;
+    
+    // Extract tasks array - check for both direct "tasks" and nested structure
+    let tasks_array = if let Some(tasks_direct) = tasks.get("tasks").and_then(|v| v.as_array()) {
+        // Direct tasks array structure
+        tasks_direct
+    } else if let Some(tasks_nested) = tasks.as_object().and_then(|obj| {
+        // Look for tasks in any nested context (e.g., "master", "main", etc.)
+        obj.values().find_map(|v| v.get("tasks").and_then(|t| t.as_array()))
+    }) {
+        tasks_nested
+    } else {
+        return Err(anyhow!("tasks.json does not contain a 'tasks' array in expected format"));
+    };
+    
+    eprintln!("📝 Found {} tasks to process", tasks_array.len());
+    
+    // Create tasks directory if it doesn't exist
+    std::fs::create_dir_all(&tasks_dir)
+        .context("Failed to create .taskmaster/tasks directory")?;
+    
+    // Generate individual task files
+    for task in tasks_array {
+        if let Some(task_id) = task.get("id").and_then(|v| v.as_u64()) {
+            let task_file = tasks_dir.join(format!("task-{}.txt", task_id));
+            let task_content = format_task_content(task)?;
+            
+            std::fs::write(&task_file, task_content)
+                .with_context(|| format!("Failed to write task file: {}", task_file.display()))?;
+            
+            eprintln!("✓ Generated task-{}.txt", task_id);
+        }
+    }
+    
+    Ok(())
+}
+
+/// Format a task object into readable text content
+fn format_task_content(task: &serde_json::Value) -> Result<String> {
+    let mut content = String::new();
+    
+    // Title
+    if let Some(title) = task.get("title").and_then(|v| v.as_str()) {
+        content.push_str(&format!("# {}\n\n", title));
+    }
+    
+    // ID and Status
+    if let Some(id) = task.get("id").and_then(|v| v.as_u64()) {
+        content.push_str(&format!("**Task ID:** {}\n", id));
+    }
+    if let Some(status) = task.get("status").and_then(|v| v.as_str()) {
+        content.push_str(&format!("**Status:** {}\n", status));
+    }
+    if let Some(priority) = task.get("priority").and_then(|v| v.as_str()) {
+        content.push_str(&format!("**Priority:** {}\n", priority));
+    }
+    content.push('\n');
+    
+    // Description
+    if let Some(description) = task.get("description").and_then(|v| v.as_str()) {
+        content.push_str("## Description\n\n");
+        content.push_str(description);
+        content.push_str("\n\n");
+    }
+    
+    // Implementation Details
+    if let Some(details) = task.get("implementationDetails").and_then(|v| v.as_str()) {
+        content.push_str("## Implementation Details\n\n");
+        content.push_str(details);
+        content.push_str("\n\n");
+    }
+    
+    // Test Strategy
+    if let Some(test_strategy) = task.get("testStrategy").and_then(|v| v.as_str()) {
+        content.push_str("## Test Strategy\n\n");
+        content.push_str(test_strategy);
+        content.push_str("\n\n");
+    }
+    
+    // Dependencies
+    if let Some(dependencies) = task.get("dependencies").and_then(|v| v.as_array()) {
+        if !dependencies.is_empty() {
+            content.push_str("## Dependencies\n\n");
+            for dep in dependencies {
+                if let Some(dep_id) = dep.as_u64() {
+                    content.push_str(&format!("- Task {}\n", dep_id));
+                }
+            }
+            content.push('\n');
+        }
+    }
+    
+    // Subtasks
+    if let Some(subtasks) = task.get("subtasks").and_then(|v| v.as_array()) {
+        if !subtasks.is_empty() {
+            content.push_str("## Subtasks\n\n");
+            for (idx, subtask) in subtasks.iter().enumerate() {
+                let subtask_id = format!("{}.{}", 
+                    task.get("id").and_then(|v| v.as_u64()).unwrap_or(0), 
+                    idx + 1
+                );
+                
+                if let Some(title) = subtask.get("title").and_then(|v| v.as_str()) {
+                    content.push_str(&format!("### {} - {}\n\n", subtask_id, title));
+                }
+                
+                if let Some(description) = subtask.get("description").and_then(|v| v.as_str()) {
+                    content.push_str(description);
+                    content.push_str("\n\n");
+                }
+            }
+        }
+    }
+    
+    Ok(content)
 }
 
 #[allow(clippy::disallowed_macros)]
