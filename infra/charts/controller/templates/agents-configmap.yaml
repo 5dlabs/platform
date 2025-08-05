@@ -17,7 +17,6 @@ data:
         appId: {{ $agent.appId | quote }}
         clientId: {{ $agent.clientId | quote }}
         role: {{ $agent.role | quote }}
-        model: {{ $agent.model | quote }}
         expertise: 
           {{- range $expertise := $agent.expertise }}
           - {{ $expertise | quote }}

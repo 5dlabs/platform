@@ -20,38 +20,42 @@ spec:
         description: "Task Master task ID to implement"
       - name: service-id
         description: "Service identifier for persistent workspace"
+        default: "{{ .Values.defaults.workflow.code.serviceId }}"
       - name: repository-url
         description: "Target repository URL in org/repo format (e.g., 5dlabs/cto)"
+        default: "{{ .Values.defaults.workflow.code.repositoryUrl }}"
       - name: docs-repository-url
         description: "Documentation repository URL in org/repo format"
+        default: "{{ .Values.defaults.workflow.code.docsRepositoryUrl }}"
       - name: docs-project-directory
         description: "Project directory within docs repository"
-        default: "."
+        default: "{{ .Values.defaults.workflow.code.docsProjectDirectory }}"
       - name: working-directory
         description: "Working directory within target repository"
-        default: "."
+        default: "{{ .Values.defaults.workflow.code.workingDirectory }}"
       - name: github-app
         description: "GitHub App name for authentication (e.g., '5DLabs-Rex')"
+        default: "{{ .Values.agents[.Values.defaults.codeAgent].githubApp }}"
       
       # Optional parameters
       - name: model
         description: "Claude model to use for execution"
-        default: "claude-3-5-sonnet-20241022"
+        default: "{{ .Values.defaults.workflow.code.model }}"
       - name: continue-session
         description: "Whether to continue previous session"
-        default: "false"
+        default: "{{ .Values.defaults.workflow.code.continueSession }}"
       - name: overwrite-memory
         description: "Whether to overwrite CLAUDE.md memory file"
-        default: "false"
+        default: "{{ .Values.defaults.workflow.code.overwriteMemory }}"
       - name: docs-branch
         description: "Documentation branch to work from"
-        default: "main"
+        default: "{{ .Values.defaults.workflow.code.docsBranch }}"
 
   # Service account for workflow execution
   serviceAccountName: argo-workflow
   
   # Workflow timeout
-  activeDeadlineSeconds: 3600  # 1 hour default
+  activeDeadlineSeconds: {{ .Values.defaults.workflow.code.timeout }}
   
   # Main workflow entry point
   entrypoint: coderun-main

@@ -43,7 +43,6 @@ agents:
     appId: "1723711"
     clientId: "Iv23liXbJaNAQELWXIYD"
     role: "Product Manager & Documentation Specialist"
-    model: "claude-opus-4-20250514"
     expertise: ["documentation", "requirements", "planning", "task-management"]
     description: "AI Documentation Specialist | Product Manager at 5D Labs | Transforms ideas into actionable plans | Expert in Task Master workflows"
     systemPrompt: |
@@ -65,7 +64,6 @@ agents:
     appId: "1724452"
     clientId: "Iv23liTnu9e0imdRPhCC"
     role: "Senior Backend Architect & Systems Engineer"
-    model: "claude-sonnet-4-20250514"
     expertise: ["backend", "architecture", "systems", "apis", "databases"]
     description: "Senior Backend Architect & Systems Engineer"
     systemPrompt: |
@@ -81,7 +79,6 @@ agents:
     appId: "1724451"
     clientId: "Iv23liiNQuFT6UcWGMTk"
     role: "Performance Engineer & Optimization Specialist"
-    model: "claude-sonnet-4-20250514"
     expertise: ["performance", "optimization", "profiling", "caching"]
     description: "Performance Engineer & Optimization Specialist"
     systemPrompt: |
@@ -97,7 +94,6 @@ agents:
     appId: "1724450"
     clientId: "Iv23li7dL883Q9dG6qpX"
     role: "Security Engineer & Code Analysis Specialist"
-    model: "claude-sonnet-4-20250514"
     expertise: ["security", "analysis", "authentication", "compliance"]
     description: "Security Engineer & Code Analysis Specialist"
     systemPrompt: |
@@ -107,10 +103,33 @@ agents:
       effectively with the broader AI agent team. You bring deep expertise and 
       strategic thinking to every challenge.
 
-# Default agent assignments
+# Default agent assignments and workflow parameters
 defaults:
   docsAgent: "morgan"
   codeAgent: "rex"
+  
+  # Workflow parameter defaults
+  workflow:
+    # Code task defaults
+    code:
+      workingDirectory: "."
+      serviceId: "market-research"
+      repositoryUrl: "5dlabs/cto"
+      docsRepositoryUrl: "5dlabs/cto"
+      docsProjectDirectory: "projects/market-research"
+      docsBranch: "argo"
+      continueSession: false
+      overwriteMemory: false
+      timeout: 3600  # 1 hour
+      model: "claude-3-5-sonnet-20241022"
+      
+    # Documentation task defaults  
+    docs:
+      workingDirectory: "projects/market-research"
+      repositoryUrl: "5dlabs/cto"
+      sourceBranch: "argo"
+      timeout: 1800  # 30 minutes
+      model: "claude-3-5-sonnet-20241022"
 
 imagePullSecrets:
   - name: ghcr-secret
@@ -211,13 +230,6 @@ config:
 
   # Logging
   rustLog: "debug"
-
-# Default model configurations
-models:
-  # Default model for documentation generation
-  defaultDocsModel: "claude-opus-4-20250514"
-  # Default model for code tasks
-  defaultCodeModel: "claude-sonnet-4-20250514"
 
 # Secret configuration for API keys
 secrets:

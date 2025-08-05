@@ -13,7 +13,7 @@ argo submit --from workflowtemplate/coderun-template \
   -n agent-platform \
   -p task-id=1 \
   -p service-id=market-research \
-  -p repository-url=https://github.com/5dlabs/cto \
+  -p repository-url=https://github.com/5dlabs/test-implementation \
   -p docs-repository-url=https://github.com/5dlabs/cto \
   -p docs-project-directory=projects/market-research \
   -p working-directory=projects/market-research \

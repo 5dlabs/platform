@@ -13,7 +13,6 @@ pub struct Agent {
     #[serde(rename = "clientId")]
     pub client_id: String,
     pub role: String,
-    pub model: String,
     pub expertise: Vec<String>,
     pub description: String,
     #[serde(rename = "systemPrompt")]
@@ -128,7 +127,6 @@ impl Default for AgentsConfig {
             app_id: "1723711".to_string(),
             client_id: "Iv23liXbJaNAQELWXIYD".to_string(),
             role: "Product Manager & Documentation Specialist".to_string(),
-            model: "claude-opus-4-20250514".to_string(),
             expertise: vec!["documentation".to_string(), "requirements".to_string(), "planning".to_string()],
             description: "AI Documentation Specialist".to_string(),
             system_prompt: "You are Morgan, a meticulous AI Product Manager and Documentation Specialist.".to_string(),

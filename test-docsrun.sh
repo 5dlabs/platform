@@ -14,7 +14,6 @@ argo submit --from workflowtemplate/docsrun-template \
   -p working-directory=projects/market-research \
   -p repository-url=https://github.com/5dlabs/cto \
   -p github-app=5DLabs-Morgan \
-  -p github-user="" \
   -p source-branch=argo \
   -p model=claude-opus-4-20250514 \
   --wait

@@ -9,5 +9,3 @@ data:
   SERVER_HOST: {{ .Values.config.serverHost | quote }}
   SERVER_PORT: {{ .Values.config.serverPort | quote }}
   RUST_LOG: {{ .Values.config.rustLog | quote }}
-  DEFAULT_DOCS_MODEL: {{ .Values.models.defaultDocsModel | quote }}
-  DEFAULT_CODE_MODEL: {{ .Values.models.defaultCodeModel | quote }}

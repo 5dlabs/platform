@@ -18,27 +18,28 @@ spec:
       # Required parameters from MCP server  
       - name: working-directory
         description: "Working directory within the repository (Task Master project path)"
-      # Authentication (one required)
-      - name: github-user
-        description: "GitHub username for commits and authentication (deprecated - use github-app)"
-        default: ""
+        default: "{{ .Values.defaults.workflow.docs.workingDirectory }}"
+      - name: repository-url
+        description: "Repository URL in org/repo format (e.g., 5dlabs/platform)"
+        default: "{{ .Values.defaults.workflow.docs.repositoryUrl }}"
+      # Authentication
       - name: github-app
         description: "GitHub App name for authentication (e.g., '5DLabs-Morgan')"
-        default: "5DLabs-Morgan"
+        default: "{{ .Values.agents[.Values.defaults.docsAgent].githubApp }}"
       
       # Optional parameters
       - name: source-branch
         description: "Source branch to work from"
-        default: "main"
+        default: "{{ .Values.defaults.workflow.docs.sourceBranch }}"
       - name: model
         description: "Claude model to use for documentation generation"
-        default: "claude-opus-4-20250514"
+        default: "{{ .Values.defaults.workflow.docs.model }}"
 
   # Service account for workflow execution
   serviceAccountName: argo-workflow
   
   # Workflow timeout
-  activeDeadlineSeconds: 1800  # 30 minutes default
+  activeDeadlineSeconds: {{ .Values.defaults.workflow.docs.timeout }}
   
   # Main workflow entry point
   entrypoint: docsrun-main
