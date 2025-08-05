@@ -77,13 +77,13 @@ spec:
             namespace: {{ .Release.Namespace }}
             labels:
               workflow-name: "{{`{{workflow.name}}`}}"
-              github-app: "{{`{{workflow.parameters.github-app}}`}}"
+              github-app: "{{`{{= sprig.default \"5DLabs-Morgan\" workflow.parameters.github-app}}`}}"
           spec:
             workingDirectory: "{{`{{workflow.parameters.working-directory}}`}}"
-            githubApp: "{{`{{workflow.parameters.github-app}}`}}"
+            githubApp: "{{`{{= sprig.default \"5DLabs-Morgan\" workflow.parameters.github-app}}`}}"
             sourceBranch: "{{`{{workflow.parameters.source-branch}}`}}"
             repositoryUrl: "{{`{{workflow.parameters.repository-url}}`}}"
-            model: "{{`{{workflow.parameters.model}}`}}"
+            model: "{{`{{= sprig.default \"claude-opus-4-20250514\" workflow.parameters.model}}`}}"
             includeCodebase: "{{`{{workflow.parameters.include-codebase}}`}}"
             
     - name: wait-docsrun-completion
