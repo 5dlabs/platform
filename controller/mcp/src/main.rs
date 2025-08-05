@@ -116,7 +116,16 @@ fn get_git_remote_url() -> Result<String> {
         .context("Failed to execute git command")?;
 
     if output.status.success() {
-        Ok(String::from_utf8(output.stdout)?.trim().to_string())
+        let url = String::from_utf8(output.stdout)?.trim().to_string();
+        
+        // Convert SSH URLs to HTTPS format
+        if url.starts_with("git@github.com:") {
+            let repo_path = url.strip_prefix("git@github.com:").unwrap();
+            let repo_path = repo_path.strip_suffix(".git").unwrap_or(repo_path);
+            Ok(format!("https://github.com/{}", repo_path))
+        } else {
+            Ok(url)
+        }
     } else {
         let stderr = String::from_utf8(output.stderr)?;
         Err(anyhow!("Git command failed: {}", stderr))
