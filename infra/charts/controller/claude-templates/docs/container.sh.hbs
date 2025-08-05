@@ -211,13 +211,12 @@ if [ -d "/task-files" ]; then
   done
 
   {{#if include_codebase}}
-  # Copy codebase.md for existing project context
+  # Copy codebase.md for existing project context (if available)
   if [ -f "/task-files/codebase.md" ]; then
     cp "/task-files/codebase.md" "$CLAUDE_WORK_DIR/.taskmaster/docs/codebase.md"
     echo "✓ Copied codebase.md for existing project context"
   else
-    echo "❌ include_codebase=true but codebase.md not found in ConfigMap"
-    exit 1
+    echo "⚠️ include_codebase=true but codebase.md not found in ConfigMap - continuing without existing codebase context"
   fi
   {{/if}}
 else
