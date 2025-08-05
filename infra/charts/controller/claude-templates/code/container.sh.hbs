@@ -38,8 +38,8 @@ if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ]; then
     JWT_TOKEN="$JWT_HEADER.$JWT_PAYLOAD.$JWT_SIGNATURE"
     
     # Get installation ID for the repository
-    REPO_OWNER=$(echo "{{repository_url}}" | cut -d'/' -f1)
-    REPO_NAME=$(echo "{{repository_url}}" | cut -d'/' -f2)
+    REPO_OWNER=$(echo "{{repository_url}}" | cut -d'/' -f4)
+    REPO_NAME=$(echo "{{repository_url}}" | cut -d'/' -f5)
     echo "DEBUG: Parsed repository - Owner: '$REPO_OWNER', Name: '$REPO_NAME'"
     
     echo "Getting installation ID for $REPO_OWNER/$REPO_NAME..."
