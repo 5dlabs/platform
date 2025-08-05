@@ -68,7 +68,6 @@ impl DocsTemplateGenerator {
             "source_branch": docs_run.spec.source_branch,
             "working_directory": docs_run.spec.working_directory,
             "github_app": docs_run.spec.github_app.as_deref().unwrap_or(""),
-            "github_app": docs_run.spec.github_app,
             "service_name": "docs-generator",
             "include_codebase": docs_run.spec.include_codebase.unwrap_or(false)
         });

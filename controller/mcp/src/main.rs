@@ -206,7 +206,63 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     let source_branch = get_git_current_branch()
         .context("Failed to auto-detect git branch. Ensure you're in a git repository.")?;
     
-    // Handle agent name resolution with validation
+    // Check for uncommitted changes and push them before starting docs generation
+    eprintln!("🔍 Checking for uncommitted changes...");
+    let status_output = Command::new("git")
+        .args(["status", "--porcelain"])
+        .output()
+        .context("Failed to check git status")?;
+    
+    if status_output.status.success() {
+        let status_text = String::from_utf8(status_output.stdout)?;
+        if !status_text.trim().is_empty() {
+            eprintln!("📝 Found uncommitted changes, committing and pushing...");
+            
+            // Add all changes
+            let add_result = Command::new("git")
+                .args(["add", "."])
+                .output()
+                .context("Failed to stage changes")?;
+            
+            if !add_result.status.success() {
+                return Err(anyhow!("Failed to stage changes: {}", String::from_utf8_lossy(&add_result.stderr)));
+            }
+            
+            // Commit with timestamp
+            let timestamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            let commit_msg = format!("docs: auto-commit before docs generation at {}", timestamp);
+            
+            let commit_result = Command::new("git")
+                .args(["commit", "-m", &commit_msg])
+                .output()
+                .context("Failed to commit changes")?;
+            
+            if !commit_result.status.success() {
+                return Err(anyhow!("Failed to commit changes: {}", String::from_utf8_lossy(&commit_result.stderr)));
+            }
+            
+            // Push to current branch
+            let push_result = Command::new("git")
+                .args(["push", "origin", &source_branch])
+                .output()
+                .context("Failed to push changes")?;
+            
+            if !push_result.status.success() {
+                return Err(anyhow!("Failed to push changes: {}", String::from_utf8_lossy(&push_result.stderr)));
+            }
+            
+            eprintln!("✅ Changes committed and pushed successfully");
+        } else {
+            eprintln!("✅ No uncommitted changes found");
+        }
+    } else {
+        return Err(anyhow!("Failed to check git status: {}", String::from_utf8_lossy(&status_output.stderr)));
+    }
+    
+    // Handle agent name resolution with validation (optional - workflow has defaults)
     let agent_name = arguments.get("agent").and_then(|v| v.as_str());
     let github_app = if let Some(agent) = agent_name {
         // Validate agent name exists in config
@@ -217,19 +273,20 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
                 agent, available_agents
             ));
         }
-        agents_config[agent].clone()
+        Some(agents_config[agent].clone())
     } else {
-        return Err(anyhow!("No agent specified. Please provide an 'agent' parameter (e.g., 'morgan', 'rex', 'blaze', 'cipher')"));
+        // No agent specified - workflow template will use default
+        None
     };
     
-    // Handle model (use Helm defaults if not provided)  
-    let model = arguments.get("model")
-        .and_then(|v| v.as_str())
-        .ok_or(anyhow!("No model specified. Please provide a 'model' parameter (e.g., 'claude-opus-4-20250514')"))?;
+    // Handle model (optional - use workflow defaults if not provided)  
+    let model = arguments.get("model").and_then(|v| v.as_str());
     
-    // Validate model name
-    if !model.starts_with("claude-") {
-        return Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name", model));
+    // Validate model name if provided
+    if let Some(m) = model {
+        if !m.starts_with("claude-") {
+            return Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name", m));
+        }
     }
     
     // Handle include_codebase parameter
@@ -241,11 +298,24 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         format!("working-directory={working_directory}"),
         format!("repository-url={repository_url}"),
         format!("source-branch={source_branch}"),
-        format!("github-app={github_app}"),
-        format!("model={model}"),
     ];
     
-    // Always add include_codebase parameter (required by workflow template)
+    // Always add github-app parameter (use default from Helm values if no agent specified)
+    if let Some(ref app) = github_app {
+        params.push(format!("github-app={}", app));
+    } else {
+        // Let workflow template use its default value
+        eprintln!("No agent specified - workflow will use default from Helm values");
+    }
+    
+    // Only add model parameter if specified - let workflow use defaults
+    if let Some(m) = model {
+        params.push(format!("model={}", m));
+    } else {
+        eprintln!("No model specified - workflow will use default from Helm values");
+    }
+    
+    // Always add include_codebase parameter as boolean (required by workflow template)
     params.push(format!("include-codebase={}", include_codebase));
     
     let mut args = vec![
@@ -270,7 +340,7 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
             "source_branch": source_branch,
             "github_app": github_app,
             "agent": agent_name.unwrap_or("default"),
-            "model": model,
+            "model": model.unwrap_or("default"),
             "parameters": params
         })),
         Err(e) => Err(anyhow!("Failed to submit docs workflow: {}", e)),
@@ -336,13 +406,14 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         return Err(anyhow!("No agent specified. Please provide an 'agent' parameter (e.g., 'rex', 'blaze', 'cipher')"));
     };
     
-    // Handle model (require explicit value or rely on Helm defaults)
-    let model = arguments.get("model")
-        .and_then(|v| v.as_str())
-        .ok_or(anyhow!("No model specified. Please provide a 'model' parameter (e.g., 'claude-3-5-sonnet-20241022')"))?;
+    // Handle model (optional - use workflow defaults if not provided)
+    let model = arguments.get("model").and_then(|v| v.as_str());
     
-    if !model.starts_with("claude-") {
-        return Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name", model));
+    // Validate model name if provided
+    if let Some(m) = model {
+        if !m.starts_with("claude-") {
+            return Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name", m));
+        }
     }
     
     // Auto-detect docs branch (fail if not available)
@@ -367,12 +438,16 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         format!("docs-project-directory={docs_project_directory}"),
         format!("working-directory={working_directory}"),
         format!("github-app={github_app}"),
-        format!("model={model}"),
         format!("continue-session={continue_session}"),
         format!("overwrite-memory={overwrite_memory}"),
         format!("docs-branch={docs_branch}"),
         format!("context-version=0"), // Auto-assign by controller
     ];
+    
+    // Only add model parameter if specified
+    if let Some(m) = model {
+        params.push(format!("model={}", m));
+    }
     
     // Handle env object - convert to JSON string for workflow parameter
     if let Some(env) = arguments.get("env").and_then(|v| v.as_object()) {
@@ -411,7 +486,7 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
             "working_directory": working_directory,
             "github_app": github_app,
             "agent": agent_name.unwrap_or("default"),
-            "model": model,
+            "model": model.unwrap_or("default"),
             "continue_session": continue_session,
             "overwrite_memory": overwrite_memory,
             "docs_branch": docs_branch,

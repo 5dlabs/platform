@@ -18,11 +18,11 @@ argo submit --from workflowtemplate/coderun-template \
   -p docs-project-directory=projects/market-research \
   -p working-directory=projects/market-research \
   -p github-app=5DLabs-Blaze \
-  -p github-user="" \
   -p model=claude-3-5-sonnet-20241022 \
   -p continue-session=false \
   -p overwrite-memory=false \
   -p docs-branch=argo \
+  -p context-version=1 \
   --wait
 
 echo "✅ CodeRun workflow test completed"

@@ -25,7 +25,7 @@ fn get_docs_schema() -> Value {
                 },
                 "agent": {
                     "type": "string",
-                    "description": "Agent name for task assignment (e.g., morgan, rex, blaze, cipher)"
+                    "description": "Agent name for task assignment (optional, uses workflow default if not specified)"
                 },
                 "model": {
                     "type": "string",
