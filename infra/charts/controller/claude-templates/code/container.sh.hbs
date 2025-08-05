@@ -683,6 +683,9 @@ CLAUDE_CONFIG="$CLAUDE_WORK_DIR/toolman-config.json"
 
 if [ -f "$CLAUDE_CONFIG" ]; then
   echo "✓ toolman-config.json found in Claude working directory"
+  # Set TOOLMAN_CONFIG_PATH environment variable for MCP server
+  export TOOLMAN_CONFIG_PATH="$CLAUDE_CONFIG"
+  echo "✓ TOOLMAN_CONFIG_PATH set to: $TOOLMAN_CONFIG_PATH"
 else
   echo "⚠️ toolman-config.json not found in Claude working directory - toolman may not work correctly"
 fi
