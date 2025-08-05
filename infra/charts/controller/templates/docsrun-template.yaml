@@ -69,7 +69,7 @@ spec:
           apiVersion: agents.platform/v1
           kind: DocsRun
           metadata:
-            generateName: "docsrun-morgan-"
+            generateName: "docs-{{`{{workflow.parameters.github-app | lower}}`}}-"
             namespace: {{ .Release.Namespace }}
             labels:
               workflow-name: "{{`{{workflow.name}}`}}"
