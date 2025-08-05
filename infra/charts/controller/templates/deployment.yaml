@@ -58,16 +58,6 @@ spec:
                 configMapKeyRef:
                   name: {{ include "controller.fullname" . }}-config
                   key: RUST_LOG
-            - name: DEFAULT_DOCS_MODEL
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "controller.fullname" . }}-config
-                  key: DEFAULT_DOCS_MODEL
-            - name: DEFAULT_CODE_MODEL
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "controller.fullname" . }}-config
-                  key: DEFAULT_CODE_MODEL
             # Secrets for agents
             {{- if .Values.secrets.anthropicApiKey }}
             - name: ANTHROPIC_API_KEY
