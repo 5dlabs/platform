@@ -25,7 +25,7 @@ spec:
       # Authentication
       - name: github-app
         description: "GitHub App name for authentication (e.g., '5DLabs-Morgan')"
-        default: "{{ .Values.agents[.Values.defaults.docsAgent].githubApp }}"
+        default: "{{ index .Values.agents .Values.defaults.docsAgent "githubApp" }}"
       
       # Optional parameters
       - name: source-branch

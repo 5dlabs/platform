@@ -1,13 +1,17 @@
 {{- if .Values.rbac.create -}}
-{{- if .Values.rbac.namespaced }}
+
+{{/* Controller RBAC */}}
+{{- if .Values.rbac.controller }}
+{{- if .Values.rbac.controller.namespaced }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ include "controller.roleName" . }}
   labels:
     {{- include "controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller-rbac
 rules:
-{{- toYaml .Values.rbac.rules | nindent 2 }}
+{{- toYaml .Values.rbac.controller.rules | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -15,6 +19,7 @@ metadata:
   name: {{ include "controller.roleName" . }}
   labels:
     {{- include "controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller-rbac
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -30,8 +35,9 @@ metadata:
   name: {{ include "controller.roleName" . }}
   labels:
     {{- include "controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller-rbac
 rules:
-{{- toYaml .Values.rbac.rules | nindent 2 }}
+{{- toYaml .Values.rbac.controller.rules | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -39,6 +45,7 @@ metadata:
   name: {{ include "controller.roleName" . }}
   labels:
     {{- include "controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller-rbac
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -48,4 +55,133 @@ subjects:
   name: {{ include "controller.serviceAccountName" . }}
   namespace: {{ .Release.Namespace }}
 {{- end }}
+{{- end }}
+
+{{/* Workflow RBAC */}}
+{{- if .Values.rbac.workflow }}
+---
+# ServiceAccount for workflows
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argo-workflow
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: workflow-rbac
+
+---
+{{- if .Values.rbac.workflow.namespaced }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "controller.fullname" . }}-workflow
+  labels:
+    {{- include "controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: workflow-rbac
+rules:
+{{- toYaml .Values.rbac.workflow.rules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "controller.fullname" . }}-workflow
+  labels:
+    {{- include "controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: workflow-rbac
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "controller.fullname" . }}-workflow
+subjects:
+- kind: ServiceAccount
+  name: argo-workflow
+  namespace: {{ .Release.Namespace }}
+{{- else }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "controller.fullname" . }}-workflow
+  labels:
+    {{- include "controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: workflow-rbac
+rules:
+{{- toYaml .Values.rbac.workflow.rules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "controller.fullname" . }}-workflow
+  labels:
+    {{- include "controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: workflow-rbac
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "controller.fullname" . }}-workflow
+subjects:
+- kind: ServiceAccount
+  name: argo-workflow
+  namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- end }}
+
+{{/* Workflow Submitter RBAC */}}
+{{- if .Values.rbac.submitter }}
+---
+{{- if .Values.rbac.submitter.namespaced }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "controller.fullname" . }}-submitter
+  labels:
+    {{- include "controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: submitter-rbac
+rules:
+{{- toYaml .Values.rbac.submitter.rules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "controller.fullname" . }}-submitter
+  labels:
+    {{- include "controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: submitter-rbac
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "controller.fullname" . }}-submitter
+subjects:
+- kind: ServiceAccount
+  name: {{ include "controller.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+{{- else }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "controller.fullname" . }}-submitter
+  labels:
+    {{- include "controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: submitter-rbac
+rules:
+{{- toYaml .Values.rbac.submitter.rules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "controller.fullname" . }}-submitter
+  labels:
+    {{- include "controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: submitter-rbac
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "controller.fullname" . }}-submitter
+subjects:
+- kind: ServiceAccount
+  name: {{ include "controller.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- end }}
+
 {{- end }}

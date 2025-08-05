@@ -244,44 +244,102 @@ secrets:
 rbac:
   # Create RBAC resources
   create: true
-  # Use Role/RoleBinding (true) or ClusterRole/ClusterRoleBinding (false)
-  namespaced: true
-  rules:
-    # CodeRun and DocsRun CRD management
-    - apiGroups: ["agents.platform"]
-      resources: ["coderuns", "docsruns"]
-      verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
-    - apiGroups: ["agents.platform"]
-      resources: ["coderuns/status", "docsruns/status"]
-      verbs: ["get", "update", "patch"]
-    # Job management in agent-platform namespace
-    - apiGroups: ["batch"]
-      resources: ["jobs"]
-      verbs: ["create", "get", "list", "watch", "delete", "patch", "update"]
-    # ConfigMap and Secret access (for agent configuration and task files)
-    - apiGroups: [""]
-      resources: ["configmaps", "secrets"]
-      verbs: ["get", "list", "create", "update", "delete", "watch", "patch"]
-    # ServiceAccount management (required for Helm operations)
-    - apiGroups: [""]
-      resources: ["serviceaccounts"]
-      verbs: ["get", "list", "create", "update", "delete", "patch"]
-    # Service management (required for Helm operations)
-    - apiGroups: [""]
-      resources: ["services"]
-      verbs: ["get", "list", "create", "update", "delete", "patch"]
-    # Pod monitoring
-    - apiGroups: [""]
-      resources: ["pods", "pods/log"]
-      verbs: ["get", "list", "watch"]
-    # PVC management for agent workspaces
-    - apiGroups: [""]
-      resources: ["persistentvolumeclaims"]
-      verbs: ["create", "get", "list", "delete"]
-    # Events for debugging
-    - apiGroups: [""]
-      resources: ["events"]
-      verbs: ["get", "list", "watch"]
+  
+  # Controller RBAC (for managing CodeRun/DocsRun resources)
+  controller:
+    # Use Role/RoleBinding (true) or ClusterRole/ClusterRoleBinding (false)
+    namespaced: true
+    rules:
+      # CodeRun and DocsRun CRD management
+      - apiGroups: ["agents.platform"]
+        resources: ["coderuns", "docsruns"]
+        verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+      - apiGroups: ["agents.platform"]
+        resources: ["coderuns/status", "docsruns/status"]
+        verbs: ["get", "update", "patch"]
+      # Job management in agent-platform namespace
+      - apiGroups: ["batch"]
+        resources: ["jobs"]
+        verbs: ["create", "get", "list", "watch", "delete", "patch", "update"]
+      # ConfigMap and Secret access (for agent configuration and task files)
+      - apiGroups: [""]
+        resources: ["configmaps", "secrets"]
+        verbs: ["get", "list", "create", "update", "delete", "watch", "patch"]
+      # ServiceAccount management (required for Helm operations)
+      - apiGroups: [""]
+        resources: ["serviceaccounts"]
+        verbs: ["get", "list", "create", "update", "delete", "patch"]
+      # Service management (required for Helm operations)
+      - apiGroups: [""]
+        resources: ["services"]
+        verbs: ["get", "list", "create", "update", "delete", "patch"]
+      # Pod monitoring
+      - apiGroups: [""]
+        resources: ["pods", "pods/log"]
+        verbs: ["get", "list", "watch"]
+      # PVC management for agent workspaces
+      - apiGroups: [""]
+        resources: ["persistentvolumeclaims"]
+        verbs: ["create", "get", "list", "delete"]
+      # Events for debugging
+      - apiGroups: [""]
+        resources: ["events"]
+        verbs: ["get", "list", "watch"]
+
+  # Workflow RBAC (for Argo Workflow execution)
+  workflow:
+    # Workflows need cluster scope to manage resources across namespaces
+    namespaced: false
+    rules:
+      # Workflow execution and management
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflowtemplates", "clusterworkflowtemplates"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflows"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      # Pod management for workflow steps
+      - apiGroups: [""]
+        resources: ["pods", "pods/log", "pods/exec"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      # ConfigMap and Secret access
+      - apiGroups: [""]
+        resources: ["configmaps", "secrets"]
+        verbs: ["get", "list", "watch"]
+      # PVC management for workspaces
+      - apiGroups: [""]
+        resources: ["persistentvolumeclaims"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      # Events for logging
+      - apiGroups: [""]
+        resources: ["events"]
+        verbs: ["create", "patch"]
+      # Workflow task results (required for Argo Workflows)
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflowtaskresults"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      # Orchestrator CRDs (for creating DocsRun/CodeRun from workflows)
+      - apiGroups: ["agents.platform"]
+        resources: ["docsruns", "coderuns"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # Workflow Submitter RBAC (for orchestrator to submit workflows)
+  submitter:
+    # Submitter needs cluster scope to submit workflows across namespaces
+    namespaced: false
+    rules:
+      # Submit workflows from templates
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflows"]
+        verbs: ["create", "get", "list", "watch", "update", "patch"]
+      # Access templates
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflowtemplates", "clusterworkflowtemplates"]
+        verbs: ["get", "list"]
+      # Monitor workflow status
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflows"]
+        verbs: ["get", "list", "watch"]
 
 # Health checks
 healthCheck:
