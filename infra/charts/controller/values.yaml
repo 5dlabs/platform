@@ -113,11 +113,10 @@ defaults:
     # Code task defaults
     code:
       workingDirectory: "."
-      serviceId: "market-research"
-      repositoryUrl: "5dlabs/cto"
-      docsRepositoryUrl: "5dlabs/cto"
-      docsProjectDirectory: "projects/market-research"
-      docsBranch: "argo"
+      serviceId: ""
+      docsRepositoryUrl: "5dlabs/projects"
+      docsProjectDirectory: "."
+      docsBranch: "main"
       continueSession: false
       overwriteMemory: false
       timeout: 3600  # 1 hour
@@ -125,9 +124,9 @@ defaults:
       
     # Documentation task defaults  
     docs:
-      workingDirectory: "projects/market-research"
-      repositoryUrl: "5dlabs/cto"
-      sourceBranch: "argo"
+      workingDirectory: "."
+      repositoryUrl: "5dlabs/projects"
+      sourceBranch: "main"
       timeout: 1800  # 30 minutes
       model: "claude-opus-4-20250514"
 

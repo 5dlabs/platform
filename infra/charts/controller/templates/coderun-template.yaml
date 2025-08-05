@@ -23,7 +23,6 @@ spec:
         default: "{{ .Values.defaults.workflow.code.serviceId }}"
       - name: repository-url
         description: "Target repository URL in org/repo format (e.g., 5dlabs/cto)"
-        default: "{{ .Values.defaults.workflow.code.repositoryUrl }}"
       - name: docs-repository-url
         description: "Documentation repository URL in org/repo format"
         default: "{{ .Values.defaults.workflow.code.docsRepositoryUrl }}"
