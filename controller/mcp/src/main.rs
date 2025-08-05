@@ -228,10 +228,8 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         format!("model={model}"),
     ];
     
-    // Add include_codebase parameter if enabled
-    if include_codebase {
-        params.push("include-codebase=true".to_string());
-    }
+    // Always add include_codebase parameter (required by workflow template)
+    params.push(format!("include-codebase={}", include_codebase));
     
     let mut args = vec![
         "submit",
