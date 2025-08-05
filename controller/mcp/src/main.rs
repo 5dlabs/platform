@@ -180,6 +180,23 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     
     let agents_config = AGENTS_CONFIG.get().unwrap();
     
+    // Get workspace directory from Cursor environment, then navigate to working_directory
+    let workspace_dir = std::env::var("WORKSPACE_FOLDER_PATHS")
+        .map(|paths| {
+            let first_path = paths.split(',').next().unwrap_or(&paths).trim();
+            first_path.to_string()
+        })
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::env::current_dir().unwrap_or_default());
+        
+    let project_dir = workspace_dir.join(working_directory);
+    
+    eprintln!("🔍 Using project directory: {}", project_dir.display());
+    
+    // Change to project directory for git commands
+    std::env::set_current_dir(&project_dir)
+        .with_context(|| format!("Failed to navigate to project directory: {}", project_dir.display()))?;
+    
     // Auto-detect repository URL (fail if not available)
     let repository_url = get_git_remote_url()
         .context("Failed to auto-detect repository URL. Ensure you're in a git repository with origin remote.")?;
