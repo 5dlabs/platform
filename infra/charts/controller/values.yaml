@@ -129,7 +129,7 @@ defaults:
       repositoryUrl: "5dlabs/cto"
       sourceBranch: "argo"
       timeout: 1800  # 30 minutes
-      model: "claude-3-5-sonnet-20241022"
+      model: "claude-opus-4-20250514"
 
 imagePullSecrets:
   - name: ghcr-secret
