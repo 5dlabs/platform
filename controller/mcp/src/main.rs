@@ -827,19 +827,26 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
 
     eprintln!("🔍 Using workspace directory: {}", workspace_dir.display());
 
-    // Read PRD from intake folder or use provided content
-    let intake_path = workspace_dir.join("intake");
+    // Get project name (required)
+    let project_name = arguments
+        .get("project_name")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow!("project_name is required"))?;
+
+    // Read PRD from project's intake folder or use provided content
+    let project_path = workspace_dir.join(project_name);
+    let intake_path = project_path.join("intake");
     let prd_file = intake_path.join("prd.txt");
     
     let prd_content = if let Some(content) = arguments.get("prd_content").and_then(|v| v.as_str()) {
         // Allow override via parameter for compatibility
         content.to_string()
     } else if prd_file.exists() {
-        eprintln!("📋 Reading PRD from intake/prd.txt");
+        eprintln!("📋 Reading PRD from {}/intake/prd.txt", project_name);
         std::fs::read_to_string(&prd_file)
-            .context("Failed to read intake/prd.txt")?
+            .with_context(|| format!("Failed to read {}/intake/prd.txt", project_name))?
     } else {
-        return Err(anyhow!("No PRD found. Please create intake/prd.txt or provide prd_content parameter"));
+        return Err(anyhow!("No PRD found. Please create {}/intake/prd.txt or provide prd_content parameter", project_name));
     };
 
     // Read optional architecture file
@@ -847,18 +854,12 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     let architecture_content = if let Some(content) = arguments.get("architecture_content").and_then(|v| v.as_str()) {
         content.to_string()
     } else if arch_file.exists() {
-        eprintln!("🏗️ Reading architecture from intake/architecture.md");
+        eprintln!("🏗️ Reading architecture from {}/intake/architecture.md", project_name);
         std::fs::read_to_string(&arch_file)
-            .context("Failed to read intake/architecture.md")?
+            .with_context(|| format!("Failed to read {}/intake/architecture.md", project_name))?
     } else {
         String::new()
     };
-
-    // Get project name (required)
-    let project_name = arguments
-        .get("project_name")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| anyhow!("project_name is required"))?;
 
     // Get configuration
     let config = CTO_CONFIG.get().ok_or_else(|| anyhow!("Configuration not loaded"))?;

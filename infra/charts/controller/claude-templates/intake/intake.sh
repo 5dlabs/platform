@@ -119,8 +119,14 @@ CLONE_DIR="/tmp/repo-$(date +%s)"
 git clone "$REPOSITORY_URL" "$CLONE_DIR"
 cd "$CLONE_DIR"
 
-# Set PROJECT_DIR to the cloned repository directory
-PROJECT_DIR="$CLONE_DIR"
+# Set PROJECT_DIR to a subdirectory within the cloned repository
+PROJECT_DIR="$CLONE_DIR/$PROJECT_NAME"
+
+# Create project directory if it doesn't exist
+if [ ! -d "$PROJECT_DIR" ]; then
+    echo "📁 Creating project directory: $PROJECT_NAME"
+    mkdir -p "$PROJECT_DIR"
+fi
 
 # Configure git identity
 git config user.name "Project Intake Bot"
@@ -130,8 +136,11 @@ git config user.email "intake@5dlabs.com"
 echo "📦 Installing TaskMaster..."
 npm install -g task-master-ai@latest
 
+# Change to project directory
+cd "$PROJECT_DIR"
+
 # Initialize TaskMaster
-echo "🚀 Initializing TaskMaster project..."
+echo "🚀 Initializing TaskMaster project in $PROJECT_NAME..."
 task-master init --yes \
     --name "$PROJECT_NAME" \
     --description "Auto-generated project from intake pipeline" \
