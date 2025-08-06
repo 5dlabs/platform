@@ -165,12 +165,26 @@ echo "📂 Current directory: $(pwd)"
 echo "📂 Directory contents before init:"
 ls -la
 
-if ! task-master init --yes \
+# Check task-master version and help to debug
+echo "🔍 TaskMaster version: $(task-master --version)"
+echo "🔍 TaskMaster help for init:"
+task-master init --help || echo "Help failed"
+
+# Try the init command with verbose output
+echo "🔍 Running init command..."
+set -x  # Enable command tracing
+task-master init --yes \
     --name "$PROJECT_NAME" \
     --description "Auto-generated project from intake pipeline" \
     --version "0.1.0" \
-    --rules "cursor"; then
-    echo "❌ TaskMaster initialization failed"
+    --rules "cursor"
+INIT_EXIT_CODE=$?
+set +x  # Disable command tracing
+
+echo "🔍 Init command exit code: $INIT_EXIT_CODE"
+
+if [ $INIT_EXIT_CODE -ne 0 ]; then
+    echo "❌ TaskMaster initialization failed with exit code $INIT_EXIT_CODE"
     echo "📂 Directory contents after failed init:"
     ls -la
     exit 1
@@ -179,6 +193,10 @@ fi
 echo "✅ TaskMaster initialization completed"
 echo "📂 Directory contents after init:"
 ls -la .taskmaster/ 2>/dev/null || echo "No .taskmaster directory found"
+
+# Also check if any hidden files were created
+echo "📂 All files in directory (including hidden):"
+ls -la
 
 # Copy PRD and architecture files after initialization
 echo "📋 Copying PRD and architecture files..."
