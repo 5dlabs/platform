@@ -136,9 +136,9 @@ spec:
               workflow: {{`{{workflow.name}}`}}
           data:
             prd.txt: |
-          {{`{{inputs.parameters.prd-content | indent 6}}`}}
+          {{`{{inputs.parameters.prd-content | b64dec | indent 6}}`}}
             architecture.md: |
-          {{`{{inputs.parameters.architecture-content | indent 6}}`}}
+          {{`{{inputs.parameters.architecture-content | b64dec | indent 6}}`}}
             config.json: |
               {
                 "project_name": "{{`{{inputs.parameters.project-name}}`}}",

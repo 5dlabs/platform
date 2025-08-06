@@ -885,6 +885,11 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     eprintln!("🤖 Using GitHub App: {github_app}");
     eprintln!("🧠 Using model: {model}");
 
+    // Base64 encode the content to avoid shell/YAML escaping issues
+    use base64::{Engine as _, engine::general_purpose};
+    let encoded_prd = general_purpose::STANDARD.encode(prd_content.as_bytes());
+    let encoded_arch = general_purpose::STANDARD.encode(architecture_content.as_bytes());
+
     // Submit Argo workflow with minimal parameters
     let workflow_name = format!("intake-{}", chrono::Utc::now().timestamp());
 
@@ -898,9 +903,9 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
             "--name",
             &workflow_name,
             "-p",
-            &format!("prd-content={prd_content}"),
+            &format!("prd-content={encoded_prd}"),
             "-p",
-            &format!("architecture-content={architecture_content}"),
+            &format!("architecture-content={encoded_arch}"),
             "-p",
             &format!("project-name={project_name}"),
             "-p",
