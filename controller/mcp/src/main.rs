@@ -65,12 +65,23 @@ fn load_fdl_config() -> Result<FdlConfig> {
         std::path::PathBuf::from("../cto-config.json"),
     ];
 
+    // TEMPORARY DEBUG: Print all environment variables
+    eprintln!("🐛 DEBUG: Environment variables:");
+    for (key, value) in std::env::vars() {
+        eprintln!("🐛   {}: {}", key, value);
+    }
+    eprintln!("🐛 DEBUG: Current working directory: {:?}", std::env::current_dir());
+    
     // Add workspace folder paths if available (Cursor provides this)
     if let Ok(workspace_paths) = std::env::var("WORKSPACE_FOLDER_PATHS") {
+        eprintln!("🐛 DEBUG: WORKSPACE_FOLDER_PATHS found: {}", workspace_paths);
         for workspace_path in workspace_paths.split(',') {
             let workspace_path = workspace_path.trim();
+            eprintln!("🐛 DEBUG: Adding config path: {}", workspace_path);
             config_paths.push(std::path::PathBuf::from(workspace_path).join("cto-config.json"));
         }
+    } else {
+        eprintln!("🐛 DEBUG: WORKSPACE_FOLDER_PATHS not found in environment");
     }
 
     for config_path in config_paths {
@@ -263,15 +274,45 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|_| std::env::current_dir().unwrap_or_default());
 
-    let project_dir = workspace_dir.join(working_directory);
+    // Handle both absolute and relative paths
+    let working_path = std::path::PathBuf::from(working_directory);
+    let project_dir = if working_path.is_absolute() {
+        // If working_directory is absolute, use it directly
+        working_path.clone()
+    } else {
+        // If relative, join with workspace_dir
+        workspace_dir.join(working_directory)
+    };
+
+    // For git operations, we need the repository root, not the working directory
+    // Try to find the git root by looking for .git directory
+    let mut git_root = project_dir.clone();
+    let mut found_git = false;
+    while git_root.parent().is_some() {
+        if git_root.join(".git").exists() {
+            found_git = true;
+            break;
+        }
+        if let Some(parent) = git_root.parent() {
+            git_root = parent.to_path_buf();
+        } else {
+            break;
+        }
+    }
+    
+    // If we didn't find a .git directory, fall back to the project directory
+    if !found_git {
+        git_root = project_dir.clone();
+    }
 
     eprintln!("🔍 Using project directory: {}", project_dir.display());
+    eprintln!("🔍 Using git root directory: {}", git_root.display());
 
-    // Change to project directory for git commands
-    std::env::set_current_dir(&project_dir).with_context(|| {
+    // Change to git root for git commands
+    std::env::set_current_dir(&git_root).with_context(|| {
         format!(
-            "Failed to navigate to project directory: {}",
-            project_dir.display()
+            "Failed to navigate to git root directory: {}",
+            git_root.display()
         )
     })?;
 
@@ -289,6 +330,7 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
 
     // Check for uncommitted changes and push them before starting docs generation
     eprintln!("🔍 Checking for uncommitted changes...");
+    eprintln!("🐛 DEBUG: Current directory for git: {:?}", std::env::current_dir());
     let status_output = Command::new("git")
         .args(["status", "--porcelain"])
         .output()
@@ -350,22 +392,31 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
                 .context("Failed to commit changes")?;
 
             if !commit_result.status.success() {
+                let stderr = String::from_utf8_lossy(&commit_result.stderr);
+                let stdout = String::from_utf8_lossy(&commit_result.stdout);
+                eprintln!("🐛 DEBUG: Git commit failed");
+                eprintln!("🐛 DEBUG: Stderr: {}", stderr);
+                eprintln!("🐛 DEBUG: Stdout: {}", stdout);
                 return Err(anyhow!(
                     "Failed to commit changes: {}",
-                    String::from_utf8_lossy(&commit_result.stderr)
+                    stderr
                 ));
             }
 
             // Push to current branch
+            eprintln!("🐛 DEBUG: Pushing to branch: {}", source_branch);
             let push_result = Command::new("git")
                 .args(["push", "origin", &source_branch])
                 .output()
                 .context("Failed to push changes")?;
 
             if !push_result.status.success() {
+                let stderr = String::from_utf8_lossy(&push_result.stderr);
+                eprintln!("🐛 DEBUG: Git push failed");
+                eprintln!("🐛 DEBUG: Stderr: {}", stderr);
                 return Err(anyhow!(
                     "Failed to push changes: {}",
-                    String::from_utf8_lossy(&push_result.stderr)
+                    stderr
                 ));
             }
 
@@ -427,8 +478,26 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .and_then(|v| v.as_bool())
         .unwrap_or(config.defaults.docs.include_codebase);
 
+    // Calculate relative working directory for container (relative to git root)
+    let container_working_directory = if let Ok(relative_path) = project_dir.strip_prefix(&git_root) {
+        // Get the relative path from git root to working directory
+        relative_path.to_string_lossy().to_string()
+    } else if working_path.is_absolute() {
+        // Fallback: extract just the final component(s)
+        working_path.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(working_directory)
+            .to_string()
+    } else {
+        // If it's already relative, use it as-is
+        working_directory.to_string()
+    };
+
+    eprintln!("🐛 DEBUG: Local working directory: {}", working_directory);
+    eprintln!("🐛 DEBUG: Container working directory: {}", container_working_directory);
+
     let mut params = vec![
-        format!("working-directory={working_directory}"),
+        format!("working-directory={container_working_directory}"),
         format!("repository-url={repository_url}"),
         format!("source-branch={source_branch}"),
         format!("github-app={github_app}"),
@@ -582,6 +651,8 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .and_then(|v| v.as_bool())
         .unwrap_or(config.defaults.code.overwrite_memory);
 
+    eprintln!("🐛 DEBUG: Task workflow working directory: {}", working_directory);
+
     let mut params = vec![
         format!("task-id={task_id}"),
         format!("service-id={service}"),
@@ -670,7 +741,7 @@ fn handle_tool_calls(method: &str, params_map: &HashMap<String, Value>) -> Optio
                 }))),
                 Ok("task") => Some(handle_task_workflow(&arguments).map(|result| json!({
                     "content": [{
-                        "type": "text", 
+                        "type": "text",
                         "text": serde_json::to_string_pretty(&result).unwrap_or_else(|_| result.to_string())
                     }]
                 }))),
