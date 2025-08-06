@@ -27,7 +27,7 @@ storage:
 # Argo Workflows integration (requires Argo Workflows CRDs to be installed)
 argo:
   # Whether to create WorkflowTemplate resources (requires Argo Workflows)
-  enabled: false
+  enabled: true
 
 # Cleanup configuration (controller-based event-driven cleanup)
 cleanup:
