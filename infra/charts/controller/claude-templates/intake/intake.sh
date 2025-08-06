@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Force output to be unbuffered
+exec 2>&1
+set -x  # Enable command tracing temporarily
+
 # Add error trap for debugging
 trap 'echo "❌ Error occurred at line $LINENO with exit code $?. Last command: $BASH_COMMAND"; exit 1' ERR
 
@@ -17,24 +21,48 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
+# Debug: Show what's in the config file
+echo "📄 Config file contents:"
+cat "$CONFIG_FILE" || echo "Failed to cat config file"
+echo ""
+echo "---"
+
 # Parse configuration
 echo "📋 Loading configuration from ConfigMap..."
-PROJECT_NAME=$(jq -r '.project_name' "$CONFIG_FILE")
-REPOSITORY_URL=$(jq -r '.repository_url' "$CONFIG_FILE")
-GITHUB_APP=$(jq -r '.github_app' "$CONFIG_FILE")
-MODEL=$(jq -r '.model' "$CONFIG_FILE")
-NUM_TASKS=$(jq -r '.num_tasks' "$CONFIG_FILE")
-EXPAND_TASKS=$(jq -r '.expand_tasks' "$CONFIG_FILE")
-ANALYZE_COMPLEXITY=$(jq -r '.analyze_complexity' "$CONFIG_FILE")
 
-echo "🔍 Configuration loaded:"
-echo "  - Project: $PROJECT_NAME"
-echo "  - Repository: $REPOSITORY_URL"
-echo "  - GitHub App: $GITHUB_APP"
-echo "  - Model: $MODEL"
-echo "  - Num Tasks: $NUM_TASKS"
-echo "  - Expand: $EXPAND_TASKS"
-echo "  - Analyze: $ANALYZE_COMPLEXITY"
+# Parse each field with error handling
+PROJECT_NAME=$(jq -r '.project_name' "$CONFIG_FILE" 2>/dev/null || echo "")
+echo "  ✓ Project name: $PROJECT_NAME"
+
+REPOSITORY_URL=$(jq -r '.repository_url' "$CONFIG_FILE" 2>/dev/null || echo "")
+echo "  ✓ Repository URL: $REPOSITORY_URL"
+
+GITHUB_APP=$(jq -r '.github_app' "$CONFIG_FILE" 2>/dev/null || echo "")
+echo "  ✓ GitHub App: $GITHUB_APP"
+
+MODEL=$(jq -r '.model' "$CONFIG_FILE" 2>/dev/null || echo "claude-3-5-sonnet-20241022")
+echo "  ✓ Model: $MODEL"
+
+NUM_TASKS=$(jq -r '.num_tasks' "$CONFIG_FILE" 2>/dev/null || echo "10")
+echo "  ✓ Num tasks: $NUM_TASKS"
+
+EXPAND_TASKS=$(jq -r '.expand_tasks' "$CONFIG_FILE" 2>/dev/null || echo "false")
+echo "  ✓ Expand tasks: $EXPAND_TASKS"
+
+ANALYZE_COMPLEXITY=$(jq -r '.analyze_complexity' "$CONFIG_FILE" 2>/dev/null || echo "false")
+echo "  ✓ Analyze complexity: $ANALYZE_COMPLEXITY"
+
+echo "🔍 Configuration summary:"
+echo "  - Project: ${PROJECT_NAME:-[empty]}"
+echo "  - Repository: ${REPOSITORY_URL:-[empty]}"
+echo "  - GitHub App: ${GITHUB_APP:-[empty]}"
+echo "  - Model: ${MODEL:-[empty]}"
+echo "  - Num Tasks: ${NUM_TASKS:-[empty]}"
+echo "  - Expand: ${EXPAND_TASKS:-[empty]}"
+echo "  - Analyze: ${ANALYZE_COMPLEXITY:-[empty]}"
+
+# Turn off command tracing after configuration parsing
+set +x
 
 # If project name is empty, try to extract from PRD
 if [ -z "$PROJECT_NAME" ] || [ "$PROJECT_NAME" = "null" ]; then
@@ -122,14 +150,14 @@ if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ]; then
         
         # Configure GitHub CLI
         echo "🔧 Configuring GitHub CLI..."
-        echo "$GITHUB_TOKEN" | gh auth login --with-token || {
-            echo "⚠️ gh auth login returned non-zero, but continuing..."
+        echo "$GITHUB_TOKEN" | timeout 10 gh auth login --with-token || {
+            echo "⚠️ gh auth login returned non-zero or timed out, but continuing..."
         }
         
         # Check auth status (this may return non-zero even when auth is valid)
         echo "🔍 Checking GitHub CLI auth status..."
-        gh auth status || {
-            echo "⚠️ gh auth status returned non-zero, but token is likely still valid"
+        timeout 10 gh auth status || {
+            echo "⚠️ gh auth status returned non-zero or timed out, but token is likely still valid"
         }
         
         echo "✅ GitHub authentication configured"
@@ -181,20 +209,43 @@ fi
 git config user.name "Project Intake Bot"
 git config user.email "intake@5dlabs.com"
 
+# Check if npm is available
+if ! command -v npm &> /dev/null; then
+    echo "❌ npm is not installed or not in PATH"
+    echo "🔍 PATH: $PATH"
+    echo "🔍 Checking for node/npm..."
+    which node || echo "node not found"
+    which npm || echo "npm not found"
+    
+    # Try to install Node.js/npm if not available
+    echo "📦 Attempting to install Node.js..."
+    if command -v apk &> /dev/null; then
+        # Alpine Linux
+        apk add --no-cache nodejs npm
+    elif command -v apt-get &> /dev/null; then
+        # Debian/Ubuntu
+        apt-get update && apt-get install -y nodejs npm
+    else
+        echo "❌ Cannot install Node.js automatically"
+        exit 1
+    fi
+fi
+
 # Install TaskMaster globally with dependency resolution
 echo "📦 Installing TaskMaster..."
+echo "📋 Node version: $(node --version 2>/dev/null || echo 'node not found')"
+echo "📋 NPM version: $(npm --version 2>/dev/null || echo 'npm not found')"
+
 npm install -g task-master-ai@latest --force --legacy-peer-deps || {
     echo "⚠️ Standard install failed, trying alternative approach..."
     npm install -g task-master-ai@latest --no-optional --ignore-scripts || {
         echo "❌ TaskMaster installation failed"
-        echo "📋 Node version: $(node --version)"
-        echo "📋 NPM version: $(npm --version)"
         exit 1
     }
 }
 
 # Find where npm installed the binary
-NPM_BIN=$(npm bin -g)
+NPM_BIN=$(npm bin -g 2>/dev/null || echo "/usr/local/bin")
 echo "🔍 NPM global bin directory: $NPM_BIN"
 
 # Add npm global bin to PATH if not already there
