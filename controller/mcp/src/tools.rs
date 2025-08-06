@@ -7,7 +7,8 @@ pub fn get_tool_schemas() -> Value {
         "tools": [
             get_docs_schema(),
             get_task_schema(&HashMap::new()),
-            get_export_schema()
+            get_export_schema(),
+            get_intake_schema()
         ]
     })
 }
@@ -18,7 +19,8 @@ pub fn get_tool_schemas_with_config(agents: &HashMap<String, String>) -> Value {
         "tools": [
             get_docs_schema(),
             get_task_schema(agents),
-            get_export_schema()
+            get_export_schema(),
+            get_intake_schema()
         ]
     })
 }
@@ -149,6 +151,57 @@ fn get_export_schema() -> Value {
             "type": "object",
             "properties": {},
             "required": []
+        }
+    })
+}
+
+fn get_intake_schema() -> Value {
+    json!({
+        "name": "intake",
+        "description": "Process a new project intake by parsing PRD and generating TaskMaster tasks",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "prd_content": {
+                    "type": "string",
+                    "description": "Product Requirements Document content (required)"
+                },
+                "architecture_content": {
+                    "type": "string",
+                    "description": "Architecture document content (optional)"
+                },
+                "project_name": {
+                    "type": "string",
+                    "description": "Project name (optional, auto-detected from PRD if not provided)"
+                },
+                "repository": {
+                    "type": "string",
+                    "description": "Target repository URL for the project (optional, defaults to 5dlabs/projects)"
+                },
+                "num_tasks": {
+                    "type": "integer",
+                    "description": "Target number of tasks to generate (optional, defaults to 50)",
+                    "minimum": 1,
+                    "maximum": 200
+                },
+                "expand_tasks": {
+                    "type": "boolean",
+                    "description": "Whether to expand tasks with subtasks (optional, defaults to true)"
+                },
+                "analyze_complexity": {
+                    "type": "boolean",
+                    "description": "Whether to analyze task complexity (optional, defaults to true)"
+                },
+                "model": {
+                    "type": "string",
+                    "description": "Claude model to use for task generation (optional, defaults to opus)"
+                },
+                "agent": {
+                    "type": "string",
+                    "description": "GitHub App agent to use for PR creation (optional, defaults to Morgan)"
+                }
+            },
+            "required": ["prd_content"]
         }
     })
 }

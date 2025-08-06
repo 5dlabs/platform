@@ -27,5 +27,8 @@ tokio = { workspace = true }
 # Logging and tracing
 tracing = { workspace = true }
 
+# Time utilities
+chrono = { workspace = true }
+
 # Internal dependencies  
 common = { path = "../common" }
