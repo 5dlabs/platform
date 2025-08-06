@@ -92,7 +92,22 @@ generate_github_token() {
     git config --global --add credential.helper '!f() { echo "username=x-access-token"; echo "password=$GITHUB_TOKEN"; }; f'
     
     # Also authenticate gh CLI with the token
-    echo "$GITHUB_TOKEN" | gh auth login --with-token
+    echo "🔐 Authenticating gh CLI with GitHub App token..."
+    if echo "$GITHUB_TOKEN" | gh auth login --with-token; then
+        echo "✓ gh CLI authentication successful"
+    else
+        echo "❌ gh CLI authentication failed"
+        exit 1
+    fi
+    
+    # Verify gh CLI authentication status
+    echo "🔍 Verifying gh CLI authentication status..."
+    if gh auth status; then
+        echo "✓ gh CLI is properly authenticated"
+    else
+        echo "❌ gh CLI authentication verification failed"
+        exit 1
+    fi
     
     echo "✓ GitHub App authenticated successfully"
 }
