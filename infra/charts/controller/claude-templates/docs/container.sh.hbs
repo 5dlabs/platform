@@ -378,14 +378,30 @@ fi
 # PR creation
 echo "Creating pull request..."
 
-# Check for documentation changes
-if git diff --quiet HEAD -- .taskmaster/ 2>/dev/null && git diff --cached --quiet HEAD -- .taskmaster/ 2>/dev/null; then
-    UNTRACKED_DOCS=$(git ls-files --others --exclude-standard .taskmaster/ 2>/dev/null | wc -l)
-    if [ "$UNTRACKED_DOCS" -eq 0 ]; then
-        echo "No documentation changes found"
-        exit 0
-    fi
+# Ensure we're in the repository root for git operations
+cd /workspace
+
+# Check for documentation changes (including untracked files)
+echo "Checking for documentation changes..."
+echo "Current directory: $(pwd)"
+
+# Check for any changes in .taskmaster directory
+MODIFIED_DOCS=$(git diff HEAD -- .taskmaster/ 2>/dev/null | wc -l)
+STAGED_DOCS=$(git diff --cached HEAD -- .taskmaster/ 2>/dev/null | wc -l)
+UNTRACKED_DOCS=$(git ls-files --others --exclude-standard .taskmaster/ 2>/dev/null | wc -l)
+
+echo "Modified files: $MODIFIED_DOCS lines of diff"
+echo "Staged files: $STAGED_DOCS lines of diff"
+echo "Untracked files: $UNTRACKED_DOCS files"
+
+if [ "$MODIFIED_DOCS" -eq 0 ] && [ "$STAGED_DOCS" -eq 0 ] && [ "$UNTRACKED_DOCS" -eq 0 ]; then
+    echo "No documentation changes found in .taskmaster/"
+    echo "Checking if .taskmaster exists:"
+    ls -la .taskmaster/ 2>/dev/null || echo ".taskmaster directory not found"
+    exit 0
 fi
+
+echo "✓ Documentation changes detected, proceeding with PR creation..."
 
 # Create PR branch
 SOURCE_BRANCH=$(git rev-parse --abbrev-ref HEAD)
@@ -394,19 +410,43 @@ RANDOM_ID=$(date +%s | tail -c 6)
 PR_BRANCH="docs/{{#if task_id}}task-{{task_id}}{{else}}auto-gen{{/if}}-${TIMESTAMP}-${RANDOM_ID}"
 
 echo "Creating branch: $PR_BRANCH"
-git checkout -b "$PR_BRANCH"
+if ! git checkout -b "$PR_BRANCH"; then
+    echo "❌ Failed to create branch"
+    exit 1
+fi
 
 echo "Staging all .taskmaster changes..."
 git add .taskmaster/
 
 echo "Showing what will be committed:"
+STAGED_FILES=$(git status --porcelain | grep "^[AM]" | wc -l)
 git status --porcelain
 
+if [ "$STAGED_FILES" -eq 0 ]; then
+    echo "❌ No changes staged for commit"
+    echo "Current directory: $(pwd)"
+    echo "Looking for .taskmaster changes:"
+    find .taskmaster -type f -name "*.md" 2>/dev/null | head -10
+    exit 1
+fi
+
 echo "Committing changes..."
-git commit -m "docs: auto-generate Task Master documentation{{#if task_id}} for task {{task_id}}{{/if}}"
+if ! git commit -m "docs: auto-generate Task Master documentation{{#if task_id}} for task {{task_id}}{{/if}}"; then
+    echo "❌ Failed to commit changes"
+    echo "Git status:"
+    git status
+    exit 1
+fi
 
 echo "Pushing branch..."
-git push -u origin "$PR_BRANCH"
+if ! git push -u origin "$PR_BRANCH"; then
+    echo "❌ Failed to push branch"
+    echo "Retrying with verbose output..."
+    GIT_CURL_VERBOSE=1 git push -u origin "$PR_BRANCH" 2>&1
+    exit 1
+fi
+
+echo "✓ Branch pushed successfully"
 
 # Create PR
 if command -v gh >/dev/null 2>&1; then
@@ -446,7 +486,9 @@ if command -v gh >/dev/null 2>&1; then
     if [ "$PR_CREATED" = false ]; then
         echo "❌ Failed to create pull request after 3 attempts"
         echo "⚠️ Branch has been pushed, but PR creation failed"
-        echo "💡 You can manually create a PR at: https://github.com/{{repository_url}}/pull/new/$PR_BRANCH"
+        # Extract owner/repo from repository URL
+        REPO_PATH=$(echo "{{repository_url}}" | sed -E 's|https://github.com/||' | sed 's|\.git$||')
+        echo "💡 You can manually create a PR at: https://github.com/$REPO_PATH/pull/new/$PR_BRANCH"
         exit 1
     fi
 else
