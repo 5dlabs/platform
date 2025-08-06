@@ -119,12 +119,12 @@ CLONE_DIR="/tmp/repo-$(date +%s)"
 git clone "$REPOSITORY_URL" "$CLONE_DIR"
 cd "$CLONE_DIR"
 
+# Set PROJECT_DIR to the cloned repository directory
+PROJECT_DIR="$CLONE_DIR"
+
 # Configure git identity
 git config user.name "Project Intake Bot"
 git config user.email "intake@5dlabs.com"
-
-# Change to project directory
-cd "$PROJECT_DIR"
 
 # Install TaskMaster globally
 echo "📦 Installing TaskMaster..."
