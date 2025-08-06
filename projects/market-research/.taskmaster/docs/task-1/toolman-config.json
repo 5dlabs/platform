@@ -1,0 +1,19 @@
+{
+  "remoteTools": [
+    "brave_web_search"
+  ],
+  "localServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      "tools": [
+        "create_directory",
+        "write_file",
+        "read_text_file",
+        "list_directory",
+        "get_file_info"
+      ],
+      "workingDirectory": "project_root"
+    }
+  }
+}
