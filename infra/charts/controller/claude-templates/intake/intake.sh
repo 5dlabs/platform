@@ -170,6 +170,12 @@ echo "🔍 TaskMaster version: $(task-master --version)"
 echo "🔍 TaskMaster help for init:"
 task-master init --help || echo "Help failed"
 
+echo "🔍 TaskMaster general help:"
+task-master --help || echo "General help failed"
+
+echo "🔍 Available TaskMaster commands:"
+task-master help || echo "Help command failed"
+
 # Try the init command with verbose output
 echo "🔍 Running init command..."
 set -x  # Enable command tracing
@@ -197,6 +203,51 @@ ls -la .taskmaster/ 2>/dev/null || echo "No .taskmaster directory found"
 # Also check if any hidden files were created
 echo "📂 All files in directory (including hidden):"
 ls -la
+
+# If no .taskmaster directory was created, try alternative approaches
+if [ ! -d ".taskmaster" ]; then
+    echo "🔧 No .taskmaster directory found, trying alternative init approaches..."
+    
+    # Try init without --yes flag
+    echo "🔧 Trying init without --yes flag..."
+    set -x
+    task-master init \
+        --name "$PROJECT_NAME" \
+        --description "Auto-generated project from intake pipeline" \
+        --version "0.1.0" \
+        --rules "cursor"
+    set +x
+    
+    # Check if that worked
+    if [ -d ".taskmaster" ]; then
+        echo "✅ Alternative init method worked!"
+    else
+        echo "🔧 Trying init with minimal flags..."
+        set -x
+        task-master init --name "$PROJECT_NAME"
+        set +x
+        
+        # Check if that worked
+        if [ -d ".taskmaster" ]; then
+            echo "✅ Minimal init method worked!"
+        else
+            echo "🔧 Trying init with no flags..."
+            set -x
+            task-master init
+            set +x
+            
+            # Check if that worked
+            if [ -d ".taskmaster" ]; then
+                echo "✅ No-flag init method worked!"
+            else
+                echo "❌ All init methods failed, but continuing to see what other commands show..."
+            fi
+        fi
+    fi
+    
+    echo "📂 Final directory contents:"
+    ls -la
+fi
 
 # Copy PRD and architecture files after initialization
 echo "📋 Copying PRD and architecture files..."
