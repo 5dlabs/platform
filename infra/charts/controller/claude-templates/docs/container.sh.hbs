@@ -84,15 +84,15 @@ generate_github_token() {
     # Clean up temporary key file
     rm -f "$TEMP_KEY_FILE"
     
-    # Export the token for git to use
+    # Authenticate gh CLI with the token BEFORE exporting to environment
+    echo "$GITHUB_TOKEN" | gh auth login --with-token
+    
+    # NOW export the token for git to use
     export GITHUB_TOKEN
     
     # Configure git to use the token
     git config --global credential.helper store
     git config --global --add credential.helper '!f() { echo "username=x-access-token"; echo "password=$GITHUB_TOKEN"; }; f'
-    
-    # gh CLI will automatically use GITHUB_TOKEN environment variable
-    echo "🔐 GitHub CLI will use GITHUB_TOKEN environment variable for authentication"
     
     echo "✓ GitHub App authenticated successfully"
 }
