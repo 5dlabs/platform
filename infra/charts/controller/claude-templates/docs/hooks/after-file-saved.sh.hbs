@@ -74,51 +74,88 @@ fi
 
 echo "[Auto-save] Committed $TASK_NUM documentation"
 
-# Check if token needs refresh (if been > 30 minutes)
-TOKEN_AGE_FILE="/tmp/github-token-age"
-CURRENT_TIME=$(date +%s)
-
-if [ -f "$TOKEN_AGE_FILE" ]; then
-    LAST_REFRESH=$(cat "$TOKEN_AGE_FILE")
-    AGE=$((CURRENT_TIME - LAST_REFRESH))
-    
-    if [ $AGE -gt 1800 ]; then
-        echo "[Auto-save] Token is ${AGE}s old, refreshing..."
+# Token refresh function for hooks
+refresh_github_token_if_needed() {
+    # Check if token generation timestamp exists (set by main container script)
+    if [ -n "$TOKEN_GENERATED_AT" ]; then
+        NOW=$(date +%s)
+        TOKEN_AGE=$((NOW - TOKEN_GENERATED_AT))
         
-        # Only refresh if we have the required env vars
-        if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ] && [ -n "$INSTALLATION_ID" ]; then
-            # Generate new JWT
-            TEMP_KEY="/tmp/github-key-$$"
-            echo "$GITHUB_APP_PRIVATE_KEY" > "$TEMP_KEY"
-            chmod 600 "$TEMP_KEY"
-            
-            JWT_HEADER=$(printf '{"alg":"RS256","typ":"JWT"}' | base64 -w 0 | tr '+/' '-_' | tr -d '=')
-            NOW=$(date +%s)
-            EXP=$((NOW + 600))
-            JWT_PAYLOAD=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' "$NOW" "$EXP" "$GITHUB_APP_ID" | base64 -w 0 | tr '+/' '-_' | tr -d '=')
-            JWT_SIGNATURE=$(printf '%s.%s' "$JWT_HEADER" "$JWT_PAYLOAD" | openssl dgst -sha256 -sign "$TEMP_KEY" -binary | base64 -w 0 | tr '+/' '-_' | tr -d '=')
-            JWT_TOKEN="$JWT_HEADER.$JWT_PAYLOAD.$JWT_SIGNATURE"
-            
-            # Get new access token
-            NEW_TOKEN=$(curl -s -X POST \
-                -H "Authorization: Bearer $JWT_TOKEN" \
-                -H "Accept: application/vnd.github+json" \
-                "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens" | jq -r '.token')
-            
-            if [ -n "$NEW_TOKEN" ] && [ "$NEW_TOKEN" != "null" ]; then
-                export GITHUB_TOKEN="$NEW_TOKEN"
-                echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
-                echo "$CURRENT_TIME" > "$TOKEN_AGE_FILE"
-                echo "[Auto-save] Token refreshed successfully"
-            fi
-            
-            rm -f "$TEMP_KEY"
+        # Refresh if token is older than 50 minutes (tokens last 1 hour, refresh early to be safe)
+        if [ $TOKEN_AGE -lt 3000 ]; then
+            echo "[Auto-save] Token is still valid ($(($TOKEN_AGE / 60)) minutes old)"
+            return 0
         fi
+        
+        echo "[Auto-save] Token is $(($TOKEN_AGE / 60)) minutes old, refreshing..."
+    else
+        echo "[Auto-save] No token timestamp found, attempting refresh..."
     fi
-else
-    # First run, record current time
-    echo "$CURRENT_TIME" > "$TOKEN_AGE_FILE"
-fi
+    
+    # Check we have required credentials
+    if [ -z "$GITHUB_APP_PRIVATE_KEY" ] || [ -z "$GITHUB_APP_ID" ]; then
+        echo "[Auto-save] ⚠️ Missing GitHub App credentials, cannot refresh token"
+        return 1
+    fi
+    
+    # Create temporary key file
+    TEMP_KEY="/tmp/github-key-$$"
+    echo "$GITHUB_APP_PRIVATE_KEY" > "$TEMP_KEY"
+    chmod 600 "$TEMP_KEY"
+    
+    # Generate JWT token
+    JWT_HEADER=$(printf '{"alg":"RS256","typ":"JWT"}' | base64 -w 0 | tr '+/' '-_' | tr -d '=')
+    NOW=$(date +%s)
+    EXP=$((NOW + 600))
+    JWT_PAYLOAD=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' "$NOW" "$EXP" "$GITHUB_APP_ID" | base64 -w 0 | tr '+/' '-_' | tr -d '=')
+    JWT_SIGNATURE=$(printf '%s.%s' "$JWT_HEADER" "$JWT_PAYLOAD" | openssl dgst -sha256 -sign "$TEMP_KEY" -binary | base64 -w 0 | tr '+/' '-_' | tr -d '=')
+    JWT_TOKEN="$JWT_HEADER.$JWT_PAYLOAD.$JWT_SIGNATURE"
+    
+    # Get installation ID if not already set
+    if [ -z "$INSTALLATION_ID" ]; then
+        echo "[Auto-save] Getting installation ID..."
+        REPO_URL="{{repository_url}}"
+        REPO_OWNER=$(echo "$REPO_URL" | sed -E 's|https://github.com/([^/]+)/.*|\1|')
+        REPO_NAME=$(echo "$REPO_URL" | sed -E 's|https://github.com/[^/]+/([^/]+)(\.git)?|\1|')
+        
+        INSTALLATION_RESPONSE=$(curl -s -H "Authorization: Bearer $JWT_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/installation")
+        
+        INSTALLATION_ID=$(echo "$INSTALLATION_RESPONSE" | jq -r '.id')
+        
+        if [ "$INSTALLATION_ID" = "null" ] || [ -z "$INSTALLATION_ID" ]; then
+            echo "[Auto-save] ❌ Failed to get installation ID"
+            rm -f "$TEMP_KEY"
+            return 1
+        fi
+        export INSTALLATION_ID
+    fi
+    
+    # Get new access token
+    TOKEN_RESPONSE=$(curl -s -X POST \
+        -H "Authorization: Bearer $JWT_TOKEN" \
+        -H "Accept: application/vnd.github+json" \
+        "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens")
+    
+    NEW_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token')
+    
+    if [ -n "$NEW_TOKEN" ] && [ "$NEW_TOKEN" != "null" ]; then
+        export GITHUB_TOKEN="$NEW_TOKEN"
+        export TOKEN_GENERATED_AT=$(date +%s)
+        echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+        echo "[Auto-save] ✓ Token refreshed successfully"
+        rm -f "$TEMP_KEY"
+        return 0
+    else
+        echo "[Auto-save] ❌ Failed to refresh token: $TOKEN_RESPONSE"
+        rm -f "$TEMP_KEY"
+        return 1
+    fi
+}
+
+# Refresh token before push operations
+refresh_github_token_if_needed
 
 # Push with retries (run in background to not block Claude)
 (
