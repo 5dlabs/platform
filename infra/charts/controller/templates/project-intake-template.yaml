@@ -147,31 +147,30 @@ spec:
               secretKeyRef:
                 name: {{ include "controller.fullname" . }}-secrets
                 key: anthropic-api-key
-          # GitHub App credentials - dynamically selected based on workflow parameter
-          # The secret name is computed from the github-app parameter
-          # e.g., "5DLabs-Morgan" -> "github-app-5dlabs-morgan"
+          # GitHub App credentials - use the standardized secret name
+          # All GitHub App secrets follow the pattern: github-app-{normalized-name}
           - name: GITHUB_APP_ID
             valueFrom:
               secretKeyRef:
-                name: github-app-{{`{{workflow.parameters.github-app | lower | replace "_" "-" | replace " " "-"}}`}}
+                name: github-app-5dlabs-morgan
                 key: app-id
                 optional: true
           - name: GITHUB_APP_PRIVATE_KEY
             valueFrom:
               secretKeyRef:
-                name: github-app-{{`{{workflow.parameters.github-app | lower | replace "_" "-" | replace " " "-"}}`}}
+                name: github-app-5dlabs-morgan
                 key: private-key
                 optional: true
           - name: GITHUB_APP_CLIENT_ID
             valueFrom:
               secretKeyRef:
-                name: github-app-{{`{{workflow.parameters.github-app | lower | replace "_" "-" | replace " " "-"}}`}}
+                name: github-app-5dlabs-morgan
                 key: client-id
                 optional: true
           - name: GITHUB_APP_CLIENT_SECRET
             valueFrom:
               secretKeyRef:
-                name: github-app-{{`{{workflow.parameters.github-app | lower | replace "_" "-" | replace " " "-"}}`}}
+                name: github-app-5dlabs-morgan
                 key: client-secret
                 optional: true
       volumes:
