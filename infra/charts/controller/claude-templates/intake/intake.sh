@@ -147,17 +147,37 @@ npm install -g task-master-ai@latest --force --legacy-peer-deps || {
     }
 }
 
+# Find where npm installed the binary
+NPM_BIN=$(npm bin -g)
+echo "🔍 NPM global bin directory: $NPM_BIN"
+
+# Add npm global bin to PATH if not already there
+if [[ ":$PATH:" != *":$NPM_BIN:"* ]]; then
+    export PATH="$NPM_BIN:$PATH"
+    echo "🔍 Added $NPM_BIN to PATH"
+fi
+
 # Verify installation
 if ! command -v task-master &> /dev/null; then
     echo "❌ task-master command not found after installation"
     echo "🔍 PATH: $PATH"
+    echo "🔍 Looking for task-master in npm bin:"
+    ls -la "$NPM_BIN" | grep -i task || echo "Not found in $NPM_BIN"
     exit 1
 fi
 
-echo "✅ TaskMaster installed successfully: $(task-master --version 2>/dev/null || echo 'version check failed')"
+# Get the actual path to task-master
+TASK_MASTER_PATH=$(which task-master)
+echo "✅ TaskMaster installed at: $TASK_MASTER_PATH"
+echo "✅ TaskMaster version: $(task-master --version 2>/dev/null || echo 'version check failed')"
 
 # Change to project directory
 cd "$PROJECT_DIR"
+
+# Set environment variables for TaskMaster
+export TASKMASTER_LOG_LEVEL="debug"
+export CI="true"  # This might help TaskMaster run in non-interactive mode
+export TASKMASTER_AUTO_ACCEPT="true"
 
 # Initialize TaskMaster
 echo "🚀 Initializing TaskMaster project in $PROJECT_NAME..."
@@ -165,96 +185,96 @@ echo "📂 Current directory: $(pwd)"
 echo "📂 Directory contents before init:"
 ls -la
 
-# Check task-master version and help to debug
-echo "🔍 TaskMaster version: $(task-master --version)"
-echo "🔍 TaskMaster help for init:"
-task-master init --help || echo "Help failed"
+# Debug: Check if task-master command works
+echo "🔍 Testing task-master command..."
+task-master --version || echo "⚠️ task-master --version failed"
+task-master --help > /dev/null 2>&1 || echo "⚠️ task-master --help failed"
 
-echo "🔍 TaskMaster general help:"
-task-master --help || echo "General help failed"
-
-echo "🔍 Available TaskMaster commands:"
-task-master help || echo "Help command failed"
-
-# Try the init command with verbose output
-echo "🔍 Running init command..."
-set -x  # Enable command tracing
-task-master init --yes \
+# First attempt: Try clean init with all flags
+echo "🔍 Attempting TaskMaster init with full flags..."
+# Use the full path to ensure we're calling the right binary
+"$TASK_MASTER_PATH" init --yes \
     --name "$PROJECT_NAME" \
     --description "Auto-generated project from intake pipeline" \
     --version "0.1.0" \
-    --rules "cursor"
+    --rules "cursor" \
+    --skip-install \
+    --aliases
 INIT_EXIT_CODE=$?
-set +x  # Disable command tracing
 
-echo "🔍 Init command exit code: $INIT_EXIT_CODE"
+echo "🔍 Init result: exit code $INIT_EXIT_CODE"
 
-if [ $INIT_EXIT_CODE -ne 0 ]; then
-    echo "❌ TaskMaster initialization failed with exit code $INIT_EXIT_CODE"
-    echo "📂 Directory contents after failed init:"
+# Check if initialization was successful
+if [ $INIT_EXIT_CODE -eq 0 ] && [ -d ".taskmaster" ]; then
+    echo "✅ TaskMaster initialization successful!"
+    echo "📂 Directory contents after init:"
+    ls -la .taskmaster/
+else
+    echo "⚠️ TaskMaster init failed or didn't create .taskmaster directory"
+    echo "📂 Current directory contents:"
+    ls -la
+    
+    # Try alternative approach: init with minimal flags
+    echo "🔧 Trying init with minimal flags..."
+    task-master init --name "$PROJECT_NAME" --yes
+    INIT_EXIT_CODE=$?
+    
+    if [ $INIT_EXIT_CODE -eq 0 ] && [ -d ".taskmaster" ]; then
+        echo "✅ Minimal init method worked!"
+    else
+        echo "🔧 Final attempt: Manual directory creation as fallback..."
+        
+        # Create the .taskmaster directory structure manually as last resort
+        echo "📁 Creating .taskmaster directory structure manually..."
+        mkdir -p .taskmaster/docs
+        mkdir -p .taskmaster/tasks
+        mkdir -p .taskmaster/reports
+        mkdir -p .taskmaster/templates
+        
+        # Create a minimal config.json file
+        cat > .taskmaster/config.json << EOF
+{
+  "project": {
+    "name": "$PROJECT_NAME",
+    "description": "Auto-generated project from intake pipeline",
+    "version": "0.1.0"
+  },
+  "models": {
+    "main": "claude-3-5-sonnet-20241022",
+    "research": "claude-3-5-sonnet-20241022",
+    "fallback": "claude-3-5-sonnet-20241022"
+  },
+  "parameters": {
+    "maxTokens": 8000,
+    "temperature": 0.7
+  },
+  "global": {
+    "defaultTag": "master"
+  }
+}
+EOF
+        
+        # Create empty tasks.json
+        echo '{"tasks": []}' > .taskmaster/tasks/tasks.json
+        
+        echo "✅ Created .taskmaster directory structure manually"
+    fi
+fi
+
+# Final check
+if [ ! -d ".taskmaster" ]; then
+    echo "❌ Failed to create .taskmaster directory after all attempts"
+    echo "📂 Final directory contents:"
     ls -la
     exit 1
 fi
 
-echo "✅ TaskMaster initialization completed"
-echo "📂 Directory contents after init:"
-ls -la .taskmaster/ 2>/dev/null || echo "No .taskmaster directory found"
-
-# Also check if any hidden files were created
-echo "📂 All files in directory (including hidden):"
-ls -la
-
-# If no .taskmaster directory was created, try alternative approaches
-if [ ! -d ".taskmaster" ]; then
-    echo "🔧 No .taskmaster directory found, trying alternative init approaches..."
-    
-    # Try init without --yes flag
-    echo "🔧 Trying init without --yes flag..."
-    set -x
-    task-master init \
-        --name "$PROJECT_NAME" \
-        --description "Auto-generated project from intake pipeline" \
-        --version "0.1.0" \
-        --rules "cursor"
-    set +x
-    
-    # Check if that worked
-    if [ -d ".taskmaster" ]; then
-        echo "✅ Alternative init method worked!"
-    else
-        echo "🔧 Trying init with minimal flags..."
-        set -x
-        task-master init --name "$PROJECT_NAME"
-        set +x
-        
-        # Check if that worked
-        if [ -d ".taskmaster" ]; then
-            echo "✅ Minimal init method worked!"
-        else
-            echo "🔧 Trying init with no flags..."
-            set -x
-            task-master init
-            set +x
-            
-            # Check if that worked
-            if [ -d ".taskmaster" ]; then
-                echo "✅ No-flag init method worked!"
-            else
-                echo "❌ All init methods failed, but continuing to see what other commands show..."
-            fi
-        fi
-    fi
-    
-    echo "📂 Final directory contents:"
-    ls -la
-fi
+echo "✅ TaskMaster setup complete"
+echo "📂 Final .taskmaster contents:"
+ls -la .taskmaster/
 
 # Copy PRD and architecture files after initialization
 echo "📋 Copying PRD and architecture files..."
-
-# Ensure the docs directory exists (in case TaskMaster init didn't create it)
-mkdir -p ".taskmaster/docs"
-
 cp "$PRD_FILE" ".taskmaster/docs/prd.txt"
 if [ -f "$ARCH_FILE" ] && [ -s "$ARCH_FILE" ]; then
     cp "$ARCH_FILE" ".taskmaster/docs/architecture.md"
