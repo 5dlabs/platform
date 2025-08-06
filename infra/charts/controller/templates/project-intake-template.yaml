@@ -7,7 +7,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
   name: project-intake
-  namespace: {{ .Values.argo.namespace | default "argo" }}
+  namespace: {{ .Values.namespace | default "agent-platform" }}
   labels:
     {{- include "controller.labels" . | nindent 4 }}
     app.kubernetes.io/component: project-intake
