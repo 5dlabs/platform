@@ -278,9 +278,62 @@ if [ ! -d "$CLAUDE_WORK_DIR/.taskmaster" ]; then
   exit 1
 fi
 
-# Individual task files are used instead of tasks.json
-if [ ! -d "$CLAUDE_WORK_DIR/.taskmaster/docs" ]; then
-  echo "❌ .taskmaster/docs directory not found"
+# Ensure docs directory exists
+mkdir -p "$CLAUDE_WORK_DIR/.taskmaster/docs"
+
+# Handle task files - support both JSON and individual file formats
+echo "Setting up task files..."
+if [ -f "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" ]; then
+  echo "📋 Found tasks.json, generating individual task files..."
+  
+  # Use jq to extract tasks and create individual files (handle null values safely)
+  jq -r '.tasks[]? | select(.id != null) | "\(.id // "")|\(.title // "No Title")|\(.description // "")|\(.details // "")|\(.testStrategy // "")"' \
+    "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" | while IFS='|' read -r task_id title description details test_strategy; do
+    
+    if [ -n "$task_id" ] && [ "$task_id" != "null" ]; then
+      task_dir="$CLAUDE_WORK_DIR/.taskmaster/docs/task-$task_id"
+      mkdir -p "$task_dir"
+      
+      # Create task.md with formatted content
+      cat > "$task_dir/task.md" << EOF
+# Task $task_id: $title
+
+## Description
+$description
+
+## Implementation Details
+$details
+
+## Test Strategy
+$test_strategy
+EOF
+      
+      echo "✓ Generated docs/task-$task_id/task.md"
+    fi
+  done
+elif [ -d "$CLAUDE_WORK_DIR/.taskmaster/tasks" ] && [ "$(ls -A "$CLAUDE_WORK_DIR/.taskmaster/tasks" 2>/dev/null)" ]; then
+  echo "📋 Found individual task files, copying to docs directory..."
+  
+  # Copy individual task files from tasks/ to docs/ directory
+  for task_dir in "$CLAUDE_WORK_DIR/.taskmaster/tasks"/task-*; do
+    if [ -d "$task_dir" ]; then
+      task_name=$(basename "$task_dir")
+      target_dir="$CLAUDE_WORK_DIR/.taskmaster/docs/$task_name"
+      mkdir -p "$target_dir"
+      cp -r "$task_dir"/* "$target_dir/"
+      echo "✓ Copied $task_name to docs directory"
+    fi
+  done
+else
+  echo "❌ No task files found - expected either:"
+  echo "  - tasks.json at .taskmaster/tasks/tasks.json"
+  echo "  - Individual task directories at .taskmaster/tasks/task-*/"
+  exit 1
+fi
+
+# Verify we have task files to work with
+if [ ! -d "$CLAUDE_WORK_DIR/.taskmaster/docs" ] || [ -z "$(ls -A "$CLAUDE_WORK_DIR/.taskmaster/docs" 2>/dev/null)" ]; then
+  echo "❌ No task files available in .taskmaster/docs directory"
   exit 1
 fi
 
