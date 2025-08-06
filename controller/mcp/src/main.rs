@@ -723,59 +723,59 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
 #[allow(clippy::disallowed_macros)]
 fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     eprintln!("🚀 Processing project intake request");
-    
+
     // Get required PRD content
     let prd_content = arguments
         .get("prd_content")
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow!("PRD content is required"))?;
-    
+
     // Get optional parameters
     let architecture_content = arguments
         .get("architecture_content")
         .and_then(|v| v.as_str())
         .unwrap_or("");
-    
+
     let project_name = arguments
         .get("project_name")
         .and_then(|v| v.as_str())
         .unwrap_or("");
-    
+
     let repository = arguments
         .get("repository")
         .and_then(|v| v.as_str())
         .unwrap_or("https://github.com/5dlabs/projects");
-    
+
     let num_tasks = arguments
         .get("num_tasks")
         .and_then(|v| v.as_i64())
         .unwrap_or(50);
-    
+
     let expand_tasks = arguments
         .get("expand_tasks")
         .and_then(|v| v.as_bool())
         .unwrap_or(true);
-    
+
     let analyze_complexity = arguments
         .get("analyze_complexity")
         .and_then(|v| v.as_bool())
         .unwrap_or(true);
-    
+
     let model = arguments
         .get("model")
         .and_then(|v| v.as_str())
         .unwrap_or("claude-opus-4-20250514");
-    
+
     let agent = arguments
         .get("agent")
         .and_then(|v| v.as_str())
         .unwrap_or("5DLabs-Morgan");
-    
+
     // Submit Argo workflow
     let workflow_name = format!("intake-{}", chrono::Utc::now().timestamp());
-    
+
     let output = std::process::Command::new("argo")
-        .args(&[
+        .args([
             "submit",
             "--from",
             "workflowtemplate/project-intake",
@@ -784,43 +784,42 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
             "--name",
             &workflow_name,
             "-p",
-            &format!("prd-content={}", prd_content),
+            &format!("prd-content={prd_content}"),
             "-p",
-            &format!("architecture-content={}", architecture_content),
+            &format!("architecture-content={architecture_content}"),
             "-p",
-            &format!("project-name={}", project_name),
+            &format!("project-name={project_name}"),
             "-p",
-            &format!("repository-url={}", repository),
+            &format!("repository-url={repository}"),
             "-p",
-            &format!("github-app={}", agent),
+            &format!("github-app={agent}"),
             "-p",
-            &format!("model={}", model),
+            &format!("model={model}"),
             "-p",
-            &format!("num-tasks={}", num_tasks),
+            &format!("num-tasks={num_tasks}"),
             "-p",
-            &format!("expand-tasks={}", expand_tasks),
+            &format!("expand-tasks={expand_tasks}"),
             "-p",
-            &format!("analyze-complexity={}", analyze_complexity),
+            &format!("analyze-complexity={analyze_complexity}"),
             "--wait=false",
             "-o",
-            "json"
+            "json",
         ])
         .output();
-    
+
     match output {
         Ok(result) if result.status.success() => {
             let workflow_json: Value = serde_json::from_slice(&result.stdout)
                 .unwrap_or_else(|_| json!({"message": "Workflow submitted"}));
-            
-            eprintln!("✅ Project intake workflow submitted: {}", workflow_name);
+
+                        eprintln!("✅ Project intake workflow submitted: {workflow_name}");
             
             Ok(json!({
                 "status": "submitted",
                 "workflow_name": workflow_name,
                 "workflow": workflow_json,
                 "message": format!(
-                    "Project intake initiated. PRD will be processed to generate TaskMaster tasks. Target: {} tasks",
-                    num_tasks
+                    "Project intake initiated. PRD will be processed to generate TaskMaster tasks. Target: {num_tasks} tasks"
                 ),
                 "details": {
                     "repository": repository,
@@ -832,12 +831,12 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         }
         Ok(result) => {
             let error_msg = String::from_utf8_lossy(&result.stderr);
-            eprintln!("❌ Failed to submit intake workflow: {}", error_msg);
-            Err(anyhow!("Failed to submit intake workflow: {}", error_msg))
+            eprintln!("❌ Failed to submit intake workflow: {error_msg}");
+            Err(anyhow!("Failed to submit intake workflow: {error_msg}"))
         }
         Err(e) => {
-            eprintln!("❌ Failed to execute argo command: {}", e);
-            Err(anyhow!("Failed to execute argo command: {}", e))
+            eprintln!("❌ Failed to execute argo command: {e}");
+            Err(anyhow!("Failed to execute argo command: {e}"))
         }
     }
 }

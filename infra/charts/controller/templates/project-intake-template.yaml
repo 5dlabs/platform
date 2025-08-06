@@ -110,7 +110,7 @@ spec:
           valueFrom:
             path: /tmp/configmap-name
       script:
-        image: ghcr.io/5dlabs/controller:{{ .Values.controller.image.tag }}
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
         command: ["/bin/sh"]
         source: |
           #!/bin/sh
@@ -161,8 +161,8 @@ spec:
         parameters:
         - name: configmap-name
       container:
-        image: {{ .Values.agents.claude.image | default "ghcr.io/5dlabs/claude-code:latest" }}
-        imagePullPolicy: {{ .Values.agents.claude.imagePullPolicy | default "Always" }}
+        image: {{ .Values.agent.image.repository }}:{{ .Values.agent.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.agent.image.pullPolicy | default "Always" }}
         command: ["/bin/bash"]
         args: ["/intake-files/intake.sh"]
         workingDir: /workspace
@@ -223,7 +223,7 @@ spec:
         parameters:
         - name: configmap-name
       script:
-        image: ghcr.io/5dlabs/controller:{{ .Values.controller.image.tag }}
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
         command: ["/bin/sh"]
         source: |
           #!/bin/sh
