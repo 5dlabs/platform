@@ -242,14 +242,12 @@ fn get_git_remote_url() -> Result<String> {
 fn get_git_current_branch_in_dir(dir: Option<&Path>) -> Result<String> {
     let mut cmd = Command::new("git");
     cmd.args(["branch", "--show-current"]);
-    
+
     if let Some(dir) = dir {
         cmd.current_dir(dir);
     }
-    
-    let output = cmd
-        .output()
-        .context("Failed to execute git command")?;
+
+    let output = cmd.output().context("Failed to execute git command")?;
 
     if output.status.success() {
         let branch = String::from_utf8(output.stdout)?.trim().to_string();
@@ -268,11 +266,11 @@ fn get_git_current_branch_in_dir(dir: Option<&Path>) -> Result<String> {
 fn get_git_repository_url_in_dir(dir: Option<&Path>) -> Result<String> {
     let mut cmd = Command::new("git");
     cmd.args(["remote", "get-url", "origin"]);
-    
+
     if let Some(dir) = dir {
         cmd.current_dir(dir);
     }
-    
+
     let output = cmd
         .output()
         .context("Failed to execute git remote command")?;
@@ -283,7 +281,7 @@ fn get_git_repository_url_in_dir(dir: Option<&Path>) -> Result<String> {
     }
 
     let url = String::from_utf8(output.stdout)?.trim().to_string();
-    
+
     // Parse GitHub URL to get org/repo format
     // Handles both https://github.com/org/repo.git and git@github.com:org/repo.git
     if url.contains("github.com/") {
@@ -301,7 +299,7 @@ fn get_git_repository_url_in_dir(dir: Option<&Path>) -> Result<String> {
             return Ok(org_repo.to_string());
         }
     }
-    
+
     Err(anyhow!("Could not parse repository URL: {}", url))
 }
 
@@ -745,20 +743,20 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     ];
 
     // Check for requirements.yaml file in the task directory
-    let requirements_path = format!(
-        "{docs_project_directory}/task-{task_id}/requirements.yaml"
-    );
-    
+    let requirements_path = format!("{docs_project_directory}/task-{task_id}/requirements.yaml");
+
     if Path::new(&requirements_path).exists() {
         eprintln!("📋 Found requirements.yaml for task {task_id}");
-        let requirements_content = std::fs::read_to_string(&requirements_path)
-            .context(format!("Failed to read requirements file: {requirements_path}"))?;
-        
+        let requirements_content = std::fs::read_to_string(&requirements_path).context(format!(
+            "Failed to read requirements file: {requirements_path}"
+        ))?;
+
         // Base64 encode the requirements YAML
-        use base64::{Engine as _, engine::general_purpose};
-        let encoded_requirements = general_purpose::STANDARD.encode(requirements_content.as_bytes());
+        use base64::{engine::general_purpose, Engine as _};
+        let encoded_requirements =
+            general_purpose::STANDARD.encode(requirements_content.as_bytes());
         params.push(format!("task-requirements={encoded_requirements}"));
-        
+
         eprintln!("✓ Task requirements encoded and added to workflow parameters");
     } else {
         // Fall back to old env/env_from_secrets parameters if provided
@@ -769,7 +767,8 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         }
 
         // Handle env_from_secrets array - convert to JSON string for workflow parameter
-        if let Some(env_from_secrets) = arguments.get("env_from_secrets").and_then(|v| v.as_array()) {
+        if let Some(env_from_secrets) = arguments.get("env_from_secrets").and_then(|v| v.as_array())
+        {
             let env_from_secrets_json = serde_json::to_string(env_from_secrets)?;
             params.push(format!("envFromSecrets={env_from_secrets_json}"));
         }
@@ -837,39 +836,47 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     let project_path = workspace_dir.join(project_name);
     let intake_path = project_path.join("intake");
     let prd_file = intake_path.join("prd.txt");
-    
+
     let prd_content = if let Some(content) = arguments.get("prd_content").and_then(|v| v.as_str()) {
         // Allow override via parameter for compatibility
         content.to_string()
     } else if prd_file.exists() {
-        eprintln!("📋 Reading PRD from {}/intake/prd.txt", project_name);
+        eprintln!("📋 Reading PRD from {project_name}/intake/prd.txt");
         std::fs::read_to_string(&prd_file)
-            .with_context(|| format!("Failed to read {}/intake/prd.txt", project_name))?
+            .with_context(|| format!("Failed to read {project_name}/intake/prd.txt"))?
     } else {
-        return Err(anyhow!("No PRD found. Please create {}/intake/prd.txt or provide prd_content parameter", project_name));
+        return Err(anyhow!(
+            "No PRD found. Please create {}/intake/prd.txt or provide prd_content parameter",
+            project_name
+        ));
     };
 
     // Read optional architecture file
     let arch_file = intake_path.join("architecture.md");
-    let architecture_content = if let Some(content) = arguments.get("architecture_content").and_then(|v| v.as_str()) {
+    let architecture_content = if let Some(content) = arguments
+        .get("architecture_content")
+        .and_then(|v| v.as_str())
+    {
         content.to_string()
     } else if arch_file.exists() {
-        eprintln!("🏗️ Reading architecture from {}/intake/architecture.md", project_name);
+        eprintln!("🏗️ Reading architecture from {project_name}/intake/architecture.md");
         std::fs::read_to_string(&arch_file)
-            .with_context(|| format!("Failed to read {}/intake/architecture.md", project_name))?
+            .with_context(|| format!("Failed to read {project_name}/intake/architecture.md"))?
     } else {
         String::new()
     };
 
     // Get configuration
-    let config = CTO_CONFIG.get().ok_or_else(|| anyhow!("Configuration not loaded"))?;
-    
+    let config = CTO_CONFIG
+        .get()
+        .ok_or_else(|| anyhow!("Configuration not loaded"))?;
+
     // Auto-detect repository from git (using workspace directory)
     eprintln!("🔍 Auto-detecting repository from git...");
     let repository_name = get_git_repository_url_in_dir(Some(&workspace_dir))?;
     eprintln!("📦 Using repository: {repository_name}");
     let repository_url = format!("https://github.com/{repository_name}");
-    
+
     // Auto-detect current branch (using workspace directory)
     eprintln!("🌿 Auto-detecting git branch...");
     let branch = get_git_current_branch_in_dir(Some(&workspace_dir))?;
@@ -878,20 +885,22 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     // Use configuration values with defaults
     let github_app = &config.defaults.intake.github_app;
     let model = &config.defaults.intake.model;
-    let num_tasks = 50;  // Standard task count
-    let expand_tasks = true;  // Always expand for detailed planning
-    let analyze_complexity = true;  // Always analyze for better breakdown
-    
+    let num_tasks = 50; // Standard task count
+    let expand_tasks = true; // Always expand for detailed planning
+    let analyze_complexity = true; // Always analyze for better breakdown
+
     eprintln!("🤖 Using GitHub App: {github_app}");
     eprintln!("🧠 Using model: {model}");
 
     // Create a ConfigMap with the intake files to avoid YAML escaping issues
-    let configmap_name = format!("intake-{}-{}", 
-        project_name.to_lowercase().replace(' ', "-"), 
-        chrono::Utc::now().timestamp());
-    
+    let configmap_name = format!(
+        "intake-{}-{}",
+        project_name.to_lowercase().replace(' ', "-"),
+        chrono::Utc::now().timestamp()
+    );
+
     eprintln!("📦 Creating ConfigMap: {configmap_name}");
-    
+
     // Create ConfigMap with the intake content
     let config_json = serde_json::json!({
         "project_name": project_name,
@@ -902,7 +911,7 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         "expand_tasks": expand_tasks,
         "analyze_complexity": analyze_complexity
     });
-    
+
     // Create the ConfigMap using kubectl
     let cm_output = std::process::Command::new("kubectl")
         .args([
@@ -913,14 +922,14 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
             "agent-platform",
             &format!("--from-literal=prd.txt={prd_content}"),
             &format!("--from-literal=architecture.md={architecture_content}"),
-            &format!("--from-literal=config.json={}", config_json.to_string()),
+            &format!("--from-literal=config.json={config_json}"),
         ])
         .output();
-    
+
     if let Err(e) = cm_output {
         return Err(anyhow!("Failed to create ConfigMap: {}", e));
     }
-    
+
     if let Ok(output) = cm_output {
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -969,8 +978,8 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
             let workflow_json: Value = serde_json::from_slice(&result.stdout)
                 .unwrap_or_else(|_| json!({"message": "Workflow submitted"}));
 
-                        eprintln!("✅ Project intake workflow submitted: {workflow_name}");
-            
+            eprintln!("✅ Project intake workflow submitted: {workflow_name}");
+
             Ok(json!({
                 "status": "submitted",
                 "workflow_name": workflow_name,
