@@ -408,6 +408,7 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     params.push(format!("include-codebase={include_codebase}"));
     
     eprintln!("🐛 DEBUG: Docs workflow submitting with model: {}", model);
+    eprintln!("🐛 DEBUG: Full Argo parameters: {:?}", params);
     
     let mut args = vec![
         "submit",

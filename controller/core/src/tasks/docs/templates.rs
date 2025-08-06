@@ -126,8 +126,13 @@ impl DocsTemplateGenerator {
                 ))
             })?;
 
+        // Debug logging to trace model value
+        let model_value = docs_run.spec.model.as_deref().unwrap_or("");
+        tracing::info!("🐛 DEBUG: DocsRun template - model from spec: {:?}", docs_run.spec.model);
+        tracing::info!("🐛 DEBUG: DocsRun template - model value for template: {}", model_value);
+        
         let context = json!({
-            "model": docs_run.spec.model.as_deref().unwrap_or(""),
+            "model": model_value,
             "github_app": docs_run.spec.github_app.as_deref().unwrap_or(""),
             "api_key_secret_name": config.secrets.api_key_secret_name,
             "api_key_secret_key": config.secrets.api_key_secret_key
