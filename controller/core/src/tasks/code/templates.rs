@@ -1,6 +1,6 @@
+use crate::crds::CodeRun;
 use crate::tasks::config::ControllerConfig;
 use crate::tasks::types::Result;
-use crate::crds::CodeRun;
 use handlebars::Handlebars;
 use serde_json::json;
 use std::collections::BTreeMap;
@@ -124,9 +124,7 @@ impl CodeTemplateGenerator {
         });
 
         handlebars.render("claude_memory", &context).map_err(|e| {
-            crate::tasks::types::Error::ConfigError(format!(
-                "Failed to render CLAUDE.md: {e}"
-            ))
+            crate::tasks::types::Error::ConfigError(format!("Failed to render CLAUDE.md: {e}"))
         })
     }
 
@@ -152,9 +150,7 @@ impl CodeTemplateGenerator {
         });
 
         handlebars.render("claude_settings", &context).map_err(|e| {
-            crate::tasks::types::Error::ConfigError(format!(
-                "Failed to render settings.json: {e}"
-            ))
+            crate::tasks::types::Error::ConfigError(format!("Failed to render settings.json: {e}"))
         })
     }
 
@@ -162,8 +158,6 @@ impl CodeTemplateGenerator {
         // MCP config is currently static, so just load and return the template content
         Self::load_template("code/mcp.json.hbs")
     }
-
-
 
     fn generate_coding_guidelines(code_run: &CodeRun) -> Result<String> {
         let mut handlebars = Handlebars::new();
@@ -221,7 +215,6 @@ impl CodeTemplateGenerator {
                 ))
             })
     }
-
 
     fn generate_hook_scripts(code_run: &CodeRun) -> Result<BTreeMap<String, String>> {
         let mut hook_scripts = BTreeMap::new();

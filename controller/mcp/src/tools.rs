@@ -23,7 +23,6 @@ pub fn get_tool_schemas_with_config(agents: &HashMap<String, String>) -> Value {
     })
 }
 
-
 fn get_docs_schema() -> Value {
     json!({
         "name": "docs",
@@ -83,7 +82,7 @@ fn get_task_schema(agents: &HashMap<String, String>) -> Value {
                     "description": "Documentation repository URL. Optional if defaults.code.docsRepository is set in config."
                 },
                 "agent": {
-                    "type": "string", 
+                    "type": "string",
                     "description": if agents.is_empty() {
                         "Agent name for task assignment".to_string()
                     } else {

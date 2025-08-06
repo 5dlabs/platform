@@ -21,9 +21,9 @@
 //! This crate provides the core functionality for the unified orchestration service,
 //! including Kubernetes client wrapper, job orchestration, and request handling.
 
-pub mod tasks;
 pub mod crds;
+pub mod tasks;
 
 // Re-export commonly used types
-pub use tasks::config::ControllerConfig;
 pub use crds::{CodeRun, CodeRunSpec, CodeRunStatus, DocsRun, DocsRunSpec, DocsRunStatus};
+pub use tasks::config::ControllerConfig;

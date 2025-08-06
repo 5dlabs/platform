@@ -60,7 +60,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    info!("Starting 5D Labs Controller Service v{}", env!("CARGO_PKG_VERSION"));
+    info!(
+        "Starting 5D Labs Controller Service v{}",
+        env!("CARGO_PKG_VERSION")
+    );
 
     // Initialize Kubernetes client and controller
     let client = kube::Client::try_default().await?;

@@ -1,6 +1,6 @@
+use crate::crds::DocsRun;
 use crate::tasks::config::ControllerConfig;
 use crate::tasks::types::Result;
-use crate::crds::DocsRun;
 use handlebars::Handlebars;
 use serde_json::json;
 use std::collections::BTreeMap;
@@ -106,9 +106,7 @@ impl DocsTemplateGenerator {
         });
 
         handlebars.render("claude_memory", &context).map_err(|e| {
-            crate::tasks::types::Error::ConfigError(format!(
-                "Failed to render CLAUDE.md: {e}"
-            ))
+            crate::tasks::types::Error::ConfigError(format!("Failed to render CLAUDE.md: {e}"))
         })
     }
 
@@ -128,9 +126,15 @@ impl DocsTemplateGenerator {
 
         // Debug logging to trace model value
         let model_value = docs_run.spec.model.as_deref().unwrap_or("");
-        tracing::info!("🐛 DEBUG: DocsRun template - model from spec: {:?}", docs_run.spec.model);
-        tracing::info!("🐛 DEBUG: DocsRun template - model value for template: {}", model_value);
-        
+        tracing::info!(
+            "🐛 DEBUG: DocsRun template - model from spec: {:?}",
+            docs_run.spec.model
+        );
+        tracing::info!(
+            "🐛 DEBUG: DocsRun template - model value for template: {}",
+            model_value
+        );
+
         let context = json!({
             "model": model_value,
             "github_app": docs_run.spec.github_app.as_deref().unwrap_or(""),
@@ -139,9 +143,7 @@ impl DocsTemplateGenerator {
         });
 
         handlebars.render("claude_settings", &context).map_err(|e| {
-            crate::tasks::types::Error::ConfigError(format!(
-                "Failed to render settings.json: {e}"
-            ))
+            crate::tasks::types::Error::ConfigError(format!("Failed to render settings.json: {e}"))
         })
     }
 
@@ -173,9 +175,7 @@ impl DocsTemplateGenerator {
         });
 
         handlebars.render("docs_prompt", &context).map_err(|e| {
-            crate::tasks::types::Error::ConfigError(format!(
-                "Failed to render docs prompt: {e}"
-            ))
+            crate::tasks::types::Error::ConfigError(format!("Failed to render docs prompt: {e}"))
         })
     }
 
@@ -183,17 +183,18 @@ impl DocsTemplateGenerator {
 
     fn load_toolman_catalog_data() -> Result<serde_json::Value> {
         const TOOLMAN_CATALOG_PATH: &str = "/toolman-catalog/tool-catalog.json";
-        
+
         match fs::read_to_string(TOOLMAN_CATALOG_PATH) {
-            Ok(catalog_json) => {
-                serde_json::from_str(&catalog_json).map_err(|e| {
-                    crate::tasks::types::Error::ConfigError(format!(
-                        "Failed to parse toolman catalog JSON: {e}"
-                    ))
-                })
-            }
+            Ok(catalog_json) => serde_json::from_str(&catalog_json).map_err(|e| {
+                crate::tasks::types::Error::ConfigError(format!(
+                    "Failed to parse toolman catalog JSON: {e}"
+                ))
+            }),
             Err(e) => {
-                debug!("Toolman catalog not found at {}: {}", TOOLMAN_CATALOG_PATH, e);
+                debug!(
+                    "Toolman catalog not found at {}: {}",
+                    TOOLMAN_CATALOG_PATH, e
+                );
                 // Return empty catalog structure if toolman ConfigMap is not available
                 Ok(json!({
                     "local": {},
@@ -209,7 +210,7 @@ impl DocsTemplateGenerator {
 
     fn count_total_tools(catalog_data: &serde_json::Value) -> u32 {
         let mut count = 0;
-        
+
         if let Some(local) = catalog_data.get("local").and_then(|v| v.as_object()) {
             for server in local.values() {
                 if let Some(tools) = server.get("tools").and_then(|v| v.as_array()) {
@@ -217,7 +218,7 @@ impl DocsTemplateGenerator {
                 }
             }
         }
-        
+
         if let Some(remote) = catalog_data.get("remote").and_then(|v| v.as_object()) {
             for server in remote.values() {
                 if let Some(tools) = server.get("tools").and_then(|v| v.as_array()) {
@@ -225,24 +226,35 @@ impl DocsTemplateGenerator {
                 }
             }
         }
-        
+
         count
     }
 
     fn render_toolman_catalog_markdown(catalog_data: &serde_json::Value) -> Result<String> {
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(false);
-        
+
         // Register json helper for proper JSON serialization
         handlebars.register_helper(
             "json",
-            Box::new(|h: &handlebars::Helper, _: &Handlebars, _: &handlebars::Context, _: &mut handlebars::RenderContext, out: &mut dyn handlebars::Output| -> handlebars::HelperResult {
-                let param = h.param(0).ok_or(handlebars::RenderErrorReason::ParamNotFoundForIndex("json", 0))?;
-                let json_str = serde_json::to_string(param.value())
-                    .map_err(|e| handlebars::RenderErrorReason::NestedError(Box::new(e)))?;
-                out.write(&json_str)?;
-                Ok(())
-            }),
+            Box::new(
+                |h: &handlebars::Helper,
+                 _: &Handlebars,
+                 _: &handlebars::Context,
+                 _: &mut handlebars::RenderContext,
+                 out: &mut dyn handlebars::Output|
+                 -> handlebars::HelperResult {
+                    let param =
+                        h.param(0)
+                            .ok_or(handlebars::RenderErrorReason::ParamNotFoundForIndex(
+                                "json", 0,
+                            ))?;
+                    let json_str = serde_json::to_string(param.value())
+                        .map_err(|e| handlebars::RenderErrorReason::NestedError(Box::new(e)))?;
+                    out.write(&json_str)?;
+                    Ok(())
+                },
+            ),
         );
 
         let template = Self::load_template("docs/toolman-catalog.md.hbs")?;
@@ -254,7 +266,7 @@ impl DocsTemplateGenerator {
                     "Failed to register toolman catalog markdown template: {e}"
                 ))
             })?;
-        
+
         let context = json!({
             "toolman_catalog": catalog_data,
             "generated_timestamp": std::time::SystemTime::now()
@@ -264,11 +276,13 @@ impl DocsTemplateGenerator {
             "total_tool_count": Self::count_total_tools(catalog_data)
         });
 
-        handlebars.render("toolman_catalog_markdown", &context).map_err(|e| {
-            crate::tasks::types::Error::ConfigError(format!(
-                "Failed to render toolman catalog markdown: {e}"
-            ))
-        })
+        handlebars
+            .render("toolman_catalog_markdown", &context)
+            .map_err(|e| {
+                crate::tasks::types::Error::ConfigError(format!(
+                    "Failed to render toolman catalog markdown: {e}"
+                ))
+            })
     }
 
     fn generate_hook_scripts(docs_run: &DocsRun) -> Result<BTreeMap<String, String>> {

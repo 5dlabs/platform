@@ -8,8 +8,8 @@ use std::sync::Arc;
 use tracing::{debug, error, info, instrument, Instrument};
 
 pub mod code;
-pub mod docs;
 pub mod config;
+pub mod docs;
 pub mod types;
 
 // Re-export commonly used items
@@ -39,29 +39,20 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
 
             // Validate configuration has required fields
             if let Err(validation_error) = cfg.validate() {
-                error!(
-                    "Configuration validation failed: {}",
-                    validation_error
-                );
+                error!("Configuration validation failed: {}", validation_error);
                 return Err(Error::ConfigError(validation_error.to_string()));
             }
             debug!("Configuration validation passed");
             cfg
         }
         Err(e) => {
-            error!(
-                "Failed to load configuration, using defaults: {}",
-                e
-            );
+            error!("Failed to load configuration, using defaults: {}", e);
             debug!("Creating default configuration...");
             let default_config = ControllerConfig::default();
 
             // Validate default configuration
             if let Err(validation_error) = default_config.validate() {
-                error!(
-                    "Default configuration is invalid: {}",
-                    validation_error
-                );
+                error!("Default configuration is invalid: {}", validation_error);
                 return Err(Error::ConfigError(validation_error.to_string()));
             }
             debug!("Default configuration validation passed");

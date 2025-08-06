@@ -1,6 +1,6 @@
 use super::resources::CodeResourceManager;
-use crate::tasks::types::{Context, Result, CODE_FINALIZER_NAME};
 use crate::crds::CodeRun;
+use crate::tasks::types::{Context, Result, CODE_FINALIZER_NAME};
 use k8s_openapi::api::{
     batch::v1::Job,
     core::v1::{ConfigMap, PersistentVolumeClaim},
@@ -15,10 +15,7 @@ use tracing::{info, instrument};
 
 #[instrument(skip(ctx), fields(code_run_name = %code_run.name_any(), namespace = %ctx.namespace))]
 pub async fn reconcile_code_run(code_run: Arc<CodeRun>, ctx: Arc<Context>) -> Result<Action> {
-    info!(
-        "🎯 Starting reconcile for CodeRun: {}",
-        code_run.name_any()
-    );
+    info!("🎯 Starting reconcile for CodeRun: {}", code_run.name_any());
 
     let namespace = &ctx.namespace;
     let client = &ctx.client;
@@ -47,18 +44,21 @@ pub async fn reconcile_code_run(code_run: Arc<CodeRun>, ctx: Arc<Context>) -> Re
     .map_err(|e| match e {
         kube::runtime::finalizer::Error::ApplyFailed(err) => err,
         kube::runtime::finalizer::Error::CleanupFailed(err) => err,
-        kube::runtime::finalizer::Error::AddFinalizer(e) => crate::tasks::types::Error::KubeError(e),
-        kube::runtime::finalizer::Error::RemoveFinalizer(e) => crate::tasks::types::Error::KubeError(e),
-        kube::runtime::finalizer::Error::UnnamedObject => crate::tasks::types::Error::MissingObjectKey,
+        kube::runtime::finalizer::Error::AddFinalizer(e) => {
+            crate::tasks::types::Error::KubeError(e)
+        }
+        kube::runtime::finalizer::Error::RemoveFinalizer(e) => {
+            crate::tasks::types::Error::KubeError(e)
+        }
+        kube::runtime::finalizer::Error::UnnamedObject => {
+            crate::tasks::types::Error::MissingObjectKey
+        }
         kube::runtime::finalizer::Error::InvalidFinalizer => {
             crate::tasks::types::Error::ConfigError("Invalid finalizer name".to_string())
         }
     })?;
 
-    info!(
-        "🏁 Reconcile completed with result: {:?}",
-        result
-    );
+    info!("🏁 Reconcile completed with result: {:?}", result);
 
     Ok(result)
 }

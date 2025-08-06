@@ -1,6 +1,6 @@
+use crate::crds::DocsRun;
 use crate::tasks::config::ControllerConfig;
 use crate::tasks::types::{github_app_secret_name, ssh_secret_name, Context, Result};
-use crate::crds::DocsRun;
 use k8s_openapi::api::{batch::v1::Job, core::v1::ConfigMap};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::{ObjectMeta, OwnerReference};
 use kube::api::{Api, DeleteParams, ListParams, PostParams};
@@ -172,13 +172,13 @@ impl<'a> DocsResourceManager<'a> {
             .map(|uid| &uid[..8]) // Use first 8 chars of UID for uniqueness
             .unwrap_or("nouid");
         let context_version = 1; // Docs don't have context versions, always 1
-        
+
         // Add timestamp to ensure absolute uniqueness and prevent any caching issues
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        
+
         format!("docs-{namespace}-{name}-{uid_suffix}-v{context_version}-{timestamp}-files")
             .replace(['_', '.'], "-")
             .to_lowercase()
@@ -324,7 +324,7 @@ impl<'a> DocsResourceManager<'a> {
         error!("✅ RESOURCE_MANAGER: Created docs job: {}", job_name);
 
         // Update status using legacy status manager if needed
-                        if let Err(e) = super::status::DocsStatusManager::update_job_started(
+        if let Err(e) = super::status::DocsStatusManager::update_job_started(
             &Arc::new(docs_run.clone()),
             self.ctx,
             &job_name,
@@ -507,7 +507,10 @@ impl<'a> DocsResourceManager<'a> {
         labels.insert("app".to_string(), "orchestrator".to_string());
         labels.insert("component".to_string(), "docs-generator".to_string());
         // Use github_app if available, fallback to github_user for backward compatibility
-        let github_identity = docs_run.spec.github_app.as_deref()
+        let github_identity = docs_run
+            .spec
+            .github_app
+            .as_deref()
             .or(docs_run.spec.github_user.as_deref())
             .unwrap_or("");
         labels.insert(
@@ -588,7 +591,10 @@ impl<'a> DocsResourceManager<'a> {
 
     // Legacy cleanup method for backward compatibility
     async fn cleanup_old_jobs(&self, docs_run: &DocsRun) -> Result<()> {
-        let github_identity = docs_run.spec.github_app.as_deref()
+        let github_identity = docs_run
+            .spec
+            .github_app
+            .as_deref()
             .or(docs_run.spec.github_user.as_deref())
             .unwrap_or("");
         let list_params = ListParams::default().labels(&format!(
@@ -611,8 +617,11 @@ impl<'a> DocsResourceManager<'a> {
     async fn cleanup_old_configmaps(&self, docs_run: &DocsRun) -> Result<()> {
         // Generate current ConfigMap name to avoid deleting it
         let current_cm_name = self.generate_configmap_name(docs_run);
-        
-        let github_identity = docs_run.spec.github_app.as_deref()
+
+        let github_identity = docs_run
+            .spec
+            .github_app
+            .as_deref()
             .or(docs_run.spec.github_user.as_deref())
             .unwrap_or("");
         let list_params = ListParams::default().labels(&format!(
@@ -629,9 +638,11 @@ impl<'a> DocsResourceManager<'a> {
                     info!("Skipping deletion of current ConfigMap: {}", cm_name);
                     continue;
                 }
-                
+
                 // Check if ConfigMap has an owner reference to a Job that's still running
-                let has_active_job = cm.metadata.owner_references
+                let has_active_job = cm
+                    .metadata
+                    .owner_references
                     .as_ref()
                     .map(|owners| {
                         owners.iter().any(|owner| {
@@ -639,13 +650,16 @@ impl<'a> DocsResourceManager<'a> {
                         })
                     })
                     .unwrap_or(false);
-                
+
                 if has_active_job {
                     // If ConfigMap is owned by a Job, let Kubernetes handle cleanup when Job completes
-                    info!("Skipping cleanup of ConfigMap with active Job owner: {}", cm_name);
+                    info!(
+                        "Skipping cleanup of ConfigMap with active Job owner: {}",
+                        cm_name
+                    );
                     continue;
                 }
-                
+
                 info!("Deleting old docs ConfigMap: {}", cm_name);
                 let _ = self
                     .configmaps

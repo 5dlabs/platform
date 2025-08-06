@@ -1,6 +1,6 @@
+use crate::crds::CodeRun;
 use crate::tasks::config::ControllerConfig;
 use crate::tasks::types::{github_app_secret_name, Context, Result};
-use crate::crds::CodeRun;
 use k8s_openapi::api::{
     batch::v1::Job,
     core::v1::{ConfigMap, PersistentVolumeClaim},
@@ -41,10 +41,7 @@ impl<'a> CodeResourceManager<'a> {
 
     pub async fn reconcile_create_or_update(&self, code_run: &Arc<CodeRun>) -> Result<Action> {
         let name = code_run.name_any();
-        info!(
-            "🚀 Creating/updating code resources for: {}",
-            name
-        );
+        info!("🚀 Creating/updating code resources for: {}", name);
 
         // Ensure PVC exists for code tasks (persistent workspace)
         let service_name = &code_run.spec.service;
@@ -89,19 +86,13 @@ impl<'a> CodeResourceManager<'a> {
                         info!("✅ Updated ConfigMap: {}", cm_name);
                     }
                     Err(e) => {
-                        error!(
-                            "❌ Failed to update ConfigMap {}: {}",
-                            cm_name, e
-                        );
+                        error!("❌ Failed to update ConfigMap {}: {}", cm_name, e);
                         return Err(e.into());
                     }
                 }
             }
             Err(e) => {
-                error!(
-                    "❌ Failed to create ConfigMap {}: {}",
-                    cm_name, e
-                );
+                error!("❌ Failed to create ConfigMap {}: {}", cm_name, e);
                 return Err(e.into());
             }
         }
@@ -121,10 +112,7 @@ impl<'a> CodeResourceManager<'a> {
             info!("⚠️ No job owner reference to set");
         }
 
-        info!(
-            "🎉 Reconciliation completed successfully for: {}",
-            name
-        );
+        info!("🎉 Reconciliation completed successfully for: {}", name);
         Ok(Action::await_change())
     }
 
@@ -209,7 +197,7 @@ impl<'a> CodeResourceManager<'a> {
         let task_id = code_run.spec.task_id;
         let service_name = code_run.spec.service.replace('_', "-");
         let context_version = code_run.spec.context_version;
-        
+
         format!("code-{namespace}-{name}-{uid_suffix}-{service_name}-t{task_id}-v{context_version}-files")
             .replace(['_', '.'], "-")
             .to_lowercase()
@@ -224,10 +212,8 @@ impl<'a> CodeResourceManager<'a> {
         let mut data = BTreeMap::new();
 
         // Generate all templates for code
-        let templates = super::templates::CodeTemplateGenerator::generate_all_templates(
-            code_run,
-            self.config,
-        )?;
+        let templates =
+            super::templates::CodeTemplateGenerator::generate_all_templates(code_run, self.config)?;
         for (filename, content) in templates {
             data.insert(filename, content);
         }
@@ -356,19 +342,25 @@ impl<'a> CodeResourceManager<'a> {
         let task_id = code_run.spec.task_id;
         let context_version = code_run.spec.context_version;
 
-        let job_name = format!("code-{namespace}-{name}-{uid_suffix}-t{task_id}-v{context_version}")
-            .replace(['_', '.'], "-")
-            .to_lowercase();
+        let job_name =
+            format!("code-{namespace}-{name}-{uid_suffix}-t{task_id}-v{context_version}")
+                .replace(['_', '.'], "-")
+                .to_lowercase();
 
         // Kubernetes has a 63-character limit for resource names and labels
         // Truncate if necessary while preserving uniqueness
         if job_name.len() > 63 {
             let uid_and_suffix = format!("-{uid_suffix}-t{task_id}-v{context_version}");
             let available_len = 63 - uid_and_suffix.len();
-            let prefix = format!("code-{namespace}-{name}").replace(['_', '.'], "-").to_lowercase();
-            
+            let prefix = format!("code-{namespace}-{name}")
+                .replace(['_', '.'], "-")
+                .to_lowercase();
+
             if prefix.len() > available_len {
-                format!("{}-{uid_suffix}-t{task_id}-v{context_version}", &prefix[..available_len])
+                format!(
+                    "{}-{uid_suffix}-t{task_id}-v{context_version}",
+                    &prefix[..available_len]
+                )
             } else {
                 job_name
             }
@@ -427,13 +419,17 @@ impl<'a> CodeResourceManager<'a> {
         }));
 
         // GitHub App authentication only - no SSH volumes needed
-        let github_app = code_run.spec.github_app.as_ref()
-            .ok_or_else(|| {
-                tracing::error!("GitHub App is required for CodeRun authentication");
-                crate::tasks::types::Error::ConfigError("GitHub App is required for CodeRun authentication".to_string())
-            })?;
-        
-        tracing::info!("Using GitHub App authentication for CodeRun: {}", github_app);
+        let github_app = code_run.spec.github_app.as_ref().ok_or_else(|| {
+            tracing::error!("GitHub App is required for CodeRun authentication");
+            crate::tasks::types::Error::ConfigError(
+                "GitHub App is required for CodeRun authentication".to_string(),
+            )
+        })?;
+
+        tracing::info!(
+            "Using GitHub App authentication for CodeRun: {}",
+            github_app
+        );
 
         let image = format!(
             "{}:{}",
@@ -520,7 +516,10 @@ impl<'a> CodeResourceManager<'a> {
 
         labels.insert("app".to_string(), "orchestrator".to_string());
         labels.insert("component".to_string(), "code-runner".to_string());
-        let github_identifier = code_run.spec.github_app.as_deref()
+        let github_identifier = code_run
+            .spec
+            .github_app
+            .as_deref()
             .or(code_run.spec.github_user.as_deref())
             .unwrap_or("unknown");
         labels.insert(
@@ -542,7 +541,6 @@ impl<'a> CodeResourceManager<'a> {
 
         labels
     }
-
 
     async fn update_configmap_owner(
         &self,
@@ -570,7 +568,10 @@ impl<'a> CodeResourceManager<'a> {
 
     // Legacy cleanup method for backward compatibility
     async fn cleanup_old_jobs(&self, code_run: &CodeRun) -> Result<()> {
-        let github_identifier = code_run.spec.github_app.as_deref()
+        let github_identifier = code_run
+            .spec
+            .github_app
+            .as_deref()
             .or(code_run.spec.github_user.as_deref())
             .unwrap_or("unknown");
         let list_params = ListParams::default().labels(&format!(
@@ -594,8 +595,11 @@ impl<'a> CodeResourceManager<'a> {
     async fn cleanup_old_configmaps(&self, code_run: &CodeRun) -> Result<()> {
         // Generate current ConfigMap name to avoid deleting it
         let current_cm_name = self.generate_configmap_name(code_run);
-        
-        let github_identifier = code_run.spec.github_app.as_deref()
+
+        let github_identifier = code_run
+            .spec
+            .github_app
+            .as_deref()
             .or(code_run.spec.github_user.as_deref())
             .unwrap_or("unknown");
         let list_params = ListParams::default().labels(&format!(
@@ -613,9 +617,11 @@ impl<'a> CodeResourceManager<'a> {
                     info!("Skipping deletion of current ConfigMap: {}", cm_name);
                     continue;
                 }
-                
+
                 // Check if ConfigMap has an owner reference to a Job that's still running
-                let has_active_job = cm.metadata.owner_references
+                let has_active_job = cm
+                    .metadata
+                    .owner_references
                     .as_ref()
                     .map(|owners| {
                         owners.iter().any(|owner| {
@@ -623,13 +629,16 @@ impl<'a> CodeResourceManager<'a> {
                         })
                     })
                     .unwrap_or(false);
-                
+
                 if has_active_job {
                     // If ConfigMap is owned by a Job, let Kubernetes handle cleanup when Job completes
-                    info!("Skipping cleanup of ConfigMap with active Job owner: {}", cm_name);
+                    info!(
+                        "Skipping cleanup of ConfigMap with active Job owner: {}",
+                        cm_name
+                    );
                     continue;
                 }
-                
+
                 info!("Deleting old code ConfigMap: {}", cm_name);
                 let _ = self
                     .configmaps
@@ -676,4 +685,3 @@ impl<'a> CodeResourceManager<'a> {
         sanitized
     }
 }
-
