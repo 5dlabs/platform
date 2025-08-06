@@ -250,26 +250,8 @@ if [ ! -d "$CLAUDE_WORK_DIR/.taskmaster/docs" ]; then
   exit 1
 fi
 
-# Copy individual task files from tasks/ to docs/task-{id}/ for agent convenience
-echo "Setting up individual task files..."
-if [ -d "$CLAUDE_WORK_DIR/.taskmaster/tasks" ]; then
-  for task_file in "$CLAUDE_WORK_DIR/.taskmaster/tasks"/task-*.txt; do
-    if [ -f "$task_file" ]; then
-      # Extract task ID from filename (e.g., task-1.txt -> 1)
-      task_id=$(basename "$task_file" | sed 's/task-\([0-9]*\)\.txt/\1/')
-      task_dir="$CLAUDE_WORK_DIR/.taskmaster/docs/task-$task_id"
-      
-      # Create task directory if it doesn't exist
-      mkdir -p "$task_dir"
-      
-      # Copy task file
-      cp "$task_file" "$task_dir/task.txt"
-      echo "✓ Copied task $task_id to docs/task-$task_id/task.txt"
-    fi
-  done
-else
-  echo "⚠️ No .taskmaster/tasks directory found - task files will not be pre-copied"
-fi
+# Task files are generated directly in docs/task-{id}/ structure by MCP server
+echo "✓ Task files should be available in docs/task-{id}/ structure"
 
 echo "✓ Workspace validated"
 

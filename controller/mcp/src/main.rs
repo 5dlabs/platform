@@ -756,10 +756,11 @@ fn process_source_files(
     Ok(())
 }
 
-/// Generate individual task files from tasks.json (restore old CLI behavior)
+/// Generate individual task files from tasks.json directly in docs structure
 fn generate_task_files(project_dir: &std::path::Path) -> Result<()> {
     let taskmaster_dir = project_dir.join(".taskmaster");
     let tasks_dir = taskmaster_dir.join("tasks");
+    let docs_dir = taskmaster_dir.join("docs");
     let tasks_json_path = tasks_dir.join("tasks.json");
     
     // Check if tasks.json exists
@@ -792,25 +793,30 @@ fn generate_task_files(project_dir: &std::path::Path) -> Result<()> {
     
     eprintln!("📝 Found {} tasks to process", tasks_array.len());
     
-    // Create tasks directory if it doesn't exist
-    std::fs::create_dir_all(&tasks_dir)
-        .context("Failed to create .taskmaster/tasks directory")?;
+    // Create docs directory if it doesn't exist
+    std::fs::create_dir_all(&docs_dir)
+        .context("Failed to create .taskmaster/docs directory")?;
     
-    // Generate individual task files only if they don't exist
+    // Generate individual task files directly in docs/task-{id}/ structure
     for task in tasks_array {
         if let Some(task_id) = task.get("id").and_then(|v| v.as_u64()) {
-            let task_file = tasks_dir.join(format!("task-{}.txt", task_id));
+            let task_dir = docs_dir.join(format!("task-{}", task_id));
+            let task_file = task_dir.join("task.txt");
             
             // Only generate if file doesn't exist
             if !task_file.exists() {
+                // Create task directory
+                std::fs::create_dir_all(&task_dir)
+                    .with_context(|| format!("Failed to create task directory: {}", task_dir.display()))?;
+                
                 let task_content = format_task_content(task)?;
                 
                 std::fs::write(&task_file, task_content)
                     .with_context(|| format!("Failed to write task file: {}", task_file.display()))?;
                 
-                eprintln!("✓ Generated task-{}.txt", task_id);
+                eprintln!("✓ Generated docs/task-{}/task.txt", task_id);
             } else {
-                eprintln!("⚠️ Task file already exists: task-{}.txt", task_id);
+                eprintln!("⚠️ Task file already exists: docs/task-{}/task.txt", task_id);
             }
         }
     }
