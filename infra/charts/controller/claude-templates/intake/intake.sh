@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Add error trap for debugging
+trap 'echo "❌ Error occurred at line $LINENO with exit code $?. Last command: $BASH_COMMAND"; exit 1' ERR
+
 echo "🚀 Starting Project Intake Process"
 echo "================================="
 
@@ -15,6 +18,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
 fi
 
 # Parse configuration
+echo "📋 Loading configuration from ConfigMap..."
 PROJECT_NAME=$(jq -r '.project_name' "$CONFIG_FILE")
 REPOSITORY_URL=$(jq -r '.repository_url' "$CONFIG_FILE")
 GITHUB_APP=$(jq -r '.github_app' "$CONFIG_FILE")
@@ -22,6 +26,15 @@ MODEL=$(jq -r '.model' "$CONFIG_FILE")
 NUM_TASKS=$(jq -r '.num_tasks' "$CONFIG_FILE")
 EXPAND_TASKS=$(jq -r '.expand_tasks' "$CONFIG_FILE")
 ANALYZE_COMPLEXITY=$(jq -r '.analyze_complexity' "$CONFIG_FILE")
+
+echo "🔍 Configuration loaded:"
+echo "  - Project: $PROJECT_NAME"
+echo "  - Repository: $REPOSITORY_URL"
+echo "  - GitHub App: $GITHUB_APP"
+echo "  - Model: $MODEL"
+echo "  - Num Tasks: $NUM_TASKS"
+echo "  - Expand: $EXPAND_TASKS"
+echo "  - Analyze: $ANALYZE_COMPLEXITY"
 
 # If project name is empty, try to extract from PRD
 if [ -z "$PROJECT_NAME" ] || [ "$PROJECT_NAME" = "null" ]; then
@@ -40,6 +53,12 @@ if [ -z "$PROJECT_NAME" ] || [ "$PROJECT_NAME" = "null" ]; then
     echo "✅ Using project name: $PROJECT_NAME"
 fi
 
+# Check for required environment variables
+echo "🔍 Checking environment variables..."
+if [ -z "$ANTHROPIC_API_KEY" ]; then
+    echo "⚠️ Warning: ANTHROPIC_API_KEY is not set"
+fi
+
 # Disable interactive Git prompts
 export GIT_TERMINAL_PROMPT=0
 export GIT_ASKPASS=/bin/true
@@ -48,6 +67,8 @@ export SSH_ASKPASS=/bin/true
 # GitHub App authentication setup
 if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ]; then
     echo "🔐 Setting up GitHub App authentication..."
+    echo "  - GitHub App ID found: ${GITHUB_APP_ID:0:10}..."
+    echo "  - GitHub App Private Key found: [REDACTED]"
     
     # Function to generate GitHub App token (reusing from container.sh logic)
     generate_github_token() {
@@ -100,8 +121,16 @@ if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ]; then
         echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
         
         # Configure GitHub CLI
-        echo "$GITHUB_TOKEN" | gh auth login --with-token
-        gh auth status
+        echo "🔧 Configuring GitHub CLI..."
+        echo "$GITHUB_TOKEN" | gh auth login --with-token || {
+            echo "⚠️ gh auth login returned non-zero, but continuing..."
+        }
+        
+        # Check auth status (this may return non-zero even when auth is valid)
+        echo "🔍 Checking GitHub CLI auth status..."
+        gh auth status || {
+            echo "⚠️ gh auth status returned non-zero, but token is likely still valid"
+        }
         
         echo "✅ GitHub authentication configured"
         return 0
@@ -115,9 +144,26 @@ fi
 
 # Clone repository
 echo "📦 Cloning repository: $REPOSITORY_URL"
+
+# Validate repository URL
+if [ -z "$REPOSITORY_URL" ] || [ "$REPOSITORY_URL" = "null" ]; then
+    echo "❌ Repository URL is empty or null"
+    exit 1
+fi
+
 CLONE_DIR="/tmp/repo-$(date +%s)"
-git clone "$REPOSITORY_URL" "$CLONE_DIR"
+echo "📂 Clone directory: $CLONE_DIR"
+echo "🔍 Attempting git clone..."
+git clone "$REPOSITORY_URL" "$CLONE_DIR" || {
+    echo "❌ Git clone failed with exit code $?"
+    echo "Repository URL: $REPOSITORY_URL"
+    echo "Clone directory: $CLONE_DIR"
+    exit 1
+}
+
+echo "✅ Repository cloned successfully"
 cd "$CLONE_DIR"
+echo "📂 Changed to clone directory: $(pwd)"
 
 # Normalize project name for filesystem (lowercase, safe characters)
 PROJECT_DIR_NAME=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-*//;s/-*$//')
@@ -290,7 +336,11 @@ task-master models --set-fallback "claude-3-5-sonnet-20241022"
 echo "📄 Parsing PRD to generate tasks..."
 task-master parse-prd \
     --input ".taskmaster/docs/prd.txt" \
-    --force
+    --output ".taskmaster/tasks/tasks.json" \
+    --force || {
+    echo "❌ Failed to parse PRD"
+    exit 1
+}
 
 # Analyze complexity if requested
 if [ "$ANALYZE_COMPLEXITY" = "true" ]; then
@@ -307,8 +357,12 @@ fi
 # Review and align tasks with architecture using Claude
 echo "🤖 Reviewing tasks against architecture with Claude..."
 if [ -f ".taskmaster/docs/architecture.md" ]; then
-    # Create a prompt for Claude to review tasks
-    cat > /tmp/review-prompt.md <<'EOF'
+    # Check if claude command is available
+    if command -v claude &> /dev/null; then
+        echo "✅ Claude command found"
+        
+        # Create a prompt for Claude to review tasks
+        cat > /tmp/review-prompt.md <<'EOF'
 Please review the tasks.json file against the architecture.md document and ensure they are properly aligned.
 
 Your task is to:
@@ -325,16 +379,22 @@ Important:
 - Add clear details and implementation notes based on the architecture
 
 Files to review:
-- .taskmaster/tasks.json (the task list)
+- .taskmaster/tasks/tasks.json (the task list)
 - .taskmaster/docs/architecture.md (the architecture reference)
 
 Make the necessary modifications directly to ensure the tasks and architecture are fully aligned.
 EOF
 
-    # Run Claude to review and update tasks
-    claude --output-format stream-json --model "$MODEL" /tmp/review-prompt.md
-    
-    echo "✅ Task review complete"
+        # Run Claude to review and update tasks
+        echo "🔍 Running Claude review..."
+        claude --output-format stream-json --model "$MODEL" /tmp/review-prompt.md || {
+            echo "⚠️ Claude review failed, but continuing..."
+        }
+        
+        echo "✅ Task review complete"
+    else
+        echo "⚠️ Claude command not found, skipping architecture alignment"
+    fi
 else
     echo "⚠️ No architecture.md file found, skipping architecture alignment"
 fi
