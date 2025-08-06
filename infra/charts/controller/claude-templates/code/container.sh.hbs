@@ -834,11 +834,7 @@ echo "✓ Code implementation environment ready"
 # Build Claude command
 CLAUDE_CMD="claude -p --output-format stream-json --verbose"
 
-# Add model flag if specified via environment variable
-if [ -n "$MODEL" ]; then
-    CLAUDE_CMD="$CLAUDE_CMD --model $MODEL"
-    echo "Using specified model: $MODEL"
-fi
+# Model is set via settings.json template, not CLI flag
 
 # Add continue flag if this is a retry attempt or user requested continuation
 {{#if continue_session}}
