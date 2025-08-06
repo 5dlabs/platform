@@ -16,6 +16,7 @@ argo submit --from workflowtemplate/docsrun-template \
   -p github-app=5DLabs-Morgan \
   -p source-branch=argo \
   -p model=claude-opus-4-20250514 \
+  -p include-codebase=true \
   --wait
 
 echo "✅ DocsRun workflow test completed"
