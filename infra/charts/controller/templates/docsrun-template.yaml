@@ -94,6 +94,9 @@ spec:
         successCondition: status.phase == Succeeded
         failureCondition: status.phase == Failed
             
+  # Workflow timeout - allow up to 5 hours for long documentation tasks
+  activeDeadlineSeconds: 18000     # 5 hours = 5 * 60 * 60 = 18000 seconds
+  
   # Cleanup policy - reasonable cleanup for long-running AI tasks
   ttlStrategy:
     secondsAfterCompletion: 300    # Keep completed workflows for 5 minutes

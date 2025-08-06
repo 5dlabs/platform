@@ -369,6 +369,10 @@ impl<'a> DocsResourceManager<'a> {
         cm_name: &str,
     ) -> Result<Option<OwnerReference>> {
         let job_name = self.generate_job_name(docs_run);
+        
+        // Ensure PVC exists before creating job
+        self.ensure_workspace_pvc(docs_run).await?;
+        
         let job = self.build_job_spec(docs_run, &job_name, cm_name)?;
 
         let created_job = self.jobs.create(&PostParams::default(), &job).await?;
@@ -460,10 +464,22 @@ impl<'a> DocsResourceManager<'a> {
             "subPath": "settings.json"
         }));
 
-        // EmptyDir workspace volume for docs (no persistence needed)
+        // Persistent workspace volume for docs to prevent data loss
+        // Create a PVC name based on the working directory for reuse across jobs
+        let pvc_name = format!("docs-workspace-{}", 
+            docs_run.spec.working_directory
+                .chars()
+                .map(|c| if c.is_alphanumeric() || c == '-' { c } else { '-' })
+                .collect::<String>()
+                .trim_matches('-')
+                .to_lowercase()
+        );
+        
         volumes.push(json!({
             "name": "workspace",
-            "emptyDir": {}
+            "persistentVolumeClaim": {
+                "claimName": pvc_name
+            }
         }));
         volume_mounts.push(json!({
             "name": "workspace",
@@ -767,6 +783,78 @@ impl<'a> DocsResourceManager<'a> {
         }
 
         sanitized
+    }
+
+    async fn ensure_workspace_pvc(&self, docs_run: &DocsRun) -> Result<()> {
+        let pvc_name = format!("docs-workspace-{}", 
+            docs_run.spec.working_directory
+                .chars()
+                .map(|c| if c.is_alphanumeric() || c == '-' { c } else { '-' })
+                .collect::<String>()
+                .trim_matches('-')
+                .to_lowercase()
+        );
+
+        // Check if PVC already exists
+        let pvcs: Api<k8s_openapi::api::core::v1::PersistentVolumeClaim> = 
+            Api::namespaced(self.ctx.client.clone(), &self.ctx.namespace);
+            
+        match pvcs.get(&pvc_name).await {
+            Ok(_) => {
+                error!("✅ PVC {} already exists", pvc_name);
+                return Ok(());
+            },
+            Err(kube::Error::Api(ae)) if ae.code == 404 => {
+                // PVC doesn't exist, create it
+                error!("📦 Creating PVC: {}", pvc_name);
+            },
+            Err(e) => return Err(e.into()),
+        }
+
+        // Create PVC
+        let pvc = k8s_openapi::api::core::v1::PersistentVolumeClaim {
+            metadata: k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+                name: Some(pvc_name.clone()),
+                namespace: Some(self.ctx.namespace.clone()),
+                labels: Some({
+                    let mut labels = std::collections::BTreeMap::new();
+                    labels.insert("app".to_string(), "controller".to_string());
+                    labels.insert("component".to_string(), "docs-workspace".to_string());
+                    labels.insert("working-directory".to_string(), self.sanitize_label_value(&docs_run.spec.working_directory));
+                    labels
+                }),
+                ..Default::default()
+            },
+            spec: Some(k8s_openapi::api::core::v1::PersistentVolumeClaimSpec {
+                access_modes: Some(vec!["ReadWriteOnce".to_string()]),
+                resources: Some(k8s_openapi::api::core::v1::VolumeResourceRequirements {
+                    requests: Some({
+                        let mut requests = std::collections::BTreeMap::new();
+                        requests.insert("storage".to_string(), k8s_openapi::apimachinery::pkg::api::resource::Quantity("5Gi".to_string()));
+                        requests
+                    }),
+                    ..Default::default()
+                }),
+                storage_class_name: Some("local-path".to_string()), // Talos default
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        match pvcs.create(&kube::api::PostParams::default(), &pvc).await {
+            Ok(_) => {
+                error!("✅ Created PVC: {}", pvc_name);
+                Ok(())
+            },
+            Err(kube::Error::Api(ae)) if ae.code == 409 => {
+                error!("✅ PVC {} already exists (created concurrently)", pvc_name);
+                Ok(())
+            },
+            Err(e) => {
+                error!("❌ Failed to create PVC {}: {:?}", pvc_name, e);
+                Err(e.into())
+            }
+        }
     }
 }
 
