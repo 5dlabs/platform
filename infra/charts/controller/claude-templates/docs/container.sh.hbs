@@ -100,6 +100,41 @@ generate_github_token() {
     # Call the function to authenticate
     generate_github_token
     
+    # Validate authentication by testing actual GitHub operations we'll need
+    echo "🔍 Validating GitHub authentication with actual operations..."
+    REPO_OWNER=$(echo "$REPO_URL" | sed 's|https://github.com/||' | sed 's|/.*||')
+    REPO_NAME=$(echo "$REPO_URL" | sed 's|.*/||')
+    
+    # Test 1: Can we access the repository?
+    if gh api "repos/$REPO_OWNER/$REPO_NAME" > /tmp/repo_test.json 2>&1; then
+        echo "✅ Repository access confirmed"
+    else
+        echo "❌ Cannot access repository $REPO_OWNER/$REPO_NAME"
+        echo "Error: $(cat /tmp/repo_test.json)"
+        exit 1
+    fi
+    
+    # Test 2: Can we list branches (needed for PR creation)?
+    if gh api "repos/$REPO_OWNER/$REPO_NAME/branches" > /tmp/branches_test.json 2>&1; then
+        echo "✅ Can list branches"
+    else
+        echo "❌ Cannot list branches"
+        echo "Error: $(cat /tmp/branches_test.json)"
+        exit 1
+    fi
+    
+    # Test 3: Can we get user info (needed for commits)?
+    if gh api user > /tmp/user_test.json 2>&1; then
+        USER_LOGIN=$(jq -r '.login' /tmp/user_test.json 2>/dev/null || echo "unknown")
+        echo "✅ GitHub API access confirmed as user: $USER_LOGIN"
+    else
+        echo "❌ Cannot access user information"
+        echo "Error: $(cat /tmp/user_test.json)"
+        exit 1
+    fi
+    
+    echo "✅ All GitHub authentication tests passed - proceeding with confidence"
+    
 else
     echo "❌ GITHUB_APP_PRIVATE_KEY or GITHUB_APP_ID not found"
     exit 1
