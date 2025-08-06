@@ -295,6 +295,13 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         }
     }
     
+    // Generate individual task files from tasks.json if it exists
+    if project_dir.join(".taskmaster/tasks/tasks.json").exists() {
+        eprintln!("🔧 Generating individual task files from tasks.json...");
+        generate_task_files(&project_dir)
+            .context("Failed to generate individual task files")?;
+    }
+    
     // Handle include_codebase parameter
     let include_codebase = arguments.get("include_codebase")
         .and_then(|v| v.as_bool())
