@@ -88,7 +88,7 @@ fn get_task_schema(agents: &HashMap<String, String>) -> Value {
                         "Agent name for task assignment".to_string()
                     } else {
                         let agent_list = agents.keys().map(|s| s.as_str()).collect::<Vec<_>>().join(", ");
-                        format!("Agent name for task assignment. Available agents: {}", agent_list)
+                        format!("Agent name for task assignment. Available agents: {agent_list}")
                     }
                 },
                 "working_directory": {

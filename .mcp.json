@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "fdl-mcp": {
+    "cto-mcp": {
       "type": "stdio",
-      "command": "/usr/local/bin/fdl-mcp",
+      "command": "/usr/local/bin/cto-mcp",
       "args": [],
       "env": {
         "FDL_DEFAULT_DOCS_USER": "pm0-5dlabs"

@@ -16,7 +16,7 @@ use tracing::{info, instrument};
 #[instrument(skip(ctx), fields(code_run_name = %code_run.name_any(), namespace = %ctx.namespace))]
 pub async fn reconcile_code_run(code_run: Arc<CodeRun>, ctx: Arc<Context>) -> Result<Action> {
     info!(
-        "🎯 CODE DEBUG: Starting reconcile for CodeRun: {}",
+        "🎯 Starting reconcile for CodeRun: {}",
         code_run.name_any()
     );
 
@@ -24,12 +24,12 @@ pub async fn reconcile_code_run(code_run: Arc<CodeRun>, ctx: Arc<Context>) -> Re
     let client = &ctx.client;
     let name = code_run.name_any();
 
-    info!("🔄 CODE DEBUG: Reconciling CodeRun: {}", name);
+    info!("🔄 Reconciling CodeRun: {}", name);
 
     // Create APIs
-    info!("🔗 CODE DEBUG: Creating Kubernetes API clients...");
+    info!("🔗 Creating Kubernetes API clients...");
     let coderuns: Api<CodeRun> = Api::namespaced(client.clone(), namespace);
-    info!("✅ CODE DEBUG: API clients created successfully");
+    info!("✅ API clients created successfully");
 
     // Handle finalizers for cleanup
     let result = finalizer(
@@ -56,7 +56,7 @@ pub async fn reconcile_code_run(code_run: Arc<CodeRun>, ctx: Arc<Context>) -> Re
     })?;
 
     info!(
-        "🏁 CODE DEBUG: reconcile completed with result: {:?}",
+        "🏁 Reconcile completed with result: {:?}",
         result
     );
 
@@ -203,7 +203,7 @@ async fn reconcile_code_create_or_update(code_run: Arc<CodeRun>, ctx: &Context) 
 
 #[instrument(skip(ctx), fields(code_run_name = %code_run.name_any(), namespace = %ctx.namespace))]
 async fn cleanup_code_resources(code_run: Arc<CodeRun>, ctx: &Context) -> Result<Action> {
-    info!("🧹 CODE DEBUG: Cleaning up resources for CodeRun");
+    info!("🧹 Cleaning up resources for CodeRun");
 
     // Create APIs
     let jobs: Api<Job> = Api::namespaced(ctx.client.clone(), &ctx.namespace);

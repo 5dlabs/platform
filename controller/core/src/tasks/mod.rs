@@ -40,7 +40,7 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
             // Validate configuration has required fields
             if let Err(validation_error) = cfg.validate() {
                 error!(
-                    "❌ TASK_CONTROLLER DEBUG: Configuration validation failed: {}",
+                    "Configuration validation failed: {}",
                     validation_error
                 );
                 return Err(Error::ConfigError(validation_error.to_string()));
@@ -50,7 +50,7 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
         }
         Err(e) => {
             error!(
-                "❌ TASK_CONTROLLER DEBUG: Failed to load configuration, using defaults: {}",
+                "Failed to load configuration, using defaults: {}",
                 e
             );
             debug!("Creating default configuration...");
@@ -59,7 +59,7 @@ pub async fn run_task_controller(client: Client, namespace: String) -> Result<()
             // Validate default configuration
             if let Err(validation_error) = default_config.validate() {
                 error!(
-                    "❌ TASK_CONTROLLER DEBUG: Default configuration is invalid: {}",
+                    "Default configuration is invalid: {}",
                     validation_error
                 );
                 return Err(Error::ConfigError(validation_error.to_string()));

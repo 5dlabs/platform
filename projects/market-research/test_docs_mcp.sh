@@ -5,16 +5,16 @@
 
 echo "Testing MCP server docs functionality for market-research project..."
 
-# Path to fdl-mcp binary
-FDL_MCP="./controller/target/release/fdl-mcp"
+# Path to cto-mcp binary
+CTO_MCP="./controller/target/release/cto-mcp"
 
-if [[ ! -f "$FDL_MCP" ]]; then
-    echo "Error: fdl-mcp binary not found at $FDL_MCP"
+if [[ ! -f "$CTO_MCP" ]]; then
+    echo "Error: cto-mcp binary not found at $CTO_MCP"
     exit 1
 fi
 
 # Create a test script that sends JSON-RPC messages for docs generation
-cat << 'EOF' | "$FDL_MCP"
+cat << 'EOF' | "$CTO_MCP"
 {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18", "capabilities": {"tools": {}}, "clientInfo": {"name": "test", "version": "1.0.0"}}}
 {"jsonrpc": "2.0", "method": "notifications/initialized"}
 {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "docs", "arguments": {"working_directory": "projects/market-research", "model": "claude-3-5-sonnet-20241022"}}}

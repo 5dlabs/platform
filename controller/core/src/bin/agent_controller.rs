@@ -136,7 +136,7 @@ async fn metrics() -> Json<Value> {
     Json(json!({
         "service": "controller",
         "version": env!("CARGO_PKG_VERSION"),
-        "uptime": "TODO: implement uptime tracking"
+        "status": "running"
     }))
 }
 
