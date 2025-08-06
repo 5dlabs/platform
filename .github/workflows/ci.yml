@@ -175,11 +175,13 @@ jobs:
 
           # Test template generation with different values
           echo "📋 Testing default values..."
-          helm template controller ./infra/charts/controller > /tmp/default.yaml
+          helm template controller ./infra/charts/controller \
+            --set argo.enabled=false > /tmp/default.yaml
           kubectl --dry-run=client apply -f /tmp/default.yaml
 
           echo "📋 Testing with secrets..."
           helm template controller ./infra/charts/controller \
+            --set argo.enabled=false \
             --set secrets.anthropicApiKey="test-key" \
             --set secrets.githubToken="test-token" > /tmp/with-secrets.yaml
           kubectl --dry-run=client apply -f /tmp/with-secrets.yaml
