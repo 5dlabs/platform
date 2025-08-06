@@ -83,3 +83,15 @@ Create a checksum for the toolman catalog ConfigMap to force pod restart when it
 {{- "not-found" }}
 {{- end }}
 {{- end }}
+
+{{/*
+Create a checksum for the toolman catalog ConfigMap to force pod restart when it changes
+*/}}
+{{- define "orchestrator.toolmanCatalogChecksum" -}}
+{{- $catalog := lookup "v1" "ConfigMap" .Release.Namespace "toolman-tool-catalog" -}}
+{{- if $catalog }}
+{{- $catalog.data | toYaml | sha256sum }}
+{{- else }}
+{{- "not-found" }}
+{{- end }}
+{{- end }}
