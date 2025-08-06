@@ -90,23 +90,6 @@ if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ]; then
     
     echo "✓ GitHub App authenticated successfully"
     
-    # Early authentication test - verify we can access the repository before starting heavy work
-    echo "🔍 Testing GitHub authentication early..."
-    if gh api user > /dev/null 2>&1; then
-        echo "✅ GitHub API access confirmed"
-    else
-        echo "❌ GitHub API access failed - stopping early to avoid wasted compute"
-        exit 1
-    fi
-    
-    # Test repository access specifically
-    if gh api "repos/$REPO_OWNER/$REPO_NAME" > /dev/null 2>&1; then
-        echo "✅ Repository access confirmed for $REPO_OWNER/$REPO_NAME"
-    else
-        echo "❌ Repository access failed for $REPO_OWNER/$REPO_NAME - stopping early"
-        exit 1
-    fi
-    
 else
     echo "❌ GITHUB_APP_PRIVATE_KEY or GITHUB_APP_ID not found"
     exit 1
