@@ -6,35 +6,93 @@ use std::process::Command;
 use std::sync::OnceLock;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::runtime::Runtime;
+use tokio::time::{timeout, Duration};
+use tokio::signal;
 
 mod tools;
 
-// Global agents configuration loaded once at startup
-static AGENTS_CONFIG: OnceLock<HashMap<String, String>> = OnceLock::new();
+// Global configuration loaded once at startup
+static FDL_CONFIG: OnceLock<FdlConfig> = OnceLock::new();
 
-/// Load agent configuration from environment variables
-/// Looks for AGENT_* environment variables (e.g., AGENT_MORGAN=5DLabs-Morgan)
-fn load_agents_from_env() -> Result<HashMap<String, String>> {
-    let mut agents = HashMap::new();
+#[derive(Debug, Deserialize, Clone)]
+struct FdlConfig {
+    version: String,
+    defaults: WorkflowDefaults,
+    agents: HashMap<String, String>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct WorkflowDefaults {
+    docs: DocsDefaults,
+    code: CodeDefaults,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct DocsDefaults {
+    model: String,
+    #[serde(rename = "githubApp")]
+    github_app: String,
+    #[serde(rename = "includeCodebase")]
+    include_codebase: bool,
+    #[serde(rename = "sourceBranch")]
+    source_branch: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct CodeDefaults {
+    model: String,
+    #[serde(rename = "githubApp")]
+    github_app: String,
+    #[serde(rename = "continueSession")]
+    continue_session: bool,
+    #[serde(rename = "workingDirectory")]
+    working_directory: String,
+    #[serde(rename = "overwriteMemory")]
+    overwrite_memory: bool,
+    #[serde(rename = "docsRepository")]
+    docs_repository: Option<String>,
+    #[serde(rename = "docsProjectDirectory")]  
+    docs_project_directory: Option<String>,
+    service: Option<String>,
+}
+
+/// Load configuration from cto-config.json file
+/// Looks in current directory, workspace root, or WORKSPACE_FOLDER_PATHS for cto-config.json
+fn load_fdl_config() -> Result<FdlConfig> {
+    let mut config_paths = vec![
+        std::path::PathBuf::from("cto-config.json"),
+        std::path::PathBuf::from("../cto-config.json"),
+    ];
     
-    for (key, value) in std::env::vars() {
-        // Only load AGENT_{NAME}_GITHUB_APP environment variables
-        if let Some(suffix) = key.strip_prefix("AGENT_") {
-            if suffix.ends_with("_GITHUB_APP") {
-                let agent_name = suffix.strip_suffix("_GITHUB_APP")
-                    .unwrap()
-                    .to_lowercase();
-                agents.insert(agent_name, value);
-            }
+    // Add workspace folder paths if available (Cursor provides this)
+    if let Ok(workspace_paths) = std::env::var("WORKSPACE_FOLDER_PATHS") {
+        for workspace_path in workspace_paths.split(',') {
+            let workspace_path = workspace_path.trim();
+            config_paths.push(std::path::PathBuf::from(workspace_path).join("cto-config.json"));
         }
     }
     
-    // It's OK if no agents are configured - we'll use workflow defaults
-    if agents.is_empty() {
-        eprintln!("ℹ️ No AGENT_*_GITHUB_APP environment variables found - using workflow defaults");
+    for config_path in config_paths {
+        if config_path.exists() {
+            eprintln!("📋 Loading configuration from: {}", config_path.display());
+            let config_content = std::fs::read_to_string(&config_path)
+                .with_context(|| format!("Failed to read config file: {}", config_path.display()))?;
+            
+            let config: FdlConfig = serde_json::from_str(&config_content)
+                .with_context(|| format!("Failed to parse config file: {}", config_path.display()))?;
+            
+            eprintln!("✅ Configuration loaded successfully");
+            return Ok(config);
+        }
     }
     
-    Ok(agents)
+    let workspace_info = if let Ok(workspace_paths) = std::env::var("WORKSPACE_FOLDER_PATHS") {
+        format!(" Also checked workspace folders: {}", workspace_paths)
+    } else {
+        " No WORKSPACE_FOLDER_PATHS environment variable found (Cursor-only feature).".to_string()
+    };
+    
+    Err(anyhow!("cto-config.json not found in current directory or parent directory.{} Please create a configuration file in your project root.", workspace_info))
 }
 
 #[derive(Deserialize)]
@@ -94,7 +152,11 @@ fn handle_mcp_methods(method: &str, _params_map: &HashMap<String, Value>) -> Opt
             })))
         }
         "tools/list" => {
-            Some(Ok(tools::get_tool_schemas()))
+            // Get config if available to show dynamic agent options
+            match FDL_CONFIG.get() {
+                Some(config) => Some(Ok(tools::get_tool_schemas_with_config(&config.agents))),
+                None => Some(Ok(tools::get_tool_schemas()))
+            }
         }
         _ => None,
     }
@@ -184,7 +246,7 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .and_then(|v| v.as_str())
         .ok_or(anyhow!("Missing required parameter: working_directory"))?;
     
-    let agents_config = AGENTS_CONFIG.get().unwrap();
+    let config = FDL_CONFIG.get().unwrap();
     
     // Get workspace directory from Cursor environment, then navigate to working_directory
     let workspace_dir = std::env::var("WORKSPACE_FOLDER_PATHS")
@@ -223,6 +285,25 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         let status_text = String::from_utf8(status_output.stdout)?;
         if !status_text.trim().is_empty() {
             eprintln!("📝 Found uncommitted changes, committing and pushing...");
+            
+            // Configure git user for commits (required for git commit to work)
+            let config_name_result = Command::new("git")
+                .args(["config", "user.name", "MCP Server"])
+                .output()
+                .context("Failed to configure git user.name")?;
+            
+            if !config_name_result.status.success() {
+                return Err(anyhow!("Failed to configure git user.name: {}", String::from_utf8_lossy(&config_name_result.stderr)));
+            }
+            
+            let config_email_result = Command::new("git")
+                .args(["config", "user.email", "mcp-server@5dlabs.com"])
+                .output()
+                .context("Failed to configure git user.email")?;
+            
+            if !config_email_result.status.success() {
+                return Err(anyhow!("Failed to configure git user.email: {}", String::from_utf8_lossy(&config_email_result.stderr)));
+            }
             
             // Add all changes
             let add_result = Command::new("git")
@@ -268,39 +349,35 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         return Err(anyhow!("Failed to check git status: {}", String::from_utf8_lossy(&status_output.stderr)));
     }
     
-    // Handle agent name resolution with validation (optional - workflow has defaults)
+    // Handle agent name resolution with validation
     let agent_name = arguments.get("agent").and_then(|v| v.as_str());
     let github_app = if let Some(agent) = agent_name {
         // Validate agent name exists in config
-        if !agents_config.contains_key(agent) {
-            let available_agents: Vec<&String> = agents_config.keys().collect();
+        if !config.agents.contains_key(agent) {
+            let available_agents: Vec<&String> = config.agents.keys().collect();
             return Err(anyhow!(
                 "Unknown agent '{}'. Available agents: {:?}", 
                 agent, available_agents
             ));
         }
-        Some(agents_config[agent].clone())
+        config.agents[agent].clone()
     } else {
-        // No agent specified - workflow template will use default
-        None
+        // Use default from config
+        config.defaults.docs.github_app.clone()
     };
     
-    // Handle model (optional - use workflow defaults if not provided)  
-    let model = arguments.get("model").and_then(|v| v.as_str());
+    // Handle model - use provided value or config default
+    let model = arguments.get("model")
+        .and_then(|v| v.as_str())
+        .map(String::from)
+        .unwrap_or_else(|| config.defaults.docs.model.clone());
     
-    // Validate model name if provided
-    if let Some(m) = model {
-        if !m.starts_with("claude-") {
-            return Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name", m));
-        }
+    // Validate model name
+    if !model.starts_with("claude-") {
+        return Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name", model));
     }
     
-    // Generate individual task files from tasks.json if it exists
-    if project_dir.join(".taskmaster/tasks/tasks.json").exists() {
-        eprintln!("🔧 Generating individual task files from tasks.json...");
-        generate_task_files(&project_dir)
-            .context("Failed to generate individual task files")?;
-    }
+    // Task files will be generated by container script from tasks.json
     
     // Handle include_codebase parameter
     let include_codebase = arguments.get("include_codebase")
@@ -311,22 +388,9 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         format!("working-directory={working_directory}"),
         format!("repository-url={repository_url}"),
         format!("source-branch={source_branch}"),
+        format!("github-app={github_app}"),
+        format!("model={model}"),
     ];
-    
-    // TEMPORARY FIX: Always pass parameters until Argo template defaults are working
-    if let Some(ref app) = github_app {
-        params.push(format!("github-app={}", app));
-    } else {
-        params.push("github-app=5DLabs-Morgan".to_string());
-        eprintln!("No agent specified - using explicit fallback: 5DLabs-Morgan");
-    }
-    
-    if let Some(m) = model {
-        params.push(format!("model={}", m));
-    } else {
-        params.push("model=claude-opus-4-20250514".to_string());
-        eprintln!("No model specified - using explicit fallback: claude-opus-4-20250514");
-    }
     
     // Always add include_codebase parameter as boolean (required by workflow template)
     params.push(format!("include-codebase={}", include_codebase));
@@ -353,7 +417,7 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
             "source_branch": source_branch,
             "github_app": github_app,
             "agent": agent_name.unwrap_or("default"),
-            "model": model.unwrap_or("default"),
+            "model": model,
             "parameters": params
         })),
         Err(e) => Err(anyhow!("Failed to submit docs workflow: {}", e)),
@@ -366,10 +430,13 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .and_then(|v| v.as_u64())
         .ok_or(anyhow!("Missing required parameter: task_id"))?;
     
+    let config = FDL_CONFIG.get().unwrap();
+    
     let service = arguments
         .get("service")
         .and_then(|v| v.as_str())
-        .ok_or(anyhow!("Missing required parameter: service"))?;
+        .or_else(|| config.defaults.code.service.as_deref())
+        .ok_or(anyhow!("Missing required parameter: service. Please provide it or set defaults.code.service in config"))?;
         
     let repository = arguments
         .get("repository")
@@ -379,7 +446,8 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     let docs_project_directory = arguments
         .get("docs_project_directory")
         .and_then(|v| v.as_str())
-        .ok_or(anyhow!("Missing required parameter: docs_project_directory"))?;
+        .or_else(|| config.defaults.code.docs_project_directory.as_deref())
+        .ok_or(anyhow!("Missing required parameter: docs_project_directory. Please provide it or set defaults.code.docsProjectDirectory in config"))?;
     
     // Validate repository URL
     validate_repository_url(repository)?;
@@ -389,59 +457,61 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         return Err(anyhow!("Invalid service name '{}'. Must contain only lowercase letters, numbers, and hyphens", service));
     }
     
-    let agents_config = AGENTS_CONFIG.get().unwrap();
-    
-    // Handle docs repository (require explicit value or rely on Helm defaults)
+    // Handle docs repository - use provided value, config default, or error
     let docs_repository = arguments.get("docs_repository")
         .and_then(|v| v.as_str())
-        .ok_or(anyhow!("No docs_repository specified. Please provide a 'docs_repository' parameter"))?;
+        .map(String::from)
+        .or_else(|| config.defaults.code.docs_repository.clone())
+        .ok_or(anyhow!("No docs_repository specified. Please provide a 'docs_repository' parameter or set defaults.code.docsRepository in config"))?;
     
-    validate_repository_url(docs_repository)?;
+    validate_repository_url(&docs_repository)?;
     
-    // Handle working directory (require explicit value or rely on Helm defaults)
+    // Handle working directory - use provided value or config default
     let working_directory = arguments.get("working_directory")
         .and_then(|v| v.as_str())
-        .ok_or(anyhow!("No working_directory specified. Please provide a 'working_directory' parameter"))?;
+        .unwrap_or(&config.defaults.code.working_directory);
         
     // Handle agent name resolution with validation
     let agent_name = arguments.get("agent").and_then(|v| v.as_str());
     let github_app = if let Some(agent) = agent_name {
         // Validate agent name exists in config
-        if !agents_config.contains_key(agent) {
-            let available_agents: Vec<&String> = agents_config.keys().collect();
+        if !config.agents.contains_key(agent) {
+            let available_agents: Vec<&String> = config.agents.keys().collect();
             return Err(anyhow!(
                 "Unknown agent '{}'. Available agents: {:?}", 
                 agent, available_agents
             ));
         }
-        agents_config[agent].clone()
+        config.agents[agent].clone()
     } else {
-        return Err(anyhow!("No agent specified. Please provide an 'agent' parameter (e.g., 'rex', 'blaze', 'cipher')"));
+        // Use default from config
+        config.defaults.code.github_app.clone()
     };
     
-    // Handle model (optional - use workflow defaults if not provided)
-    let model = arguments.get("model").and_then(|v| v.as_str());
+    // Handle model - use provided value or config default
+    let model = arguments.get("model")
+        .and_then(|v| v.as_str())
+        .map(String::from)
+        .unwrap_or_else(|| config.defaults.code.model.clone());
     
-    // Validate model name if provided
-    if let Some(m) = model {
-        if !m.starts_with("claude-") {
-            return Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name", m));
-        }
+    // Validate model name
+    if !model.starts_with("claude-") {
+        return Err(anyhow!("Invalid model '{}'. Must be a valid Claude model name", model));
     }
     
     // Auto-detect docs branch (fail if not available)
     let docs_branch = get_git_current_branch()
         .context("Failed to auto-detect git branch. Ensure you're in a git repository.")?;
     
-    // Handle continue session (require explicit value or rely on Helm defaults)
+    // Handle continue session - use provided value or config default
     let continue_session = arguments.get("continue_session")
         .and_then(|v| v.as_bool())
-        .ok_or(anyhow!("No continue_session specified. Please provide a 'continue_session' parameter (true/false)"))?;
+        .unwrap_or(config.defaults.code.continue_session);
     
-    // Handle overwrite memory (require explicit value or rely on Helm defaults)
+    // Handle overwrite memory - use provided value or config default
     let overwrite_memory = arguments.get("overwrite_memory")
         .and_then(|v| v.as_bool())
-        .ok_or(anyhow!("No overwrite_memory specified. Please provide an 'overwrite_memory' parameter (true/false)"))?;
+        .unwrap_or(config.defaults.code.overwrite_memory);
     
     let mut params = vec![
         format!("task-id={task_id}"),
@@ -451,16 +521,12 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         format!("docs-project-directory={docs_project_directory}"),
         format!("working-directory={working_directory}"),
         format!("github-app={github_app}"),
+        format!("model={model}"),
         format!("continue-session={continue_session}"),
         format!("overwrite-memory={overwrite_memory}"),
         format!("docs-branch={docs_branch}"),
         format!("context-version=0"), // Auto-assign by controller
     ];
-    
-    // Only add model parameter if specified
-    if let Some(m) = model {
-        params.push(format!("model={}", m));
-    }
     
     // Handle env object - convert to JSON string for workflow parameter
     if let Some(env) = arguments.get("env").and_then(|v| v.as_object()) {
@@ -499,7 +565,7 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
             "working_directory": working_directory,
             "github_app": github_app,
             "agent": agent_name.unwrap_or("default"),
-            "model": model.unwrap_or("default"),
+            "model": model,
             "continue_session": continue_session,
             "overwrite_memory": overwrite_memory,
             "docs_branch": docs_branch,
@@ -584,9 +650,35 @@ async fn rpc_loop() -> Result<()> {
     let mut lines = reader.lines();
     let mut stdout = tokio::io::stdout();
 
-    while let Some(line) = lines.next_line().await? {
+    loop {
+        // Add 30 second timeout for reading from stdin
+        let line_result = timeout(Duration::from_secs(30), lines.next_line()).await;
+        
+        let line = match line_result {
+            Ok(Ok(Some(line))) => line,
+            Ok(Ok(None)) => {
+                eprintln!("Stdin closed, exiting RPC loop");
+                break;
+            }
+            Ok(Err(e)) => {
+                eprintln!("Error reading from stdin: {}", e);
+                break;
+            }
+            Err(_) => {
+                eprintln!("Timeout waiting for stdin, checking if we should exit...");
+                // Check if stdin is still valid, if not exit gracefully
+                continue;
+            }
+        };
+        
         eprintln!("Received line: {line}");
-        let request: RpcRequest = serde_json::from_str(&line).context("Invalid JSON request")?;
+        let request: RpcRequest = match serde_json::from_str(&line) {
+            Ok(req) => req,
+            Err(e) => {
+                eprintln!("Invalid JSON request: {}", e);
+                continue;
+            }
+        };
         eprintln!("Parsed request for method: {}", request.method);
 
         let result = handle_method(&request.method, request.params.as_ref());
@@ -613,8 +705,15 @@ async fn rpc_loop() -> Result<()> {
                     serde_json::to_string(&response)?
                 }
             };
-            stdout.write_all((resp_json + "\n").as_bytes()).await?;
-            stdout.flush().await?;
+            // Add timeout for stdout operations to prevent hanging
+            if let Err(_) = timeout(Duration::from_secs(5), stdout.write_all((resp_json + "\n").as_bytes())).await {
+                eprintln!("Timeout writing to stdout, exiting");
+                break;
+            }
+            if let Err(_) = timeout(Duration::from_secs(5), stdout.flush()).await {
+                eprintln!("Timeout flushing stdout, exiting");
+                break;
+            }
         }
     }
     Ok(())
@@ -902,21 +1001,35 @@ fn format_task_content(task: &serde_json::Value) -> Result<String> {
 fn main() -> Result<()> {
     eprintln!("🚀 Starting 5D Labs MCP Server...");
     
-    // Initialize agents configuration from environment variables
-    let agents_config = load_agents_from_env()
-        .context("Failed to load agents configuration")?;
-    eprintln!("📋 Loaded {} agents from environment: {:?}", 
-              agents_config.len(), 
-              agents_config.keys().collect::<Vec<_>>());
+    // Initialize configuration from JSON file
+    let config = load_fdl_config()
+        .context("Failed to load cto-config.json")?;
+    eprintln!("📋 Loaded {} agents from config: {:?}", 
+              config.agents.len(), 
+              config.agents.keys().collect::<Vec<_>>());
     
     // Store in global static
-    AGENTS_CONFIG.set(agents_config).map_err(|_| anyhow!("Failed to set agents config"))?;
-    eprintln!("✅ Agents configuration loaded");
+    FDL_CONFIG.set(config).map_err(|_| anyhow!("Failed to set FDL config"))?;
+    eprintln!("✅ Configuration loaded");
     
     eprintln!("Creating runtime...");
     let rt = Runtime::new()?;
     eprintln!("Runtime created, starting RPC loop");
-    rt.block_on(rpc_loop())?;
-    eprintln!("RPC loop completed");
+    
+    // Set up signal handling for graceful shutdown
+    rt.block_on(async {
+        tokio::select! {
+            result = rpc_loop() => {
+                eprintln!("RPC loop completed with result: {:?}", result);
+                result
+            }
+            _ = signal::ctrl_c() => {
+                eprintln!("Received Ctrl+C, shutting down gracefully");
+                Ok(())
+            }
+        }
+    })?;
+    
+    eprintln!("MCP server shutdown complete");
     Ok(())
 }

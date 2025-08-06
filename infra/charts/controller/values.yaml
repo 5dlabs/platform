@@ -103,32 +103,7 @@ agents:
       effectively with the broader AI agent team. You bring deep expertise and 
       strategic thinking to every challenge.
 
-# Default agent assignments and workflow parameters
-defaults:
-  docsAgent: "morgan"
-  codeAgent: "rex"
-  
-  # Workflow parameter defaults
-  workflow:
-    # Code task defaults
-    code:
-      workingDirectory: "."
-      serviceId: ""
-      docsRepositoryUrl: "5dlabs/projects"
-      docsProjectDirectory: "."
-      docsBranch: "main"
-      continueSession: false
-      overwriteMemory: false
-      timeout: 3600  # 1 hour
-      model: "claude-3-5-sonnet-20241022"
-      
-    # Documentation task defaults  
-    docs:
-      workingDirectory: "."
-      repositoryUrl: "5dlabs/projects"
-      sourceBranch: "main"
-      timeout: 1800  # 30 minutes
-      model: "claude-opus-4-20250514"
+# Agent defaults are now managed through cto-config.json in the MCP server
 
 imagePullSecrets:
   - name: ghcr-secret

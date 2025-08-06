@@ -24,7 +24,5 @@ data:
         description: {{ $agent.description | quote }}
         systemPrompt: {{ $agent.systemPrompt | quote }}
       {{- end }}
-    defaults:
-      docsAgent: {{ .Values.defaults.docsAgent | quote }}
-      codeAgent: {{ .Values.defaults.codeAgent | quote }}
+    # Agent defaults are now managed through cto-config.json in the MCP server
 {{- end }}

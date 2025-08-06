@@ -1,11 +1,23 @@
 use serde_json::{json, Value};
+use std::collections::HashMap;
 
 /// Get tool schemas for MCP protocol with rich descriptions
 pub fn get_tool_schemas() -> Value {
     json!({
         "tools": [
             get_docs_schema(),
-            get_task_schema(),
+            get_task_schema(&HashMap::new()),
+            get_export_schema()
+        ]
+    })
+}
+
+/// Get tool schemas with config-based agent descriptions
+pub fn get_tool_schemas_with_config(agents: &HashMap<String, String>) -> Value {
+    json!({
+        "tools": [
+            get_docs_schema(),
+            get_task_schema(agents),
             get_export_schema()
         ]
     })
@@ -41,7 +53,7 @@ fn get_docs_schema() -> Value {
     })
 }
 
-fn get_task_schema() -> Value {
+fn get_task_schema(agents: &HashMap<String, String>) -> Value {
     json!({
         "name": "task",
         "description": "Submit a Task Master task for implementation using Claude with persistent workspace",
@@ -55,7 +67,7 @@ fn get_task_schema() -> Value {
                 },
                 "service": {
                     "type": "string",
-                    "description": "Target service name (creates workspace-{service} PVC)",
+                    "description": "Target service name (creates workspace-{service} PVC). Optional if defaults.code.service is set in config.",
                     "pattern": "^[a-z0-9-]+$"
                 },
                 "repository": {
@@ -64,15 +76,20 @@ fn get_task_schema() -> Value {
                 },
                 "docs_project_directory": {
                     "type": "string",
-                    "description": "Project directory within docs repository (e.g., projects/market-research)"
+                    "description": "Project directory within docs repository (e.g., projects/market-research). Optional if defaults.code.docsProjectDirectory is set in config."
                 },
                 "docs_repository": {
                     "type": "string",
-                    "description": "Documentation repository URL (optional, defaults to configured value)"
+                    "description": "Documentation repository URL. Optional if defaults.code.docsRepository is set in config."
                 },
                 "agent": {
-                    "type": "string",
-                    "description": "Agent name for task assignment (e.g., morgan, rex, blaze, cipher)"
+                    "type": "string", 
+                    "description": if agents.is_empty() {
+                        "Agent name for task assignment".to_string()
+                    } else {
+                        let agent_list = agents.keys().map(|s| s.as_str()).collect::<Vec<_>>().join(", ");
+                        format!("Agent name for task assignment. Available agents: {}", agent_list)
+                    }
                 },
                 "working_directory": {
                     "type": "string",
@@ -120,7 +137,7 @@ fn get_task_schema() -> Value {
                     }
                 }
             },
-            "required": ["task_id", "service", "repository", "docs_project_directory"]
+            "required": ["task_id", "repository"]
         }
     })
 }

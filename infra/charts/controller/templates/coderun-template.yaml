@@ -12,49 +12,39 @@ metadata:
     app.kubernetes.io/part-of: platform
     agents.platform/template-type: coderun
 spec:
-  # Define input parameters that match the MCP server interface
+  # Define input parameters that match the MCP server interface  
+  # Note: 'default' values are for documentation/IDE hints only - MCP server always provides explicit values
   arguments:
     parameters:
-      # Required parameters from MCP server
+      # All parameters are required by Argo (MCP server always provides explicit values)
       - name: task-id
         description: "Task Master task ID to implement"
       - name: service-id
         description: "Service identifier for persistent workspace"
-        default: "{{ .Values.defaults.workflow.code.serviceId }}"
       - name: repository-url
         description: "Target repository URL in org/repo format (e.g., 5dlabs/cto)"
       - name: docs-repository-url
         description: "Documentation repository URL in org/repo format"
-        default: "{{ .Values.defaults.workflow.code.docsRepositoryUrl }}"
       - name: docs-project-directory
         description: "Project directory within docs repository"
-        default: "{{ .Values.defaults.workflow.code.docsProjectDirectory }}"
       - name: working-directory
         description: "Working directory within target repository"
-        default: "{{ .Values.defaults.workflow.code.workingDirectory }}"
       - name: github-app
         description: "GitHub App name for authentication (e.g., '5DLabs-Rex')"
-        default: "{{ index .Values.agents .Values.defaults.codeAgent "githubApp" }}"
-      
-      # Optional parameters
       - name: model
         description: "Claude model to use for execution"
-        default: "{{ .Values.defaults.workflow.code.model }}"
       - name: continue-session
         description: "Whether to continue previous session"
-        default: "{{ .Values.defaults.workflow.code.continueSession }}"
       - name: overwrite-memory
         description: "Whether to overwrite CLAUDE.md memory file"
-        default: "{{ .Values.defaults.workflow.code.overwriteMemory }}"
       - name: docs-branch
         description: "Documentation branch to work from"
-        default: "{{ .Values.defaults.workflow.code.docsBranch }}"
 
   # Service account for workflow execution
   serviceAccountName: argo-workflow
   
-  # Workflow timeout
-  activeDeadlineSeconds: {{ .Values.defaults.workflow.code.timeout }}
+  # Workflow timeout (1 hour)
+  activeDeadlineSeconds: 3600
   
   # Main workflow entry point
   entrypoint: coderun-main
