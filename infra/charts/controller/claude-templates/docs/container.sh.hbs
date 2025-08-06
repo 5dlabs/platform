@@ -15,25 +15,60 @@ echo "Using GitHub App authentication (SSH not required)"
 
 # Authenticate with GitHub App
 if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ]; then
-    echo "Authenticating with GitHub App..."
+    # Function to generate fresh GitHub App token
+generate_github_token() {
+    echo "Generating fresh GitHub App token..."
     
-    # Create temporary private key file
-    TEMP_KEY_FILE="/tmp/github-app-key.pem"
-    echo "$GITHUB_APP_PRIVATE_KEY" > "$TEMP_KEY_FILE"
-    chmod 600 "$TEMP_KEY_FILE"
+    # Look for private key file - check both workspace root and working directory
+    PRIVATE_KEY_FILE=""
+    # Check workspace root first
+    for key_file in /workspace/morgan-5dlabs.*.private-key.pem; do
+        if [ -f "$key_file" ]; then
+            PRIVATE_KEY_FILE="$key_file"
+            break
+        fi
+    done
+    # If not found, check current working directory
+    if [ -z "$PRIVATE_KEY_FILE" ]; then
+        for key_file in "$CLAUDE_WORK_DIR"/morgan-5dlabs.*.private-key.pem; do
+            if [ -f "$key_file" ]; then
+                PRIVATE_KEY_FILE="$key_file"
+                break
+            fi
+        done
+    fi
     
-    # Generate JWT token for GitHub App
-    # JWT header
-    JWT_HEADER=$(echo -n '{"alg":"RS256","typ":"JWT"}' | base64 -w 0 | tr '+/' '-_' | tr -d '=')
+    if [ -z "$PRIVATE_KEY_FILE" ]; then
+        echo "❌ Morgan private key file not found in workspace"
+        exit 1
+    fi
     
-    # JWT payload with current time and expiration (10 minutes)
-    NOW=$(date +%s)
-    EXP=$((NOW + 600))
-    JWT_PAYLOAD=$(echo -n "{\"iat\":$NOW,\"exp\":$EXP,\"iss\":\"$GITHUB_APP_ID\"}" | base64 -w 0 | tr '+/' '-_' | tr -d '=')
+    echo "Using private key: $PRIVATE_KEY_FILE"
     
-    # Sign the JWT
-    JWT_SIGNATURE=$(echo -n "$JWT_HEADER.$JWT_PAYLOAD" | openssl dgst -sha256 -sign "$TEMP_KEY_FILE" | base64 -w 0 | tr '+/' '-_' | tr -d '=')
-    JWT_TOKEN="$JWT_HEADER.$JWT_PAYLOAD.$JWT_SIGNATURE"
+    # Install Python PyJWT if not available
+    if ! python3 -c "import jwt" 2>/dev/null; then
+        echo "Installing PyJWT..."
+        pip3 install 'PyJWT[crypto]' >/dev/null 2>&1
+    fi
+    
+    # Generate JWT using Python (more reliable than shell)
+    JWT_TOKEN=$(python3 -c "
+import jwt
+import time
+
+with open('$PRIVATE_KEY_FILE', 'r') as f:
+    private_key = f.read()
+
+now = int(time.time())
+payload = {'iat': now, 'exp': now + 600, 'iss': '$GITHUB_APP_ID'}
+token = jwt.encode(payload, private_key, algorithm='RS256')
+print(token)
+")
+    
+    if [ -z "$JWT_TOKEN" ]; then
+        echo "❌ Failed to generate JWT token"
+        exit 1
+    fi
     
     # Get installation ID for the repository
     REPO_OWNER=$(echo "{{repository_url}}" | sed -E 's|https://github.com/([^/]+)/.*|\1|')
@@ -86,6 +121,10 @@ if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ]; then
     echo "$GITHUB_TOKEN" | gh auth login --with-token
     
     echo "✓ GitHub App authenticated successfully"
+}
+
+    # Call the function to authenticate
+    generate_github_token
 else
     echo "❌ GITHUB_APP_PRIVATE_KEY or GITHUB_APP_ID not found"
     exit 1

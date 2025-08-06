@@ -306,18 +306,19 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         format!("source-branch={source_branch}"),
     ];
     
-    // Only add github-app parameter if agent specified (let workflow use backend default)
+    // TEMPORARY FIX: Always pass parameters until Argo template defaults are working
     if let Some(ref app) = github_app {
         params.push(format!("github-app={}", app));
     } else {
-        eprintln!("No agent specified - workflow will use backend default: 5DLabs-Morgan");
+        params.push("github-app=5DLabs-Morgan".to_string());
+        eprintln!("No agent specified - using explicit fallback: 5DLabs-Morgan");
     }
     
-    // Only add model parameter if specified (let workflow use backend default)
     if let Some(m) = model {
         params.push(format!("model={}", m));
     } else {
-        eprintln!("No model specified - workflow will use backend default: claude-opus-4-20250514");
+        params.push("model=claude-opus-4-20250514".to_string());
+        eprintln!("No model specified - using explicit fallback: claude-opus-4-20250514");
     }
     
     // Always add include_codebase parameter as boolean (required by workflow template)
@@ -788,16 +789,22 @@ fn generate_task_files(project_dir: &std::path::Path) -> Result<()> {
     std::fs::create_dir_all(&tasks_dir)
         .context("Failed to create .taskmaster/tasks directory")?;
     
-    // Generate individual task files
+    // Generate individual task files only if they don't exist
     for task in tasks_array {
         if let Some(task_id) = task.get("id").and_then(|v| v.as_u64()) {
             let task_file = tasks_dir.join(format!("task-{}.txt", task_id));
-            let task_content = format_task_content(task)?;
             
-            std::fs::write(&task_file, task_content)
-                .with_context(|| format!("Failed to write task file: {}", task_file.display()))?;
-            
-            eprintln!("✓ Generated task-{}.txt", task_id);
+            // Only generate if file doesn't exist
+            if !task_file.exists() {
+                let task_content = format_task_content(task)?;
+                
+                std::fs::write(&task_file, task_content)
+                    .with_context(|| format!("Failed to write task file: {}", task_file.display()))?;
+                
+                eprintln!("✓ Generated task-{}.txt", task_id);
+            } else {
+                eprintln!("⚠️ Task file already exists: task-{}.txt", task_id);
+            }
         }
     }
     
