@@ -246,9 +246,17 @@ echo "📦 Installing TaskMaster..."
 echo "📋 Node version: $(node --version)"
 echo "📋 NPM version: $(npm --version)"
 
-# In Claude Code image, global packages go to /usr/local/share/npm-global
-export NPM_CONFIG_PREFIX=/usr/local/share/npm-global
-export PATH=$PATH:/usr/local/share/npm-global/bin
+# Check if we're in the Claude Code container
+if [ -d "/usr/local/share/npm-global" ] && [ -w "/usr/local/share/npm-global" ]; then
+    echo "✅ Detected Claude Code container environment"
+    export NPM_CONFIG_PREFIX=/usr/local/share/npm-global
+    export PATH=$PATH:/usr/local/share/npm-global/bin
+    NPM_BIN="/usr/local/share/npm-global/bin"
+else
+    echo "🔍 Using default npm global location"
+    # Let npm use its default global location
+    NPM_BIN=$(npm bin -g 2>/dev/null || echo "/usr/local/bin")
+fi
 
 npm install -g task-master-ai@latest || {
     echo "❌ TaskMaster installation failed"
@@ -257,9 +265,14 @@ npm install -g task-master-ai@latest || {
 }
 
 # Verify installation location
-NPM_BIN="/usr/local/share/npm-global/bin"
 echo "🔍 NPM global bin directory: $NPM_BIN"
 echo "🔍 Current PATH: $PATH"
+
+# Add npm global bin to PATH if not already there
+if [[ ":$PATH:" != *":$NPM_BIN:"* ]]; then
+    export PATH="$NPM_BIN:$PATH"
+    echo "🔍 Added $NPM_BIN to PATH"
+fi
 
 # Verify installation
 if ! command -v task-master &> /dev/null; then
