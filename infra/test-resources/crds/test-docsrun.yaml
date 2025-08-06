@@ -9,4 +9,4 @@ spec:
   sourceBranch: "main"
   targetBranch: "docs/test-auto-docs"
   model: "sonnet"
-  githubUser: "test-user"
+  githubApp: "morgan-5dlabs"

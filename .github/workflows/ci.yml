@@ -197,15 +197,37 @@ jobs:
           echo "🏗️  Installing CRD definitions..."
           kubectl apply -f infra/charts/controller/crds/
 
+          # Create mock secrets for GitHub App authentication (required by CRDs)
+          echo "🔐 Creating mock secrets for GitHub App..."
+          kubectl create secret generic github-app-morgan-5dlabs \
+            --namespace=test-platform \
+            --from-literal=private-key="mock-private-key" \
+            --from-literal=app-id="123456" || true
+          
+          # Create mock API key secret
+          kubectl create secret generic anthropic-api-key \
+            --namespace=test-platform \
+            --from-literal=api-key="mock-api-key" || true
+
           # Apply test CodeRun and DocsRun instances
           echo "🧪 Applying test CRD instances..."
           kubectl apply -f infra/test-resources/crds/ -n test-platform || true
+          
+          # Wait a moment for resources to be created
+          sleep 5
 
       - name: Verify CRD deployment
         run: |
-          kubectl get crd coderuns.controller.platform
-          kubectl get crd docsruns.controller.platform
-          kubectl get coderuns,docsruns -A
+          echo "🔍 Verifying CRD definitions..."
+          kubectl get crd coderuns.agents.platform
+          kubectl get crd docsruns.agents.platform
+          
+          echo "🔍 Verifying CRD instances..."
+          kubectl get coderuns,docsruns -n test-platform
+          
+          echo "🔍 Describing test instances..."
+          kubectl describe coderun test-coderun-ci -n test-platform || true
+          kubectl describe docsrun test-docsrun-ci -n test-platform || true
 
   # Security scanning (non-blocking)
   security-scan:
