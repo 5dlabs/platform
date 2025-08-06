@@ -195,7 +195,7 @@ jobs:
 
           # Install CRD definitions first
           echo "🏗️  Installing CRD definitions..."
-          kubectl apply -f infra/charts/controller/crds/platform-crds.yaml
+          kubectl apply -f infra/charts/controller/crds/
 
           # Apply test CodeRun and DocsRun instances
           echo "🧪 Applying test CRD instances..."
