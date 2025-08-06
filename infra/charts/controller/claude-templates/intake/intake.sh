@@ -169,22 +169,44 @@ if [ "$EXPAND_TASKS" = "true" ]; then
     task-master expand --all --force
 fi
 
+# Review and align tasks with architecture using Claude
+echo "🤖 Reviewing tasks against architecture with Claude..."
+if [ -f ".taskmaster/docs/architecture.md" ]; then
+    # Create a prompt for Claude to review tasks
+    cat > /tmp/review-prompt.md <<'EOF'
+Please review the tasks.json file against the architecture.md document and ensure they are properly aligned.
+
+Your task is to:
+1. Cross-reference all tasks in tasks.json with the architecture diagram
+2. Identify any missing tasks that are implied by the architecture
+3. Identify any tasks that don't align with the architecture
+4. Update, add, or remove tasks as needed to ensure full alignment
+
+Important:
+- Make direct edits to the tasks.json file
+- Ensure all architectural components have corresponding tasks
+- Ensure task dependencies match the architectural flow
+- Preserve the existing task structure and IDs where possible
+- Add clear details and implementation notes based on the architecture
+
+Files to review:
+- .taskmaster/tasks.json (the task list)
+- .taskmaster/docs/architecture.md (the architecture reference)
+
+Make the necessary modifications directly to ensure the tasks and architecture are fully aligned.
+EOF
+
+    # Run Claude to review and update tasks
+    claude --output-format stream-json --model "$MODEL" /tmp/review-prompt.md
+    
+    echo "✅ Task review complete"
+else
+    echo "⚠️ No architecture.md file found, skipping architecture alignment"
+fi
+
 # Generate task files
 echo "📝 Generating individual task files..."
 task-master generate
-
-# Create docs directory structure
-echo "📁 Creating docs directory structure..."
-if [ -d ".taskmaster/tasks" ]; then
-    for task_file in .taskmaster/tasks/task-*.txt; do
-        if [ -f "$task_file" ]; then
-            task_num=$(basename "$task_file" .txt | sed 's/task-//')
-            task_dir="docs/task-$task_num"
-            mkdir -p "$task_dir"
-            cp "$task_file" "$task_dir/task.md"
-        fi
-    done
-fi
 
 # Create summary file
 echo "📊 Creating project summary..."
