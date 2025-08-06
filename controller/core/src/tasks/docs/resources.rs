@@ -499,8 +499,19 @@ impl<'a> DocsResourceManager<'a> {
     fn create_task_labels(&self, docs_run: &DocsRun) -> BTreeMap<String, String> {
         let mut labels = BTreeMap::new();
 
-        labels.insert("app".to_string(), "orchestrator".to_string());
+        // Update legacy orchestrator label to controller
+        labels.insert("app".to_string(), "controller".to_string());
         labels.insert("component".to_string(), "docs-generator".to_string());
+        
+        // Project identification labels
+        labels.insert("job-type".to_string(), "docs".to_string());
+        
+        // Use working_directory as project name (it's the most meaningful identifier)
+        labels.insert(
+            "project-name".to_string(),
+            self.sanitize_label_value(&docs_run.spec.working_directory),
+        );
+        
         // Use github_app if available, fallback to github_user for backward compatibility
         let github_identity = docs_run
             .spec

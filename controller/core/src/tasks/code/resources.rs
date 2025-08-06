@@ -624,8 +624,19 @@ impl<'a> CodeResourceManager<'a> {
     fn create_task_labels(&self, code_run: &CodeRun) -> BTreeMap<String, String> {
         let mut labels = BTreeMap::new();
 
-        labels.insert("app".to_string(), "orchestrator".to_string());
+        // Update legacy orchestrator label to controller
+        labels.insert("app".to_string(), "controller".to_string());
         labels.insert("component".to_string(), "code-runner".to_string());
+        
+        // Project identification labels
+        labels.insert("job-type".to_string(), "code".to_string());
+        
+        // Use service as project name for code tasks
+        labels.insert(
+            "project-name".to_string(),
+            self.sanitize_label_value(&code_run.spec.service),
+        );
+        
         let github_identifier = code_run
             .spec
             .github_app
