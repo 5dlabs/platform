@@ -139,7 +139,8 @@ impl DocsTemplateGenerator {
             "model": model_value,
             "github_app": docs_run.spec.github_app.as_deref().unwrap_or(""),
             "api_key_secret_name": config.secrets.api_key_secret_name,
-            "api_key_secret_key": config.secrets.api_key_secret_key
+            "api_key_secret_key": config.secrets.api_key_secret_key,
+            "working_directory": &docs_run.spec.working_directory
         });
 
         handlebars.render("claude_settings", &context).map_err(|e| {

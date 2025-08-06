@@ -146,7 +146,8 @@ impl CodeTemplateGenerator {
             "model": code_run.spec.model,
             "github_app": code_run.spec.github_app.as_deref().unwrap_or(""),
             "api_key_secret_name": config.secrets.api_key_secret_name,
-            "api_key_secret_key": config.secrets.api_key_secret_key
+            "api_key_secret_key": config.secrets.api_key_secret_key,
+            "working_directory": code_run.spec.working_directory.as_deref().unwrap_or(".")
         });
 
         handlebars.render("claude_settings", &context).map_err(|e| {
