@@ -123,13 +123,6 @@ cd "$CLONE_DIR"
 git config user.name "Project Intake Bot"
 git config user.email "intake@5dlabs.com"
 
-# Create project directory structure
-PROJECT_DIR="projects/$PROJECT_NAME"
-echo "🏗️ Creating project structure at: $PROJECT_DIR"
-
-mkdir -p "$PROJECT_DIR/.taskmaster/docs"
-mkdir -p "$PROJECT_DIR/docs"
-
 # Copy PRD and architecture files
 cp "$PRD_FILE" "$PROJECT_DIR/.taskmaster/docs/prd.txt"
 if [ -f "$ARCH_FILE" ] && [ -s "$ARCH_FILE" ]; then
@@ -148,13 +141,14 @@ echo "🚀 Initializing TaskMaster project..."
 task-master init --yes \
     --name "$PROJECT_NAME" \
     --description "Auto-generated project from intake pipeline" \
-    --version "0.1.0"
+    --version "0.1.0" \
+    --rules "cursor"
 
 # Configure models
 echo "🤖 Configuring AI models..."
 task-master models --set-main "$MODEL"
 task-master models --set-research "$MODEL"  # Use same model for research to avoid Perplexity requirement
-task-master models --set-fallback "claude-haiku-3-20240307"
+task-master models --set-fallback "claude-3-5-sonnet-20241022"
 
 # Parse PRD
 echo "📄 Parsing PRD to generate tasks..."
