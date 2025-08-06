@@ -85,6 +85,7 @@ impl CodeTemplateGenerator {
             "overwrite_memory": code_run.spec.overwrite_memory,
             "docs_project_directory": code_run.spec.docs_project_directory.as_deref().unwrap_or(""),
             "github_app": code_run.spec.github_app.as_deref().unwrap_or(""),
+            "model": code_run.spec.model,
         });
 
         handlebars

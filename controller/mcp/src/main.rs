@@ -379,7 +379,10 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     let model = arguments.get("model")
         .and_then(|v| v.as_str())
         .map(String::from)
-        .unwrap_or_else(|| config.defaults.docs.model.clone());
+        .unwrap_or_else(|| {
+            eprintln!("🐛 DEBUG: Using docs default model: {}", config.defaults.docs.model);
+            config.defaults.docs.model.clone()
+        });
     
     // Validate model name
     if !model.starts_with("claude-") {
@@ -403,6 +406,8 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     
     // Always add include_codebase parameter as boolean (required by workflow template)
     params.push(format!("include-codebase={include_codebase}"));
+    
+    eprintln!("🐛 DEBUG: Docs workflow submitting with model: {}", model);
     
     let mut args = vec![
         "submit",
@@ -502,7 +507,10 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     let model = arguments.get("model")
         .and_then(|v| v.as_str())
         .map(String::from)
-        .unwrap_or_else(|| config.defaults.code.model.clone());
+        .unwrap_or_else(|| {
+            eprintln!("🐛 DEBUG: Using code default model: {}", config.defaults.code.model);
+            config.defaults.code.model.clone()
+        });
     
     // Validate model name
     if !model.starts_with("claude-") {
