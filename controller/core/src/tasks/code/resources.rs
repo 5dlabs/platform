@@ -247,7 +247,33 @@ impl<'a> CodeResourceManager<'a> {
         // Try to get existing job first (idempotent check)
         match self.jobs.get(&job_name).await {
             Ok(existing_job) => {
-                info!("Found existing job: {}, using it", job_name);
+                info!("Found existing job: {}, checking for active pods", job_name);
+                
+                // Check if there are any pods for this job (regardless of controller UID)
+                // This prevents duplicate pods when controller restarts
+                let pods: Api<k8s_openapi::api::core::v1::Pod> = Api::namespaced(
+                    self.ctx.client.clone(),
+                    code_run.metadata.namespace.as_deref().unwrap_or("default"),
+                );
+                
+                let pod_list = pods.list(&ListParams::default()
+                    .labels(&format!("job-name={job_name}")))
+                    .await?;
+                
+                if !pod_list.items.is_empty() {
+                    info!(
+                        "Found {} existing pod(s) for job {}, using existing job",
+                        pod_list.items.len(),
+                        job_name
+                    );
+                } else {
+                    info!(
+                        "Job {} exists but has no pods, will let Job controller handle it",
+                        job_name
+                    );
+                }
+                
+                // Return the existing job's owner reference
                 Ok(Some(OwnerReference {
                     api_version: "batch/v1".to_string(),
                     kind: "Job".to_string(),

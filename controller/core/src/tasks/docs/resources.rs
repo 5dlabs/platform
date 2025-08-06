@@ -262,11 +262,68 @@ impl<'a> DocsResourceManager<'a> {
     ) -> Result<Option<OwnerReference>> {
         let job_name = self.generate_job_name(docs_run);
 
-        // OPTIMISTIC APPROACH: Try to create job directly first
-        error!(
-            "🎯 RESOURCE_MANAGER: Using optimistic job creation for: {}",
-            job_name
-        );
+        // FIRST: Check if the job already exists
+        match self.jobs.get(&job_name).await {
+            Ok(existing_job) => {
+                error!(
+                    "🔍 RESOURCE_MANAGER: Job {} already exists, checking for active pods",
+                    job_name
+                );
+                
+                // Check if there are any pods for this job (regardless of controller UID)
+                // This prevents duplicate pods when controller restarts
+                let pods: Api<k8s_openapi::api::core::v1::Pod> = Api::namespaced(
+                    self.ctx.client.clone(),
+                    docs_run.metadata.namespace.as_deref().unwrap_or("default"),
+                );
+                
+                let pod_list = pods.list(&ListParams::default()
+                    .labels(&format!("job-name={job_name}")))
+                    .await?;
+                
+                if !pod_list.items.is_empty() {
+                    error!(
+                        "✅ RESOURCE_MANAGER: Found {} existing pod(s) for job {}, skipping job creation",
+                        pod_list.items.len(),
+                        job_name
+                    );
+                    
+                    // Job exists with pods, return its owner reference
+                    return Ok(Some(OwnerReference {
+                        api_version: "batch/v1".to_string(),
+                        kind: "Job".to_string(),
+                        name: job_name.clone(),
+                        uid: existing_job.metadata.uid.unwrap_or_default(),
+                        controller: Some(false),
+                        block_owner_deletion: Some(true),
+                    }));
+                } else {
+                    error!(
+                        "⚠️ RESOURCE_MANAGER: Job {} exists but has no pods, will let Job controller handle it",
+                        job_name
+                    );
+                    
+                    // Job exists but no pods - the Job controller will create them
+                    return Ok(Some(OwnerReference {
+                        api_version: "batch/v1".to_string(),
+                        kind: "Job".to_string(),
+                        name: job_name.clone(),
+                        uid: existing_job.metadata.uid.unwrap_or_default(),
+                        controller: Some(false),
+                        block_owner_deletion: Some(true),
+                    }));
+                }
+            }
+            Err(_) => {
+                // Job doesn't exist, proceed with creation
+                error!(
+                    "🎯 RESOURCE_MANAGER: Job {} does not exist, creating new job",
+                    job_name
+                );
+            }
+        }
+
+        // OPTIMISTIC APPROACH: Try to create job directly
         match self.create_job(docs_run, cm_name).await {
             Ok(owner_ref) => {
                 error!(
@@ -276,8 +333,8 @@ impl<'a> DocsResourceManager<'a> {
                 Ok(owner_ref)
             }
             Err(crate::tasks::types::Error::KubeError(kube::Error::Api(ae))) if ae.code == 409 => {
-                // Job already exists due to race condition, get the existing one
-                error!("🔄 RESOURCE_MANAGER: Job {} already exists (409 conflict), getting existing job", job_name);
+                // Job was created by another reconciliation loop, get the existing one
+                error!("🔄 RESOURCE_MANAGER: Job {} was created concurrently (409 conflict), getting existing job", job_name);
                 match self.jobs.get(&job_name).await {
                     Ok(existing_job) => {
                         error!("✅ RESOURCE_MANAGER: Retrieved existing job: {}", job_name);
