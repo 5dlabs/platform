@@ -119,12 +119,15 @@ CLONE_DIR="/tmp/repo-$(date +%s)"
 git clone "$REPOSITORY_URL" "$CLONE_DIR"
 cd "$CLONE_DIR"
 
+# Normalize project name for filesystem (lowercase, safe characters)
+PROJECT_DIR_NAME=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-*//;s/-*$//')
+
 # Set PROJECT_DIR to a subdirectory within the cloned repository
-PROJECT_DIR="$CLONE_DIR/$PROJECT_NAME"
+PROJECT_DIR="$CLONE_DIR/$PROJECT_DIR_NAME"
 
 # Create project directory if it doesn't exist
 if [ ! -d "$PROJECT_DIR" ]; then
-    echo "📁 Creating project directory: $PROJECT_NAME"
+    echo "📁 Creating project directory: $PROJECT_DIR_NAME"
     mkdir -p "$PROJECT_DIR"
 fi
 
@@ -166,6 +169,10 @@ task-master init --yes \
 
 # Copy PRD and architecture files after initialization
 echo "📋 Copying PRD and architecture files..."
+
+# Ensure the docs directory exists (in case TaskMaster init didn't create it)
+mkdir -p ".taskmaster/docs"
+
 cp "$PRD_FILE" ".taskmaster/docs/prd.txt"
 if [ -f "$ARCH_FILE" ] && [ -s "$ARCH_FILE" ]; then
     cp "$ARCH_FILE" ".taskmaster/docs/architecture.md"
