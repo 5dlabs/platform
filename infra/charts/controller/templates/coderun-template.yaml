@@ -44,8 +44,8 @@ spec:
   # Service account for workflow execution
   serviceAccountName: argo-workflow
   
-  # Workflow timeout (1 hour)
-  activeDeadlineSeconds: 3600
+  # Workflow timeout (3 hours)
+  activeDeadlineSeconds: 10800
   
   # Main workflow entry point
   entrypoint: coderun-main
@@ -112,10 +112,10 @@ spec:
         successCondition: status.phase == Succeeded
         failureCondition: status.phase == Failed
             
-  # Cleanup policy - aggressive cleanup for development
+  # Cleanup policy - reasonable cleanup for long-running AI tasks
   ttlStrategy:
     secondsAfterCompletion: 300    # Keep completed workflows for 5 minutes
-    secondsAfterFailure: 3600      # Keep failed workflows for 1 hour
+    secondsAfterFailure: 10800     # Keep failed workflows for 3 hours
   
   # Pod garbage collection
   podGC:
