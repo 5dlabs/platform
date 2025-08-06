@@ -209,50 +209,57 @@ fi
 git config user.name "Project Intake Bot"
 git config user.email "intake@5dlabs.com"
 
+# Set up nvm environment if available (Claude Code image uses nvm)
+if [ -s "/usr/local/nvm/nvm.sh" ]; then
+    echo "🔧 Setting up nvm environment..."
+    export NVM_DIR="/usr/local/nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+    echo "✅ nvm loaded, node version: $(node --version)"
+fi
+
 # Check if npm is available
 if ! command -v npm &> /dev/null; then
     echo "❌ npm is not installed or not in PATH"
     echo "🔍 PATH: $PATH"
-    echo "🔍 Checking for node/npm..."
-    which node || echo "node not found"
-    which npm || echo "npm not found"
+    echo "🔍 Checking for node/npm in common locations..."
     
-    # Try to install Node.js/npm if not available
-    echo "📦 Attempting to install Node.js..."
-    if command -v apk &> /dev/null; then
-        # Alpine Linux
-        apk add --no-cache nodejs npm
-    elif command -v apt-get &> /dev/null; then
-        # Debian/Ubuntu
-        apt-get update && apt-get install -y nodejs npm
-    else
-        echo "❌ Cannot install Node.js automatically"
+    # Check common locations
+    for npm_path in /usr/local/nvm/versions/node/*/bin/npm /usr/bin/npm /usr/local/bin/npm; do
+        if [ -f "$npm_path" ]; then
+            echo "✅ Found npm at: $npm_path"
+            # Add to PATH
+            export PATH="$(dirname $npm_path):$PATH"
+            break
+        fi
+    done
+    
+    # Final check
+    if ! command -v npm &> /dev/null; then
+        echo "❌ Cannot find npm after checking common locations"
         exit 1
     fi
 fi
 
-# Install TaskMaster globally with dependency resolution
+# Install TaskMaster globally
 echo "📦 Installing TaskMaster..."
-echo "📋 Node version: $(node --version 2>/dev/null || echo 'node not found')"
-echo "📋 NPM version: $(npm --version 2>/dev/null || echo 'npm not found')"
+echo "📋 Node version: $(node --version)"
+echo "📋 NPM version: $(npm --version)"
 
-npm install -g task-master-ai@latest --force --legacy-peer-deps || {
-    echo "⚠️ Standard install failed, trying alternative approach..."
-    npm install -g task-master-ai@latest --no-optional --ignore-scripts || {
-        echo "❌ TaskMaster installation failed"
-        exit 1
-    }
+# In Claude Code image, global packages go to /usr/local/share/npm-global
+export NPM_CONFIG_PREFIX=/usr/local/share/npm-global
+export PATH=$PATH:/usr/local/share/npm-global/bin
+
+npm install -g task-master-ai@latest || {
+    echo "❌ TaskMaster installation failed"
+    echo "🔍 Trying with --force flag..."
+    npm install -g task-master-ai@latest --force || exit 1
 }
 
-# Find where npm installed the binary
-NPM_BIN=$(npm bin -g 2>/dev/null || echo "/usr/local/bin")
+# Verify installation location
+NPM_BIN="/usr/local/share/npm-global/bin"
 echo "🔍 NPM global bin directory: $NPM_BIN"
-
-# Add npm global bin to PATH if not already there
-if [[ ":$PATH:" != *":$NPM_BIN:"* ]]; then
-    export PATH="$NPM_BIN:$PATH"
-    echo "🔍 Added $NPM_BIN to PATH"
-fi
+echo "🔍 Current PATH: $PATH"
 
 # Verify installation
 if ! command -v task-master &> /dev/null; then
