@@ -132,9 +132,26 @@ fi
 git config user.name "Project Intake Bot"
 git config user.email "intake@5dlabs.com"
 
-# Install TaskMaster globally
+# Install TaskMaster globally with dependency resolution
 echo "📦 Installing TaskMaster..."
-npm install -g task-master-ai@latest
+npm install -g task-master-ai@latest --force --legacy-peer-deps || {
+    echo "⚠️ Standard install failed, trying alternative approach..."
+    npm install -g task-master-ai@latest --no-optional --ignore-scripts || {
+        echo "❌ TaskMaster installation failed"
+        echo "📋 Node version: $(node --version)"
+        echo "📋 NPM version: $(npm --version)"
+        exit 1
+    }
+}
+
+# Verify installation
+if ! command -v task-master &> /dev/null; then
+    echo "❌ task-master command not found after installation"
+    echo "🔍 PATH: $PATH"
+    exit 1
+fi
+
+echo "✅ TaskMaster installed successfully: $(task-master --version 2>/dev/null || echo 'version check failed')"
 
 # Change to project directory
 cd "$PROJECT_DIR"
