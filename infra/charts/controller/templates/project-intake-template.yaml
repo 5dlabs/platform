@@ -14,11 +14,8 @@ metadata:
 spec:
   arguments:
     parameters:
-      - name: prd-content
-        description: "PRD content (text or markdown)"
-      - name: architecture-content
-        description: "Architecture document content (optional)"
-        value: ""
+      - name: configmap-name
+        description: "Name of the ConfigMap containing intake files"
       - name: project-name
         description: "Project name (auto-detected if not provided)"
         value: ""
@@ -58,10 +55,8 @@ spec:
           template: generate-intake-config
           arguments:
             parameters:
-            - name: prd-content
-              value: "{{`{{workflow.parameters.prd-content}}`}}"
-            - name: architecture-content
-              value: "{{`{{workflow.parameters.architecture-content}}`}}"
+            - name: configmap-name
+              value: "{{`{{workflow.parameters.configmap-name}}`}}"
             - name: project-name
               value: "{{`{{workflow.parameters.project-name}}`}}"
             - name: repository-url
@@ -95,8 +90,7 @@ spec:
     - name: generate-intake-config
       inputs:
         parameters:
-        - name: prd-content
-        - name: architecture-content
+        - name: configmap-name
         - name: project-name
         - name: repository-url
         - name: github-app
@@ -116,43 +110,11 @@ spec:
           #!/bin/sh
           set -e
           
-          # Generate unique ConfigMap name
-          TIMESTAMP=$(date +%s)
-          RANDOM_ID=$(head /dev/urandom | tr -dc a-z0-9 | head -c 8)
-          CONFIGMAP_NAME="intake-${TIMESTAMP}-${RANDOM_ID}"
-          
-          echo "Creating ConfigMap: $CONFIGMAP_NAME"
-          
-          # Create the ConfigMap with intake configuration
-          cat <<EOF | kubectl apply -f -
-          apiVersion: v1
-          kind: ConfigMap
-          metadata:
-            name: $CONFIGMAP_NAME
-            namespace: {{ .Values.argo.namespace | default "argo" }}
-            labels:
-              app: orchestrator
-              component: project-intake
-              workflow: {{`{{workflow.name}}`}}
-          data:
-            prd.txt: |
-          {{`{{inputs.parameters.prd-content | b64dec | indent 6}}`}}
-            architecture.md: |
-          {{`{{inputs.parameters.architecture-content | b64dec | indent 6}}`}}
-            config.json: |
-              {
-                "project_name": "{{`{{inputs.parameters.project-name}}`}}",
-                "repository_url": "{{`{{inputs.parameters.repository-url}}`}}",
-                "github_app": "{{`{{inputs.parameters.github-app}}`}}",
-                "model": "{{`{{inputs.parameters.model}}`}}",
-                "num_tasks": {{`{{inputs.parameters.num-tasks}}`}},
-                "expand_tasks": {{`{{inputs.parameters.expand-tasks}}`}},
-                "analyze_complexity": {{`{{inputs.parameters.analyze-complexity}}`}}
-              }
-          EOF
+          # ConfigMap already created by MCP server, just pass it through
+          echo "Using ConfigMap: {{`{{inputs.parameters.configmap-name}}`}}"
           
           # Output the ConfigMap name for the next step
-          echo "$CONFIGMAP_NAME" > /tmp/configmap-name
+          echo "{{`{{inputs.parameters.configmap-name}}`}}" > /tmp/configmap-name
           echo "ConfigMap created successfully"
 
     # Run the intake container

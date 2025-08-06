@@ -885,10 +885,48 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     eprintln!("🤖 Using GitHub App: {github_app}");
     eprintln!("🧠 Using model: {model}");
 
-    // Base64 encode the content to avoid shell/YAML escaping issues
-    use base64::{Engine as _, engine::general_purpose};
-    let encoded_prd = general_purpose::STANDARD.encode(prd_content.as_bytes());
-    let encoded_arch = general_purpose::STANDARD.encode(architecture_content.as_bytes());
+    // Create a ConfigMap with the intake files to avoid YAML escaping issues
+    let configmap_name = format!("intake-{}-{}", 
+        project_name.to_lowercase().replace(' ', "-"), 
+        chrono::Utc::now().timestamp());
+    
+    eprintln!("📦 Creating ConfigMap: {configmap_name}");
+    
+    // Create ConfigMap with the intake content
+    let config_json = serde_json::json!({
+        "project_name": project_name,
+        "repository_url": format!("https://github.com/{}", repository_name),
+        "github_app": github_app,
+        "model": model,
+        "num_tasks": num_tasks,
+        "expand_tasks": expand_tasks,
+        "analyze_complexity": analyze_complexity
+    });
+    
+    // Create the ConfigMap using kubectl
+    let cm_output = std::process::Command::new("kubectl")
+        .args([
+            "create",
+            "configmap",
+            &configmap_name,
+            "-n",
+            "argo",
+            &format!("--from-literal=prd.txt={prd_content}"),
+            &format!("--from-literal=architecture.md={architecture_content}"),
+            &format!("--from-literal=config.json={}", config_json.to_string()),
+        ])
+        .output();
+    
+    if let Err(e) = cm_output {
+        return Err(anyhow!("Failed to create ConfigMap: {}", e));
+    }
+    
+    if let Ok(output) = cm_output {
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(anyhow!("Failed to create ConfigMap: {}", stderr));
+        }
+    }
 
     // Submit Argo workflow with minimal parameters
     let workflow_name = format!("intake-{}", chrono::Utc::now().timestamp());
@@ -903,9 +941,7 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
             "--name",
             &workflow_name,
             "-p",
-            &format!("prd-content={encoded_prd}"),
-            "-p",
-            &format!("architecture-content={encoded_arch}"),
+            &format!("configmap-name={configmap_name}"),
             "-p",
             &format!("project-name={project_name}"),
             "-p",
