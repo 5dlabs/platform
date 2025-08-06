@@ -145,8 +145,8 @@ spec:
           - name: ANTHROPIC_API_KEY
             valueFrom:
               secretKeyRef:
-                name: {{ include "controller.fullname" . }}-secrets
-                key: anthropic-api-key
+                name: agent-platform-secrets
+                key: ANTHROPIC_API_KEY
           # GitHub App credentials - use the standardized secret name
           # All GitHub App secrets follow the pattern: github-app-{normalized-name}
           - name: GITHUB_APP_ID
