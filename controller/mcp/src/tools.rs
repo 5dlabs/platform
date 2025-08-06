@@ -158,25 +158,25 @@ fn get_export_schema() -> Value {
 fn get_intake_schema() -> Value {
     json!({
         "name": "intake",
-        "description": "Process a new project intake by parsing PRD and generating TaskMaster tasks",
+        "description": "Process a new project intake. Reads PRD from intake/prd.txt and optional architecture from intake/architecture.md, then generates TaskMaster tasks",
         "inputSchema": {
             "type": "object",
             "properties": {
+                "project_name": {
+                    "type": "string",
+                    "description": "Name for the new project (required)"
+                },
                 "prd_content": {
                     "type": "string",
-                    "description": "Product Requirements Document content (required)"
+                    "description": "Override PRD content instead of reading from intake/prd.txt (optional)"
                 },
                 "architecture_content": {
                     "type": "string",
-                    "description": "Architecture document content (optional)"
-                },
-                "project_name": {
-                    "type": "string",
-                    "description": "Project name (optional, auto-detected from PRD if not provided)"
+                    "description": "Override architecture content instead of reading from intake/architecture.md (optional)"
                 },
                 "repository": {
                     "type": "string",
-                    "description": "Target repository URL for the project (optional, defaults to 5dlabs/projects)"
+                    "description": "Target repository URL (optional, auto-detected from current git repo)"
                 },
                 "num_tasks": {
                     "type": "integer",
@@ -201,7 +201,7 @@ fn get_intake_schema() -> Value {
                     "description": "GitHub App agent to use for PR creation (optional, defaults to Morgan)"
                 }
             },
-            "required": ["prd_content"]
+            "required": ["project_name"]
         }
     })
 }

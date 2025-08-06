@@ -240,6 +240,41 @@ fn get_git_current_branch() -> Result<String> {
     }
 }
 
+/// Get the current git repository URL in org/repo format
+fn get_git_repository_url() -> Result<String> {
+    let output = Command::new("git")
+        .args(["remote", "get-url", "origin"])
+        .output()
+        .context("Failed to execute git remote command")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8(output.stderr)?;
+        return Err(anyhow!("Failed to get git repository URL: {}", stderr));
+    }
+
+    let url = String::from_utf8(output.stdout)?.trim().to_string();
+    
+    // Parse GitHub URL to get org/repo format
+    // Handles both https://github.com/org/repo.git and git@github.com:org/repo.git
+    if url.contains("github.com/") {
+        // https format: https://github.com/org/repo.git
+        let parts: Vec<&str> = url.split("github.com/").collect();
+        if parts.len() > 1 {
+            let org_repo = parts[1].trim_end_matches(".git");
+            return Ok(org_repo.to_string());
+        }
+    } else if url.contains("github.com:") {
+        // SSH format: git@github.com:org/repo.git
+        let parts: Vec<&str> = url.split("github.com:").collect();
+        if parts.len() > 1 {
+            let org_repo = parts[1].trim_end_matches(".git");
+            return Ok(org_repo.to_string());
+        }
+    }
+    
+    Err(anyhow!("Could not parse repository URL: {}", url))
+}
+
 /// Validate repository URL format
 fn validate_repository_url(repo_url: &str) -> Result<()> {
     if !repo_url.starts_with("https://github.com/") {
@@ -744,27 +779,48 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
 fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     eprintln!("🚀 Processing project intake request");
 
-    // Get required PRD content
-    let prd_content = arguments
-        .get("prd_content")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| anyhow!("PRD content is required"))?;
+    // Read PRD from intake folder or use provided content
+    let intake_path = Path::new("intake");
+    let prd_file = intake_path.join("prd.txt");
+    
+    let prd_content = if let Some(content) = arguments.get("prd_content").and_then(|v| v.as_str()) {
+        // Allow override via parameter for compatibility
+        content.to_string()
+    } else if prd_file.exists() {
+        eprintln!("📋 Reading PRD from intake/prd.txt");
+        std::fs::read_to_string(&prd_file)
+            .context("Failed to read intake/prd.txt")?
+    } else {
+        return Err(anyhow!("No PRD found. Please create intake/prd.txt or provide prd_content parameter"));
+    };
 
-    // Get optional parameters
-    let architecture_content = arguments
-        .get("architecture_content")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    // Read optional architecture file
+    let arch_file = intake_path.join("architecture.md");
+    let architecture_content = if let Some(content) = arguments.get("architecture_content").and_then(|v| v.as_str()) {
+        content.to_string()
+    } else if arch_file.exists() {
+        eprintln!("🏗️ Reading architecture from intake/architecture.md");
+        std::fs::read_to_string(&arch_file)
+            .context("Failed to read intake/architecture.md")?
+    } else {
+        String::new()
+    };
 
+    // Get project name (required)
     let project_name = arguments
         .get("project_name")
         .and_then(|v| v.as_str())
-        .unwrap_or("");
+        .ok_or_else(|| anyhow!("project_name is required"))?;
 
-    let repository = arguments
-        .get("repository")
-        .and_then(|v| v.as_str())
-        .unwrap_or("https://github.com/5dlabs/projects");
+    // Auto-detect repository from git or use provided
+    let repository = if let Some(repo) = arguments.get("repository").and_then(|v| v.as_str()) {
+        repo.to_string()
+    } else {
+        eprintln!("🔍 Auto-detecting repository from git...");
+        let detected = get_git_repository_url()?;
+        eprintln!("📦 Using repository: {detected}");
+        format!("https://github.com/{detected}")  // Need full URL for the workflow
+    };
 
     let num_tasks = arguments
         .get("num_tasks")
