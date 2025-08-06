@@ -24,6 +24,11 @@ storage:
   # Size of workspace PVCs
   workspaceSize: "10Gi"
 
+# Argo Workflows integration (requires Argo Workflows CRDs to be installed)
+argo:
+  # Whether to create WorkflowTemplate resources (requires Argo Workflows)
+  enabled: false
+
 # Cleanup configuration (controller-based event-driven cleanup)
 cleanup:
   # Whether to enable automatic cleanup of completed jobs

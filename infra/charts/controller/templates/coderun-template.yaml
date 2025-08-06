@@ -1,3 +1,4 @@
+{{- if .Values.argo.enabled }}
 ---
 # Argo Workflow Template for CodeRun Tasks
 # This template creates CodeRun CRDs and lets the existing controller handle execution
@@ -118,4 +119,4 @@ spec:
   
   # Pod garbage collection
   podGC:
-    strategy: OnPodCompletion      # Delete pods immediately when they complete
+    strategy: OnPodCompletion      # Delete pods immediately when they complete{{- end }}
