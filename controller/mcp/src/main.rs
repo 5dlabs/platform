@@ -238,10 +238,16 @@ fn get_git_remote_url() -> Result<String> {
     }
 }
 
-/// Get the current git branch
-fn get_git_current_branch() -> Result<String> {
-    let output = Command::new("git")
-        .args(["branch", "--show-current"])
+/// Get the current git branch in a specific directory
+fn get_git_current_branch_in_dir(dir: Option<&Path>) -> Result<String> {
+    let mut cmd = Command::new("git");
+    cmd.args(["branch", "--show-current"]);
+    
+    if let Some(dir) = dir {
+        cmd.current_dir(dir);
+    }
+    
+    let output = cmd
         .output()
         .context("Failed to execute git command")?;
 
@@ -258,10 +264,16 @@ fn get_git_current_branch() -> Result<String> {
     }
 }
 
-/// Get the current git repository URL in org/repo format
-fn get_git_repository_url() -> Result<String> {
-    let output = Command::new("git")
-        .args(["remote", "get-url", "origin"])
+/// Get the current git repository URL in org/repo format from a specific directory
+fn get_git_repository_url_in_dir(dir: Option<&Path>) -> Result<String> {
+    let mut cmd = Command::new("git");
+    cmd.args(["remote", "get-url", "origin"]);
+    
+    if let Some(dir) = dir {
+        cmd.current_dir(dir);
+    }
+    
+    let output = cmd
         .output()
         .context("Failed to execute git remote command")?;
 
@@ -606,6 +618,14 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
 
     let config = CTO_CONFIG.get().unwrap();
 
+    // Get workspace directory from Cursor environment
+    let workspace_dir = std::env::var("WORKSPACE_FOLDER_PATHS")
+        .map(|paths| {
+            let first_path = paths.split(',').next().unwrap_or(&paths).trim();
+            std::path::PathBuf::from(first_path)
+        })
+        .unwrap_or_else(|_| std::env::current_dir().unwrap_or_default());
+
     let service = arguments
         .get("service")
         .and_then(|v| v.as_str())
@@ -691,8 +711,8 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         ));
     }
 
-    // Auto-detect docs branch (fail if not available)
-    let docs_branch = get_git_current_branch()
+    // Auto-detect docs branch (fail if not available, using workspace directory)
+    let docs_branch = get_git_current_branch_in_dir(Some(&workspace_dir))
         .context("Failed to auto-detect git branch. Ensure you're in a git repository.")?;
 
     // Handle continue session - use provided value or config default
@@ -797,8 +817,18 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
 fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     eprintln!("🚀 Processing project intake request");
 
+    // Get workspace directory from Cursor environment
+    let workspace_dir = std::env::var("WORKSPACE_FOLDER_PATHS")
+        .map(|paths| {
+            let first_path = paths.split(',').next().unwrap_or(&paths).trim();
+            std::path::PathBuf::from(first_path)
+        })
+        .unwrap_or_else(|_| std::env::current_dir().unwrap_or_default());
+
+    eprintln!("🔍 Using workspace directory: {}", workspace_dir.display());
+
     // Read PRD from intake folder or use provided content
-    let intake_path = Path::new("intake");
+    let intake_path = workspace_dir.join("intake");
     let prd_file = intake_path.join("prd.txt");
     
     let prd_content = if let Some(content) = arguments.get("prd_content").and_then(|v| v.as_str()) {
@@ -833,15 +863,15 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     // Get configuration
     let config = CTO_CONFIG.get().ok_or_else(|| anyhow!("Configuration not loaded"))?;
     
-    // Auto-detect repository from git
+    // Auto-detect repository from git (using workspace directory)
     eprintln!("🔍 Auto-detecting repository from git...");
-    let repository_name = get_git_repository_url()?;
+    let repository_name = get_git_repository_url_in_dir(Some(&workspace_dir))?;
     eprintln!("📦 Using repository: {repository_name}");
     let repository_url = format!("https://github.com/{repository_name}");
     
-    // Auto-detect current branch
+    // Auto-detect current branch (using workspace directory)
     eprintln!("🌿 Auto-detecting git branch...");
-    let branch = get_git_current_branch()?;
+    let branch = get_git_current_branch_in_dir(Some(&workspace_dir))?;
     eprintln!("🎯 Using branch: {branch}");
 
     // Use configuration values with defaults
