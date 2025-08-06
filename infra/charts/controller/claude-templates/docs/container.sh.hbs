@@ -255,8 +255,8 @@ echo "Setting up individual task files..."
 if [ -f "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" ]; then
   echo "📋 Found tasks.json, generating individual task files..."
   
-  # Use jq to extract tasks and create individual files
-  jq -r '.tasks[] | "\(.id)|\(.title)|\(.description // "")|\(.details // "")|\(.testStrategy // "")"' \
+  # Use jq to extract tasks and create individual files (handle null values safely)
+  jq -r '.tasks[]? | select(.id != null) | "\(.id // "")|\(.title // "No Title")|\(.description // "")|\(.details // "")|\(.testStrategy // "")"' \
     "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" | while IFS='|' read -r task_id title description details test_strategy; do
     
     if [ -n "$task_id" ] && [ "$task_id" != "null" ]; then
