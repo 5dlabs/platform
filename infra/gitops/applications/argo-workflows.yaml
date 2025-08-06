@@ -26,6 +26,17 @@ spec:
     helm:
       valueFiles: []
       values: |
+        # Override images to use v3.7.0-rc4 pre-release
+        controller:
+          image:
+            tag: v3.7.0-rc4
+        server:
+          image:
+            tag: v3.7.0-rc4
+        executor:
+          image:
+            tag: v3.7.0-rc4
+        
         # Use values from our local configuration file
         artifactRepository:
           archiveLogs: true
