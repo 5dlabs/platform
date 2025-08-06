@@ -56,7 +56,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/after-file-saved.sh"
+            "command": "/workspace/{{#if working_directory}}{{working_directory}}{{else}}.{{/if}}/after-file-saved.sh"
           }
         ]
       }

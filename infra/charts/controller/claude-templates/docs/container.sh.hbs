@@ -297,8 +297,8 @@ if [ -f "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" ]; then
       task_dir="$CLAUDE_WORK_DIR/.taskmaster/docs/task-$task_id"
       mkdir -p "$task_dir"
       
-      # Create task.md with formatted content
-      cat > "$task_dir/task.md" << EOF
+      # Create task.txt with formatted content (source file)
+      cat > "$task_dir/task.txt" << EOF
 # Task $task_id: $title
 
 ## Description
@@ -311,7 +311,7 @@ $details
 $test_strategy
 EOF
       
-      echo "✓ Generated docs/task-$task_id/task.md"
+      echo "✓ Generated docs/task-$task_id/task.txt (source file for Claude)"
     fi
   done
 elif [ -d "$CLAUDE_WORK_DIR/.taskmaster/tasks" ] && [ "$(ls -A "$CLAUDE_WORK_DIR/.taskmaster/tasks" 2>/dev/null)" ]; then
