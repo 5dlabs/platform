@@ -26,17 +26,17 @@ generate_github_token() {
     
     echo "Using private key from environment variable"
     
-    # Generate JWT token for GitHub App (fixed JWT generation)
+    # Generate JWT token for GitHub App (fixed JWT generation for Linux containers)
     # JWT header
-    JWT_HEADER=$(printf '{"alg":"RS256","typ":"JWT"}' | base64 | tr '+/' '-_' | tr -d '=')
+    JWT_HEADER=$(printf '{"alg":"RS256","typ":"JWT"}' | base64 -w 0 | tr '+/' '-_' | tr -d '=')
     
     # JWT payload with current time and expiration (10 minutes)
     NOW=$(date +%s)
     EXP=$((NOW + 600))
-    JWT_PAYLOAD=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' "$NOW" "$EXP" "$GITHUB_APP_ID" | base64 | tr '+/' '-_' | tr -d '=')
+    JWT_PAYLOAD=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' "$NOW" "$EXP" "$GITHUB_APP_ID" | base64 -w 0 | tr '+/' '-_' | tr -d '=')
     
     # Sign the JWT
-    JWT_SIGNATURE=$(printf '%s.%s' "$JWT_HEADER" "$JWT_PAYLOAD" | openssl dgst -sha256 -sign "$TEMP_KEY_FILE" -binary | base64 | tr '+/' '-_' | tr -d '=')
+    JWT_SIGNATURE=$(printf '%s.%s' "$JWT_HEADER" "$JWT_PAYLOAD" | openssl dgst -sha256 -sign "$TEMP_KEY_FILE" -binary | base64 -w 0 | tr '+/' '-_' | tr -d '=')
     JWT_TOKEN="$JWT_HEADER.$JWT_PAYLOAD.$JWT_SIGNATURE"
     
     if [ -z "$JWT_TOKEN" ]; then
