@@ -26,25 +26,18 @@ generate_github_token() {
     
     echo "Using private key from environment variable"
     
-    # Install Python PyJWT if not available
-    if ! python3 -c "import jwt" 2>/dev/null; then
-        echo "Installing PyJWT..."
-        pip3 install 'PyJWT[crypto]' >/dev/null 2>&1
-    fi
+    # Generate JWT token for GitHub App (same approach as code script)
+    # JWT header
+    JWT_HEADER=$(echo -n '{"alg":"RS256","typ":"JWT"}' | base64 -w 0 | tr '+/' '-_' | tr -d '=')
     
-    # Generate JWT using Python (more reliable than shell)
-    JWT_TOKEN=$(python3 -c "
-import jwt
-import time
-
-with open('$TEMP_KEY_FILE', 'r') as f:
-    private_key = f.read()
-
-now = int(time.time())
-payload = {'iat': now, 'exp': now + 600, 'iss': '$GITHUB_APP_ID'}
-token = jwt.encode(payload, private_key, algorithm='RS256')
-print(token)
-")
+    # JWT payload with current time and expiration (10 minutes)
+    NOW=$(date +%s)
+    EXP=$((NOW + 600))
+    JWT_PAYLOAD=$(echo -n "{\"iat\":$NOW,\"exp\":$EXP,\"iss\":\"$GITHUB_APP_ID\"}" | base64 -w 0 | tr '+/' '-_' | tr -d '=')
+    
+    # Sign the JWT
+    JWT_SIGNATURE=$(echo -n "$JWT_HEADER.$JWT_PAYLOAD" | openssl dgst -sha256 -sign "$TEMP_KEY_FILE" | base64 -w 0 | tr '+/' '-_' | tr -d '=')
+    JWT_TOKEN="$JWT_HEADER.$JWT_PAYLOAD.$JWT_SIGNATURE"
     
     if [ -z "$JWT_TOKEN" ]; then
         echo "❌ Failed to generate JWT token"
