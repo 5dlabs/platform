@@ -123,12 +123,6 @@ cd "$CLONE_DIR"
 git config user.name "Project Intake Bot"
 git config user.email "intake@5dlabs.com"
 
-# Copy PRD and architecture files
-cp "$PRD_FILE" "$PROJECT_DIR/.taskmaster/docs/prd.txt"
-if [ -f "$ARCH_FILE" ] && [ -s "$ARCH_FILE" ]; then
-    cp "$ARCH_FILE" "$PROJECT_DIR/.taskmaster/docs/architecture.md"
-fi
-
 # Change to project directory
 cd "$PROJECT_DIR"
 
@@ -144,6 +138,13 @@ task-master init --yes \
     --version "0.1.0" \
     --rules "cursor"
 
+# Copy PRD and architecture files after initialization
+echo "📋 Copying PRD and architecture files..."
+cp "$PRD_FILE" ".taskmaster/docs/prd.txt"
+if [ -f "$ARCH_FILE" ] && [ -s "$ARCH_FILE" ]; then
+    cp "$ARCH_FILE" ".taskmaster/docs/architecture.md"
+fi
+
 # Configure models
 echo "🤖 Configuring AI models..."
 task-master models --set-main "$MODEL"
@@ -154,7 +155,6 @@ task-master models --set-fallback "claude-3-5-sonnet-20241022"
 echo "📄 Parsing PRD to generate tasks..."
 task-master parse-prd \
     --input ".taskmaster/docs/prd.txt" \
-    --num-tasks "$NUM_TASKS" \
     --force
 
 # Analyze complexity if requested
