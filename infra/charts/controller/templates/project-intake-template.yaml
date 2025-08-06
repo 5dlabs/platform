@@ -22,6 +22,9 @@ spec:
       - name: repository-url
         description: "Target repository for the generated project"
         value: "{{ .Values.agents.morgan.defaultRepository | default "https://github.com/5dlabs/projects" }}"
+      - name: source-branch
+        description: "Source branch to work from"
+        value: "main"
       - name: github-app
         description: "GitHub App to use for authentication"
         value: "{{ .Values.agents.morgan.githubApp | default "5DLabs-Morgan" }}"
