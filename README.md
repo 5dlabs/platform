@@ -1,4 +1,4 @@
-# 5D Labs CTO Platform
+# Cognitive Task Orchestrator
 
 An AI-powered development platform that helps you generate documentation and implement code using Claude agents through simple MCP (Model Context Protocol) tools. The platform uses GitHub Apps for secure authentication and configuration-driven workflows.
 
