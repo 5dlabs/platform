@@ -284,40 +284,6 @@ if [ ! -d "$CLAUDE_WORK_DIR/.taskmaster/docs" ]; then
   exit 1
 fi
 
-# Generate individual task files from tasks.json if it exists
-echo "Setting up individual task files..."
-if [ -f "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" ]; then
-  echo "📋 Found tasks.json, generating individual task files..."
-  
-  # Use jq to extract tasks and create individual files (handle null values safely)
-  jq -r '.tasks[]? | select(.id != null) | "\(.id // "")|\(.title // "No Title")|\(.description // "")|\(.details // "")|\(.testStrategy // "")"' \
-    "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" | while IFS='|' read -r task_id title description details test_strategy; do
-    
-    if [ -n "$task_id" ] && [ "$task_id" != "null" ]; then
-      task_dir="$CLAUDE_WORK_DIR/.taskmaster/docs/task-$task_id"
-      mkdir -p "$task_dir"
-      
-      # Create task.txt with formatted content
-      cat > "$task_dir/task.txt" << EOF
-# Task $task_id: $title
-
-## Description
-$description
-
-## Implementation Details
-$details
-
-## Test Strategy
-$test_strategy
-EOF
-      
-      echo "✓ Generated docs/task-$task_id/task.txt"
-    fi
-  done
-else
-  echo "⚠️ No tasks.json found - task files will not be generated"
-fi
-
 echo "✓ Workspace validated"
 
 # Environment setup
