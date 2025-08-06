@@ -26,6 +26,8 @@ struct CtoConfig {
 struct WorkflowDefaults {
     docs: DocsDefaults,
     code: CodeDefaults,
+    #[serde(default)]
+    intake: IntakeDefaults,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -55,6 +57,22 @@ struct CodeDefaults {
     #[serde(rename = "docsProjectDirectory")]
     docs_project_directory: Option<String>,
     service: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct IntakeDefaults {
+    model: String,
+    #[serde(rename = "githubApp")]
+    github_app: String,
+}
+
+impl Default for IntakeDefaults {
+    fn default() -> Self {
+        IntakeDefaults {
+            model: "claude-opus-4-20250514".to_string(),
+            github_app: "5DLabs-Morgan".to_string(),
+        }
+    }
 }
 
 /// Load configuration from cto-config.json file
@@ -812,6 +830,9 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow!("project_name is required"))?;
 
+    // Get configuration
+    let config = CTO_CONFIG.get().ok_or_else(|| anyhow!("Configuration not loaded"))?;
+    
     // Auto-detect repository from git
     eprintln!("🔍 Auto-detecting repository from git...");
     let repository_name = get_git_repository_url()?;
@@ -823,12 +844,15 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
     let branch = get_git_current_branch()?;
     eprintln!("🎯 Using branch: {branch}");
 
-    // Fixed configuration for intake workflow
-    let github_app = "5DLabs-Morgan";  // Morgan handles documentation/intake
-    let model = "claude-opus-4-20250514";  // Best model for task generation
+    // Use configuration values with defaults
+    let github_app = &config.defaults.intake.github_app;
+    let model = &config.defaults.intake.model;
     let num_tasks = 50;  // Standard task count
     let expand_tasks = true;  // Always expand for detailed planning
     let analyze_complexity = true;  // Always analyze for better breakdown
+    
+    eprintln!("🤖 Using GitHub App: {github_app}");
+    eprintln!("🧠 Using model: {model}");
 
     // Submit Argo workflow with minimal parameters
     let workflow_name = format!("intake-{}", chrono::Utc::now().timestamp());
