@@ -378,8 +378,8 @@ fi
 # PR creation
 echo "Creating pull request..."
 
-# Ensure we're in the repository root for git operations
-cd /workspace
+# Ensure we're in the correct working directory for git operations
+cd /workspace/{{working_directory}}
 
 # Check for documentation changes (including untracked files)
 echo "Checking for documentation changes..."
