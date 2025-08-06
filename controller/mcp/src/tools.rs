@@ -158,13 +158,13 @@ fn get_export_schema() -> Value {
 fn get_intake_schema() -> Value {
     json!({
         "name": "intake",
-        "description": "Process a new project intake. Reads PRD from intake/prd.txt and optional architecture from intake/architecture.md. Auto-detects repository and branch from git. Creates PR with TaskMaster structure.",
+        "description": "Process a new project intake. Reads PRD from {project_name}/intake/prd.txt and optional architecture from {project_name}/intake/architecture.md. Auto-detects repository and branch from git. Creates TaskMaster structure in project subdirectory and submits PR.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "project_name": {
                     "type": "string",
-                    "description": "Name for the new project/feature (required)"
+                    "description": "Name of the project subdirectory containing intake files (required)"
                 }
             },
             "required": ["project_name"]
