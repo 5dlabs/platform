@@ -269,25 +269,25 @@ impl<'a> DocsResourceManager<'a> {
                     "🔍 RESOURCE_MANAGER: Job {} already exists, checking for active pods",
                     job_name
                 );
-                
+
                 // Check if there are any pods for this job (regardless of controller UID)
                 // This prevents duplicate pods when controller restarts
                 let pods: Api<k8s_openapi::api::core::v1::Pod> = Api::namespaced(
                     self.ctx.client.clone(),
                     docs_run.metadata.namespace.as_deref().unwrap_or("default"),
                 );
-                
-                let pod_list = pods.list(&ListParams::default()
-                    .labels(&format!("job-name={job_name}")))
+
+                let pod_list = pods
+                    .list(&ListParams::default().labels(&format!("job-name={job_name}")))
                     .await?;
-                
+
                 if !pod_list.items.is_empty() {
                     error!(
                         "✅ RESOURCE_MANAGER: Found {} existing pod(s) for job {}, skipping job creation",
                         pod_list.items.len(),
                         job_name
                     );
-                    
+
                     // Job exists with pods, return its owner reference
                     return Ok(Some(OwnerReference {
                         api_version: "batch/v1".to_string(),
@@ -302,7 +302,7 @@ impl<'a> DocsResourceManager<'a> {
                         "⚠️ RESOURCE_MANAGER: Job {} exists but has no pods, will let Job controller handle it",
                         job_name
                     );
-                    
+
                     // Job exists but no pods - the Job controller will create them
                     return Ok(Some(OwnerReference {
                         api_version: "batch/v1".to_string(),
@@ -559,16 +559,16 @@ impl<'a> DocsResourceManager<'a> {
         // Update legacy orchestrator label to controller
         labels.insert("app".to_string(), "controller".to_string());
         labels.insert("component".to_string(), "docs-generator".to_string());
-        
+
         // Project identification labels
         labels.insert("job-type".to_string(), "docs".to_string());
-        
+
         // Use working_directory as project name (it's the most meaningful identifier)
         labels.insert(
             "project-name".to_string(),
             self.sanitize_label_value(&docs_run.spec.working_directory),
         );
-        
+
         // Use github_app if available, fallback to github_user for backward compatibility
         let github_identity = docs_run
             .spec

@@ -248,18 +248,18 @@ impl<'a> CodeResourceManager<'a> {
         match self.jobs.get(&job_name).await {
             Ok(existing_job) => {
                 info!("Found existing job: {}, checking for active pods", job_name);
-                
+
                 // Check if there are any pods for this job (regardless of controller UID)
                 // This prevents duplicate pods when controller restarts
                 let pods: Api<k8s_openapi::api::core::v1::Pod> = Api::namespaced(
                     self.ctx.client.clone(),
                     code_run.metadata.namespace.as_deref().unwrap_or("default"),
                 );
-                
-                let pod_list = pods.list(&ListParams::default()
-                    .labels(&format!("job-name={job_name}")))
+
+                let pod_list = pods
+                    .list(&ListParams::default().labels(&format!("job-name={job_name}")))
                     .await?;
-                
+
                 if !pod_list.items.is_empty() {
                     info!(
                         "Found {} existing pod(s) for job {}, using existing job",
@@ -272,7 +272,7 @@ impl<'a> CodeResourceManager<'a> {
                         job_name
                     );
                 }
-                
+
                 // Return the existing job's owner reference
                 Ok(Some(OwnerReference {
                     api_version: "batch/v1".to_string(),
@@ -506,7 +506,7 @@ impl<'a> CodeResourceManager<'a> {
             "workingDir": "/workspace",
             "volumeMounts": volume_mounts
         });
-        
+
         // Add envFrom if we have secrets to mount
         if !env_from.is_empty() {
             container_spec["envFrom"] = json!(env_from);
@@ -552,37 +552,43 @@ impl<'a> CodeResourceManager<'a> {
         mut env_vars: Vec<serde_json::Value>,
     ) -> Result<(Vec<serde_json::Value>, Vec<serde_json::Value>)> {
         let mut env_from = Vec::new();
-        
+
         // Check if we have task requirements
         if let Some(requirements_b64) = &code_run.spec.task_requirements {
-            use base64::{Engine as _, engine::general_purpose};
-            
+            use base64::{engine::general_purpose, Engine as _};
+
             // Decode base64
             let decoded = general_purpose::STANDARD
                 .decode(requirements_b64)
-                .map_err(|e| crate::tasks::types::Error::ConfigError(
-                    format!("Failed to decode task requirements: {e}")
-                ))?;
-            
+                .map_err(|e| {
+                    crate::tasks::types::Error::ConfigError(format!(
+                        "Failed to decode task requirements: {e}"
+                    ))
+                })?;
+
             // Parse YAML
-            let requirements: serde_yaml::Value = serde_yaml::from_slice(&decoded)
-                .map_err(|e| crate::tasks::types::Error::ConfigError(
-                    format!("Failed to parse task requirements YAML: {e}")
-                ))?;
-            
+            let requirements: serde_yaml::Value =
+                serde_yaml::from_slice(&decoded).map_err(|e| {
+                    crate::tasks::types::Error::ConfigError(format!(
+                        "Failed to parse task requirements YAML: {e}"
+                    ))
+                })?;
+
             // Process secrets
             if let Some(secrets) = requirements.get("secrets").and_then(|s| s.as_sequence()) {
                 for secret in secrets {
                     if let Some(secret_map) = secret.as_mapping() {
                         if let Some(name) = secret_map.get("name").and_then(|n| n.as_str()) {
                             // Check if we have specific key mappings
-                            if let Some(keys) = secret_map.get("keys").and_then(|k| k.as_sequence()) {
+                            if let Some(keys) = secret_map.get("keys").and_then(|k| k.as_sequence())
+                            {
                                 // Mount specific keys as individual env vars
                                 for key_mapping in keys {
                                     if let Some(key_map) = key_mapping.as_mapping() {
                                         for (k8s_key, env_name) in key_map {
-                                            if let (Some(k8s_key_str), Some(env_name_str)) = 
-                                                (k8s_key.as_str(), env_name.as_str()) {
+                                            if let (Some(k8s_key_str), Some(env_name_str)) =
+                                                (k8s_key.as_str(), env_name.as_str())
+                                            {
                                                 env_vars.push(json!({
                                                     "name": env_name_str,
                                                     "valueFrom": {
@@ -608,7 +614,7 @@ impl<'a> CodeResourceManager<'a> {
                     }
                 }
             }
-            
+
             // Process static environment variables
             if let Some(env) = requirements.get("environment").and_then(|e| e.as_mapping()) {
                 for (key, value) in env {
@@ -629,7 +635,7 @@ impl<'a> CodeResourceManager<'a> {
                     "value": value
                 }));
             }
-            
+
             // Process env_from_secrets
             for secret_env in &code_run.spec.env_from_secrets {
                 env_vars.push(json!({
@@ -643,7 +649,7 @@ impl<'a> CodeResourceManager<'a> {
                 }));
             }
         }
-        
+
         Ok((env_vars, env_from))
     }
 
@@ -653,16 +659,16 @@ impl<'a> CodeResourceManager<'a> {
         // Update legacy orchestrator label to controller
         labels.insert("app".to_string(), "controller".to_string());
         labels.insert("component".to_string(), "code-runner".to_string());
-        
+
         // Project identification labels
         labels.insert("job-type".to_string(), "code".to_string());
-        
+
         // Use service as project name for code tasks
         labels.insert(
             "project-name".to_string(),
             self.sanitize_label_value(&code_run.spec.service),
         );
-        
+
         let github_identifier = code_run
             .spec
             .github_app
