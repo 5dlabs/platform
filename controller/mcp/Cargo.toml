@@ -30,5 +30,8 @@ tracing = { workspace = true }
 # Time utilities
 chrono = { workspace = true }
 
+# Encoding
+base64 = "0.22"
+
 # Internal dependencies  
 common = { path = "../common" }

@@ -106,6 +106,10 @@ pub struct CodeRunSpec {
     /// Environment variables from secrets
     #[serde(default, rename = "envFromSecrets")]
     pub env_from_secrets: Vec<SecretEnvVar>,
+    
+    /// Base64-encoded YAML containing task requirements (secrets and environment variables)
+    #[serde(default, rename = "taskRequirements")]
+    pub task_requirements: Option<String>,
 }
 
 /// Status of the `CodeRun`

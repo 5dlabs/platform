@@ -58,6 +58,9 @@ chrono = { workspace = true }
 regex = { workspace = true }
 handlebars = { workspace = true }
 
+# Encoding
+base64 = "0.22"
+
 # File system
 tempfile = "3.8"
 

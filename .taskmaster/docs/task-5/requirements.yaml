@@ -1,0 +1,44 @@
+# Task Requirements Example
+# This file defines secrets and environment variables needed for task execution
+
+# Secrets section - references to existing Kubernetes secrets
+secrets:
+  # Option 1: Mount entire secret as environment variables
+  # All keys in the secret will become env vars with the same names
+  - name: birdeye-secret
+  
+  # Option 2: Mount specific keys with custom environment variable names
+  - name: stripe-secret
+    keys:
+      # Maps K8s secret key -> environment variable name
+      - secret_key: STRIPE_SECRET_KEY
+      - webhook_secret: STRIPE_WEBHOOK_SECRET
+      - publishable_key: STRIPE_PUBLISHABLE_KEY
+  
+  # Another example with database credentials
+  - name: postgres-credentials
+    keys:
+      - host: DATABASE_HOST
+      - port: DATABASE_PORT
+      - username: DATABASE_USER
+      - password: DATABASE_PASSWORD
+      - database: DATABASE_NAME
+
+# Static environment variables
+environment:
+  # API configuration
+  API_VERSION: "v2"
+  API_BASE_URL: "https://api.example.com"
+  
+  # Node environment
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  
+  # Feature flags
+  ENABLE_ANALYTICS: "true"
+  ENABLE_CACHE: "true"
+  CACHE_TTL: "3600"
+  
+  # Service configuration
+  SERVICE_NAME: "market-research"
+  SERVICE_PORT: "3000"

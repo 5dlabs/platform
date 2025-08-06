@@ -467,7 +467,24 @@ impl<'a> CodeResourceManager<'a> {
             }),
         ];
 
-        // Code-specific environment variables will be added here when needed
+        // Process task requirements if present
+        let (final_env_vars, env_from) = self.process_task_requirements(code_run, env_vars)?;
+
+        // Build the job spec with environment configuration
+        let mut container_spec = json!({
+            "name": "claude-code",
+            "image": image,
+            "env": final_env_vars,
+            "command": ["/bin/bash"],
+            "args": ["/task-files/container.sh"],
+            "workingDir": "/workspace",
+            "volumeMounts": volume_mounts
+        });
+        
+        // Add envFrom if we have secrets to mount
+        if !env_from.is_empty() {
+            container_spec["envFrom"] = json!(env_from);
+        }
 
         let job_spec = json!({
             "apiVersion": "batch/v1",
@@ -493,15 +510,7 @@ impl<'a> CodeResourceManager<'a> {
                     },
                     "spec": {
                         "restartPolicy": "Never",
-                        "containers": [{
-                            "name": "claude-code",
-                            "image": image,
-                            "env": env_vars,
-                            "command": ["/bin/bash"],
-                            "args": ["/task-files/container.sh"],
-                            "workingDir": "/workspace",
-                            "volumeMounts": volume_mounts
-                        }],
+                        "containers": [container_spec],
                         "volumes": volumes
                     }
                 }
@@ -509,6 +518,107 @@ impl<'a> CodeResourceManager<'a> {
         });
 
         Ok(serde_json::from_value(job_spec)?)
+    }
+
+    fn process_task_requirements(
+        &self,
+        code_run: &CodeRun,
+        mut env_vars: Vec<serde_json::Value>,
+    ) -> Result<(Vec<serde_json::Value>, Vec<serde_json::Value>)> {
+        let mut env_from = Vec::new();
+        
+        // Check if we have task requirements
+        if let Some(requirements_b64) = &code_run.spec.task_requirements {
+            use base64::{Engine as _, engine::general_purpose};
+            
+            // Decode base64
+            let decoded = general_purpose::STANDARD
+                .decode(requirements_b64)
+                .map_err(|e| crate::tasks::types::Error::ConfigError(
+                    format!("Failed to decode task requirements: {e}")
+                ))?;
+            
+            // Parse YAML
+            let requirements: serde_yaml::Value = serde_yaml::from_slice(&decoded)
+                .map_err(|e| crate::tasks::types::Error::ConfigError(
+                    format!("Failed to parse task requirements YAML: {e}")
+                ))?;
+            
+            // Process secrets
+            if let Some(secrets) = requirements.get("secrets").and_then(|s| s.as_sequence()) {
+                for secret in secrets {
+                    if let Some(secret_map) = secret.as_mapping() {
+                        if let Some(name) = secret_map.get("name").and_then(|n| n.as_str()) {
+                            // Check if we have specific key mappings
+                            if let Some(keys) = secret_map.get("keys").and_then(|k| k.as_sequence()) {
+                                // Mount specific keys as individual env vars
+                                for key_mapping in keys {
+                                    if let Some(key_map) = key_mapping.as_mapping() {
+                                        for (k8s_key, env_name) in key_map {
+                                            if let (Some(k8s_key_str), Some(env_name_str)) = 
+                                                (k8s_key.as_str(), env_name.as_str()) {
+                                                env_vars.push(json!({
+                                                    "name": env_name_str,
+                                                    "valueFrom": {
+                                                        "secretKeyRef": {
+                                                            "name": name,
+                                                            "key": k8s_key_str
+                                                        }
+                                                    }
+                                                }));
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Mount entire secret as env vars
+                                env_from.push(json!({
+                                    "secretRef": {
+                                        "name": name
+                                    }
+                                }));
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Process static environment variables
+            if let Some(env) = requirements.get("environment").and_then(|e| e.as_mapping()) {
+                for (key, value) in env {
+                    if let (Some(key_str), Some(value_str)) = (key.as_str(), value.as_str()) {
+                        env_vars.push(json!({
+                            "name": key_str,
+                            "value": value_str
+                        }));
+                    }
+                }
+            }
+        } else {
+            // Fall back to legacy env and env_from_secrets fields
+            // Process direct env vars
+            for (key, value) in &code_run.spec.env {
+                env_vars.push(json!({
+                    "name": key,
+                    "value": value
+                }));
+            }
+            
+            // Process env_from_secrets
+            for secret_env in &code_run.spec.env_from_secrets {
+                env_vars.push(json!({
+                    "name": &secret_env.name,
+                    "valueFrom": {
+                        "secretKeyRef": {
+                            "name": &secret_env.secret_name,
+                            "key": &secret_env.secret_key
+                        }
+                    }
+                }));
+            }
+        }
+        
+        Ok((env_vars, env_from))
     }
 
     fn create_task_labels(&self, code_run: &CodeRun) -> BTreeMap<String, String> {

@@ -2,6 +2,7 @@ use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::path::Path;
 use std::process::Command;
 use std::sync::OnceLock;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -670,16 +671,35 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         format!("context-version=0"), // Auto-assign by controller
     ];
 
-    // Handle env object - convert to JSON string for workflow parameter
-    if let Some(env) = arguments.get("env").and_then(|v| v.as_object()) {
-        let env_json = serde_json::to_string(env)?;
-        params.push(format!("env={env_json}"));
-    }
+    // Check for requirements.yaml file in the task directory
+    let requirements_path = format!(
+        "{docs_project_directory}/task-{task_id}/requirements.yaml"
+    );
+    
+    if Path::new(&requirements_path).exists() {
+        eprintln!("📋 Found requirements.yaml for task {task_id}");
+        let requirements_content = std::fs::read_to_string(&requirements_path)
+            .context(format!("Failed to read requirements file: {requirements_path}"))?;
+        
+        // Base64 encode the requirements YAML
+        use base64::{Engine as _, engine::general_purpose};
+        let encoded_requirements = general_purpose::STANDARD.encode(requirements_content.as_bytes());
+        params.push(format!("task-requirements={encoded_requirements}"));
+        
+        eprintln!("✓ Task requirements encoded and added to workflow parameters");
+    } else {
+        // Fall back to old env/env_from_secrets parameters if provided
+        // Handle env object - convert to JSON string for workflow parameter
+        if let Some(env) = arguments.get("env").and_then(|v| v.as_object()) {
+            let env_json = serde_json::to_string(env)?;
+            params.push(format!("env={env_json}"));
+        }
 
-    // Handle env_from_secrets array - convert to JSON string for workflow parameter
-    if let Some(env_from_secrets) = arguments.get("env_from_secrets").and_then(|v| v.as_array()) {
-        let env_from_secrets_json = serde_json::to_string(env_from_secrets)?;
-        params.push(format!("envFromSecrets={env_from_secrets_json}"));
+        // Handle env_from_secrets array - convert to JSON string for workflow parameter
+        if let Some(env_from_secrets) = arguments.get("env_from_secrets").and_then(|v| v.as_array()) {
+            let env_from_secrets_json = serde_json::to_string(env_from_secrets)?;
+            params.push(format!("envFromSecrets={env_from_secrets_json}"));
+        }
     }
 
     let mut args = vec![

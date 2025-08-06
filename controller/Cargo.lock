@@ -384,6 +384,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "axum 0.8.4",
+ "base64 0.22.1",
  "chrono",
  "common",
  "futures",
@@ -470,6 +471,7 @@ name = "cto-mcp"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "base64 0.22.1",
  "chrono",
  "common",
  "serde",

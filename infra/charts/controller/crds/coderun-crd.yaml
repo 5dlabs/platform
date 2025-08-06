@@ -118,6 +118,9 @@ spec:
                     - secretName
                     - secretKey
                 description: "Environment variables from secrets"
+              taskRequirements:
+                type: string
+                description: "Base64-encoded YAML containing task requirements (secrets and environment variables)"
           status:
             type: object
             properties:

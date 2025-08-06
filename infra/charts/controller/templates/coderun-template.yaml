@@ -40,6 +40,9 @@ spec:
         description: "Whether to overwrite CLAUDE.md memory file"
       - name: docs-branch
         description: "Documentation branch to work from"
+      - name: task-requirements
+        description: "Base64-encoded requirements.yaml content"
+        default: ""
 
   # Service account for workflow execution
   serviceAccountName: argo-workflow
@@ -96,6 +99,9 @@ spec:
             overwriteMemory: {{`{{workflow.parameters.overwrite-memory}}`}}
             docsBranch: "{{`{{workflow.parameters.docs-branch}}`}}"
             contextVersion: 1
+            {{`{{- if workflow.parameters.task-requirements }}`}}
+            taskRequirements: "{{`{{workflow.parameters.task-requirements}}`}}"
+            {{`{{- end }}`}}
             
     - name: wait-coderun-completion
       inputs:
