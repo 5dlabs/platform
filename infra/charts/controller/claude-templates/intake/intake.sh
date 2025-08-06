@@ -161,11 +161,24 @@ cd "$PROJECT_DIR"
 
 # Initialize TaskMaster
 echo "🚀 Initializing TaskMaster project in $PROJECT_NAME..."
-task-master init --yes \
+echo "📂 Current directory: $(pwd)"
+echo "📂 Directory contents before init:"
+ls -la
+
+if ! task-master init --yes \
     --name "$PROJECT_NAME" \
     --description "Auto-generated project from intake pipeline" \
     --version "0.1.0" \
-    --rules "cursor"
+    --rules "cursor"; then
+    echo "❌ TaskMaster initialization failed"
+    echo "📂 Directory contents after failed init:"
+    ls -la
+    exit 1
+fi
+
+echo "✅ TaskMaster initialization completed"
+echo "📂 Directory contents after init:"
+ls -la .taskmaster/ 2>/dev/null || echo "No .taskmaster directory found"
 
 # Copy PRD and architecture files after initialization
 echo "📋 Copying PRD and architecture files..."
