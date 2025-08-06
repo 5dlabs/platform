@@ -173,13 +173,8 @@ impl<'a> DocsResourceManager<'a> {
             .unwrap_or("nouid");
         let context_version = 1; // Docs don't have context versions, always 1
 
-        // Add timestamp to ensure absolute uniqueness and prevent any caching issues
-        let timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
-
-        format!("docs-{namespace}-{name}-{uid_suffix}-v{context_version}-{timestamp}-files")
+        // Use deterministic naming based on DocsRun UID for stable references
+        format!("docs-{namespace}-{name}-{uid_suffix}-v{context_version}-files")
             .replace(['_', '.'], "-")
             .to_lowercase()
     }
