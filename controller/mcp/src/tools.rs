@@ -158,47 +158,13 @@ fn get_export_schema() -> Value {
 fn get_intake_schema() -> Value {
     json!({
         "name": "intake",
-        "description": "Process a new project intake. Reads PRD from intake/prd.txt and optional architecture from intake/architecture.md, then generates TaskMaster tasks",
+        "description": "Process a new project intake. Reads PRD from intake/prd.txt and optional architecture from intake/architecture.md. Auto-detects repository and branch from git. Creates PR with TaskMaster structure.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "project_name": {
                     "type": "string",
-                    "description": "Name for the new project (required)"
-                },
-                "prd_content": {
-                    "type": "string",
-                    "description": "Override PRD content instead of reading from intake/prd.txt (optional)"
-                },
-                "architecture_content": {
-                    "type": "string",
-                    "description": "Override architecture content instead of reading from intake/architecture.md (optional)"
-                },
-                "repository": {
-                    "type": "string",
-                    "description": "Target repository URL (optional, auto-detected from current git repo)"
-                },
-                "num_tasks": {
-                    "type": "integer",
-                    "description": "Target number of tasks to generate (optional, defaults to 50)",
-                    "minimum": 1,
-                    "maximum": 200
-                },
-                "expand_tasks": {
-                    "type": "boolean",
-                    "description": "Whether to expand tasks with subtasks (optional, defaults to true)"
-                },
-                "analyze_complexity": {
-                    "type": "boolean",
-                    "description": "Whether to analyze task complexity (optional, defaults to true)"
-                },
-                "model": {
-                    "type": "string",
-                    "description": "Claude model to use for task generation (optional, defaults to opus)"
-                },
-                "agent": {
-                    "type": "string",
-                    "description": "GitHub App agent to use for PR creation (optional, defaults to Morgan)"
+                    "description": "Name for the new project/feature (required)"
                 }
             },
             "required": ["project_name"]

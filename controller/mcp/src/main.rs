@@ -812,42 +812,25 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow!("project_name is required"))?;
 
-    // Auto-detect repository from git or use provided
-    let repository = if let Some(repo) = arguments.get("repository").and_then(|v| v.as_str()) {
-        repo.to_string()
-    } else {
-        eprintln!("🔍 Auto-detecting repository from git...");
-        let detected = get_git_repository_url()?;
-        eprintln!("📦 Using repository: {detected}");
-        format!("https://github.com/{detected}")  // Need full URL for the workflow
-    };
+    // Auto-detect repository from git
+    eprintln!("🔍 Auto-detecting repository from git...");
+    let repository_name = get_git_repository_url()?;
+    eprintln!("📦 Using repository: {repository_name}");
+    let repository_url = format!("https://github.com/{repository_name}");
+    
+    // Auto-detect current branch
+    eprintln!("🌿 Auto-detecting git branch...");
+    let branch = get_git_current_branch()?;
+    eprintln!("🎯 Using branch: {branch}");
 
-    let num_tasks = arguments
-        .get("num_tasks")
-        .and_then(|v| v.as_i64())
-        .unwrap_or(50);
+    // Fixed configuration for intake workflow
+    let github_app = "5DLabs-Morgan";  // Morgan handles documentation/intake
+    let model = "claude-opus-4-20250514";  // Best model for task generation
+    let num_tasks = 50;  // Standard task count
+    let expand_tasks = true;  // Always expand for detailed planning
+    let analyze_complexity = true;  // Always analyze for better breakdown
 
-    let expand_tasks = arguments
-        .get("expand_tasks")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(true);
-
-    let analyze_complexity = arguments
-        .get("analyze_complexity")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(true);
-
-    let model = arguments
-        .get("model")
-        .and_then(|v| v.as_str())
-        .unwrap_or("claude-opus-4-20250514");
-
-    let agent = arguments
-        .get("agent")
-        .and_then(|v| v.as_str())
-        .unwrap_or("5DLabs-Morgan");
-
-    // Submit Argo workflow
+    // Submit Argo workflow with minimal parameters
     let workflow_name = format!("intake-{}", chrono::Utc::now().timestamp());
 
     let output = std::process::Command::new("argo")
@@ -866,9 +849,11 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
             "-p",
             &format!("project-name={project_name}"),
             "-p",
-            &format!("repository-url={repository}"),
+            &format!("repository-url={repository_url}"),
             "-p",
-            &format!("github-app={agent}"),
+            &format!("source-branch={branch}"),
+            "-p",
+            &format!("github-app={github_app}"),
             "-p",
             &format!("model={model}"),
             "-p",
@@ -895,13 +880,15 @@ fn handle_intake_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
                 "workflow_name": workflow_name,
                 "workflow": workflow_json,
                 "message": format!(
-                    "Project intake initiated. PRD will be processed to generate TaskMaster tasks. Target: {num_tasks} tasks"
+                    "Project intake initiated for '{}'. PR will be created in {} on branch '{}'",
+                    project_name, repository_name, branch
                 ),
                 "details": {
-                    "repository": repository,
-                    "model": model,
-                    "expand_tasks": expand_tasks,
-                    "analyze_complexity": analyze_complexity
+                    "project_name": project_name,
+                    "repository": repository_name,
+                    "branch": branch,
+                    "prd_source": if prd_file.exists() { "intake/prd.txt" } else { "provided" },
+                    "architecture_source": if arch_file.exists() { "intake/architecture.md" } else { "none" }
                 }
             }))
         }
