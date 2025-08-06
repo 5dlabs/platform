@@ -87,8 +87,8 @@ generate_github_token() {
     # Export the token for git to use
     export GITHUB_TOKEN
     
-    # Configure git to use the token
-    git config --global credential.helper store
+    # Configure git to use the token (use --replace-all to handle multiple existing helpers)
+    git config --global --replace-all credential.helper store
     git config --global --add credential.helper '!f() { echo "username=x-access-token"; echo "password=$GITHUB_TOKEN"; }; f'
     
     # Also authenticate gh CLI with the token
