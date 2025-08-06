@@ -436,47 +436,58 @@ fi
 
 echo "✓ Documentation changes detected, proceeding with PR creation..."
 
-# Create PR branch
-SOURCE_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-RANDOM_ID=$(date +%s | tail -c 6)
-PR_BRANCH="docs/{{#if task_id}}task-{{task_id}}{{else}}auto-gen{{/if}}-${TIMESTAMP}-${RANDOM_ID}"
-
-echo "Creating branch: $PR_BRANCH"
-if ! git checkout -b "$PR_BRANCH"; then
-    echo "❌ Failed to create branch"
-    exit 1
+# Check if we're already on an auto-save branch from the hook
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [[ "$CURRENT_BRANCH" == docs/auto-save-* ]]; then
+    echo "✓ Already on auto-save branch from hook: $CURRENT_BRANCH"
+    PR_BRANCH="$CURRENT_BRANCH"
+    SOURCE_BRANCH="main"  # Assume we branched from main originally
+else
+    # Create new PR branch if not already on one
+    SOURCE_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+    RANDOM_ID=$(date +%s | tail -c 6)
+    PR_BRANCH="docs/{{#if task_id}}task-{{task_id}}{{else}}auto-gen{{/if}}-${TIMESTAMP}-${RANDOM_ID}"
+    
+    echo "Creating branch: $PR_BRANCH"
+    if ! git checkout -b "$PR_BRANCH"; then
+        echo "❌ Failed to create branch"
+        exit 1
+    fi
 fi
 
 echo "Staging all .taskmaster changes..."
 git add .taskmaster/
 
-echo "Showing what will be committed:"
+echo "Checking for uncommitted changes..."
 STAGED_FILES=$(git status --porcelain | grep "^[AM]" | wc -l)
-git status --porcelain
 
-if [ "$STAGED_FILES" -eq 0 ]; then
-    echo "❌ No changes staged for commit"
-    echo "Current directory: $(pwd)"
-    echo "Looking for .taskmaster changes:"
-    find .taskmaster -type f -name "*.md" 2>/dev/null | head -10
-    exit 1
+if [ "$STAGED_FILES" -gt 0 ]; then
+    echo "Showing what will be committed:"
+    git status --porcelain
+    
+    echo "Committing changes..."
+    if ! git commit -m "docs: auto-generate Task Master documentation{{#if task_id}} for task {{task_id}}{{/if}}"; then
+        echo "❌ Failed to commit changes"
+        echo "Git status:"
+        git status
+        exit 1
+    fi
+else
+    echo "✓ All changes already committed by auto-save hook"
 fi
 
-echo "Committing changes..."
-if ! git commit -m "docs: auto-generate Task Master documentation{{#if task_id}} for task {{task_id}}{{/if}}"; then
-    echo "❌ Failed to commit changes"
-    echo "Git status:"
-    git status
-    exit 1
-fi
-
-echo "Pushing branch..."
-if ! git push -u origin "$PR_BRANCH"; then
-    echo "❌ Failed to push branch"
-    echo "Retrying with verbose output..."
-    GIT_CURL_VERBOSE=1 git push -u origin "$PR_BRANCH" 2>&1
-    exit 1
+# Check if we need to push (there might be unpushed commits from hook)
+if git rev-list --count origin/"$PR_BRANCH"..HEAD 2>/dev/null | grep -q '^0$'; then
+    echo "✓ Branch already up to date with origin"
+else
+    echo "Pushing branch..."
+    if ! git push -u origin "$PR_BRANCH"; then
+        echo "❌ Failed to push branch"
+        echo "Retrying with verbose output..."
+        GIT_CURL_VERBOSE=1 git push -u origin "$PR_BRANCH" 2>&1
+        exit 1
+    fi
 fi
 
 echo "✓ Branch pushed successfully"
