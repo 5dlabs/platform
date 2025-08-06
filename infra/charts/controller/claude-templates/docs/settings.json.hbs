@@ -48,5 +48,18 @@
   },
   "model": "{{model}}",
   "cleanupPeriodDays": 3,
-  "includeCoAuthoredBy": false
+  "includeCoAuthoredBy": false,
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/after-file-saved.sh"
+          }
+        ]
+      }
+    ]
+  }
 }
