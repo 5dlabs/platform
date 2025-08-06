@@ -25,4 +25,16 @@ data:
         systemPrompt: {{ $agent.systemPrompt | quote }}
       {{- end }}
     # Agent defaults are now managed through cto-config.json in the MCP server
+  {{- range $key, $agent := .Values.agents }}
+  {{- if $agent.systemPrompt }}
+  agents_{{ $key }}_system-prompt.md: |
+    ---
+    name: {{ $agent.name }}
+    description: {{ $agent.description }}
+    # tools: omitted to inherit all available tools
+    ---
+    
+{{ $agent.systemPrompt | nindent 4 }}
+  {{- end }}
+  {{- end }}
 {{- end }}

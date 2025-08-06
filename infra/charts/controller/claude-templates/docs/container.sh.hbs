@@ -348,7 +348,37 @@ export GITHUB_APP="{{github_app}}"
 
 # Claude execution
 echo "Starting Claude execution..."
+
+# Check if system prompt file exists and add to command if available
 CLAUDE_CMD="claude -p --output-format stream-json --verbose"
+
+# Determine the agent key from the GitHub App name
+AGENT_KEY=""
+case "{{github_app}}" in
+    "5DLabs-Morgan")
+        AGENT_KEY="morgan"
+        ;;
+    "5DLabs-Rex")
+        AGENT_KEY="rex"
+        ;;
+    "5DLabs-Blaze")
+        AGENT_KEY="blaze"
+        ;;
+    "5DLabs-Cipher")
+        AGENT_KEY="cipher"
+        ;;
+    *)
+        echo "⚠️ Unknown GitHub App: {{github_app}}"
+        ;;
+esac
+
+# Look for agent-specific system prompt file
+if [ -n "$AGENT_KEY" ] && [ -f "/task-files/agents_${AGENT_KEY}_system-prompt.md" ]; then
+    echo "✓ Found system prompt file for agent $AGENT_KEY, adding to Claude command"
+    CLAUDE_CMD="$CLAUDE_CMD --system-prompt /task-files/agents_${AGENT_KEY}_system-prompt.md"
+else
+    echo "ℹ️ No system prompt file found for agent, using defaults"
+fi
 
 # Model is set via settings.json template, not CLI flag
 
