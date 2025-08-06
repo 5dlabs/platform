@@ -12,10 +12,10 @@ use tokio::time::{timeout, Duration};
 mod tools;
 
 // Global configuration loaded once at startup
-static FDL_CONFIG: OnceLock<FdlConfig> = OnceLock::new();
+static CTO_CONFIG: OnceLock<CtoConfig> = OnceLock::new();
 
 #[derive(Debug, Deserialize, Clone)]
-struct FdlConfig {
+struct CtoConfig {
     version: String,
     defaults: WorkflowDefaults,
     agents: HashMap<String, String>,
@@ -59,7 +59,7 @@ struct CodeDefaults {
 /// Load configuration from cto-config.json file
 /// Looks in current directory, workspace root, or WORKSPACE_FOLDER_PATHS for cto-config.json
 #[allow(clippy::disallowed_macros)]
-fn load_fdl_config() -> Result<FdlConfig> {
+fn load_cto_config() -> Result<CtoConfig> {
     let mut config_paths = vec![
         std::path::PathBuf::from("cto-config.json"),
         std::path::PathBuf::from("../cto-config.json"),
@@ -91,7 +91,7 @@ fn load_fdl_config() -> Result<FdlConfig> {
                 format!("Failed to read config file: {}", config_path.display())
             })?;
 
-            let config: FdlConfig = serde_json::from_str(&config_content).with_context(|| {
+            let config: CtoConfig = serde_json::from_str(&config_content).with_context(|| {
                 format!("Failed to parse config file: {}", config_path.display())
             })?;
 
@@ -169,7 +169,7 @@ fn handle_mcp_methods(method: &str, _params_map: &HashMap<String, Value>) -> Opt
         }))),
         "tools/list" => {
             // Get config if available to show dynamic agent options
-            match FDL_CONFIG.get() {
+            match CTO_CONFIG.get() {
                 Some(config) => Some(Ok(tools::get_tool_schemas_with_config(&config.agents))),
                 None => Some(Ok(tools::get_tool_schemas())),
             }
@@ -263,7 +263,7 @@ fn handle_docs_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .and_then(|v| v.as_str())
         .ok_or(anyhow!("Missing required parameter: working_directory"))?;
 
-    let config = FDL_CONFIG.get().unwrap();
+    let config = CTO_CONFIG.get().unwrap();
 
     // Get workspace directory from Cursor environment, then navigate to working_directory
     let workspace_dir = std::env::var("WORKSPACE_FOLDER_PATHS")
@@ -548,7 +548,7 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .and_then(|v| v.as_u64())
         .ok_or(anyhow!("Missing required parameter: task_id"))?;
 
-    let config = FDL_CONFIG.get().unwrap();
+    let config = CTO_CONFIG.get().unwrap();
 
     let service = arguments
         .get("service")
@@ -1016,7 +1016,7 @@ fn main() -> Result<()> {
     eprintln!("🚀 Starting 5D Labs MCP Server...");
 
     // Initialize configuration from JSON file
-    let config = load_fdl_config().context("Failed to load cto-config.json")?;
+    let config = load_cto_config().context("Failed to load cto-config.json")?;
     eprintln!(
         "📋 Loaded {} agents from config: {:?}",
         config.agents.len(),
@@ -1024,9 +1024,9 @@ fn main() -> Result<()> {
     );
 
     // Store in global static
-    FDL_CONFIG
+    CTO_CONFIG
         .set(config)
-        .map_err(|_| anyhow!("Failed to set FDL config"))?;
+        .map_err(|_| anyhow!("Failed to set CTO config"))?;
     eprintln!("✅ Configuration loaded");
 
     eprintln!("Creating runtime...");
