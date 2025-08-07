@@ -1,7 +1,18 @@
 ---
 # Argo CD Application for Database Instances
-# Manages actual database clusters (PostgreSQL and Redis) for platform services
-# Does NOT deploy example configurations
+# Manages actual database clusters (PostgreSQL, Redis, QuestDB) for platform services
+# 
+# DEPLOYS:
+# - agent-docs-postgres.yaml - PostgreSQL cluster for agent-docs service
+# - agent-docs-redis.yaml - Redis cluster for agent-docs service  
+# - agent-docs-questdb.yaml - QuestDB instance for agent-docs metrics
+#
+# EXCLUDES:
+# - examples/ subdirectory (development and production templates)
+# - README.md documentation file
+#
+# NOTE: Only deploys resources with 'agent-docs-' prefix to ensure
+# example and template files are never accidentally deployed
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -24,11 +35,11 @@ spec:
     targetRevision: main
     path: infra/gitops/databases
 
-    # Directory configuration - Only deploy instance files, NOT examples
+    # Directory configuration - Only deploy agent-docs instances
     directory:
       recurse: false  # Don't recurse into subdirectories (excludes examples/)
-      include: "*.yaml"  # Only YAML files in the root databases/ directory
-      exclude: "README.md"  # Exclude documentation
+      include: "agent-docs-*.yaml"  # Only files with agent-docs- prefix
+      exclude: "{README.md,*example*,*template*}"  # Exclude docs and any example/template files
 
   # Destination configuration
   destination:

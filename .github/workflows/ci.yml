@@ -40,7 +40,7 @@ jobs:
   # Parallel linting and testing
   lint-rust:
     needs: changes
-    if: needs.changes.outputs.controller == 'true' || needs.changes.outputs.taskrun == 'true' || github.event_name == 'push'
+    if: needs.changes.outputs.controller == 'true' || needs.changes.outputs.taskrun == 'true'
     runs-on: ubuntu-22.04
     outputs:
       format-needed: ${{ steps.format-check.outputs.format-needed }}
@@ -76,7 +76,7 @@ jobs:
   # Commit formatting changes (runs on push events when formatting was needed)
   commit-format-changes:
     needs: [changes, lint-rust]
-    if: always() && needs.lint-rust.outputs.format-needed == 'true' && github.event_name == 'push'
+    if: always() && needs.lint-rust.result == 'success' && needs.lint-rust.outputs.format-needed == 'true' && github.event_name == 'push'
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -125,7 +125,7 @@ jobs:
 
   test-rust:
     needs: changes
-    if: needs.changes.outputs.controller == 'true' || needs.changes.outputs.taskrun == 'true' || github.event_name == 'push'
+    if: needs.changes.outputs.controller == 'true' || needs.changes.outputs.taskrun == 'true'
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -141,8 +141,12 @@ jobs:
 
   # Integration tests
   integration-tests:
-    needs: [lint-rust, test-rust]
-    if: always() && !cancelled() && (needs.changes.outputs.controller == 'true' || needs.changes.outputs.taskrun == 'true' || needs.changes.outputs.infra == 'true' || github.event_name == 'push')
+    needs: [changes]
+    if: |
+      always() && !cancelled() && 
+      (needs.changes.outputs.controller == 'true' || 
+       needs.changes.outputs.taskrun == 'true' || 
+       needs.changes.outputs.infra == 'true')
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -280,7 +284,7 @@ jobs:
   # Test coverage reporting (non-blocking)
   test-coverage:
     needs: changes
-    if: needs.changes.outputs.controller == 'true' || needs.changes.outputs.taskrun == 'true' || github.event_name == 'push'
+    if: needs.changes.outputs.controller == 'true' || needs.changes.outputs.taskrun == 'true'
     runs-on: ubuntu-22.04
     continue-on-error: true  # Non-blocking
     steps:
