@@ -20,7 +20,7 @@ spec:
 
   # Source configuration - Using Spotahome's manifests
   source:
-    repoURL: https://github.com/spotahome/redis-operator
+    repoURL: https://github.com/spotahome/redis-operator.git
     targetRevision: v1.3.0  # Latest stable version
     path: manifests
 

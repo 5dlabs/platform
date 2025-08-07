@@ -34,7 +34,9 @@ spec:
     # Database operator Helm chart repositories
     - 'https://opensource.zalando.com/postgres-operator/charts/postgres-operator'
     - 'https://github.com/spotahome/redis-operator'
+    - 'https://github.com/spotahome/redis-operator.git'
     - 'https://github.com/questdb/questdb-operator'
+    - 'https://github.com/questdb/questdb-operator.git'
 
   # Destinations that applications in this project can deploy to
   destinations:
@@ -130,6 +132,12 @@ spec:
     - group: 'actions.github.com'
       kind: '*'
     - group: 'external-secrets.io'
+      kind: '*'
+    - group: 'acid.zalan.do'
+      kind: '*'
+    - group: 'databases.spotahome.com'
+      kind: '*'
+    - group: 'crd.questdb.io'
       kind: '*'
 
   # Roles for access control

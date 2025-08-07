@@ -21,7 +21,7 @@ spec:
 
   # Source configuration - Deploy from QuestDB operator manifests
   source:
-    repoURL: https://github.com/questdb/questdb-operator
+    repoURL: https://github.com/questdb/questdb-operator.git
     targetRevision: v0.5.1  # Latest stable version
     path: config/default
 
