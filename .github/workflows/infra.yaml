@@ -9,7 +9,7 @@ on:
     paths:
       - 'infra/gitops/**/*.yaml'
       - 'infra/charts/**/*'
-      - '.github/workflows/validate-argocd-apps.yaml'
+      - '.github/workflows/infra.yaml'
 
 env:
   ARGOCD_VERSION: v2.9.3
