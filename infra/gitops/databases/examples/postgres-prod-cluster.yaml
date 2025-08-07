@@ -2,7 +2,7 @@
 # Production-ready PostgreSQL cluster configuration
 # This creates a highly available 3-node PostgreSQL cluster with:
 # - Automatic failover via Patroni
-# - Connection pooling via PgBouncer  
+# - Connection pooling via PgBouncer
 # - Backup and Point-in-Time Recovery
 # - Monitoring and alerting ready
 # - Resource guarantees and limits
@@ -21,7 +21,7 @@ metadata:
 spec:
   # Team identifier for RBAC and resource ownership
   teamId: "platform"
-  
+
   # PostgreSQL version - use stable, tested versions in production
   postgresql:
     version: "16"  # Use LTS version for production
@@ -43,7 +43,7 @@ spec:
       max_parallel_workers_per_gather: "4"
       max_parallel_workers: "8"
       max_parallel_maintenance_workers: "4"
-      
+
       # WAL and replication settings
       wal_level: "replica"
       max_wal_senders: "10"
@@ -52,18 +52,18 @@ spec:
       wal_log_hints: "on"
       archive_mode: "on"
       archive_timeout: "60s"
-      
+
       # Checkpoint and background writer tuning
       checkpoint_timeout: "15min"
       bgwriter_delay: "200ms"
       bgwriter_lru_maxpages: "200"
       bgwriter_lru_multiplier: "4.0"
-      
+
       # Statement timeout and lock management
       statement_timeout: "60s"
       lock_timeout: "10s"
       idle_in_transaction_session_timeout: "60s"
-      
+
       # Logging configuration
       log_destination: "csvlog"
       logging_collector: "on"
@@ -79,10 +79,10 @@ spec:
       log_temp_files: "0"
       log_autovacuum_min_duration: "0"
       log_line_prefix: "%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h "
-      
+
       # Enable extensions
       shared_preload_libraries: "bg_mon,pg_stat_statements,pgextwlist,pg_auth_mon,pg_cron,timescaledb"
-      
+
       # Auto-vacuum tuning
       autovacuum: "on"
       autovacuum_max_workers: "4"
@@ -93,10 +93,10 @@ spec:
       autovacuum_analyze_scale_factor: "0.05"
       autovacuum_vacuum_cost_delay: "2ms"
       autovacuum_vacuum_cost_limit: "2000"
-  
+
   # High availability configuration
   numberOfInstances: 3  # Odd number for quorum
-  
+
   # Volume configuration with fast SSD storage
   volume:
     size: 100Gi
@@ -112,7 +112,7 @@ spec:
             requests:
               storage: 100Gi
           storageClassName: fast-ssd
-  
+
   # Production resource requirements
   resources:
     requests:
@@ -121,7 +121,7 @@ spec:
     limits:
       memory: 16Gi
       cpu: 4000m
-  
+
   # Users and roles
   users:
     # Application users
@@ -143,12 +143,12 @@ spec:
       - createdb
       - createrole
       - login
-  
+
   databases:
     main_db: app_primary
     analytics_db: app_primary
     metrics_db: monitoring
-  
+
   # Prepared databases with production extensions
   preparedDatabases:
     main_db:
@@ -173,7 +173,7 @@ spec:
           schema: "public"
         timescaledb:
           schema: "public"
-  
+
   # Backup configuration to S3
   env:
     - name: WALG_S3_PREFIX
@@ -202,7 +202,7 @@ spec:
         secretKeyRef:
           name: postgres-backup-credentials
           key: aws-secret-access-key
-  
+
   # Connection pooler configuration for production
   enableConnectionPooler: true
   connectionPooler:
@@ -224,23 +224,23 @@ spec:
     connectionPoolerDefaultMemoryLimit: "200Mi"
     connectionPoolerMaxDBConnections: 50
     connectionPoolerPoolMode: "transaction"
-  
+
   # Clone configuration (for creating staging from production)
   # clone:
   #   cluster: "postgres-staging"
   #   timestamp: "2024-01-15T10:00:00+00:00"  # Point-in-time recovery
-  
+
   # Standby configuration (for read replicas in other regions)
   # standby:
   #   s3_wal_path: "s3://postgres-backups/prod/wal"
-  
+
   # TLS configuration
   tls:
     secretName: "postgres-prod-tls"
     certificateFile: "tls.crt"
     privateKeyFile: "tls.key"
     caFile: "ca.crt"
-  
+
   # Sidecar containers for monitoring/logging
   sidecars:
     - name: postgres-exporter
@@ -264,11 +264,11 @@ spec:
         limits:
           cpu: 100m
           memory: 100Mi
-  
+
   # Pod priority and disruption budget
   podPriorityClassName: "production-critical"
   enablePodDisruptionBudget: true
-  
+
   # Tolerations for dedicated database nodes
   tolerations:
     - key: "workload"
@@ -280,7 +280,7 @@ spec:
       value: "database"
       effect: "NoExecute"
       tolerationSeconds: 3600
-  
+
   # Node affinity for database nodes
   nodeAffinity:
     requiredDuringSchedulingIgnoredDuringExecution:
@@ -294,7 +294,7 @@ spec:
           operator: In
           values:
           - ssd
-  
+
   # Pod anti-affinity to spread across zones
   podAntiAffinity:
     requiredDuringSchedulingIgnoredDuringExecution:
@@ -302,12 +302,12 @@ spec:
         matchLabels:
           cluster-name: postgres-prod
       topologyKey: topology.kubernetes.io/zone
-  
+
   # Maintenance windows (UTC)
   maintenanceWindows:
     - sun: 02:00-06:00  # Sunday maintenance window
     - wed: 02:00-04:00  # Wednesday minor updates
-  
+
   # Additional volumes for scripts/configs
   additionalVolumes:
     - name: postgres-config
@@ -317,7 +317,7 @@ spec:
       configMap:
         name: postgres-backup-scripts
         defaultMode: 0755
-  
+
   # Service annotations for load balancer
   serviceAnnotations:
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"

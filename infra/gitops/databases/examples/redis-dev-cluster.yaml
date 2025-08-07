@@ -18,7 +18,7 @@ spec:
   sentinel:
     # Number of sentinels (should be odd number for quorum)
     replicas: 3
-    
+
     # Sentinel resources
     resources:
       requests:
@@ -27,13 +27,13 @@ spec:
       limits:
         cpu: 100m
         memory: 100Mi
-    
+
     # Custom Sentinel configuration
     customConfig:
       - "down-after-milliseconds 5000"  # Time to consider master down
       - "failover-timeout 10000"         # Failover timeout
       - "parallel-syncs 1"               # Number of replicas to sync in parallel
-    
+
     # Affinity rules to spread sentinels across nodes
     affinity:
       podAntiAffinity:
@@ -51,12 +51,12 @@ spec:
                 values:
                 - sentinel
             topologyKey: kubernetes.io/hostname
-  
+
   # Redis configuration
   redis:
     # Number of Redis instances (1 master + N-1 replicas)
     replicas: 3
-    
+
     # Redis resources
     resources:
       requests:
@@ -65,11 +65,11 @@ spec:
       limits:
         cpu: 500m
         memory: 1Gi
-    
+
     # Redis version (image tag)
     image: redis:7.2-alpine
     imagePullPolicy: IfNotPresent
-    
+
     # Custom Redis configuration
     customConfig:
       - "maxmemory 512mb"                    # Max memory limit
@@ -88,7 +88,7 @@ spec:
       - "databases 16"                        # Number of databases
       - "slowlog-log-slower-than 10000"      # Slow query threshold (microseconds)
       - "slowlog-max-len 128"                # Max slow queries to keep
-      
+
     # Storage configuration for persistence
     storage:
       persistentVolumeClaim:
@@ -101,7 +101,7 @@ spec:
           resources:
             requests:
               storage: 10Gi
-    
+
     # Service configuration
     service:
       type: ClusterIP
@@ -109,11 +109,11 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9121"
         prometheus.io/path: "/metrics"
-    
+
     # Pod disruption budget
     podDisruptionBudget:
       maxUnavailable: 1
-    
+
     # Affinity rules to spread Redis instances across nodes
     affinity:
       podAntiAffinity:
@@ -131,24 +131,24 @@ spec:
                 values:
                 - redis
             topologyKey: kubernetes.io/hostname
-    
+
     # Security context
     securityContext:
       runAsUser: 999
       runAsGroup: 999
       fsGroup: 999
       runAsNonRoot: true
-    
+
     # Tolerations (optional)
     # tolerations:
     #   - key: "database"
     #     operator: "Equal"
     #     value: "redis"
     #     effect: "NoSchedule"
-    
+
     # Priority class (optional)
     # priorityClassName: "high-priority"
-    
+
     # Volume mount for custom scripts (optional)
     # extraVolumes:
     #   - name: scripts
@@ -157,11 +157,11 @@ spec:
     # extraVolumeMounts:
     #   - name: scripts
     #     mountPath: /scripts
-    
+
   # Authentication configuration (optional, recommended for production)
   # auth:
   #   secretPath: redis-auth
-  
+
   # Exporter configuration for Prometheus metrics (optional)
   # exporter:
   #   enabled: true
@@ -189,15 +189,15 @@ data:
   REDIS_MASTER_ENDPOINT: "rfs-redis-dev.databases.svc.cluster.local:26379"
   REDIS_SENTINEL_ENDPOINTS: "rfs-redis-dev.databases.svc.cluster.local:26379"
   REDIS_MASTER_NAME: "mymaster"
-  
+
   # Connection example for applications
   connection-example: |
     # For applications using Sentinel-aware clients:
     redis://rfs-redis-dev.databases.svc.cluster.local:26379/mymaster
-    
+
     # For direct connection (not recommended, use sentinel):
     redis://rfr-redis-dev.databases.svc.cluster.local:6379
-    
+
     # Example code (Python with redis-py):
     from redis.sentinel import Sentinel
     sentinel = Sentinel([

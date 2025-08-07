@@ -15,13 +15,13 @@ metadata:
 spec:
   # Project configuration
   project: platform
-  
+
   # Source configuration
   source:
     repoURL: https://argoproj.github.io/argo-helm
     targetRevision: 0.45.21
     chart: argo-workflows
-    
+
     # Helm configuration
     helm:
       valueFiles: []
@@ -36,7 +36,7 @@ spec:
         executor:
           image:
             tag: v3.7.0-rc4
-        
+
         # Use values from our local configuration file
         artifactRepository:
           archiveLogs: true
@@ -54,29 +54,29 @@ spec:
             annotations: {}
           rbac:
             create: true
-  
+
   # Destination configuration
   destination:
     server: https://kubernetes.default.svc
     namespace: argo
-  
+
   # Sync policy
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
       allowEmpty: false
-    
+
     syncOptions:
       - CreateNamespace=true
       - PrunePropagationPolicy=foreground
-    
+
     retry:
       limit: 3
       backoff:
         duration: 5s
         factor: 2
         maxDuration: 2m
-  
+
   # Revision history
   revisionHistoryLimit: 5

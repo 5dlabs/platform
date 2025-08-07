@@ -32,10 +32,10 @@ spec:
             value: "/config"
           - name: RUST_LOG
             value: "trace,kube=debug,toolman=trace"
-        
+
         # Set working directory to writable location (not read-only config mount)
         workingDir: "/tmp"
-        
+
         # Use latest image with local tools ConfigMap support
         image:
           tag: "1.0.5"
@@ -113,7 +113,7 @@ spec:
               command: "npx"
               args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
               workingDirectory: "/tmp"
-        
+
         # Secret store integration (External Secrets will inject these)
         secretRefs:
           - name: toolman-brave-search-secrets
@@ -128,7 +128,7 @@ spec:
           runAsGroup: 2375
           runAsNonRoot: true
           runAsUser: 1001
-        
+
         # Ensure service account token is mounted for Kubernetes API access
         automountServiceAccountToken: true
   # Destination configuration

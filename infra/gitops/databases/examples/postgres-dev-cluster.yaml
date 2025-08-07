@@ -16,7 +16,7 @@ metadata:
 spec:
   # Team identifier (used for RBAC and resource ownership)
   teamId: "platform"
-  
+
   # PostgreSQL version
   postgresql:
     version: "17"  # Latest stable version
@@ -34,23 +34,23 @@ spec:
       work_mem: "4MB"
       min_wal_size: "1GB"
       max_wal_size: "4GB"
-      
+
       # Enable useful extensions
       shared_preload_libraries: "bg_mon,pg_stat_statements,pgextwlist,pg_auth_mon"
-      
+
       # Logging
       log_statement: "all"
       log_duration: "on"
       log_min_duration_statement: "100ms"
-  
+
   # Number of instances (minimum 2 for HA)
   numberOfInstances: 2
-  
+
   # Volume configuration
   volume:
     size: 20Gi
     storageClass: local-path  # Adjust based on your cluster
-  
+
   # Resource limits for PostgreSQL pods
   resources:
     requests:
@@ -59,7 +59,7 @@ spec:
     limits:
       memory: 1Gi
       cpu: 500m
-  
+
   # Users and databases
   users:
     # Application user
@@ -73,12 +73,12 @@ spec:
     admin:
       - superuser
       - createdb
-  
+
   databases:
     app_db: appuser      # Main application database
     analytics_db: appuser # Analytics database
     test_db: appuser     # Test database
-  
+
   # Optional: prepared databases with extensions
   preparedDatabases:
     app_db:
@@ -95,7 +95,7 @@ spec:
       extensions:
         pg_stat_statements:
           schema: "public"
-  
+
   # Backup configuration (optional)
   # Uncomment and configure for S3/GCS backups
   # env:
@@ -105,7 +105,7 @@ spec:
   #     value: "us-east-1"
   #   - name: BACKUP_SCHEDULE
   #     value: "0 2 * * *"  # Daily at 2 AM
-  
+
   # Connection pooler configuration (optional)
   enableConnectionPooler: true
   connectionPooler:
@@ -120,17 +120,17 @@ spec:
       limits:
         cpu: 100m
         memory: 100Mi
-  
+
   # Pod priority class (optional)
   # podPriorityClassName: "high-priority"
-  
+
   # Tolerations (optional)
   # tolerations:
   #   - key: "database"
   #     operator: "Equal"
   #     value: "postgres"
   #     effect: "NoSchedule"
-  
+
   # Node affinity (optional)
   # nodeAffinity:
   #   requiredDuringSchedulingIgnoredDuringExecution:
@@ -140,7 +140,7 @@ spec:
   #         operator: In
   #         values:
   #         - database
-  
+
   # Maintenance window for automatic updates
   maintenanceWindows:
     - everyday: 03:00-04:00  # UTC time

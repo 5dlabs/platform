@@ -15,41 +15,41 @@ metadata:
 spec:
   # Project configuration
   project: platform
-  
+
   # Source configuration
   source:
     repoURL: https://github.com/5dlabs/cto
     targetRevision: main
     path: infra/telemetry
-    
+
     # Directory configuration
     directory:
       recurse: true
       include: "*.yaml"
       exclude: "test-*"
-  
+
   # Destination configuration
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
-  
+
   # Sync policy
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
       allowEmpty: false
-    
+
     syncOptions:
       - CreateNamespace=true
       - PrunePropagationPolicy=foreground
-    
+
     retry:
       limit: 3
       backoff:
         duration: 10s
         factor: 2
         maxDuration: 5m
-  
+
   # Revision history
   revisionHistoryLimit: 5

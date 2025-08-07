@@ -17,12 +17,12 @@ spec:
     repository: questdb/questdb
     tag: "7.3.10"
     pullPolicy: IfNotPresent
-  
+
   # Storage configuration
   volume:
     size: 20Gi
     storageClassName: local-path
-  
+
   # Development resources
   resources:
     requests:
@@ -31,49 +31,49 @@ spec:
     limits:
       memory: 2Gi
       cpu: 1000m
-  
+
   # Basic configuration
   config:
     # Enable all interfaces for development
     http.enabled: "true"
     http.bind_to: "0.0.0.0:9000"
     http.min.enabled: "true"
-    
+
     # PostgreSQL wire protocol
     pg.enabled: "true"
     pg.bind_to: "0.0.0.0:8812"
     pg.user: "admin"
     pg.readonly.user.enabled: "false"
-    
+
     # ILP for data ingestion
     line.tcp.enabled: "true"
     line.tcp.bind_to: "0.0.0.0:9009"
     line.tcp.auth.type: "none"  # No auth for dev
-    
+
     # UDP line protocol (for testing)
     line.udp.enabled: "true"
     line.udp.bind_to: "0.0.0.0:9009"
     line.udp.receive.buffer.size: "2048"
-    
+
     # Development settings
     cairo.wal.enabled: "false"  # Disable WAL for dev
     telemetry.enabled: "false"
     metrics.enabled: "true"
-    
+
     # Logging
     log.level: "DEBUG"
-  
+
   # Environment variables
   extraEnv:
     - name: JAVA_OPTS
       value: "-Xms512m -Xmx1500m -XX:+UseG1GC"
     - name: QDB_LOG_W_STDOUT_LEVEL
       value: "DEBUG"
-  
+
   # Service configuration
   service:
     type: ClusterIP
-  
+
   # Pod configuration
   podSpec:
     securityContext:
@@ -99,7 +99,7 @@ data:
         value DOUBLE,
         tags STRING
     ) TIMESTAMP(timestamp) PARTITION BY DAY;
-    
+
     -- Create an events table
     CREATE TABLE IF NOT EXISTS events (
         timestamp TIMESTAMP,
@@ -108,7 +108,7 @@ data:
         user_id LONG,
         data STRING
     ) TIMESTAMP(timestamp) PARTITION BY HOUR;
-    
+
     -- Create a logs table
     CREATE TABLE IF NOT EXISTS logs (
         timestamp TIMESTAMP,
@@ -117,20 +117,20 @@ data:
         message STRING,
         trace_id STRING
     ) TIMESTAMP(timestamp) PARTITION BY DAY;
-  
+
   sample-queries.sql: |
     -- Insert sample data
     INSERT INTO metrics VALUES(
         now(), 'host1', 'cpu_usage', 45.2, 'region=us-east'
     );
-    
+
     -- Query recent metrics
-    SELECT * FROM metrics 
+    SELECT * FROM metrics
     WHERE timestamp IN '1h'  -- Last hour
     ORDER BY timestamp DESC;
-    
+
     -- Aggregate metrics by host
-    SELECT 
+    SELECT
         host,
         avg(value) avg_value,
         min(value) min_value,
@@ -141,7 +141,7 @@ data:
         AND timestamp IN '1d'  -- Last day
     SAMPLE BY 1h  -- 1-hour buckets
     ALIGN TO CALENDAR;
-    
+
     -- Find anomalies
     SELECT * FROM metrics
     WHERE value > 90

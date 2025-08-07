@@ -15,7 +15,7 @@ metadata:
 spec:
   # Description
   description: Platform infrastructure project for agent platform and related services
-  
+
   # Source repositories that applications in this project can deploy from
   sourceRepos:
     - 'https://github.com/5dlabs/cto'
@@ -31,7 +31,7 @@ spec:
     - 'https://actions-runner-controller.github.io/actions-runner-controller'
     - 'https://twingate.github.io/helm-charts'
     - 'https://github.com/actions/actions-runner-controller'
-  
+
   # Destinations that applications in this project can deploy to
   destinations:
     - namespace: agent-platform
@@ -58,7 +58,7 @@ spec:
       server: https://kubernetes.default.svc
     - namespace: default
       server: https://kubernetes.default.svc
-  
+
   # Cluster resource whitelist
   clusterResourceWhitelist:
     - group: cert-manager.io
@@ -81,7 +81,7 @@ spec:
       kind: '*'
     - group: 'external-secrets.io'
       kind: '*'
-  
+
   # Namespace resource whitelist
   namespaceResourceWhitelist:
     - group: ''
@@ -108,7 +108,7 @@ spec:
       kind: '*'
     - group: 'external-secrets.io'
       kind: '*'
-  
+
   # Roles for access control
   roles:
     - name: admin
@@ -119,7 +119,7 @@ spec:
         - p, proj:platform:admin, clusters, *, *, allow
       groups:
         - platform:admins
-    
+
     - name: developer
       description: Developer access for platform project
       policies:
@@ -129,7 +129,7 @@ spec:
         - p, proj:platform:developer, repositories, get, *, allow
       groups:
         - platform:developers
-    
+
     - name: cicd
       description: CI/CD access for automated deployments
       policies:
@@ -139,7 +139,7 @@ spec:
         - p, proj:platform:cicd, repositories, get, *, allow
       groups:
         - platform:cicd
-  
+
   # Sync windows (optional - for maintenance windows)
   syncWindows:
     - kind: allow

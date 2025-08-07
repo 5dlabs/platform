@@ -16,7 +16,7 @@ metadata:
 spec:
   # Team identifier
   teamId: "platform"
-  
+
   # PostgreSQL configuration
   postgresql:
     version: "16"  # LTS version for stability
@@ -34,15 +34,15 @@ spec:
       work_mem: "8MB"
       min_wal_size: "512MB"
       max_wal_size: "2GB"
-      
+
       # Parallel query execution
       max_worker_processes: "4"
       max_parallel_workers_per_gather: "2"
       max_parallel_workers: "4"
-      
+
       # Enable useful extensions for agent-docs (including pgvector for embeddings)
       shared_preload_libraries: "bg_mon,pg_stat_statements,pgextwlist,pg_auth_mon,pgvector,timescaledb"
-      
+
       # Logging for debugging
       log_statement: "mod"  # Log DDL and data-modifying statements
       log_duration: "off"
@@ -52,20 +52,20 @@ spec:
       log_disconnections: "on"
       log_lock_waits: "on"
       log_temp_files: "0"
-      
+
       # Statement timeouts
       statement_timeout: "30s"
       lock_timeout: "10s"
       idle_in_transaction_session_timeout: "60s"
-  
+
   # HA configuration - 2 instances for redundancy
   numberOfInstances: 2
-  
+
   # Storage configuration
   volume:
     size: 50Gi
     storageClass: local-path  # Adjust for your cluster
-  
+
   # Resource allocation for agent-docs workload
   resources:
     requests:
@@ -74,7 +74,7 @@ spec:
     limits:
       memory: 4Gi
       cpu: 1000m
-  
+
   # Database users and permissions
   users:
     # Main application user
@@ -89,13 +89,13 @@ spec:
       - superuser
       - createdb
       - login
-  
+
   # Databases
   databases:
     agent_docs_db: agent_docs      # Main database for agent-docs
     agent_tasks_db: agent_docs     # Task history and tracking
     agent_metrics_db: agent_docs   # Metrics and telemetry
-  
+
   # Prepared databases with extensions
   preparedDatabases:
     agent_docs_db:
@@ -129,7 +129,7 @@ spec:
           schema: "public"
         timescaledb:       # For time-series metrics (if available)
           schema: "public"
-  
+
   # Connection pooler for handling multiple agent connections
   enableConnectionPooler: true
   connectionPooler:
@@ -144,7 +144,7 @@ spec:
       limits:
         cpu: 200m
         memory: 256Mi
-  
+
   # Backup configuration (optional - configure S3/GCS credentials)
   # env:
   #   - name: WAL_S3_BUCKET
@@ -153,20 +153,20 @@ spec:
   #     value: "us-east-1"
   #   - name: BACKUP_SCHEDULE
   #     value: "0 */12 * * *"  # Every 12 hours
-  
+
   # Pod disruption budget
   enablePodDisruptionBudget: true
-  
+
   # Affinity rules to spread instances
   podAntiAffinity:
     preferredDuringSchedulingIgnoredDuringExecution:
-    - weight: 100
+      - weight: 100
       podAffinityTerm:
         labelSelector:
           matchLabels:
             cluster-name: agent-docs-postgres
         topologyKey: kubernetes.io/hostname
-  
+
   # Maintenance windows (UTC)
   maintenanceWindows:
     - everyday: 03:00-04:00
@@ -211,12 +211,12 @@ data:
   POSTGRES_DATABASE: "agent_docs_db"
   POSTGRES_TASKS_DATABASE: "agent_tasks_db"
   POSTGRES_METRICS_DATABASE: "agent_metrics_db"
-  
+
   # Connection URLs (credentials will be in secrets)
   DATABASE_URL_TEMPLATE: "postgresql://agent_docs:PASSWORD@agent-docs-postgres-pooler.databases.svc.cluster.local:5432/agent_docs_db"
   TASKS_DATABASE_URL_TEMPLATE: "postgresql://agent_docs:PASSWORD@agent-docs-postgres-pooler.databases.svc.cluster.local:5432/agent_tasks_db"
   METRICS_DATABASE_URL_TEMPLATE: "postgresql://agent_docs:PASSWORD@agent-docs-postgres-pooler.databases.svc.cluster.local:5432/agent_metrics_db"
-  
+
   # Connection pooling recommendations
   connection-pool-config: |
     # Recommended pool settings for agent-docs:
@@ -225,18 +225,18 @@ data:
     connection_timeout: 5000
     idle_timeout: 600000
     max_lifetime: 1800000
-  
+
   # Usage examples
   usage-example: |
     # Direct connection (bypasses pooler)
     postgresql://agent_docs:PASSWORD@agent-docs-postgres.databases.svc.cluster.local:5432/agent_docs_db
-    
+
     # Pooled connection (recommended)
     postgresql://agent_docs:PASSWORD@agent-docs-postgres-pooler.databases.svc.cluster.local:5432/agent_docs_db
-    
+
     # Read-only connection
     postgresql://agent_docs_readonly:PASSWORD@agent-docs-postgres.databases.svc.cluster.local:5432/agent_docs_db
-    
+
     # Using pgvector for embeddings (example SQL):
     # CREATE TABLE documents (id bigserial PRIMARY KEY, content text, embedding vector(1536));
     # CREATE INDEX ON documents USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
@@ -245,10 +245,10 @@ data:
 ---
 # Note: The operator automatically creates secrets for database users
 # Secret names follow the pattern: {username}.{clustername}.credentials.postgresql.acid.zalan.do
-# 
+#
 # For agent-docs, the secrets will be:
 # - agent_docs.agent-docs-postgres.credentials.postgresql.acid.zalan.do
-# - agent_docs_readonly.agent-docs-postgres.credentials.postgresql.acid.zalan.do  
+# - agent_docs_readonly.agent-docs-postgres.credentials.postgresql.acid.zalan.do
 # - agent_docs_admin.agent-docs-postgres.credentials.postgresql.acid.zalan.do
 #
 # Each secret contains:

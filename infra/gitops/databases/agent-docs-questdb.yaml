@@ -19,7 +19,7 @@ spec:
     repository: questdb/questdb
     tag: "7.3.10"  # Latest stable version
     pullPolicy: IfNotPresent
-  
+
   # Volume configuration for data persistence
   volume:
     size: 50Gi
@@ -27,7 +27,7 @@ spec:
     # Optional: specify access modes
     accessModes:
       - ReadWriteOnce
-  
+
   # Resource allocation optimized for time-series workloads
   resources:
     requests:
@@ -36,47 +36,47 @@ spec:
     limits:
       memory: 8Gi
       cpu: 2000m
-  
+
   # QuestDB configuration
   config:
     # HTTP server configuration
     http.enabled: "true"
     http.bind_to: "0.0.0.0:9000"
     http.min.enabled: "true"  # Enable REST API
-    
+
     # PostgreSQL wire protocol (for compatibility)
     pg.enabled: "true"
     pg.bind_to: "0.0.0.0:8812"
     pg.user: "agent_docs"
     # pg.password will be set via secret
-    
+
     # ILP (InfluxDB Line Protocol) for high-throughput ingestion
     line.tcp.enabled: "true"
     line.tcp.bind_to: "0.0.0.0:9009"
     line.tcp.auth.type: "none"  # Configure auth as needed
-    
+
     # Performance tuning for time-series workloads
     cairo.sql.copy.buffer.size: "2M"
     cairo.wal.enabled: "true"  # Enable Write-Ahead Log
     cairo.wal.segment.rollover.row.count: "2000000"
     cairo.max.uncommitted.rows: "500000"
     cairo.commit.lag: "1000"  # Commit lag in milliseconds
-    
+
     # Query performance
     cairo.sql.parallel.filter.enabled: "true"
     cairo.sql.parallel.filter.pretouch.enabled: "true"
     cairo.page.frame.max.rows: "1000000"
-    
+
     # Memory management
     cairo.sql.memory.page.size: "4M"
     cairo.sql.memory.max.pages: "256"
-    
+
     # Telemetry (optional)
     telemetry.enabled: "false"  # Disable telemetry for privacy
-    
+
     # Logging
     log.level: "INFO"
-    
+
   # Environment variables (additional configuration)
   extraEnv:
     - name: QDB_LOG_W_STDOUT_LEVEL
@@ -87,7 +87,7 @@ spec:
       value: "INFO"
     - name: JAVA_OPTS
       value: "-Xms2g -Xmx6g -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
-  
+
   # Service configuration
   service:
     type: ClusterIP
@@ -95,7 +95,7 @@ spec:
       prometheus.io/scrape: "true"
       prometheus.io/port: "9003"
       prometheus.io/path: "/metrics"
-  
+
   # Pod configuration
   podSpec:
     # Security context
@@ -104,7 +104,7 @@ spec:
       runAsGroup: 1000
       fsGroup: 1000
       runAsNonRoot: true
-    
+
     # Affinity rules for better performance
     affinity:
       podAntiAffinity:
@@ -115,7 +115,7 @@ spec:
               matchLabels:
                 app.kubernetes.io/name: agent-docs-questdb
             topologyKey: kubernetes.io/hostname
-    
+
     # Liveness and readiness probes
     livenessProbe:
       httpGet:
@@ -125,7 +125,7 @@ spec:
       periodSeconds: 30
       timeoutSeconds: 5
       failureThreshold: 3
-    
+
     readinessProbe:
       httpGet:
         path: /status
@@ -134,7 +134,7 @@ spec:
       periodSeconds: 10
       timeoutSeconds: 5
       failureThreshold: 3
-    
+
     # Tolerations (optional)
     # tolerations:
     #   - key: "workload"
@@ -220,24 +220,24 @@ data:
   QUESTDB_HTTP_ENDPOINT: "http://agent-docs-questdb-http.databases.svc.cluster.local:9000"
   QUESTDB_PG_ENDPOINT: "postgresql://agent_docs@agent-docs-questdb-pg.databases.svc.cluster.local:8812/qdb"
   QUESTDB_ILP_ENDPOINT: "agent-docs-questdb-ilp.databases.svc.cluster.local:9009"
-  
+
   # API endpoints
   QUESTDB_REST_API: "http://agent-docs-questdb-http.databases.svc.cluster.local:9000"
   QUESTDB_WEB_CONSOLE: "http://agent-docs-questdb-http.databases.svc.cluster.local:9000"
-  
+
   # Usage examples
   usage-example: |
     # REST API - Execute SQL queries
     curl -G http://agent-docs-questdb-http:9000/exec \
       --data-urlencode "query=SELECT * FROM metrics LIMIT 10"
-    
+
     # ILP - High-throughput data ingestion (InfluxDB Line Protocol)
     echo "metrics,tag1=value1 field1=10,field2=20 $(date +%s%N)" | \
       nc agent-docs-questdb-ilp 9009
-    
+
     # PostgreSQL wire protocol - Compatible with PostgreSQL clients
     psql -h agent-docs-questdb-pg -p 8812 -U agent_docs -d qdb
-    
+
     # Python example using psycopg2
     import psycopg2
     conn = psycopg2.connect(
@@ -246,7 +246,7 @@ data:
         database='qdb',
         user='agent_docs'
     )
-    
+
     # Create a time-series table
     CREATE TABLE agent_metrics (
         timestamp TIMESTAMP,
@@ -257,15 +257,15 @@ data:
         cpu_usage DOUBLE,
         success BOOLEAN
     ) TIMESTAMP(timestamp) PARTITION BY DAY;
-    
+
     # Insert data
     INSERT INTO agent_metrics VALUES(
         now(), 'task-123', 'agent-docs', 1.234, 1024000, 45.6, true
     );
-    
+
     # Query with time-based aggregation
-    SELECT 
-        timestamp, 
+    SELECT
+        timestamp,
         avg(execution_time) avg_time,
         max(memory_usage) max_memory
     FROM agent_metrics
