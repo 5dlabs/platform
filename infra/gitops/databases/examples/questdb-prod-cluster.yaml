@@ -1,0 +1,288 @@
+---
+# Production-ready QuestDB configuration
+# High-performance time-series database for metrics, telemetry, and analytics
+apiVersion: crd.questdb.io/v1beta1
+kind: QuestDB
+metadata:
+  name: questdb-prod
+  namespace: databases
+  labels:
+    team: platform
+    environment: production
+    app.kubernetes.io/name: questdb-prod
+    app.kubernetes.io/component: timeseries
+    criticality: high
+spec:
+  # QuestDB image - production version
+  image:
+    repository: questdb/questdb
+    tag: "7.3.10"  # Use specific version for production
+    pullPolicy: IfNotPresent
+
+  # Storage configuration for production
+  volume:
+    size: 500Gi  # Large storage for time-series data
+    storageClassName: fast-ssd  # Use SSD for performance
+    accessModes:
+      - ReadWriteOnce
+    # Optional: volume snapshot class for backups
+    # volumeSnapshotClassName: fast-ssd-snapshot
+
+  # Production resource allocation
+  resources:
+    requests:
+      memory: 8Gi
+      cpu: 2000m
+    limits:
+      memory: 32Gi
+      cpu: 8000m
+
+  # Production configuration
+  config:
+    # HTTP server configuration
+    http.enabled: "true"
+    http.bind_to: "0.0.0.0:9000"
+    http.min.enabled: "true"
+    http.security.readonly: "false"
+    http.net.connection.limit: "256"
+    http.net.connection.timeout: "300000"  # 5 minutes
+    http.net.connection.hint: "true"
+
+    # PostgreSQL wire protocol
+    pg.enabled: "true"
+    pg.bind_to: "0.0.0.0:8812"
+    pg.user: "questdb_admin"
+    pg.readonly.user.enabled: "true"
+    pg.readonly.user: "questdb_readonly"
+    pg.net.connection.limit: "128"
+    pg.character_store.capacity: "4096"
+
+    # ILP configuration for high-throughput ingestion
+    line.tcp.enabled: "true"
+    line.tcp.bind_to: "0.0.0.0:9009"
+    line.tcp.net.connection.limit: "256"
+    line.tcp.net.connection.timeout: "60000"  # 1 minute
+    line.tcp.msg.buffer.size: "32768"
+    line.tcp.maintenance.job.interval: "30000"  # 30 seconds
+    line.tcp.auth.type: "jwt"  # Enable authentication
+
+    # UDP disabled in production (less reliable)
+    line.udp.enabled: "false"
+
+    # Write-Ahead Log for durability
+    cairo.wal.enabled: "true"
+    cairo.wal.purge.interval: "30000"  # 30 seconds
+    cairo.wal.segment.rollover.row.count: "5000000"
+    cairo.wal.max.lag.size: "250M"
+    cairo.wal.apply.worker.count: "4"
+
+    # Performance tuning
+    cairo.max.uncommitted.rows: "1000000"
+    cairo.commit.lag: "5000"  # 5 seconds
+    cairo.o3.max.lag: "600000ms"  # 10 minutes
+    cairo.o3.min.lag: "1000ms"  # 1 second
+    cairo.sql.parallel.filter.enabled: "true"
+    cairo.sql.parallel.filter.pretouch.enabled: "true"
+    cairo.page.frame.max.rows: "5000000"
+    cairo.sql.copy.buffer.size: "4M"
+
+    # Memory management
+    cairo.sql.memory.page.size: "16M"
+    cairo.sql.memory.max.pages: "512"
+    cairo.sql.analytic.column.pool.capacity: "128"
+    cairo.sql.create.table.model.pool.capacity: "32"
+    cairo.sql.column.cast.model.pool.capacity: "32"
+    cairo.sql.sort.key.page.size: "4M"
+    cairo.sql.sort.light.value.page.size: "8M"
+
+    # Vector processing
+    cairo.vector.aggregate.queue.capacity: "256"
+    cairo.page.frame.min.rows: "100000"
+
+    # Metrics and monitoring
+    metrics.enabled: "true"
+    telemetry.enabled: "false"  # Disable telemetry for privacy
+
+    # Logging configuration
+    log.level: "INFO"
+    log.record.level: "INFO"
+
+    # Security
+    http.security.max.req.size: "10485760"  # 10MB max request
+
+  # Environment variables for production
+  extraEnv:
+    - name: JAVA_OPTS
+      value: "-Xms8g -Xmx28g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+AlwaysPreTouch -XX:+UnlockExperimentalVMOptions -XX:+UseNUMA"
+    - name: QDB_LOG_W_STDOUT_LEVEL
+      value: "INFO"
+    - name: QDB_LOG_W_FILE_LEVEL
+      value: "INFO"
+    - name: QDB_METRICS_ENABLED
+      value: "true"
+    # Authentication token for ILP (from secret)
+    - name: QDB_LINE_TCP_AUTH_DB_PATH
+      value: "/var/lib/questdb/auth"
+
+  # Authentication configuration (ILP)
+  ilpAuthSecret:
+    name: questdb-prod-ilp-auth
+    key: auth.json
+
+  # PostgreSQL authentication (from secret)
+  pgSecret:
+    name: questdb-prod-pg-auth
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9003"
+      prometheus.io/path: "/metrics"
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"  # If exposing
+
+  # Pod configuration for production
+  podSpec:
+    # Priority class
+    priorityClassName: "production-critical"
+
+    # Security context
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+
+    # Container security context
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: false  # QuestDB needs to write
+
+    # Node selector for dedicated nodes
+    nodeSelector:
+      workload: timeseries
+      storage-type: ssd
+
+    # Tolerations for dedicated nodes
+    tolerations:
+      - key: "workload"
+        operator: "Equal"
+        value: "timeseries"
+        effect: "NoSchedule"
+      - key: "workload"
+        operator: "Equal"
+        value: "timeseries"
+        effect: "NoExecute"
+        tolerationSeconds: 3600
+
+    # Anti-affinity for high availability
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: questdb-prod
+          topologyKey: topology.kubernetes.io/zone
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: questdb-prod
+              topologyKey: kubernetes.io/hostname
+
+    # Health checks
+    livenessProbe:
+      httpGet:
+        path: /status
+        port: 9003
+      initialDelaySeconds: 120
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 5
+
+    readinessProbe:
+      httpGet:
+        path: /status
+        port: 9003
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+    # Startup probe for slow starts
+    startupProbe:
+      httpGet:
+        path: /status
+        port: 9003
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 30
+
+---
+# Secret for ILP authentication
+apiVersion: v1
+kind: Secret
+metadata:
+  name: questdb-prod-ilp-auth
+  namespace: databases
+  annotations:
+    questdb.crd.questdb.io/name: questdb-prod
+    questdb.crd.questdb.io/secret-type: ilp
+type: Opaque
+stringData:
+  # Generate with QuestDB tools
+  # This should contain the public key for JWT verification
+  # To generate proper keys:
+  # 1. Generate EC key pair: openssl ecparam -name prime256v1 -genkey -noout -out private.pem
+  # 2. Extract public key: openssl ec -in private.pem -pubout -out public.pem
+  # 3. Convert to JWK format using a tool like jwk-to-pem or online converter
+  auth.json: |
+    {
+      "keys": [
+        {
+          "kid": "REPLACE_WITH_KEY_ID",
+          "kty": "EC",
+          "crv": "P-256",
+          "x": "REPLACE_WITH_X_COORDINATE_BASE64",
+          "y": "REPLACE_WITH_Y_COORDINATE_BASE64"
+        }
+      ]
+    }
+
+---
+# Secret for PostgreSQL authentication
+apiVersion: v1
+kind: Secret
+metadata:
+  name: questdb-prod-pg-auth
+  namespace: databases
+  annotations:
+    questdb.crd.questdb.io/name: questdb-prod
+    questdb.crd.questdb.io/secret-type: psql
+type: Opaque
+stringData:
+  QDB_PG_USER: "questdb_admin"
+  QDB_PG_PASSWORD: "CHANGE_THIS_STRONG_PASSWORD"  # Generate with: openssl rand -base64 32
+  QDB_PG_READONLY_USER: "questdb_readonly"
+  QDB_PG_READONLY_PASSWORD: "CHANGE_THIS_READONLY_PASSWORD"
+
+---
+# QuestDBSnapshot for backups (optional, requires CSI snapshotter)
+# apiVersion: crd.questdb.io/v1beta1
+# kind: QuestDBSnapshot
+# metadata:
+#   name: questdb-prod-snapshot
+#   namespace: databases
+# spec:
+#   questdbName: questdb-prod
+#   volumeSnapshotClassName: fast-ssd-snapshot  # Must exist
+#   schedule: "0 2 * * *"  # Daily at 2 AM
+#   retention: 7  # Keep 7 snapshots

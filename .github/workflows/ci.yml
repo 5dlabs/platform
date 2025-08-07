@@ -141,8 +141,13 @@ jobs:
 
   # Integration tests
   integration-tests:
-    needs: [lint-rust, test-rust]
-    if: always() && !cancelled() && (needs.changes.outputs.controller == 'true' || needs.changes.outputs.taskrun == 'true' || needs.changes.outputs.infra == 'true' || github.event_name == 'push')
+    needs: [changes, lint-rust, test-rust]
+    if: |
+      always() && !cancelled() && 
+      (needs.changes.outputs.controller == 'true' || 
+       needs.changes.outputs.taskrun == 'true' || 
+       needs.changes.outputs.infra == 'true' ||
+       github.event_name == 'push')
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4

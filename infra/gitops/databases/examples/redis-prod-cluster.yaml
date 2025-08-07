@@ -1,0 +1,375 @@
+---
+# Production-ready Redis Failover cluster configuration
+# This creates a highly available Redis cluster with:
+# - Sentinel-based automatic failover
+# - Data persistence with AOF and RDB
+# - Authentication and security
+# - Monitoring via Redis Exporter
+# - Resource guarantees and anti-affinity rules
+
+apiVersion: databases.spotahome.com/v1
+kind: RedisFailover
+metadata:
+  name: redis-prod
+  namespace: databases
+  labels:
+    team: platform
+    environment: production
+    app.kubernetes.io/name: redis-prod
+    app.kubernetes.io/component: cache
+    criticality: high
+spec:
+  # Sentinel configuration for high availability
+  sentinel:
+    # Use 5 sentinels for better quorum in production
+    replicas: 5
+
+    # Production resources for Sentinels
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+    # Sentinel image
+    image: redis:7.2-alpine
+    imagePullPolicy: IfNotPresent
+
+    # Custom Sentinel configuration for production
+    customConfig:
+      - "down-after-milliseconds 3000"     # Faster detection of master failure
+      - "failover-timeout 10000"           # Failover timeout
+      - "parallel-syncs 2"                 # Sync 2 replicas in parallel during failover
+      - "min-replicas-to-write 1"          # Require at least 1 replica for writes
+      - "min-replicas-max-lag 10"          # Max replica lag in seconds
+      - "sentinel announce-ip $(MY_POD_IP)" # Announce correct IP in multi-network setups
+      - "sentinel announce-port 26379"      # Announce correct port
+
+    # Environment variables
+    env:
+      - name: MY_POD_IP
+        valueFrom:
+          fieldRef:
+            fieldPath: status.podIP
+
+    # Security context
+    securityContext:
+      runAsUser: 999
+      runAsGroup: 999
+      fsGroup: 999
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+
+    # Priority class for critical pods
+    priorityClassName: "production-critical"
+
+    # Anti-affinity to spread sentinels across zones and nodes
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+            matchExpressions:
+              - key: redisfailover.databases.spotahome.com/name
+              operator: In
+              values:
+                - redis-prod
+            - key: redisfailover.databases.spotahome.com/component
+              operator: In
+              values:
+                - sentinel
+          topologyKey: topology.kubernetes.io/zone
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: redisfailover.databases.spotahome.com/name
+                operator: In
+                values:
+                  - redis-prod
+              - key: redisfailover.databases.spotahome.com/component
+                operator: In
+                values:
+                  - sentinel
+            topologyKey: kubernetes.io/hostname
+
+  # Redis configuration for production
+  redis:
+    # 5 Redis instances for production (1 master + 4 replicas)
+    replicas: 5
+
+    # Production resources
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 4Gi
+      limits:
+        cpu: 2000m
+        memory: 8Gi
+
+    # Redis image
+    image: redis:7.2-alpine
+    imagePullPolicy: IfNotPresent
+
+    # Production Redis configuration
+    customConfig:
+      # Memory management
+      - "maxmemory 6gb"                        # Max memory limit (75% of container limit)
+      - "maxmemory-policy volatile-lru"        # Evict keys with expire set using LRU
+      - "maxmemory-samples 5"                  # LRU sample size
+
+      # Persistence configuration - Both RDB and AOF
+      - "save 900 1"                           # RDB: Save after 900s if 1+ keys changed
+      - "save 300 10"                          # RDB: Save after 300s if 10+ keys changed
+      - "save 60 10000"                        # RDB: Save after 60s if 10000+ keys changed
+      - "stop-writes-on-bgsave-error yes"      # Stop writes if RDB save fails
+      - "rdbcompression yes"                   # Compress RDB files
+      - "rdbchecksum yes"                      # Add checksum to RDB files
+      - "dbfilename dump.rdb"                  # RDB filename
+
+      - "appendonly yes"                       # Enable AOF persistence
+      - "appendfilename appendonly.aof"        # AOF filename
+      - "appendfsync everysec"                 # Fsync every second (good balance)
+      - "no-appendfsync-on-rewrite no"        # Continue fsync during AOF rewrite
+      - "auto-aof-rewrite-percentage 100"     # Trigger rewrite when AOF grows 100%
+      - "auto-aof-rewrite-min-size 256mb"     # Min AOF size before rewrite
+      - "aof-load-truncated yes"              # Load truncated AOF on startup
+      - "aof-use-rdb-preamble yes"            # Use RDB format for AOF rewrite
+
+      # Network and connections
+      - "tcp-backlog 511"                     # TCP listen backlog
+      - "timeout 300"                         # Client idle timeout (5 minutes)
+      - "tcp-keepalive 300"                   # TCP keepalive (5 minutes)
+      - "protected-mode yes"                  # Enable protected mode
+      - "bind 0.0.0.0"                       # Listen on all interfaces
+
+      # Performance tuning
+      - "databases 16"                        # Number of databases
+      - "hz 10"                              # Background task frequency
+      - "repl-backlog-size 64mb"            # Replication backlog size
+      - "repl-backlog-ttl 3600"             # Replication backlog TTL
+      - "repl-diskless-sync yes"            # Use diskless replication
+      - "repl-diskless-sync-delay 5"        # Delay before diskless repl starts
+      - "repl-diskless-load on-empty-db"    # Use diskless load on empty DB
+      - "repl-ping-replica-period 10"       # Replica ping frequency
+      - "repl-timeout 60"                   # Replication timeout
+      - "repl-disable-tcp-nodelay no"       # Use TCP_NODELAY for replication
+      - "replica-priority 100"               # Default replica priority
+      - "min-replicas-to-write 1"           # Require 1+ replicas for writes
+      - "min-replicas-max-lag 10"           # Max replica lag (seconds)
+
+      # Slow log
+      - "slowlog-log-slower-than 10000"     # Log queries slower than 10ms
+      - "slowlog-max-len 512"                # Keep last 512 slow queries
+
+      # Latency monitoring
+      - "latency-monitor-threshold 100"      # Monitor ops slower than 100ms
+
+      # Active defragmentation (Redis 4.0+)
+      - "activedefrag yes"                   # Enable active defragmentation
+      - "active-defrag-ignore-bytes 100mb"   # Min memory to start defrag
+      - "active-defrag-threshold-lower 10"   # Min fragmentation to start
+      - "active-defrag-threshold-upper 100"  # Force defrag above this
+      - "active-defrag-cycle-min 5"         # Min CPU% for defrag
+      - "active-defrag-cycle-max 75"        # Max CPU% for defrag
+
+      # Security
+      - "rename-command FLUSHDB \"\""       # Disable FLUSHDB
+      - "rename-command FLUSHALL \"\""      # Disable FLUSHALL
+      - "rename-command KEYS \"\""          # Disable KEYS (use SCAN)
+      - "rename-command CONFIG \"CONFIG_e8f9c6d5a2b3\"" # Rename CONFIG
+
+    # Storage configuration for production persistence
+    storage:
+      persistentVolumeClaim:
+        metadata:
+          name: redis-data
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          storageClassName: fast-ssd  # Use your production SSD storage class
+          resources:
+            requests:
+              storage: 50Gi
+
+    # Service configuration
+    service:
+      type: ClusterIP
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9121"
+        prometheus.io/path: "/metrics"
+
+    # Pod disruption budget
+    podDisruptionBudget:
+      maxUnavailable: 1  # Allow only 1 pod to be unavailable
+
+    # Security context
+    securityContext:
+      runAsUser: 999
+      runAsGroup: 999
+      fsGroup: 999
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+
+    # Priority class
+    priorityClassName: "production-critical"
+
+    # Tolerations for dedicated cache nodes
+    tolerations:
+      - key: "workload"
+        operator: "Equal"
+        value: "cache"
+        effect: "NoSchedule"
+      - key: "workload"
+        operator: "Equal"
+        value: "cache"
+        effect: "NoExecute"
+        tolerationSeconds: 3600
+
+    # Node affinity for cache nodes with SSD
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: workload
+            operator: In
+            values:
+            - cache
+          - key: storage-type
+            operator: In
+            values:
+            - ssd
+
+    # Pod anti-affinity to spread across zones
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+            - key: redisfailover.databases.spotahome.com/name
+              operator: In
+              values:
+              - redis-prod
+            - key: redisfailover.databases.spotahome.com/component
+              operator: In
+              values:
+              - redis
+          topologyKey: topology.kubernetes.io/zone
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+              - key: redisfailover.databases.spotahome.com/name
+                operator: In
+                values:
+                - redis-prod
+              - key: redisfailover.databases.spotahome.com/component
+                operator: In
+                values:
+                - redis
+            topologyKey: kubernetes.io/hostname
+
+  # Authentication configuration
+  auth:
+    secretPath: redis-auth
+
+  # Redis Exporter for Prometheus metrics
+  exporter:
+    enabled: true
+    image: oliver006/redis_exporter:v1.55.0
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    env:
+      - name: REDIS_EXPORTER_LOG_FORMAT
+        value: "json"
+      - name: REDIS_EXPORTER_WEB_LISTEN_ADDRESS
+        value: ":9121"
+      - name: REDIS_EXPORTER_WEB_TELEMETRY_PATH
+        value: "/metrics"
+
+---
+# Secret for Redis authentication
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-auth
+  namespace: databases
+type: Opaque
+stringData:
+  password: "CHANGE_THIS_STRONG_PASSWORD_IN_PRODUCTION"  # Generate with: openssl rand -base64 32
+
+---
+# ConfigMap for application connection info
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-prod-config
+  namespace: databases
+  labels:
+    team: platform
+    cluster-name: redis-prod
+data:
+  # Connection configuration
+  REDIS_SENTINELS: "rfs-redis-prod-0.databases:26379,rfs-redis-prod-1.databases:26379,rfs-redis-prod-2.databases:26379"
+  REDIS_MASTER_NAME: "mymaster"
+  REDIS_DATABASE: "0"
+  REDIS_CONNECTION_TIMEOUT: "5000"
+  REDIS_COMMAND_TIMEOUT: "5000"
+
+  # Connection pooling recommendations
+  connection-pool-config: |
+    # Recommended connection pool settings:
+    min_idle: 5
+    max_idle: 20
+    max_active: 50
+    max_wait: 5000ms
+    test_on_borrow: true
+    test_while_idle: true
+    time_between_eviction_runs: 30s
+
+  # Example connection strings for different clients
+  connection-examples: |
+    # Python (redis-py with sentinel)
+    from redis.sentinel import Sentinel
+    sentinels = [
+      ('rfs-redis-prod-0.databases', 26379),
+      ('rfs-redis-prod-1.databases', 26379),
+      ('rfs-redis-prod-2.databases', 26379)
+    ]
+    sentinel = Sentinel(sentinels, password='your-password')
+    master = sentinel.master_for('mymaster', socket_timeout=0.5, password='your-password')
+
+    # Java (Jedis)
+    Set<String> sentinels = new HashSet<>();
+    sentinels.add("rfs-redis-prod-0.databases:26379");
+    sentinels.add("rfs-redis-prod-1.databases:26379");
+    sentinels.add("rfs-redis-prod-2.databases:26379");
+    JedisSentinelPool pool = new JedisSentinelPool("mymaster", sentinels, password);
+
+    # Node.js (ioredis)
+    const Redis = require('ioredis');
+    const redis = new Redis({
+      sentinels: [
+        { host: 'rfs-redis-prod-0.databases', port: 26379 },
+        { host: 'rfs-redis-prod-1.databases', port: 26379 },
+        { host: 'rfs-redis-prod-2.databases', port: 26379 }
+      ],
+      name: 'mymaster',
+      password: 'your-password',
+      sentinelPassword: 'your-password'
+    });
