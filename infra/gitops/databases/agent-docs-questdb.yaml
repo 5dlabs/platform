@@ -15,10 +15,8 @@ metadata:
     app.kubernetes.io/part-of: agent-platform
 spec:
   # QuestDB image configuration
-  image:
-    repository: questdb/questdb
-    tag: "7.3.10"  # Latest stable version
-    pullPolicy: IfNotPresent
+  image: questdb/questdb:7.3.10  # Latest stable version
+  imagePullPolicy: IfNotPresent
 
   # Volume configuration for data persistence
   volume:
