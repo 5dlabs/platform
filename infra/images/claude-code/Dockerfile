@@ -3,7 +3,7 @@ FROM ubuntu:24.04
 ARG TZ
 ENV TZ="$TZ"
 
-# Install basic development tools and Docker CLI
+# Install basic development tools, Docker CLI, and database tools
 RUN apt update && apt install -y less \
   git \
   procps \
@@ -22,7 +22,9 @@ RUN apt update && apt install -y less \
   ca-certificates \
   curl \
   wget \
-  docker.io
+  docker.io \
+  postgresql-client \
+  redis-tools
 
 # Create node user (since we're not using the node base image)
 RUN id -u node >/dev/null 2>&1 || \
