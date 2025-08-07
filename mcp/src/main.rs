@@ -52,6 +52,7 @@ struct CodeDefaults {
     working_directory: String,
     #[serde(rename = "overwriteMemory")]
     overwrite_memory: bool,
+    repository: Option<String>,
     #[serde(rename = "docsRepository")]
     docs_repository: Option<String>,
     #[serde(rename = "docsProjectDirectory")]
@@ -630,10 +631,13 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .or(config.defaults.code.service.as_deref())
         .ok_or(anyhow!("Missing required parameter: service. Please provide it or set defaults.code.service in config"))?;
 
+    // Handle repository - use provided value or config default
     let repository = arguments
         .get("repository")
         .and_then(|v| v.as_str())
-        .ok_or(anyhow!("Missing required parameter: repository"))?;
+        .map(String::from)
+        .or_else(|| config.defaults.code.repository.clone())
+        .ok_or(anyhow!("No repository specified. Please provide a 'repository' parameter or set defaults.code.repository in config"))?;
 
     let docs_project_directory = arguments
         .get("docs_project_directory")
@@ -642,7 +646,7 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         .ok_or(anyhow!("Missing required parameter: docs_project_directory. Please provide it or set defaults.code.docsProjectDirectory in config"))?;
 
     // Validate repository URL
-    validate_repository_url(repository)?;
+    validate_repository_url(&repository)?;
 
     // Validate service name (must be valid for PVC naming)
     if !service
