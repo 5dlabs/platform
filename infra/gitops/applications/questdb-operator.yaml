@@ -34,7 +34,7 @@ spec:
         app.kubernetes.io/managed-by: argocd
         app.kubernetes.io/part-of: platform
 
-      # Resource customizations if needed
+      # Resource customizations and image fix
       patches:
         - target:
             kind: Deployment
@@ -49,11 +49,9 @@ spec:
                 limits:
                   cpu: 500m
                   memory: 512Mi
-      
-      # Fix the image tag from v0.0.0 to the actual release version
-      images:
-        - name: questdb/questdb-operator
-          newTag: v0.5.1
+            - op: replace
+              path: /spec/template/spec/containers/0/image
+              value: questdb/questdb-operator:v0.5.1
 
   # Destination configuration
   destination:
