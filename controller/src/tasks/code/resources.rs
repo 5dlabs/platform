@@ -457,6 +457,25 @@ impl<'a> CodeResourceManager<'a> {
             "mountPath": "/workspace"
         }));
 
+        // Docker-in-Docker volumes (disabled by default, can be enabled by setting enableDocker: true)
+        let enable_docker = code_run.spec.enable_docker.unwrap_or(false);
+        if enable_docker {
+            volumes.push(json!({
+                "name": "docker-sock-dir",
+                "emptyDir": {}
+            }));
+            volume_mounts.push(json!({
+                "name": "docker-sock-dir",
+                "mountPath": "/var/run"
+            }));
+
+            // Docker data volume for DinD daemon
+            volumes.push(json!({
+                "name": "docker-data",
+                "emptyDir": {}
+            }));
+        }
+
         // GitHub App authentication only - no SSH volumes needed
         let github_app = code_run.spec.github_app.as_ref().ok_or_else(|| {
             tracing::error!("GitHub App is required for CodeRun authentication");
@@ -507,7 +526,15 @@ impl<'a> CodeResourceManager<'a> {
         ];
 
         // Process task requirements if present
-        let (final_env_vars, env_from) = self.process_task_requirements(code_run, env_vars)?;
+        let (mut final_env_vars, env_from) = self.process_task_requirements(code_run, env_vars)?;
+
+        // Add Docker environment variable if Docker is enabled
+        if enable_docker {
+            final_env_vars.push(json!({
+                "name": "DOCKER_HOST",
+                "value": "unix:///var/run/docker.sock"
+            }));
+        }
 
         // Build the job spec with environment configuration
         let mut container_spec = json!({
@@ -523,6 +550,49 @@ impl<'a> CodeResourceManager<'a> {
         // Add envFrom if we have secrets to mount
         if !env_from.is_empty() {
             container_spec["envFrom"] = json!(env_from);
+        }
+
+        // Build containers array - add Docker daemon if enabled
+        let mut containers = vec![container_spec];
+        if enable_docker {
+            let docker_daemon_spec = json!({
+                "name": "docker-daemon",
+                "image": "docker:dind",
+                "securityContext": {
+                    "privileged": true
+                },
+                "env": [
+                    {
+                        "name": "DOCKER_TLS_CERTDIR",
+                        "value": ""
+                    }
+                ],
+                "volumeMounts": [
+                    {
+                        "name": "docker-sock-dir",
+                        "mountPath": "/var/run"
+                    },
+                    {
+                        "name": "docker-data",
+                        "mountPath": "/var/lib/docker"
+                    },
+                    {
+                        "name": "workspace",
+                        "mountPath": "/data"
+                    }
+                ],
+                "resources": {
+                    "requests": {
+                        "cpu": "100m",
+                        "memory": "128Mi"
+                    },
+                    "limits": {
+                        "cpu": "500m",
+                        "memory": "512Mi"
+                    }
+                }
+            });
+            containers.push(docker_daemon_spec);
         }
 
         let job_spec = json!({
@@ -549,7 +619,7 @@ impl<'a> CodeResourceManager<'a> {
                     },
                     "spec": {
                         "restartPolicy": "Never",
-                        "containers": [container_spec],
+                        "containers": containers,
                         "volumes": volumes
                     }
                 }
