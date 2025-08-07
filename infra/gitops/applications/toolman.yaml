@@ -80,8 +80,10 @@ spec:
             postgres:
               workingDirectory: "/tmp"
               transport: "stdio"
-              command: "uvx"
-              args: ["postgres-mcp", "postgresql://rustdocs:rustdocs123@rustdocs-mcp-postgresql:5432/rust_docs_vectors"]
+              command: "uv"
+              args: ["run", "postgres-mcp", "--access-mode=unrestricted"]
+              env:
+                DATABASE_URI: "postgresql://rustdocs:rustdocs123@rustdocs-mcp-postgresql:5432/rust_docs_vectors"
 
         # Local tools configuration for client-side operations
         localTools:
