@@ -73,7 +73,7 @@ fn get_task_schema(agents: &HashMap<String, String>) -> Value {
                 },
                 "repository": {
                     "type": "string",
-                    "description": "Target repository URL (e.g., https://github.com/5dlabs/cto)"
+                    "description": "Target repository URL (e.g., https://github.com/5dlabs/cto). Optional if defaults.code.repository is set in config."
                 },
                 "docs_project_directory": {
                     "type": "string",
@@ -138,7 +138,7 @@ fn get_task_schema(agents: &HashMap<String, String>) -> Value {
                     }
                 }
             },
-            "required": ["task_id", "repository"]
+            "required": ["task_id"]
         }
     })
 }
