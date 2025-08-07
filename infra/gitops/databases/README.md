@@ -1,6 +1,6 @@
 # Database Operators and Resources
 
-This directory contains database operator configurations and custom resources for managing PostgreSQL and Redis clusters in Kubernetes.
+This directory contains database operator configurations and custom resources for managing PostgreSQL, Redis, and QuestDB clusters in Kubernetes.
 
 ## PostgreSQL Operator (Zalando)
 
@@ -118,6 +118,85 @@ kubectl exec -it rfr-my-redis-cluster-0 -- redis-cli
 kubectl exec -it rfs-my-redis-cluster-0 -- redis-cli -p 26379 sentinel masters
 ```
 
+## QuestDB Operator
+
+The QuestDB operator manages high-performance time-series database instances optimized for real-time analytics and metrics storage.
+
+### Features
+- **High-Performance Ingestion**: Millions of data points per second
+- **SQL Interface**: PostgreSQL wire protocol compatibility
+- **Time-Series Optimized**: Columnar storage with time-based partitioning
+- **Multiple Protocols**: HTTP REST API, PostgreSQL wire, InfluxDB Line Protocol
+- **Out-of-Order Ingestion**: Handles late-arriving data efficiently
+- **SIMD Optimizations**: Vectorized query execution
+- **Zero-GC**: Runs on custom Java runtime with minimal garbage collection
+
+### Creating a QuestDB Instance
+
+Example minimal instance:
+```yaml
+apiVersion: crd.questdb.io/v1beta1
+kind: QuestDB
+metadata:
+  name: my-questdb
+spec:
+  image:
+    repository: questdb/questdb
+    tag: "7.3.10"
+  volume:
+    size: 50Gi
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      cpu: 2000m
+      memory: 8Gi
+  config:
+    http.enabled: "true"
+    pg.enabled: "true"
+    line.tcp.enabled: "true"
+```
+
+### Useful Commands
+```bash
+# List QuestDB instances
+kubectl get questdb -A
+
+# Get instance details
+kubectl describe questdb my-questdb
+
+# Access QuestDB console
+kubectl port-forward svc/my-questdb-http 9000:9000
+# Then browse to http://localhost:9000
+
+# Execute SQL via REST API
+curl -G http://localhost:9000/exec \
+  --data-urlencode "query=SELECT * FROM metrics LIMIT 10"
+
+# Connect via PostgreSQL protocol
+psql -h localhost -p 8812 -U admin -d qdb
+```
+
+### Data Ingestion Methods
+
+1. **InfluxDB Line Protocol (ILP)** - Fastest for high-volume ingestion:
+```bash
+echo "sensors,location=lab1 temp=23.5,humidity=45.2 $(date +%s%N)" | \
+  nc questdb-host 9009
+```
+
+2. **PostgreSQL Wire Protocol** - Standard SQL interface:
+```sql
+INSERT INTO metrics VALUES(now(), 'cpu', 45.2);
+```
+
+3. **HTTP REST API** - For application integration:
+```bash
+curl -X POST http://questdb:9000/exec \
+  -d "query=INSERT INTO metrics VALUES(now(), 'memory', 78.5)"
+```
+
 ## Best Practices
 
 ### PostgreSQL
@@ -136,12 +215,22 @@ kubectl exec -it rfs-my-redis-cluster-0 -- redis-cli -p 26379 sentinel masters
 5. **Use AUTH** for production deployments
 6. **Regular backups** if data persistence is critical
 
+### QuestDB
+1. **Partition by time** for optimal query performance
+2. **Use ILP for high-volume ingestion** instead of SQL inserts
+3. **Configure appropriate heap size** (typically 50-75% of container memory)
+4. **Enable WAL for durability** in production environments
+5. **Use SAMPLE BY** for time-based aggregations
+6. **Monitor disk I/O** as time-series workloads are I/O intensive
+7. **Set appropriate commit lag** to balance ingestion speed vs durability
+
 ## Monitoring
 
-Both operators expose Prometheus metrics:
+All database operators expose Prometheus metrics:
 
 - **PostgreSQL**: Port 9187 on each PostgreSQL pod
 - **Redis**: Port 9121 on Redis pods, port 26379 on Sentinel pods
+- **QuestDB**: Port 9003 for built-in metrics endpoint
 
 Configure ServiceMonitors or scrape configs to collect these metrics.
 
@@ -171,6 +260,23 @@ kubectl logs rfs-my-redis-cluster-0
 kubectl logs rfr-my-redis-cluster-0
 ```
 
+### QuestDB Issues
+```bash
+# Check operator logs
+kubectl logs -n questdb-operator deployment/questdb-operator-controller-manager
+
+# Check QuestDB instance logs
+kubectl logs questdb-instance-name-0
+
+# Access QuestDB console for diagnostics
+kubectl port-forward svc/questdb-instance-http 9000:9000
+# Browse to http://localhost:9000
+
+# Check table health
+curl -G http://localhost:9000/exec \
+  --data-urlencode "query=SHOW TABLES"
+```
+
 ## Security Considerations
 
 1. **Network Policies**: Implement network policies to restrict database access
@@ -183,5 +289,8 @@ kubectl logs rfr-my-redis-cluster-0
 
 - [Zalando PostgreSQL Operator Documentation](https://postgres-operator.readthedocs.io/)
 - [Spotahome Redis Operator Documentation](https://github.com/spotahome/redis-operator/tree/master/docs)
+- [QuestDB Operator Documentation](https://github.com/questdb/questdb-operator)
 - [PostgreSQL CRD Reference](https://postgres-operator.readthedocs.io/en/latest/reference/cluster_manifest/)
 - [RedisFailover CRD Reference](https://github.com/spotahome/redis-operator/blob/master/api/redisfailover/v1/validate.go)
+- [QuestDB Documentation](https://questdb.io/docs/)
+- [QuestDB SQL Reference](https://questdb.io/docs/reference/sql/overview/)
