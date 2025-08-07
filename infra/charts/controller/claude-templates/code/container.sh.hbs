@@ -124,9 +124,26 @@ echo "🔐 AUTHENTICATION VERIFICATION"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
-# Repository URLs - Use HTTPS URLs with GitHub App authentication
-REPO_HTTP_URL="https://github.com/{{repository_url}}.git"
-DOCS_HTTP_URL="https://github.com/{{docs_repository_url}}.git"
+# Repository URLs - Handle both full URLs and org/repo format
+# Check if repository_url already contains https://github.com/
+if echo "{{repository_url}}" | grep -q "^https://github.com/"; then
+    REPO_HTTP_URL="{{repository_url}}"
+    if ! echo "{{repository_url}}" | grep -q "\.git$"; then
+        REPO_HTTP_URL="${REPO_HTTP_URL}.git"
+    fi
+else
+    REPO_HTTP_URL="https://github.com/{{repository_url}}.git"
+fi
+
+# Same for docs repository
+if echo "{{docs_repository_url}}" | grep -q "^https://github.com/"; then
+    DOCS_HTTP_URL="{{docs_repository_url}}"
+    if ! echo "{{docs_repository_url}}" | grep -q "\.git$"; then
+        DOCS_HTTP_URL="${DOCS_HTTP_URL}.git"
+    fi
+else
+    DOCS_HTTP_URL="https://github.com/{{docs_repository_url}}.git"
+fi
 
 # DEBUG: Show what URLs are being constructed
 echo "🔍 DEBUG: URL Construction & Parameters"
