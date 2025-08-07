@@ -41,7 +41,7 @@ spec:
       max_parallel_workers: "4"
       
       # Enable useful extensions for agent-docs (including pgvector for embeddings)
-      shared_preload_libraries: "bg_mon,pg_stat_statements,pgextwlist,pg_auth_mon,pgvector"
+      shared_preload_libraries: "bg_mon,pg_stat_statements,pgextwlist,pg_auth_mon,pgvector,timescaledb"
       
       # Logging for debugging
       log_statement: "mod"  # Log DDL and data-modifying statements
