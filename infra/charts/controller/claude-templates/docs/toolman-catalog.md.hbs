@@ -80,24 +80,34 @@ Remote tools are available via MCP servers running in the cluster.
 
 ### Configuration Format
 
-Generate `toolman-config.json` files using this structure:
+**🚨 CRITICAL: toolman-config.json MUST use this EXACT format - nothing else!**
 
 ```json
 {
   "remoteTools": [
-    "tool_name_1",
-    "tool_name_2"
+    "actual_tool_name_from_catalog",
+    "another_tool_name_from_catalog"
   ],
   "localServers": {
-    "server_name": {
-      "command": "copy_from_above",
-      "args": ["copy", "from", "above"],
-      "tools": ["selected_tool_names"],
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "tools": ["read_file", "write_file", "list_directory", "create_directory", "edit_file"],
       "workingDirectory": "project_root"
     }
   }
 }
 ```
+
+**❌ NEVER generate task specification documents with fields like:**
+- `task_id`, `task_name`, `task_type`, `priority`, `status`
+- `required_tools`, `recommended_tools`, `optional_tools`
+- `tool_configuration`, `technical_requirements`, `testing_requirements`
+- Complex nested objects or metadata
+
+**✅ ONLY generate simple client configuration with:**
+- `remoteTools` array (tool names from this catalog)
+- `localServers` object (exact command/args shown above)
 
 ### Example Tool Selections
 

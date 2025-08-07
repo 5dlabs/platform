@@ -35,10 +35,11 @@ spec:
   
   # Sync policy
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-      allowEmpty: false
+    # TEMPORARILY DISABLED: Auto sync disabled for manual control during fixes
+    # automated:
+    #   prune: true
+    #   selfHeal: true
+    #   allowEmpty: false
     
     syncOptions:
       - CreateNamespace=true
