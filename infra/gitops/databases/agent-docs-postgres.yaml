@@ -149,22 +149,11 @@ spec:
   #   - name: BACKUP_SCHEDULE
   #     value: "0 */12 * * *"  # Every 12 hours
 
-  # Pod disruption budget
-  enablePodDisruptionBudget: true
-
-  # Affinity rules to spread instances
-  podAntiAffinity:
-    preferredDuringSchedulingIgnoredDuringExecution:
-      - weight: 100
-        podAffinityTerm:
-          labelSelector:
-            matchLabels:
-              cluster-name: agent-docs-postgres
-          topologyKey: kubernetes.io/hostname
+  # Note: enablePodDisruptionBudget and podAntiAffinity removed for compatibility
 
   # Maintenance windows (UTC)
   maintenanceWindows:
-    - "everyday: 03:00-04:00"
+    - "03:00-04:00"
 
 ---
 # Service for agent-docs to connect via pooler

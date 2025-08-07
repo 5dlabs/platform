@@ -1,0 +1,124 @@
+---
+# General-purpose QuestDB instance for time-series data
+# High-performance time-series database for metrics, telemetry, and event data
+apiVersion: crd.questdb.io/v1beta1
+kind: QuestDB
+metadata:
+  name: questdb-timeseries
+  namespace: databases
+  labels:
+    team: platform
+    environment: production
+    app.kubernetes.io/name: questdb-timeseries
+    app.kubernetes.io/component: timeseries
+    app.kubernetes.io/part-of: platform
+spec:
+  # QuestDB image configuration
+  image: questdb/questdb:7.3.10
+  imagePullPolicy: IfNotPresent
+
+  # Volume configuration for data persistence
+  volume:
+    size: 100Gi  # Larger for general use
+    storageClassName: local-path
+
+  # Resource allocation for general-purpose workloads
+  resources:
+    requests:
+      memory: 4Gi
+      cpu: 1000m
+    limits:
+      memory: 16Gi
+      cpu: 4000m
+
+---
+# Service for HTTP access to QuestDB web console
+apiVersion: v1
+kind: Service
+metadata:
+  name: questdb-timeseries-http
+  namespace: databases
+  labels:
+    app.kubernetes.io/name: questdb-timeseries
+    app.kubernetes.io/component: timeseries-http
+spec:
+  selector:
+    app.kubernetes.io/name: questdb-timeseries
+  ports:
+    - name: http
+      port: 9000
+      targetPort: 9000
+      protocol: TCP
+  type: ClusterIP
+
+---
+# Service for PostgreSQL wire protocol access
+apiVersion: v1
+kind: Service
+metadata:
+  name: questdb-timeseries-pg
+  namespace: databases
+  labels:
+    app.kubernetes.io/name: questdb-timeseries
+    app.kubernetes.io/component: timeseries-pg
+spec:
+  selector:
+    app.kubernetes.io/name: questdb-timeseries
+  ports:
+    - name: postgresql
+      port: 8812
+      targetPort: 8812
+      protocol: TCP
+  type: ClusterIP
+
+---
+# Service for InfluxDB Line Protocol (ILP) data ingestion
+apiVersion: v1
+kind: Service
+metadata:
+  name: questdb-timeseries-ilp
+  namespace: databases
+  labels:
+    app.kubernetes.io/name: questdb-timeseries
+    app.kubernetes.io/component: timeseries-ilp
+spec:
+  selector:
+    app.kubernetes.io/name: questdb-timeseries
+  ports:
+    - name: ilp
+      port: 9009
+      targetPort: 9009
+      protocol: TCP
+  type: ClusterIP
+
+---
+# ConfigMap with connection details for other services
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: questdb-timeseries-config
+  namespace: databases
+  labels:
+    app.kubernetes.io/name: questdb-timeseries
+    app.kubernetes.io/component: config
+data:
+  # Connection endpoints
+  http-endpoint: "http://questdb-timeseries-http.databases.svc.cluster.local:9000"
+  postgresql-endpoint: "questdb-timeseries-pg.databases.svc.cluster.local:8812"
+  ilp-endpoint: "questdb-timeseries-ilp.databases.svc.cluster.local:9009"
+  
+  # Database info
+  database-type: "questdb"
+  database-version: "7.3.10"
+  
+  # Usage examples
+  usage-notes: |
+    QuestDB is a high-performance time-series database optimized for:
+    - High-frequency data ingestion via InfluxDB Line Protocol
+    - SQL queries via PostgreSQL wire protocol
+    - Real-time analytics and dashboards via HTTP API
+    
+    Access methods:
+    - Web Console: http://questdb-timeseries-http:9000
+    - SQL: postgresql://questdb-timeseries-pg:8812
+    - Data Ingestion: questdb-timeseries-ilp:9009
