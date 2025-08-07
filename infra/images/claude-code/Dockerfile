@@ -3,7 +3,7 @@ FROM ubuntu:24.04
 ARG TZ
 ENV TZ="$TZ"
 
-# Install basic development tools
+# Install basic development tools and Docker CLI
 RUN apt update && apt install -y less \
   git \
   procps \
@@ -21,13 +21,8 @@ RUN apt update && apt install -y less \
   netcat-openbsd \
   ca-certificates \
   curl \
-  wget
-
-# Install Docker CLI for Docker-in-Docker support
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
-  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
-  apt update && \
-  apt install -y docker-ce-cli docker-buildx-plugin docker-compose-plugin
+  wget \
+  docker.io
 
 # Create node user (since we're not using the node base image)
 RUN id -u node >/dev/null 2>&1 || \
