@@ -1,10 +1,10 @@
 ---
 # Argo CD Application for Database Instances
 # Manages actual database clusters (PostgreSQL, Redis, QuestDB) for platform services
-# 
+#
 # DEPLOYS:
 # - agent-docs-postgres.yaml - PostgreSQL cluster for agent-docs service
-# - agent-docs-redis.yaml - Redis cluster for agent-docs service  
+# - agent-docs-redis.yaml - Redis cluster for agent-docs service
 # - agent-docs-questdb.yaml - QuestDB instance for agent-docs metrics
 #
 # EXCLUDES:
