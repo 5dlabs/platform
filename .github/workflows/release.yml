@@ -74,6 +74,7 @@ jobs:
       # (PRs run on the *source* but secrets are usually on the *target* -- that's *good*
       # but also really annoying to build CI around when it needs secrets to work right.)
       - id: plan
+        working-directory: ./mcp
         run: |
           dist ${{ (!github.event.pull_request && format('host --steps=create --tag={0}', github.ref_name)) || 'plan' }} --output-format=json > plan-dist-manifest.json
           echo "dist ran successfully"
@@ -83,7 +84,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: artifacts-plan-dist-manifest
-          path: plan-dist-manifest.json
+          path: mcp/plan-dist-manifest.json
 
   # Build and packages all the platform-specific things
   build-local-artifacts:
@@ -137,6 +138,7 @@ jobs:
         run: |
           ${{ matrix.packages_install }}
       - name: Build artifacts
+        working-directory: ./mcp
         run: |
           # Actually do builds and make zips and whatnot
           dist build ${{ needs.plan.outputs.tag-flag }} --print=linkage --output-format=json ${{ matrix.dist_args }} > dist-manifest.json
@@ -147,6 +149,7 @@ jobs:
         # to "real" actions without writing to env-vars, and writing to env-vars has
         # inconsistent syntax between shell and powershell.
         shell: bash
+        working-directory: ./mcp
         run: |
           # Parse out what we just built and upload it to scratch storage
           echo "paths<<EOF" >> "$GITHUB_OUTPUT"
@@ -190,6 +193,7 @@ jobs:
           merge-multiple: true
       - id: cargo-dist
         shell: bash
+        working-directory: ./mcp
         run: |
           dist build ${{ needs.plan.outputs.tag-flag }} --output-format=json "--artifacts=global" > dist-manifest.json
           echo "dist ran successfully"
@@ -240,12 +244,12 @@ jobs:
           workspaces: controller -> target
           shared-key: "rust-cache-release"
 
-      - name: Build controller-core for Docker
+      - name: Build controller for Docker
         working-directory: ./controller
         run: |
-          echo "🔨 Building controller-core for Docker image..."
-          cargo build --release --package core
-          cp target/release/controller-core controller
+          echo "🔨 Building controller for Docker image..."
+          cargo build --release --bin agent-controller
+          cp target/release/agent-controller controller
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -332,6 +336,7 @@ jobs:
           merge-multiple: true
       - id: host
         shell: bash
+        working-directory: ./mcp
         run: |
           dist host ${{ needs.plan.outputs.tag-flag }} --steps=upload --steps=release --output-format=json > dist-manifest.json
           echo "artifacts uploaded and released successfully"
@@ -342,7 +347,7 @@ jobs:
         with:
           # Overwrite the previous copy
           name: artifacts-dist-manifest
-          path: dist-manifest.json
+          path: mcp/dist-manifest.json
       # Create a GitHub Release while uploading all files to it
       - name: "Download GitHub Artifacts"
         uses: actions/download-artifact@v4
