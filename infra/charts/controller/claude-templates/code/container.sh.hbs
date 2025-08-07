@@ -81,9 +81,9 @@ if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ]; then
     # Export the token for git to use
     export GITHUB_TOKEN
     
-    # Configure git to use the token
-    git config --global credential.helper store
-    git config --global --add credential.helper '!f() { echo "username=x-access-token"; echo "password=$GITHUB_TOKEN"; }; f'
+    # Configure git to use the token (use --replace-all to handle multiple existing helpers)
+    git config --global --replace-all credential.helper store
+    echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
     
     # Also authenticate gh CLI with the token
     echo "$GITHUB_TOKEN" | gh auth login --with-token
@@ -124,9 +124,26 @@ echo "🔐 AUTHENTICATION VERIFICATION"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
-# Repository URLs - Use HTTPS URLs with GitHub App authentication
-REPO_HTTP_URL="https://github.com/{{repository_url}}.git"
-DOCS_HTTP_URL="https://github.com/{{docs_repository_url}}.git"
+# Repository URLs - Handle both full URLs and org/repo format
+# Check if repository_url already contains https://github.com/
+if echo "{{repository_url}}" | grep -q "^https://github.com/"; then
+    REPO_HTTP_URL="{{repository_url}}"
+    if ! echo "{{repository_url}}" | grep -q "\.git$"; then
+        REPO_HTTP_URL="${REPO_HTTP_URL}.git"
+    fi
+else
+    REPO_HTTP_URL="https://github.com/{{repository_url}}.git"
+fi
+
+# Same for docs repository
+if echo "{{docs_repository_url}}" | grep -q "^https://github.com/"; then
+    DOCS_HTTP_URL="{{docs_repository_url}}"
+    if ! echo "{{docs_repository_url}}" | grep -q "\.git$"; then
+        DOCS_HTTP_URL="${DOCS_HTTP_URL}.git"
+    fi
+else
+    DOCS_HTTP_URL="https://github.com/{{docs_repository_url}}.git"
+fi
 
 # DEBUG: Show what URLs are being constructed
 echo "🔍 DEBUG: URL Construction & Parameters"
@@ -906,6 +923,17 @@ else
         echo "✓ Using task-specific prompt from docs service: task/prompt.md"
 
         echo "startingTask:{{task_id}}"
+        echo ""
+        
+        # DEBUG: Print TOOLMAN_CONFIG_PATH for troubleshooting tool filter issues
+        echo "🔍 DEBUG: TOOLMAN_CONFIG_PATH is set to: '$TOOLMAN_CONFIG_PATH'"
+        if [ -f "$TOOLMAN_CONFIG_PATH" ]; then
+            echo "🔍 DEBUG: TOOLMAN_CONFIG_PATH file exists and is readable"
+            echo "🔍 DEBUG: First few lines of toolman config:"
+            head -10 "$TOOLMAN_CONFIG_PATH" 2>/dev/null || echo "Could not read toolman config file"
+        else
+            echo "🔍 DEBUG: TOOLMAN_CONFIG_PATH file does NOT exist or is not readable"
+        fi
         echo ""
 
         # Prepare prompt prefix for toolman guidance

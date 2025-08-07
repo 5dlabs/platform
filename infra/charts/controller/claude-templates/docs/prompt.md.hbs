@@ -75,20 +75,64 @@ Place all documentation in `.taskmaster/docs/task-{id}/` directories.
 
 ### Step 2.1: Toolman Configuration Generation (MANDATORY)
 
-**🔧 CRITICAL: Generate Task-Specific Tool Configuration**
+**🔧 CRITICAL: Generate Simple Tool Client Configuration**
 
-For each task, you MUST create a `toolman-config.json` file that selects appropriate tools based on the task's implementation requirements.
+For each task, you MUST create a `toolman-config.json` file that is a **SIMPLE CLIENT CONFIGURATION** - NOT a task specification document.
+
+**🚨 IMPORTANT: This is a CLIENT CONFIG FILE, not a detailed task document!**
+
+**REQUIRED FORMAT (EXACT STRUCTURE):**
+```json
+{
+  "remoteTools": [
+    "tool_name_1",
+    "tool_name_2"
+  ],
+  "localServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "tools": ["read_file", "write_file", "list_directory", "create_directory", "edit_file"],
+      "workingDirectory": "project_root"
+    }
+  }
+}
+```
+
+**❌ DO NOT GENERATE:** 
+- Task specifications with `task_id`, `task_name`, `task_type` 
+- Complex metadata like `priority`, `status`, `estimated_duration`
+- Detailed planning documents with `required_tools`, `recommended_tools`
+- Nested configuration objects with `tool_configuration`, `technical_requirements`
+- Any fields other than `remoteTools` and `localServers`
+
+**✅ CORRECT APPROACH:**
+1. **Read the Catalog Below**: Examine available tools and capabilities
+2. **Select Remote Tools**: Choose specific remote tool names from the catalog for `remoteTools` array
+3. **Configure Local Servers**: Use exact command/args from catalog for local servers (usually just filesystem)
+4. **Keep It Simple**: Only include `remoteTools` and `localServers` fields - nothing else!
+
+**Example for Infrastructure Task:**
+```json
+{
+  "remoteTools": [
+    "kubernetes_listResources",
+    "kubernetes_getResource",
+    "kubernetes_createResource"
+  ],
+  "localServers": {
+    "filesystem": {
+      "command": "npx", 
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "tools": ["read_file", "write_file", "edit_file", "list_directory"],
+      "workingDirectory": "project_root"
+    }
+  }
+}
+```
 
 **Available Tool Catalog:**
-The complete toolman catalog is provided below with all available tools, their capabilities, and selection guidelines.
-
-**Tool Selection Process:**
-1. **Read the Catalog Below**: Start by examining the catalog section below to understand available tools and their capabilities
-2. **Analyze Task Requirements**: Read the task description and implementation details carefully
-3. **Match to Tool Categories**: Use tool categories to identify relevant capabilities
-4. **Apply Selection Guidelines**: Use the guidelines in the catalog below for common patterns
-5. **Select Specific Tools**: Choose individual tools (never wildcards) based on task needs
-6. **Include Server Configuration**: For local servers, include complete command/args details from the catalog
+The complete toolman catalog is provided below. Use ONLY tool names that appear in this catalog.
 
 ### Step 2.2: Toolman Guide Generation (MANDATORY)
 

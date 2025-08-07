@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "defaults": {
+    "docs": {
+      "model": "claude-opus-4-1-20250805",
+      "githubApp": "5DLabs-Morgan",
+      "includeCodebase": true,
+      "sourceBranch": "main"
+    },
+    "intake": {
+      "model": "claude-opus-4-20250514",
+      "githubApp": "5DLabs-Morgan"
+    },
+    "code": {
+      "model": "claude-4-sonnet-20250219",
+      "githubApp": "5DLabs-Rex",
+      "continueSession": false,
+      "workingDirectory": ".",
+      "overwriteMemory": false,
+      "repository": "https://github.com/5dlabs/agent-docs",
+      "docsRepository": "https://github.com/5dlabs/projects",
+      "docsProjectDirectory": "agent-docs",
+      "service": "agent-docs"
+    }
+  },
+  "agents": {
+    "morgan": "5DLabs-Morgan",
+    "rex": "5DLabs-Rex",
+    "blaze": "5DLabs-Blaze",
+    "cipher": "5DLabs-Cipher"
+  }
+}
