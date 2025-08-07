@@ -69,8 +69,8 @@ struct IntakeDefaults {
 impl Default for IntakeDefaults {
     fn default() -> Self {
         IntakeDefaults {
-            model: "claude-opus-4-20250514".to_string(),
-            github_app: "5DLabs-Morgan".to_string(),
+            model: "claude-3-5-sonnet-20241022".to_string(),
+            github_app: "agent-platform".to_string(), // Should be configured in cto-config.json
         }
     }
 }
@@ -759,6 +759,10 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
 
         eprintln!("✓ Task requirements encoded and added to workflow parameters");
     } else {
+        // Always provide task-requirements parameter, even if empty (Argo requires it)
+        params.push(format!("task-requirements="));
+        eprintln!("ℹ️ No requirements.yaml found, using empty task-requirements");
+        
         // Fall back to old env/env_from_secrets parameters if provided
         // Handle env object - convert to JSON string for workflow parameter
         if let Some(env) = arguments.get("env").and_then(|v| v.as_object()) {
