@@ -185,12 +185,12 @@ spec:
     affinity:
       podAntiAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
-        - labelSelector:
+          - labelSelector:
             matchLabels:
               app.kubernetes.io/name: questdb-prod
           topologyKey: topology.kubernetes.io/zone
         preferredDuringSchedulingIgnoredDuringExecution:
-        - weight: 100
+          - weight: 100
           podAffinityTerm:
             labelSelector:
               matchLabels:

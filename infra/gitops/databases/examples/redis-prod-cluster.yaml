@@ -72,30 +72,30 @@ spec:
     affinity:
       podAntiAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
-        - labelSelector:
+          - labelSelector:
             matchExpressions:
-            - key: redisfailover.databases.spotahome.com/name
+              - key: redisfailover.databases.spotahome.com/name
               operator: In
               values:
-              - redis-prod
+                - redis-prod
             - key: redisfailover.databases.spotahome.com/component
               operator: In
               values:
-              - sentinel
+                - sentinel
           topologyKey: topology.kubernetes.io/zone
         preferredDuringSchedulingIgnoredDuringExecution:
-        - weight: 100
+          - weight: 100
           podAffinityTerm:
             labelSelector:
               matchExpressions:
-              - key: redisfailover.databases.spotahome.com/name
+                - key: redisfailover.databases.spotahome.com/name
                 operator: In
                 values:
-                - redis-prod
+                  - redis-prod
               - key: redisfailover.databases.spotahome.com/component
                 operator: In
                 values:
-                - sentinel
+                  - sentinel
             topologyKey: kubernetes.io/hostname
 
   # Redis configuration for production

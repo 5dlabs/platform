@@ -38,18 +38,18 @@ spec:
     affinity:
       podAntiAffinity:
         preferredDuringSchedulingIgnoredDuringExecution:
-        - weight: 100
+          - weight: 100
           podAffinityTerm:
             labelSelector:
               matchExpressions:
-              - key: redisfailover.databases.spotahome.com/name
+                - key: redisfailover.databases.spotahome.com/name
                 operator: In
                 values:
-                - redis-dev
+                  - redis-dev
               - key: redisfailover.databases.spotahome.com/component
                 operator: In
                 values:
-                - sentinel
+                  - sentinel
             topologyKey: kubernetes.io/hostname
 
   # Redis configuration
@@ -118,18 +118,18 @@ spec:
     affinity:
       podAntiAffinity:
         preferredDuringSchedulingIgnoredDuringExecution:
-        - weight: 100
+          - weight: 100
           podAffinityTerm:
             labelSelector:
               matchExpressions:
-              - key: redisfailover.databases.spotahome.com/name
+                - key: redisfailover.databases.spotahome.com/name
                 operator: In
                 values:
-                - redis-dev
+                  - redis-dev
               - key: redisfailover.databases.spotahome.com/component
                 operator: In
                 values:
-                - redis
+                  - redis
             topologyKey: kubernetes.io/hostname
 
     # Security context

@@ -161,11 +161,11 @@ spec:
   podAntiAffinity:
     preferredDuringSchedulingIgnoredDuringExecution:
       - weight: 100
-      podAffinityTerm:
-        labelSelector:
-          matchLabels:
-            cluster-name: agent-docs-postgres
-        topologyKey: kubernetes.io/hostname
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              cluster-name: agent-docs-postgres
+          topologyKey: kubernetes.io/hostname
 
   # Maintenance windows (UTC)
   maintenanceWindows:

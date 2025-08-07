@@ -51,3 +51,6 @@ ignore: |
   
   # Ignore examples that might have intentional issues
   **/bad-examples/**
+  
+  # Relax indentation rules for examples
+  infra/gitops/databases/examples/**

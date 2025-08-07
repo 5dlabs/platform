@@ -285,20 +285,20 @@ spec:
   nodeAffinity:
     requiredDuringSchedulingIgnoredDuringExecution:
       nodeSelectorTerms:
-      - matchExpressions:
-        - key: workload
+        - matchExpressions:
+          - key: workload
           operator: In
           values:
-          - database
+            - database
         - key: storage-type
           operator: In
           values:
-          - ssd
+            - ssd
 
   # Pod anti-affinity to spread across zones
   podAntiAffinity:
     requiredDuringSchedulingIgnoredDuringExecution:
-    - labelSelector:
+      - labelSelector:
         matchLabels:
           cluster-name: postgres-prod
       topologyKey: topology.kubernetes.io/zone
