@@ -3,7 +3,7 @@ FROM ubuntu:24.04
 ARG TZ
 ENV TZ="$TZ"
 
-# Install basic development tools
+# Install basic development tools and Docker CLI
 RUN apt update && apt install -y less \
   git \
   procps \
@@ -21,7 +21,8 @@ RUN apt update && apt install -y less \
   netcat-openbsd \
   ca-certificates \
   curl \
-  wget
+  wget \
+  docker.io
 
 # Create node user (since we're not using the node base image)
 RUN id -u node >/dev/null 2>&1 || \
