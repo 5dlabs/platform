@@ -1,0 +1,53 @@
+---
+# YAML Linting configuration for GitOps files
+
+extends: default
+
+rules:
+  line-length:
+    max: 150
+    level: warning
+  
+  comments:
+    require-starting-space: true
+    min-spaces-from-content: 1
+  
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+  
+  truthy:
+    allowed-values: ['true', 'false']
+    check-keys: false
+  
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 1
+  
+  new-lines:
+    type: unix
+  
+  trailing-spaces: enable
+  
+  key-duplicates: enable
+  
+  # ArgoCD specific relaxations
+  document-start:
+    present: true
+    level: warning
+  
+  # Allow longer lines in descriptions and URLs
+  comments-indentation: disable
+
+ignore: |
+  # Ignore generated files
+  **/*generated*.yaml
+  **/*generated*.yml
+  
+  # Ignore vendor directories
+  vendor/
+  node_modules/
+  
+  # Ignore examples that might have intentional issues
+  **/bad-examples/**

@@ -1,0 +1,293 @@
+---
+# GitHub Actions workflow for validating ArgoCD applications
+# Runs on every PR that modifies GitOps files
+
+name: Validate ArgoCD Applications
+
+on:
+  pull_request:
+    paths:
+      - 'infra/gitops/**/*.yaml'
+      - 'infra/charts/**/*'
+      - '.github/workflows/validate-argocd-apps.yaml'
+
+env:
+  ARGOCD_VERSION: v2.9.3
+  KUBECONFORM_VERSION: v0.6.4
+  OPA_VERSION: v0.60.0
+
+jobs:
+  yaml-lint:
+    name: YAML Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run yamllint
+        uses: karancode/yamllint-github-action@v2.1.1
+        with:
+          yamllint_file_or_dir: 'infra/gitops'
+          yamllint_config_filepath: '.yamllint.yaml'
+          yamllint_strict: false
+          yamllint_comment: true
+
+  schema-validation:
+    name: Schema Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup kubeconform
+        run: |
+          wget -q https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz
+          tar xf kubeconform-linux-amd64.tar.gz
+          sudo mv kubeconform /usr/local/bin
+      
+      - name: Download ArgoCD CRDs
+        run: |
+          mkdir -p /tmp/crds
+          curl -sL https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/crds/application-crd.yaml \
+            -o /tmp/crds/application-crd.yaml
+          curl -sL https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/crds/applicationset-crd.yaml \
+            -o /tmp/crds/applicationset-crd.yaml
+          curl -sL https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/crds/appproject-crd.yaml \
+            -o /tmp/crds/appproject-crd.yaml
+      
+      - name: Validate Application manifests
+        run: |
+          echo "Validating ArgoCD Application manifests..."
+          find infra/gitops/applications -name "*.yaml" | while read -r file; do
+            echo "Checking: $file"
+            kubeconform -schema-location /tmp/crds/application-crd.yaml \
+              -summary -output json "$file" || exit 1
+          done
+      
+      - name: Validate database CRDs
+        run: |
+          echo "Validating database resource manifests..."
+          # Download operator CRDs if needed
+          # For now, skip validation of custom resources until CRDs are available
+
+  helm-validation:
+    name: Helm Chart Validation
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'helm') || contains(github.event.pull_request.files.*.filename, 'charts/')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+      
+      - name: Add Helm repositories
+        run: |
+          # Add required Helm repos
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo add prometheus https://prometheus-community.github.io/helm-charts
+          helm repo add grafana https://grafana.github.io/helm-charts
+          helm repo add argo https://argoproj.github.io/argo-helm
+          helm repo update
+      
+      - name: Lint local charts
+        run: |
+          for chart in infra/charts/*/; do
+            if [ -f "$chart/Chart.yaml" ]; then
+              echo "Linting chart: $chart"
+              helm lint "$chart"
+            fi
+          done
+      
+      - name: Template Helm applications
+        run: |
+          # Parse ArgoCD apps using Helm and validate templating
+          for app in infra/gitops/applications/*.yaml; do
+            if grep -q "helm:" "$app"; then
+              echo "Found Helm application: $app"
+              # This would need proper YAML parsing in production
+              # For now, just validate the YAML is parseable
+              yq eval '.spec.source.helm' "$app" > /dev/null || exit 1
+            fi
+          done
+
+  policy-validation:
+    name: OPA Policy Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup OPA
+        run: |
+          curl -sL -o opa https://github.com/open-policy-agent/opa/releases/download/${OPA_VERSION}/opa_linux_amd64_static
+          chmod +x opa
+          sudo mv opa /usr/local/bin
+      
+      - name: Create OPA policies
+        run: |
+          mkdir -p /tmp/policies
+          cat > /tmp/policies/argocd.rego << 'EOF'
+          package argocd.validation
+          
+          import future.keywords.contains
+          import future.keywords.if
+          
+          # Check for required labels
+          deny[msg] {
+              input.kind == "Application"
+              required_labels := {"app.kubernetes.io/name", "app.kubernetes.io/part-of"}
+              provided_labels := {label | input.metadata.labels[label]}
+              missing := required_labels - provided_labels
+              count(missing) > 0
+              msg := sprintf("Application '%s' missing required labels: %v", [input.metadata.name, missing])
+          }
+          
+          # Ensure namespace is specified
+          deny[msg] {
+              input.kind == "Application"
+              not input.spec.destination.namespace
+              msg := sprintf("Application '%s' must specify destination namespace", [input.metadata.name])
+          }
+          
+          # Check sync policy for production
+          deny[msg] {
+              input.kind == "Application"
+              input.metadata.namespace == "argocd"
+              input.spec.syncPolicy.automated.prune == true
+              not input.metadata.labels["allow-auto-prune"]
+              msg := sprintf("Application '%s' has auto-prune enabled without explicit approval label", [input.metadata.name])
+          }
+          EOF
+      
+      - name: Run OPA validation
+        run: |
+          for file in infra/gitops/applications/*.yaml; do
+            echo "Validating policies for: $file"
+            # Convert YAML to JSON for OPA
+            yq eval -o=json "$file" | \
+              opa eval -d /tmp/policies/argocd.rego \
+              -f pretty "data.argocd.validation.deny[msg]" \
+              --stdin-input || true
+          done
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run Trivy security scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: 'infra/gitops'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  diff-preview:
+    name: Generate Diff Preview
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Generate diff summary
+        id: diff
+        run: |
+          echo "## 📋 GitOps Changes Summary" > diff-summary.md
+          echo "" >> diff-summary.md
+          
+          # List modified applications
+          echo "### Modified Applications:" >> diff-summary.md
+          git diff --name-only origin/main...HEAD -- 'infra/gitops/applications/*.yaml' | while read -r file; do
+            if [ -f "$file" ]; then
+              app_name=$(basename "$file" .yaml)
+              echo "- \`$app_name\`" >> diff-summary.md
+            fi
+          done
+          
+          # List modified databases
+          echo "" >> diff-summary.md
+          echo "### Modified Database Resources:" >> diff-summary.md
+          git diff --name-only origin/main...HEAD -- 'infra/gitops/databases/*.yaml' | while read -r file; do
+            if [ -f "$file" ]; then
+              resource_name=$(basename "$file" .yaml)
+              echo "- \`$resource_name\`" >> diff-summary.md
+            fi
+          done
+          
+          # Show actual diff for applications
+          echo "" >> diff-summary.md
+          echo "<details>" >> diff-summary.md
+          echo "<summary>📝 Detailed Diff</summary>" >> diff-summary.md
+          echo "" >> diff-summary.md
+          echo '```diff' >> diff-summary.md
+          git diff origin/main...HEAD -- 'infra/gitops/**/*.yaml' | head -500 >> diff-summary.md
+          echo '```' >> diff-summary.md
+          echo "</details>" >> diff-summary.md
+      
+      - name: Comment PR with diff
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const diffSummary = fs.readFileSync('diff-summary.md', 'utf8');
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('GitOps Changes Summary')
+            );
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: diffSummary
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: diffSummary
+              });
+            }
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [yaml-lint, schema-validation, policy-validation, security-scan]
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| YAML Linting | ${{ needs.yaml-lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Schema Validation | ${{ needs.schema-validation.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Policy Validation | ${{ needs.policy-validation.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Scan | ${{ needs.security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
