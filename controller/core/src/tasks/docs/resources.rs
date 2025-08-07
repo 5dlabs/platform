@@ -458,7 +458,7 @@ impl<'a> DocsResourceManager<'a> {
         }));
 
         // Agents ConfigMap volume for system prompts
-        let agents_cm_name = format!("controller-agents");
+        let agents_cm_name = "controller-agents".to_string();
         volumes.push(json!({
             "name": "agents-config",
             "configMap": {

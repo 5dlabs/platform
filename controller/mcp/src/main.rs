@@ -760,7 +760,7 @@ fn handle_task_workflow(arguments: &HashMap<String, Value>) -> Result<Value> {
         eprintln!("✓ Task requirements encoded and added to workflow parameters");
     } else {
         // Always provide task-requirements parameter, even if empty (Argo requires it)
-        params.push(format!("task-requirements="));
+        params.push("task-requirements=".to_string());
         eprintln!("ℹ️ No requirements.yaml found, using empty task-requirements");
 
         // Fall back to old env/env_from_secrets parameters if provided
