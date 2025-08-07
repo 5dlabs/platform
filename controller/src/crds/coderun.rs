@@ -107,6 +107,10 @@ pub struct CodeRunSpec {
     #[serde(default, rename = "envFromSecrets")]
     pub env_from_secrets: Vec<SecretEnvVar>,
 
+    /// Whether to enable Docker-in-Docker support for this CodeRun (defaults to false)
+    #[serde(default, rename = "enableDocker")]
+    pub enable_docker: Option<bool>,
+
     /// Base64-encoded YAML containing task requirements (secrets and environment variables)
     #[serde(default, rename = "taskRequirements")]
     pub task_requirements: Option<String>,
