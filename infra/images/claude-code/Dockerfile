@@ -23,6 +23,12 @@ RUN apt update && apt install -y less \
   curl \
   wget
 
+# Install Docker CLI for Docker-in-Docker support
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+  apt update && \
+  apt install -y docker-ce-cli docker-buildx-plugin docker-compose-plugin
+
 # Create node user (since we're not using the node base image)
 RUN id -u node >/dev/null 2>&1 || \
     (groupadd node && useradd --shell /bin/bash --create-home node --gid node)
