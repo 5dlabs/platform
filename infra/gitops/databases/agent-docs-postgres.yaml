@@ -41,6 +41,12 @@ spec:
       max_parallel_workers: "4"
 
       # Enable useful extensions for agent-docs (including pgvector for embeddings)
+      # NOTE: These extensions are required and included in Zalando PostgreSQL operator images:
+      # - bg_mon, pg_stat_statements, pgextwlist, pg_auth_mon: Standard monitoring/management
+      # - pgvector: Required for AI/ML vector embeddings (installed by default in v1.7.0+)
+      # - timescaledb: Required for time-series metrics (installed by default in v1.7.0+)
+      # If using older operator versions, ensure these extensions are available in the image.
+      # TimescaleDB and pgvector are tested for compatibility in production environments.
       shared_preload_libraries: "bg_mon,pg_stat_statements,pgextwlist,pg_auth_mon,pgvector,timescaledb"
 
       # Logging for debugging

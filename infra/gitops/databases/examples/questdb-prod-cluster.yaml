@@ -191,11 +191,11 @@ spec:
           topologyKey: topology.kubernetes.io/zone
         preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 100
-          podAffinityTerm:
-            labelSelector:
-              matchLabels:
-                app.kubernetes.io/name: questdb-prod
-            topologyKey: kubernetes.io/hostname
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: questdb-prod
+              topologyKey: kubernetes.io/hostname
 
     # Health checks
     livenessProbe:
