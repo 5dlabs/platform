@@ -924,6 +924,17 @@ else
 
         echo "startingTask:{{task_id}}"
         echo ""
+        
+        # DEBUG: Print TOOLMAN_CONFIG_PATH for troubleshooting tool filter issues
+        echo "🔍 DEBUG: TOOLMAN_CONFIG_PATH is set to: '$TOOLMAN_CONFIG_PATH'"
+        if [ -f "$TOOLMAN_CONFIG_PATH" ]; then
+            echo "🔍 DEBUG: TOOLMAN_CONFIG_PATH file exists and is readable"
+            echo "🔍 DEBUG: First few lines of toolman config:"
+            head -10 "$TOOLMAN_CONFIG_PATH" 2>/dev/null || echo "Could not read toolman config file"
+        else
+            echo "🔍 DEBUG: TOOLMAN_CONFIG_PATH file does NOT exist or is not readable"
+        fi
+        echo ""
 
         # Prepare prompt prefix for toolman guidance
         PROMPT_PREFIX=""
