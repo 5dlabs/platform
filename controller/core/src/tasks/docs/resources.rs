@@ -457,6 +457,19 @@ impl<'a> DocsResourceManager<'a> {
             "mountPath": "/task-files"
         }));
 
+        // Agents ConfigMap volume for system prompts
+        let agents_cm_name = format!("controller-agents");
+        volumes.push(json!({
+            "name": "agents-config",
+            "configMap": {
+                "name": agents_cm_name
+            }
+        }));
+        volume_mounts.push(json!({
+            "name": "agents-config",
+            "mountPath": "/config/agents"
+        }));
+
         // Mount settings.json as managed-settings.json for enterprise compatibility
         volume_mounts.push(json!({
             "name": "task-files",
