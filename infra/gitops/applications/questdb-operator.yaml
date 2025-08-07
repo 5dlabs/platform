@@ -49,6 +49,11 @@ spec:
                 limits:
                   cpu: 500m
                   memory: 512Mi
+      
+      # Fix the image tag from v0.0.0 to the actual release version
+      images:
+        - name: questdb/questdb-operator
+          newTag: v0.5.1
 
   # Destination configuration
   destination:
@@ -93,12 +98,7 @@ spec:
       jsonPointers:
         - /webhooks/0/clientConfig/caBundle
 
-  # Health assessment
-  health:
-    - group: apps
-      kind: Deployment
-      namespace: questdb-operator
-      name: questdb-operator-controller-manager
+# Note: Health checks are automatically handled by ArgoCD
 
   # Revision history
   revisionHistoryLimit: 5

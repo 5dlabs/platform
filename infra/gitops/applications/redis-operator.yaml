@@ -21,7 +21,7 @@ spec:
   # Source configuration - Using Spotahome's manifests
   source:
     repoURL: https://github.com/spotahome/redis-operator.git
-    targetRevision: v1.3.0  # Latest stable version
+    targetRevision: v1.2.4  # Latest stable version (v1.3.0 is only RC)
     path: manifests
 
     # Kustomize configuration to deploy the operator
@@ -71,13 +71,7 @@ spec:
       jsonPointers:
         - /spec/replicas  # Allow HPA to manage replicas
 
-  # Health assessment for the operator
-  health:
-    # Custom health check for the redis operator deployment
-    - group: apps
-      kind: Deployment
-      namespace: redis-operator
-      name: redisoperator
+# Note: Health checks are automatically handled by ArgoCD
 
   # Revision history
   revisionHistoryLimit: 5
