@@ -37,9 +37,9 @@ if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ]; then
     JWT_SIGNATURE=$(printf '%s.%s' "$JWT_HEADER" "$JWT_PAYLOAD" | openssl dgst -sha256 -sign "$TEMP_KEY_FILE" -binary | base64 -w 0 | tr '+/' '-_' | tr -d '=')
     JWT_TOKEN="$JWT_HEADER.$JWT_PAYLOAD.$JWT_SIGNATURE"
     
-    # Get installation ID for the repository
-    REPO_OWNER=$(echo "{{repository_url}}" | cut -d'/' -f4)
-    REPO_NAME=$(echo "{{repository_url}}" | cut -d'/' -f5)
+    # Get installation ID for the repository (handle various URL formats)
+    REPO_OWNER=$(echo "{{repository_url}}" | sed -E 's|https://github.com/([^/]+)/.*|\1|')
+    REPO_NAME=$(echo "{{repository_url}}" | sed -E 's|https://github.com/[^/]+/([^/]+)(\.git)?|\1|')
     echo "DEBUG: Parsed repository - Owner: '$REPO_OWNER', Name: '$REPO_NAME'"
     
     echo "Getting installation ID for $REPO_OWNER/$REPO_NAME..."
