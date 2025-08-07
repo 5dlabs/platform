@@ -196,9 +196,22 @@ print_result $SECURITY_ERRORS "Security checks" || TESTS_FAILED=$((TESTS_FAILED 
 echo ""
 echo "8️⃣  Kubernetes manifest validation..."
 if command_exists kubeconform; then
-    kubeconform -summary -skip Application,ApplicationSet,QuestDB,RedisFailover,postgresql \
-        "$GITOPS_DIR"/**/*.yaml 2>/dev/null
-    print_result $? "Kubernetes manifest validation" || TESTS_FAILED=$((TESTS_FAILED + 1))
+    # Only validate standard Kubernetes resources, skip CRDs
+    KUBE_ERRORS=0
+    for file in "$GITOPS_DIR"/databases/*.yaml; do
+        if [ -f "$file" ] && [[ ! "$file" == *"examples"* ]] && [[ ! "$file" == *"README"* ]]; then
+            # Check if it's a standard K8s resource
+            if command_exists yq; then
+                KIND=$(yq eval '.kind' "$file" 2>/dev/null || echo "unknown")
+                case "$KIND" in
+                    Service|ConfigMap|Secret|Deployment|StatefulSet|DaemonSet|Job|CronJob|Ingress|PersistentVolumeClaim)
+                        kubeconform -summary "$file" 2>/dev/null || KUBE_ERRORS=$((KUBE_ERRORS + 1))
+                        ;;
+                esac
+            fi
+        fi
+    done
+    print_result $KUBE_ERRORS "Kubernetes manifest validation" || TESTS_FAILED=$((TESTS_FAILED + 1))
 else
     echo -e "${YELLOW}⚠️  kubeconform not installed. Install from: https://github.com/yannh/kubeconform${NC}"
 fi

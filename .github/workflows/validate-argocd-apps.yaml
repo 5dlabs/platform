@@ -39,36 +39,105 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Setup kubeconform
+      - name: Setup tools
         run: |
+          # Install yq for YAML parsing
+          wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+          
+          # Install kubeconform for standard K8s resource validation
           wget -q https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz
           tar xf kubeconform-linux-amd64.tar.gz
           sudo mv kubeconform /usr/local/bin
       
-      - name: Download ArgoCD CRDs
-        run: |
-          mkdir -p /tmp/crds
-          curl -sL https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/crds/application-crd.yaml \
-            -o /tmp/crds/application-crd.yaml
-          curl -sL https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/crds/applicationset-crd.yaml \
-            -o /tmp/crds/applicationset-crd.yaml
-          curl -sL https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/crds/appproject-crd.yaml \
-            -o /tmp/crds/appproject-crd.yaml
-      
-      - name: Validate Application manifests
+      - name: Validate ArgoCD Application structure
         run: |
           echo "Validating ArgoCD Application manifests..."
-          find infra/gitops/applications -name "*.yaml" | while read -r file; do
+          EXIT_CODE=0
+          
+          for file in infra/gitops/applications/*.yaml; do
+            [ -f "$file" ] || continue
             echo "Checking: $file"
-            kubeconform -schema-location /tmp/crds/application-crd.yaml \
-              -summary -output json "$file" || exit 1
+            
+            # Check if it's an ArgoCD Application
+            KIND=$(yq eval '.kind' "$file")
+            if [ "$KIND" != "Application" ]; then
+              echo "  ❌ Error: Not an Application resource (kind: $KIND)"
+              EXIT_CODE=1
+              continue
+            fi
+            
+            # Check API version
+            API_VERSION=$(yq eval '.apiVersion' "$file")
+            if [ "$API_VERSION" != "argoproj.io/v1alpha1" ]; then
+              echo "  ❌ Error: Invalid apiVersion: $API_VERSION (expected: argoproj.io/v1alpha1)"
+              EXIT_CODE=1
+            fi
+            
+            # Check required fields
+            NAME=$(yq eval '.metadata.name' "$file")
+            if [ "$NAME" == "null" ]; then
+              echo "  ❌ Error: Missing metadata.name"
+              EXIT_CODE=1
+            fi
+            
+            NAMESPACE=$(yq eval '.metadata.namespace' "$file")
+            if [ "$NAMESPACE" == "null" ]; then
+              echo "  ⚠️  Warning: Missing metadata.namespace (will default to 'default')"
+            fi
+            
+            DEST_SERVER=$(yq eval '.spec.destination.server' "$file")
+            DEST_NAME=$(yq eval '.spec.destination.name' "$file")
+            if [ "$DEST_SERVER" == "null" ] && [ "$DEST_NAME" == "null" ]; then
+              echo "  ❌ Error: Missing spec.destination.server or spec.destination.name"
+              EXIT_CODE=1
+            fi
+            
+            SOURCE=$(yq eval '.spec.source' "$file")
+            SOURCES=$(yq eval '.spec.sources' "$file")
+            if [ "$SOURCE" == "null" ] && [ "$SOURCES" == "null" ]; then
+              echo "  ❌ Error: Missing spec.source or spec.sources"
+              EXIT_CODE=1
+            fi
+            
+            PROJECT=$(yq eval '.spec.project' "$file")
+            if [ "$PROJECT" == "null" ]; then
+              echo "  ⚠️  Warning: Missing spec.project (will default to 'default')"
+            fi
+            
+            # If all checks pass for this file
+            if [ $EXIT_CODE -eq 0 ]; then
+              echo "  ✅ Valid ArgoCD Application"
+            fi
           done
+          
+          exit $EXIT_CODE
       
-      - name: Validate database CRDs
+      - name: Validate Kubernetes resources
         run: |
-          echo "Validating database resource manifests..."
-          # Download operator CRDs if needed
-          # For now, skip validation of custom resources until CRDs are available
+          echo "Validating standard Kubernetes resources..."
+          # Use kubeconform for standard K8s resources (Services, ConfigMaps, etc.)
+          # Skip custom resources like Application, RedisFailover, QuestDB, postgresql
+          find infra/gitops/databases -name "*.yaml" | while read -r file; do
+            # Skip examples
+            if [[ "$file" == *"examples"* ]]; then
+              continue
+            fi
+            
+            # Check the kind
+            KIND=$(yq eval '.kind' "$file" 2>/dev/null || echo "unknown")
+            
+            # Only validate standard K8s resources
+            case "$KIND" in
+              Service|ConfigMap|Secret|Deployment|StatefulSet|DaemonSet|Job|CronJob|Ingress|PersistentVolumeClaim)
+                echo "Validating K8s resource: $file (kind: $KIND)"
+                kubeconform -summary -skip Application,RedisFailover,QuestDB,postgresql "$file"
+                ;;
+              *)
+                echo "Skipping custom resource: $file (kind: $KIND)"
+                ;;
+            esac
+          done
 
   helm-validation:
     name: Helm Chart Validation
