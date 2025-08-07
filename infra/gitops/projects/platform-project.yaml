@@ -88,11 +88,21 @@ spec:
       kind: MutatingWebhookConfiguration
     - group: 'admissionregistration.k8s.io'
       kind: ValidatingWebhookConfiguration
+    - group: 'scheduling.k8s.io'
+      kind: PriorityClass
     - group: 'agents.platform'
       kind: '*'
     - group: 'actions.github.com'
       kind: '*'
     - group: 'external-secrets.io'
+      kind: '*'
+    - group: 'acid.zalan.do'
+      kind: '*'
+    - group: 'postgresql.cnpg.io'
+      kind: '*'
+    - group: 'databases.spotahome.com'
+      kind: '*'
+    - group: 'crd.questdb.io'
       kind: '*'
 
   # Namespace resource whitelist
