@@ -87,6 +87,30 @@ spec:
               env:
                 DATABASE_URI: "postgresql://rustdocs:rustdocs123@rustdocs-mcp-postgresql.mcp.svc.cluster.local:5432/postgres"
 
+            redis:
+              name: "Redis"
+              description: "Redis database operations and caching"
+              transport: "stdio" 
+              command: "uvx"
+              args: ["--from", "git+https://github.com/redis/mcp-redis.git", "redis-mcp-server"]
+              workingDirectory: "/tmp"
+
+            context7:
+              name: "Context7"
+              description: "Up-to-date library documentation and code examples"
+              transport: "stdio"
+              command: "npx"
+              args: ["-y", "@upstash/context7-mcp"]
+              workingDirectory: "/tmp"
+
+            talos:
+              name: "Talos"
+              description: "Talos Kubernetes platform management"
+              transport: "stdio"
+              command: "uv"
+              args: ["run", "--from", "git+https://github.com/5dlabs/talos-mcp.git", "talos-mcp"]
+              workingDirectory: "/tmp"
+
         # Local tools configuration for client-side operations
         localTools:
           servers:
