@@ -99,9 +99,7 @@ spec:
             overwriteMemory: {{`{{workflow.parameters.overwrite-memory}}`}}
             docsBranch: "{{`{{workflow.parameters.docs-branch}}`}}"
             contextVersion: 1
-            {{`{{- if ne (index workflow.parameters "task-requirements") "" }}`}}
-            taskRequirements: "{{`{{index workflow.parameters "task-requirements"}}`}}"
-            {{`{{- end }}`}}
+            taskRequirements: "{{`{{workflow.parameters.task-requirements}}`}}"
             
     - name: wait-coderun-completion
       inputs:
