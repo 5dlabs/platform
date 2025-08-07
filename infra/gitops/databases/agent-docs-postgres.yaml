@@ -40,8 +40,8 @@ spec:
       max_parallel_workers_per_gather: "2"
       max_parallel_workers: "4"
       
-      # Enable useful extensions for agent-docs
-      shared_preload_libraries: "bg_mon,pg_stat_statements,pgextwlist,pg_auth_mon"
+      # Enable useful extensions for agent-docs (including pgvector for embeddings)
+      shared_preload_libraries: "bg_mon,pg_stat_statements,pgextwlist,pg_auth_mon,pgvector"
       
       # Logging for debugging
       log_statement: "mod"  # Log DDL and data-modifying statements
@@ -111,12 +111,16 @@ spec:
           schema: "public"
         hstore:            # For key-value storage
           schema: "public"
+        pgvector:          # For vector embeddings (AI/ML)
+          schema: "public"
     agent_tasks_db:
       defaultUsers: true
       extensions:
         pg_stat_statements:
           schema: "public"
         uuid-ossp:
+          schema: "public"
+        pgvector:          # For semantic task search
           schema: "public"
     agent_metrics_db:
       defaultUsers: true
@@ -232,6 +236,11 @@ data:
     
     # Read-only connection
     postgresql://agent_docs_readonly:PASSWORD@agent-docs-postgres.databases.svc.cluster.local:5432/agent_docs_db
+    
+    # Using pgvector for embeddings (example SQL):
+    # CREATE TABLE documents (id bigserial PRIMARY KEY, content text, embedding vector(1536));
+    # CREATE INDEX ON documents USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+    # SELECT * FROM documents ORDER BY embedding <=> '[0.1, 0.2, ...]' LIMIT 10;
 
 ---
 # Note: The operator automatically creates secrets for database users
