@@ -1,0 +1,184 @@
+---
+# Redis Failover cluster for agent-docs service
+# Provides caching and session storage for documentation generation
+apiVersion: databases.spotahome.com/v1
+kind: RedisFailover
+metadata:
+  name: agent-docs-redis
+  namespace: databases
+  labels:
+    team: platform
+    service: agent-docs
+    environment: production
+    app.kubernetes.io/name: agent-docs-redis
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/part-of: agent-platform
+spec:
+  # Sentinel configuration - 3 sentinels for HA
+  sentinel:
+    replicas: 3
+    
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+    
+    # Sentinel configuration for quick failover
+    customConfig:
+      - "down-after-milliseconds 5000"
+      - "failover-timeout 10000"
+      - "parallel-syncs 1"
+    
+    # Anti-affinity to spread sentinels
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+              - key: redisfailover.databases.spotahome.com/name
+                operator: In
+                values:
+                - agent-docs-redis
+              - key: redisfailover.databases.spotahome.com/component
+                operator: In
+                values:
+                - sentinel
+            topologyKey: kubernetes.io/hostname
+  
+  # Redis configuration
+  redis:
+    # 3 Redis instances for redundancy
+    replicas: 3
+    
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 2Gi
+    
+    # Redis 7.2 for latest features and performance
+    image: redis:7.2-alpine
+    imagePullPolicy: IfNotPresent
+    
+    # Configuration optimized for agent-docs workload
+    customConfig:
+      # Memory management - agent-docs typically needs moderate cache
+      - "maxmemory 1536mb"                   # 75% of memory limit
+      - "maxmemory-policy allkeys-lru"       # LRU eviction for cache use case
+      
+      # Persistence - moderate persistence for session data
+      - "save 900 1"                          # Save after 15 min if 1+ keys changed
+      - "save 300 10"                         # Save after 5 min if 10+ keys changed
+      - "save 60 10000"                       # Save after 1 min if 10000+ keys changed
+      - "appendonly yes"                      # Enable AOF for durability
+      - "appendfsync everysec"                # Balance between performance and durability
+      - "no-appendfsync-on-rewrite no"
+      - "auto-aof-rewrite-percentage 100"
+      - "auto-aof-rewrite-min-size 64mb"
+      
+      # Network and performance
+      - "tcp-keepalive 60"
+      - "tcp-backlog 511"
+      - "timeout 300"                         # 5 minute client timeout
+      - "databases 16"
+      
+      # Slow query logging
+      - "slowlog-log-slower-than 10000"      # Log queries > 10ms
+      - "slowlog-max-len 128"
+      
+      # Disable dangerous commands
+      - "rename-command FLUSHDB \"\""
+      - "rename-command FLUSHALL \"\""
+      - "rename-command KEYS \"\""
+    
+    # Storage for persistence
+    storage:
+      persistentVolumeClaim:
+        metadata:
+          name: agent-docs-redis-data
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          storageClassName: local-path  # Adjust for your cluster
+          resources:
+            requests:
+              storage: 20Gi
+    
+    # Service configuration
+    service:
+      type: ClusterIP
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9121"
+        prometheus.io/path: "/metrics"
+    
+    # Pod disruption budget
+    podDisruptionBudget:
+      maxUnavailable: 1
+    
+    # Security context
+    securityContext:
+      runAsUser: 999
+      runAsGroup: 999
+      fsGroup: 999
+      runAsNonRoot: true
+
+---
+# Service specifically for agent-docs to connect
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent-docs-redis
+  namespace: databases
+  labels:
+    team: platform
+    service: agent-docs
+    app.kubernetes.io/name: agent-docs-redis
+spec:
+  type: ClusterIP
+  selector:
+    redisfailover.databases.spotahome.com/name: agent-docs-redis
+    redisfailover.databases.spotahome.com/component: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP
+
+---
+# ConfigMap with connection information for agent-docs
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-docs-redis-config
+  namespace: databases
+  labels:
+    team: platform
+    service: agent-docs
+data:
+  # Redis connection strings
+  REDIS_HOST: "agent-docs-redis.databases.svc.cluster.local"
+  REDIS_PORT: "6379"
+  REDIS_SENTINEL_SERVICE: "rfs-agent-docs-redis.databases.svc.cluster.local"
+  REDIS_SENTINEL_PORT: "26379"
+  REDIS_MASTER_NAME: "mymaster"
+  
+  # Connection URL formats
+  redis-url: "redis://agent-docs-redis.databases.svc.cluster.local:6379"
+  sentinel-url: "redis-sentinel://rfs-agent-docs-redis.databases.svc.cluster.local:26379/mymaster"
+  
+  # Usage example
+  usage-example: |
+    # Direct connection (simple, but no automatic failover)
+    redis://agent-docs-redis.databases.svc.cluster.local:6379
+    
+    # Sentinel connection (recommended for production)
+    Sentinels: rfs-agent-docs-redis.databases.svc.cluster.local:26379
+    Master Name: mymaster
