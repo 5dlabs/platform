@@ -369,10 +369,10 @@ impl<'a> DocsResourceManager<'a> {
         cm_name: &str,
     ) -> Result<Option<OwnerReference>> {
         let job_name = self.generate_job_name(docs_run);
-        
+
         // Ensure PVC exists before creating job
         self.ensure_workspace_pvc(docs_run).await?;
-        
+
         let job = self.build_job_spec(docs_run, &job_name, cm_name)?;
 
         let created_job = self.jobs.create(&PostParams::default(), &job).await?;
@@ -466,15 +466,22 @@ impl<'a> DocsResourceManager<'a> {
 
         // Persistent workspace volume for docs to prevent data loss
         // Create a PVC name based on the working directory for reuse across jobs
-        let pvc_name = format!("docs-workspace-{}", 
-            docs_run.spec.working_directory
+        let pvc_name = format!(
+            "docs-workspace-{}",
+            docs_run
+                .spec
+                .working_directory
                 .chars()
-                .map(|c| if c.is_alphanumeric() || c == '-' { c } else { '-' })
+                .map(|c| if c.is_alphanumeric() || c == '-' {
+                    c
+                } else {
+                    '-'
+                })
                 .collect::<String>()
                 .trim_matches('-')
                 .to_lowercase()
         );
-        
+
         volumes.push(json!({
             "name": "workspace",
             "persistentVolumeClaim": {
@@ -786,28 +793,35 @@ impl<'a> DocsResourceManager<'a> {
     }
 
     async fn ensure_workspace_pvc(&self, docs_run: &DocsRun) -> Result<()> {
-        let pvc_name = format!("docs-workspace-{}", 
-            docs_run.spec.working_directory
+        let pvc_name = format!(
+            "docs-workspace-{}",
+            docs_run
+                .spec
+                .working_directory
                 .chars()
-                .map(|c| if c.is_alphanumeric() || c == '-' { c } else { '-' })
+                .map(|c| if c.is_alphanumeric() || c == '-' {
+                    c
+                } else {
+                    '-'
+                })
                 .collect::<String>()
                 .trim_matches('-')
                 .to_lowercase()
         );
 
         // Check if PVC already exists
-        let pvcs: Api<k8s_openapi::api::core::v1::PersistentVolumeClaim> = 
+        let pvcs: Api<k8s_openapi::api::core::v1::PersistentVolumeClaim> =
             Api::namespaced(self.ctx.client.clone(), &self.ctx.namespace);
-            
+
         match pvcs.get(&pvc_name).await {
             Ok(_) => {
                 error!("✅ PVC {} already exists", pvc_name);
                 return Ok(());
-            },
+            }
             Err(kube::Error::Api(ae)) if ae.code == 404 => {
                 // PVC doesn't exist, create it
                 error!("📦 Creating PVC: {}", pvc_name);
-            },
+            }
             Err(e) => return Err(e.into()),
         }
 
@@ -820,7 +834,10 @@ impl<'a> DocsResourceManager<'a> {
                     let mut labels = std::collections::BTreeMap::new();
                     labels.insert("app".to_string(), "controller".to_string());
                     labels.insert("component".to_string(), "docs-workspace".to_string());
-                    labels.insert("working-directory".to_string(), self.sanitize_label_value(&docs_run.spec.working_directory));
+                    labels.insert(
+                        "working-directory".to_string(),
+                        self.sanitize_label_value(&docs_run.spec.working_directory),
+                    );
                     labels
                 }),
                 ..Default::default()
@@ -830,7 +847,12 @@ impl<'a> DocsResourceManager<'a> {
                 resources: Some(k8s_openapi::api::core::v1::VolumeResourceRequirements {
                     requests: Some({
                         let mut requests = std::collections::BTreeMap::new();
-                        requests.insert("storage".to_string(), k8s_openapi::apimachinery::pkg::api::resource::Quantity("5Gi".to_string()));
+                        requests.insert(
+                            "storage".to_string(),
+                            k8s_openapi::apimachinery::pkg::api::resource::Quantity(
+                                "5Gi".to_string(),
+                            ),
+                        );
                         requests
                     }),
                     ..Default::default()
@@ -845,11 +867,11 @@ impl<'a> DocsResourceManager<'a> {
             Ok(_) => {
                 error!("✅ Created PVC: {}", pvc_name);
                 Ok(())
-            },
+            }
             Err(kube::Error::Api(ae)) if ae.code == 409 => {
                 error!("✅ PVC {} already exists (created concurrently)", pvc_name);
                 Ok(())
-            },
+            }
             Err(e) => {
                 error!("❌ Failed to create PVC {}: {:?}", pvc_name, e);
                 Err(e.into())
