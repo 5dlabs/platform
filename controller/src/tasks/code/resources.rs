@@ -457,8 +457,8 @@ impl<'a> CodeResourceManager<'a> {
             "mountPath": "/workspace"
         }));
 
-        // Docker-in-Docker volumes (enabled by default, can be disabled by setting enableDocker: false)
-        let enable_docker = code_run.spec.enable_docker.unwrap_or(true);
+        // Docker-in-Docker volumes (disabled by default, can be enabled by setting enableDocker: true)
+        let enable_docker = code_run.spec.enable_docker.unwrap_or(false);
         if enable_docker {
             volumes.push(json!({
                 "name": "docker-sock-dir",
