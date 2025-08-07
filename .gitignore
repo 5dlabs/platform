@@ -66,6 +66,7 @@ Chart.lock
 # Claude configuration files
 **/CLAUDE.md
 controller/target/
+mcp/target/
 
 # Agent files
 agent_*.md
