@@ -34,12 +34,15 @@ spec:
         app.kubernetes.io/managed-by: argocd
         app.kubernetes.io/part-of: platform
 
-      # Resource customizations and image fix
+      # Fix the hardcoded v0.0.0 image using JSON patch
       patches:
         - target:
             kind: Deployment
             name: questdb-operator-controller-manager
           patch: |
+            - op: replace
+              path: /spec/template/spec/containers/0/image
+              value: questdb/questdb-operator:v0.5.1
             - op: add
               path: /spec/template/spec/containers/0/resources
               value:
@@ -49,9 +52,6 @@ spec:
                 limits:
                   cpu: 500m
                   memory: 512Mi
-            - op: replace
-              path: /spec/template/spec/containers/0/image
-              value: questdb/questdb-operator:v0.5.1
 
   # Destination configuration
   destination:

@@ -22,16 +22,26 @@ spec:
   source:
     repoURL: https://github.com/spotahome/redis-operator.git
     targetRevision: v1.2.4  # Latest stable version (v1.3.0 is only RC)
-    path: manifests
+    path: manifests/kustomize/overlays/minimal
 
-    # Kustomize configuration to deploy the operator
+    # Kustomize configuration (includes RBAC via rbac-full component)
     kustomize:
       namespace: redis-operator
-
-      # Optional: Add resource customizations
+      
+      # Add common labels
       commonLabels:
         app.kubernetes.io/managed-by: argocd
         app.kubernetes.io/part-of: platform
+      
+      # Fix deployment to use the proper service account
+      patches:
+        - target:
+            kind: Deployment
+            name: redis-operator
+          patch: |
+            - op: add
+              path: /spec/template/spec/serviceAccountName
+              value: redis-operator
 
   # Destination configuration
   destination:
