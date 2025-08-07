@@ -83,7 +83,7 @@ spec:
               command: "uv"
               args: ["run", "postgres-mcp", "--access-mode=unrestricted"]
               env:
-                DATABASE_URI: "postgresql://rustdocs:rustdocs123@rustdocs-mcp-postgresql:5432/postgres"
+                DATABASE_URI: "postgresql://rustdocs:rustdocs123@rustdocs-mcp-postgresql.mcp.svc.cluster.local:5432/postgres"
 
         # Local tools configuration for client-side operations
         localTools:
