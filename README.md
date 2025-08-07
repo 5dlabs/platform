@@ -1,6 +1,6 @@
-# 5D Labs Agent Platform
+# Cognitive Task Orchestrator
 
-An AI-powered development platform that helps you generate documentation and implement code using Claude agents through simple MCP (Model Context Protocol) tools.
+An AI-powered development platform that helps you generate documentation and implement code using Claude agents through simple MCP (Model Context Protocol) tools. The platform uses GitHub Apps for secure authentication and configuration-driven workflows.
 
 ## What It Does
 
@@ -22,36 +22,38 @@ Both operations run as Kubernetes jobs with enhanced reliability through TTL-saf
 This is an integrated platform with a clear data flow:
 
 **Component Architecture:**
-- **MCP Server (`fdl-mcp`)**: Handles MCP protocol calls from Cursor/Claude
-- **CLI (`fdl`)**: Makes REST API calls to the orchestrator service
-- **Orchestrator Service**: Kubernetes REST API that creates CodeRun/DocsRun CRDs
+- **MCP Server (`cto-mcp`)**: Handles MCP protocol calls from Cursor/Claude with configuration-driven defaults
+- **Controller Service**: Kubernetes REST API that manages CodeRun/DocsRun CRDs via Argo Workflows
+- **Argo Workflows**: Orchestrates agent deployment through workflow templates
 - **Kubernetes Controllers**: Separate controllers for CodeRun and DocsRun resources with TTL-safe reconciliation
 - **Agent Workspaces**: Isolated persistent volumes for each service with session continuity
+- **GitHub Apps**: Secure authentication system replacing personal tokens
 
 **Data Flow:**
 1. Cursor calls `docs()` or `task()` via MCP protocol
-2. MCP server receives call and internally executes CLI
-3. CLI makes HTTP requests to orchestrator REST API (`/pm/tasks`)
-4. Orchestrator creates CodeRun/DocsRun custom resources
+2. MCP server loads configuration from `cto-config.json` and applies defaults
+3. MCP server submits workflow to Argo with all required parameters
+4. Argo Workflows creates CodeRun/DocsRun custom resources
 5. Dedicated Kubernetes controllers reconcile CRDs with idempotent job management
 6. Controllers deploy Claude agents as Jobs with workspace isolation
-7. Agents complete work and submit GitHub PRs with automatic cleanup
+7. Agents authenticate via GitHub Apps and complete work
+8. Agents submit GitHub PRs with automatic cleanup
 
 ### Deploy the Complete Platform
 
 ```bash
 # Add the 5dlabs Helm repository
-helm repo add 5dlabs https://5dlabs.github.io/platform
+helm repo add 5dlabs https://5dlabs.github.io/cto
 helm repo update
 
 # Install Custom Resource Definitions (CRDs) first
-kubectl apply -f https://raw.githubusercontent.com/5dlabs/platform/main/infra/charts/orchestrator/crds/platform-crds.yaml
+kubectl apply -f https://raw.githubusercontent.com/5dlabs/cto/main/infra/charts/agent-platform/crds/platform-crds.yaml
 
-# Install the orchestrator
-helm install orchestrator 5dlabs/orchestrator --namespace orchestrator --create-namespace
+# Install the agent-platform
+helm install agent-platform 5dlabs/agent-platform --namespace agent-platform --create-namespace
 
 # Setup agent secrets (interactive)
-wget https://raw.githubusercontent.com/5dlabs/platform/main/infra/scripts/setup-agent-secrets.sh
+wget https://raw.githubusercontent.com/5dlabs/cto/main/infra/scripts/setup-agent-secrets.sh
 chmod +x setup-agent-secrets.sh
 ./setup-agent-secrets.sh --help
 ```
@@ -63,7 +65,7 @@ chmod +x setup-agent-secrets.sh
 - Anthropic API Key
 
 **What you get:**
-- Complete orchestrator platform deployed to Kubernetes
+- Complete agent-platform platform deployed to Kubernetes
 - REST API for task management
 - Separate Kubernetes controllers for CodeRun/DocsRun resources with TTL-safe reconciliation
 - Agent workspace management and isolation with persistent volumes
@@ -87,73 +89,102 @@ helm upgrade --install twingate-weightless-hummingbird twingate/connector \
   --set connector.refreshToken="your-refresh-token"
 ```
 
-**Important**: After installation, add your Kubernetes service CIDR as resources in TwinGate admin panel. This enables the MCP tools to reach the orchestrator service using internal Kubernetes service URLs (e.g., `http://orchestrator.orchestrator.svc.cluster.local`) from anywhere.
+**Important**: After installation, add your Kubernetes service CIDR as resources in TwinGate admin panel. This enables the MCP tools to reach the agent-platform service using internal Kubernetes service URLs (e.g., `http://agent-platform.agent-platform.svc.cluster.local`) from anywhere.
 
-### Install CLI Tools
+### Install MCP Server
 
-For the MCP tools and CLI utilities, you can install pre-built binaries:
+For Cursor/Claude integration, install the MCP server:
 
 ```bash
 # One-liner installer (Linux/macOS)
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/5dlabs/platform/releases/download/v0.2.0/tools-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/5dlabs/cto/releases/download/v0.2.0/tools-installer.sh | sh
 
 # Verify installation
-fdl --help       # CLI tool for direct API calls
+cto-mcp --help   # MCP server for Cursor/Claude integration
 ```
 
 **What you get:**
-- `fdl` - Command-line tool for direct orchestrator API calls
-- `fdl-mcp` - MCP server that integrates with Cursor/Claude
+- `cto-mcp` - MCP server that integrates with Cursor/Claude
 - Multi-platform support (Linux x64/ARM64, macOS Intel/Apple Silicon, Windows x64)
 - Automatic installation to system PATH
 
+### Configure Project Settings
+
+Create a `cto-config.json` file in your project root to configure agents, models, and defaults:
+
+```json
+{
+  "version": "1.0",
+  "defaults": {
+    "docs": {
+      "model": "claude-opus-4-20250514",
+      "githubApp": "5DLabs-Morgan",
+      "includeCodebase": false,
+      "sourceBranch": "main"
+    },
+    "code": {
+      "model": "claude-opus-4-20250514", 
+      "githubApp": "5DLabs-Rex",
+      "continueSession": false,
+      "workingDirectory": ".",
+      "overwriteMemory": false,
+      "docsRepository": "https://github.com/your-org/your-docs-repo",
+      "docsProjectDirectory": "projects/your-project",
+      "service": "your-service-name"
+    }
+  },
+  "agents": {
+    "morgan": "5DLabs-Morgan",
+    "rex": "5DLabs-Rex", 
+    "blaze": "5DLabs-Blaze",
+    "cipher": "5DLabs-Cipher"
+  }
+}
+```
+
 ### Configure Cursor MCP Integration
 
-After installing the CLI tools, configure Cursor to use the MCP server by creating a `.cursor/mcp.json` file in your project directory:
+After creating your configuration file, configure Cursor to use the MCP server by creating a `.cursor/mcp.json` file in your project directory:
 
 ```json
 {
   "mcpServers": {
-    "fdl-mcp": {
-      "command": "fdl-mcp",
+    "cto-mcp": {
+      "command": "cto-mcp",
       "args": [],
-      "env": {
-        "FDL_DEFAULT_DOCS_USER": "your-github-username",
-        "FDL_DEFAULT_CODE_USER": "your-github-username"
-      }
+      "env": {}
     }
   }
 }
 ```
 
-**Configuration options:**
-- `FDL_DEFAULT_DOCS_USER` - Default GitHub username for documentation generation (optional)
-- `FDL_DEFAULT_CODE_USER` - Default GitHub username for code implementation (optional)
-
 **Usage:**
-1. Create the `.cursor/mcp.json` file in your project root
-2. Replace `"your-github-username"` with your actual GitHub username
+1. Create the `cto-config.json` file in your project root with your specific settings
+2. Create the `.cursor/mcp.json` file to enable MCP integration
 3. Restart Cursor to load the MCP server
-4. The `docs()` and `task()` functions will be available in Claude conversations
+4. The `docs()` and `task()` functions will be available with your configured defaults
 
-**Important**: The MCP server connects to your deployed orchestrator service. Ensure your orchestrator is accessible from your development environment (either locally or via TwinGate for remote clusters).
+**Benefits of Configuration-Driven Approach:**
+- **Simplified MCP Calls**: Most parameters have sensible defaults from your config
+- **Dynamic Agent Lists**: Tool descriptions show available agents from your config
+- **Consistent Settings**: All team members use the same model/agent assignments
+- **Easy Customization**: Change defaults without modifying MCP server setup
 
 ### Building from Source (Development)
 
 ```bash
 # Build from source
-git clone https://github.com/5dlabs/platform.git
-cd platform/orchestrator
+git clone https://github.com/5dlabs/cto.git
+cd cto/controller
 
-# Build both CLI and MCP server
-cargo build --release --bin fdl --bin fdl-mcp
+# Build MCP server
+cargo build --release --bin cto-mcp
 
-# Verify the builds
-./target/release/fdl --help       # CLI tool
+# Verify the build
+./target/release/cto-mcp --help   # MCP server
 
 # Install to your system (optional)
-cp target/release/fdl /usr/local/bin/
-cp target/release/fdl-mcp /usr/local/bin/
+cp target/release/cto-mcp /usr/local/bin/
 ```
 
 ### MCP Tools Available
@@ -164,9 +195,16 @@ The platform exposes two primary MCP tools:
 Analyzes your Task Master project and creates comprehensive documentation.
 
 ```javascript
+// Minimal call using config defaults
 docs({
-  working_directory: "_projects/my-app",
-  github_user: "your-github-username"  // optional if FDL_DEFAULT_DOCS_USER is set
+  working_directory: "projects/my-app"
+});
+
+// Override specific parameters
+docs({
+  working_directory: "projects/my-app",
+  agent: "morgan",
+  model: "claude-3-5-sonnet-20241022"
 });
 ```
 
@@ -194,25 +232,25 @@ docs({
 Deploys an autonomous Claude agent to implement a specific task from your Task Master project.
 
 ```javascript
-// Implement a specific task (initial implementation)
+// Minimal call using config defaults
 task({
   task_id: 5,
-  service: "api-server",
-  repository: "myorg/my-project",
-  docs_repository: "myorg/my-docs",
-  docs_project_directory: "_projects/my-project",
-  github_user: "myusername",
-  working_directory: "services/api-server"  // optional, defaults to repo root
+  repository: "https://github.com/myorg/my-project"
+});
+
+// Override specific parameters
+task({
+  task_id: 5,
+  repository: "https://github.com/myorg/my-project",
+  agent: "rex",
+  service: "custom-service",
+  working_directory: "services/api-server"
 });
 
 // Continue working on a partially completed or failed task
 task({
   task_id: 5,
-  service: "api-server", 
-  repository: "myorg/my-project",
-  docs_repository: "myorg/my-docs",
-  docs_project_directory: "_projects/my-project",
-  github_user: "myusername",
+  repository: "https://github.com/myorg/my-project",
   continue_session: true
 });
 ```
@@ -231,27 +269,29 @@ Complete parameter reference for both MCP tools.
 ### `docs` Tool Parameters
 
 **Required:**
-- `working_directory` - Working directory containing .taskmaster folder (e.g., `"_projects/simple-api"`)
+- `working_directory` - Working directory containing .taskmaster folder (e.g., `"projects/simple-api"`)
 
-**Optional:**
-- `github_user` - GitHub username for authentication (uses `FDL_DEFAULT_DOCS_USER` env var if not specified)
-- `model` - Claude model to use (defaults to server-side configuration)
+**Optional (with config defaults):**
+- `agent` - Agent name to use (defaults to `defaults.docs.githubApp` mapping)
+- `model` - Claude model to use (defaults to `defaults.docs.model`)
+- `source_branch` - Source branch to work from (defaults to `defaults.docs.sourceBranch`)
+- `include_codebase` - Include existing codebase as context (defaults to `defaults.docs.includeCodebase`)
 
 ### `task` Tool Parameters
 
 **Required:**
 - `task_id` - Task ID to implement from task files (integer, minimum 1)
-- `service` - Target service name, creates workspace-{service} PVC (pattern: `^[a-z0-9-]+$`)
-- `repository` - Target repository in format 'org/repo' or 'user/repo' (e.g., `"5dlabs/platform"`)
-- `docs_repository` - Documentation repository in format 'org/repo' or 'user/repo' where Task Master definitions are stored
-- `docs_project_directory` - Project directory within docs repository (e.g., `"_projects/simple-api"`, use `"."` for repo root)
-- `github_user` - GitHub username for authentication and task assignment
+- `repository` - Target repository URL (e.g., `"https://github.com/5dlabs/cto"`)
 
-**Optional:**
-
-- `working_directory` - Working directory within target repository (defaults to `"."` for repo root)
-- `model` - Claude model to use (defaults to server-side configuration)
-- `continue_session` - Whether to continue a previous session (boolean, default: false)
+**Optional (with config defaults):**
+- `service` - Target service name, creates workspace-{service} PVC (defaults to `defaults.code.service`)
+- `docs_repository` - Documentation repository URL (defaults to `defaults.code.docsRepository`)
+- `docs_project_directory` - Project directory within docs repository (defaults to `defaults.code.docsProjectDirectory`)
+- `working_directory` - Working directory within target repository (defaults to `defaults.code.workingDirectory`)
+- `agent` - Agent name for task assignment (defaults to `defaults.code.githubApp` mapping)
+- `model` - Claude model to use (defaults to `defaults.code.model`)
+- `continue_session` - Whether to continue a previous session (defaults to `defaults.code.continueSession`)
+- `overwrite_memory` - Whether to overwrite CLAUDE.md memory file (defaults to `defaults.code.overwriteMemory`)
 - `env` - Environment variables to set in the container (object with key-value pairs)
 - `env_from_secrets` - Environment variables from secrets (array of objects with `name`, `secretName`, `secretKey`)
 
@@ -259,7 +299,7 @@ Complete parameter reference for both MCP tools.
 
 The platform uses a template system to customize Claude agent behavior, settings, and prompts. Templates are Handlebars (`.hbs`) files that get rendered with task-specific data.
 
-**Model Defaults**: The orchestrator provides server-side model defaults (`claude-opus-4-20250514` for docs, `claude-sonnet-4-20250514` for code tasks) that can be overridden via MCP parameters or CLI arguments.
+**Model Defaults**: Models are configured through `cto-config.json` defaults and can be overridden via MCP parameters. The platform supports all Claude models including `claude-opus-4-20250514` and `claude-3-5-sonnet-20241022`.
 
 ### Template Architecture
 
@@ -283,10 +323,10 @@ Edit the settings template files directly:
 
 ```bash
 # For docs generation agents
-vim infra/charts/orchestrator/claude-templates/docs/settings.json.hbs
+vim infra/charts/agent-platform/claude-templates/docs/settings.json.hbs
 
 # For code implementation agents
-vim infra/charts/orchestrator/claude-templates/code/settings.json.hbs
+vim infra/charts/agent-platform/claude-templates/code/settings.json.hbs
 ```
 
 Settings control:
@@ -304,7 +344,7 @@ See [Claude Code Settings](https://docs.anthropic.com/en/docs/claude-code/settin
 
 ```bash
 # Edit the docs prompt template
-vim infra/charts/orchestrator/claude-templates/docs/prompt.md.hbs
+vim infra/charts/agent-platform/claude-templates/docs/prompt.md.hbs
 ```
 
 **For code tasks** (affects specific task implementation):
@@ -322,10 +362,10 @@ Hooks are shell scripts that run during agent execution. Add new hook files to t
 
 ```bash
 # Create new hook script (docs example)
-vim infra/charts/orchestrator/claude-templates/docs/hooks/my-custom-hook.sh.hbs
+vim infra/charts/agent-platform/claude-templates/docs/hooks/my-custom-hook.sh.hbs
 
 # Create new hook script (code example)
-vim infra/charts/orchestrator/claude-templates/code/hooks/my-custom-hook.sh.hbs
+vim infra/charts/agent-platform/claude-templates/code/hooks/my-custom-hook.sh.hbs
 ```
 
 Hook files are automatically discovered and rendered. Ensure the hook name matches any references in your settings templates.
@@ -334,14 +374,14 @@ See [Claude Code Hooks Guide](https://docs.anthropic.com/en/docs/claude-code/hoo
 
 #### 4. Deploying Template Changes
 
-After editing any template files, redeploy the orchestrator:
+After editing any template files, redeploy the agent-platform:
 
 ```bash
 # Deploy template changes
-helm upgrade orchestrator . -n orchestrator
+helm upgrade agent-platform . -n agent-platform
 
 # Verify ConfigMap was updated
-kubectl get configmap claude-templates-configmap -n orchestrator -o yaml
+kubectl get configmap claude-templates-configmap -n agent-platform -o yaml
 ```
 
 **Important**: Template changes only affect new agent jobs. Running jobs continue with their original templates.
@@ -360,17 +400,20 @@ Common variables available in templates:
 
 ## Best Practices
 
-1. **Always generate docs first** to establish baseline documentation
-2. **Implement tasks sequentially** based on dependencies
-3. **Use `continue_session: true`** for retries on the same task
-4. **Review GitHub PRs promptly** - agents provide detailed logs and explanations
-5. **Check PR descriptions** for detailed agent logs when troubleshooting
+1. **Configure `cto-config.json` first** to set up your agents, models, and repository defaults
+2. **Always generate docs first** to establish baseline documentation  
+3. **Implement tasks sequentially** based on dependencies
+4. **Use minimal MCP calls** - let configuration defaults handle most parameters
+5. **Use `continue_session: true`** for retries on the same task
+6. **Review GitHub PRs promptly** - agents provide detailed logs and explanations
+7. **Update config file** when adding new agents or changing project structure
 
 ## Support
 
 - Check GitHub PRs for detailed agent logs and explanations
 - Review Task Master project structure in `.taskmaster/` directory
-- Verify repository access and GitHub authentication setup
+- Verify `cto-config.json` configuration and GitHub Apps authentication setup
+- Ensure Argo Workflows are properly deployed and accessible
 
 ## License
 
@@ -389,7 +432,7 @@ For more details, see the [LICENSE](LICENSE) file.
 
 ## Related Projects
 
-- **[Task Master AI](https://github.com/eyaltoledano/claude-task-master)** - The AI-powered task management system that works perfectly with this orchestrator platform. Task Master AI helps you break down complex projects into manageable tasks, which can then be implemented using this platform's `task()` MCP tool.
+- **[Task Master AI](https://github.com/eyaltoledano/claude-task-master)** - The AI-powered task management system that works perfectly with this agent-platform platform. Task Master AI helps you break down complex projects into manageable tasks, which can then be implemented using this platform's `task()` MCP tool.
 
 ## Roadmap
 

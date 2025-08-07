@@ -1,0 +1,74 @@
+---
+# Namespace for storing platform secrets
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: secret-store
+  labels:
+    app.kubernetes.io/name: secret-store
+    app.kubernetes.io/part-of: platform
+
+---
+# Service account for External Secrets to access this namespace
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: external-secrets-reader
+  namespace: secret-store
+
+---
+# Role to allow reading secrets in this namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: secret-reader
+  namespace: secret-store
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch"]
+
+---
+# Bind the role to the service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: external-secrets-reader
+  namespace: secret-store
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: secret-reader
+subjects:
+- kind: ServiceAccount
+  name: external-secrets-reader
+  namespace: secret-store
+
+---
+# ClusterRole for External Secrets to access secrets across namespaces
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: external-secrets-secret-reader
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list", "watch"]
+
+---
+# Bind the cluster role to External Secrets service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: external-secrets-secret-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: external-secrets-secret-reader
+subjects:
+- kind: ServiceAccount
+  name: external-secrets
+  namespace: external-secrets-system

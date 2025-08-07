@@ -1,0 +1,339 @@
+# Default values for controller.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/5dlabs/cto/controller
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+# Agent/Task Runner image configuration (used by controller to create Jobs)
+agent:
+  image:
+    repository: ghcr.io/5dlabs/cto/claude-code
+    tag: "latest"
+    pullPolicy: Always
+
+# Storage configuration for workspace PVCs
+storage:
+  # Storage class name (e.g., "local-path" for local development, leave empty for default)
+  storageClassName: "local-path"
+  # Size of workspace PVCs
+  workspaceSize: "10Gi"
+
+# Argo Workflows integration (requires Argo Workflows CRDs to be installed)
+argo:
+  # Whether to create WorkflowTemplate resources (requires Argo Workflows)
+  enabled: true
+
+# Cleanup configuration (controller-based event-driven cleanup)
+cleanup:
+  # Whether to enable automatic cleanup of completed jobs
+  enabled: true
+  # Minutes to wait before cleaning up successful jobs (default: 5 minutes)
+  completedJobDelayMinutes: 5
+  # Minutes to wait before cleaning up failed jobs (default: 60 minutes)
+  failedJobDelayMinutes: 60
+  # Whether to delete associated ConfigMaps when cleaning up jobs
+  deleteConfigMap: true
+
+# Agent definitions for GitHub App-based AI agents
+agents:
+  morgan:
+    name: "Morgan"
+    githubApp: "5DLabs-Morgan"
+    appId: "1723711"
+    clientId: "Iv23liXbJaNAQELWXIYD"
+    role: "Product Manager & Documentation Specialist"
+    expertise: ["documentation", "requirements", "planning", "task-management"]
+    description: "AI Documentation Specialist | Product Manager at 5D Labs | Transforms ideas into actionable plans | Expert in Task Master workflows"
+    systemPrompt: |
+      You are Morgan, a meticulous AI Product Manager and Documentation Specialist at 5D Labs.
+      
+      Your core mission is to transform complex ideas into clear, actionable plans. You excel at:
+      - Breaking down requirements into structured tasks
+      - Creating comprehensive technical documentation
+      - Defining clear acceptance criteria and success metrics
+      - Managing Task Master workflows and project organization
+      
+      Your personality is methodical, detail-oriented, and strategic. You believe that well-defined problems are half-solved. You communicate with clarity and precision, always focusing on deliverables and business value.
+      
+      When working on documentation tasks, ensure every deliverable is thorough, well-structured, and enables future development. Think strategically about how each piece fits into the larger project vision.
+
+  rex:
+    name: "Rex"
+    githubApp: "5DLabs-Rex"
+    appId: "1724452"
+    clientId: "Iv23liTnu9e0imdRPhCC"
+    role: "Senior Backend Architect & Systems Engineer"
+    expertise: ["backend", "architecture", "systems", "apis", "databases"]
+    description: "Senior Backend Architect & Systems Engineer"
+    systemPrompt: |
+      You are Rex, a Senior Backend Architect & Systems Engineer at 5D Labs.
+      
+      Your core mission is to excel in your specialized domain while collaborating 
+      effectively with the broader AI agent team. You bring deep expertise and 
+      strategic thinking to every challenge.
+
+  blaze:
+    name: "Blaze"
+    githubApp: "5DLabs-Blaze"
+    appId: "1724451"
+    clientId: "Iv23liiNQuFT6UcWGMTk"
+    role: "Performance Engineer & Optimization Specialist"
+    expertise: ["performance", "optimization", "profiling", "caching"]
+    description: "Performance Engineer & Optimization Specialist"
+    systemPrompt: |
+      You are Blaze, a Performance Engineer & Optimization Specialist at 5D Labs.
+      
+      Your core mission is to excel in your specialized domain while collaborating 
+      effectively with the broader AI agent team. You bring deep expertise and 
+      strategic thinking to every challenge.
+
+  cipher:
+    name: "Cipher"
+    githubApp: "5DLabs-Cipher"
+    appId: "1724450"
+    clientId: "Iv23li7dL883Q9dG6qpX"
+    role: "Security Engineer & Code Analysis Specialist"
+    expertise: ["security", "analysis", "authentication", "compliance"]
+    description: "Security Engineer & Code Analysis Specialist"
+    systemPrompt: |
+      You are Cipher, a Security Engineer & Code Analysis Specialist at 5D Labs.
+      
+      Your core mission is to excel in your specialized domain while collaborating 
+      effectively with the broader AI agent team. You bring deep expertise and 
+      strategic thinking to every challenge.
+
+# Agent defaults are now managed through cto-config.json in the MCP server
+
+imagePullSecrets:
+  - name: ghcr-secret
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Namespace configuration
+namespace:
+  create: true
+  name: "agent-platform"
+  # PodSecurity configuration (required for Toolman's Docker-in-Docker)
+  podSecurity:
+    enforce: "privileged"
+    audit: "privileged" 
+    warn: "privileged"
+  labels: {}
+  annotations: {}
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "agent-platform"
+
+podAnnotations:
+  kubectl.kubernetes.io/restartedAt: ""
+
+podSecurityContext:
+  fsGroup: 2000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+    - ALL
+  seccompProfile:
+    type: RuntimeDefault
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+  name: http
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: agent-platform.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
+
+affinity: {}
+
+# Configuration for the controller service
+config:
+  # Kubernetes namespace (auto-populated in most cases)
+  kubernetesNamespace: "agent-platform"
+
+  # Server configuration
+  serverHost: "0.0.0.0"
+  serverPort: "8080"
+
+  # Logging
+  rustLog: "debug"
+
+# Secret configuration for API keys
+secrets:
+  # REQUIRED: Set your Anthropic API key
+  anthropicApiKey: "use-existing"
+  # External secrets name (created by External Secrets Operator)
+  externalSecretsName: "agent-platform-secrets"
+  # Note: GitHub secrets (SSH keys + tokens) are managed externally per agent
+  # See infra/scripts/setup-agent-secrets.sh for setup instructions
+
+# RBAC configuration
+rbac:
+  # Create RBAC resources
+  create: true
+  
+  # Controller RBAC (for managing CodeRun/DocsRun resources)
+  controller:
+    # Use Role/RoleBinding (true) or ClusterRole/ClusterRoleBinding (false)
+    namespaced: true
+    rules:
+      # CodeRun and DocsRun CRD management
+      - apiGroups: ["agents.platform"]
+        resources: ["coderuns", "docsruns"]
+        verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+      - apiGroups: ["agents.platform"]
+        resources: ["coderuns/status", "docsruns/status"]
+        verbs: ["get", "update", "patch"]
+      # Job management in agent-platform namespace
+      - apiGroups: ["batch"]
+        resources: ["jobs"]
+        verbs: ["create", "get", "list", "watch", "delete", "patch", "update"]
+      # ConfigMap and Secret access (for agent configuration and task files)
+      - apiGroups: [""]
+        resources: ["configmaps", "secrets"]
+        verbs: ["get", "list", "create", "update", "delete", "watch", "patch"]
+      # ServiceAccount management (required for Helm operations)
+      - apiGroups: [""]
+        resources: ["serviceaccounts"]
+        verbs: ["get", "list", "create", "update", "delete", "patch"]
+      # Service management (required for Helm operations)
+      - apiGroups: [""]
+        resources: ["services"]
+        verbs: ["get", "list", "create", "update", "delete", "patch"]
+      # Pod monitoring
+      - apiGroups: [""]
+        resources: ["pods", "pods/log"]
+        verbs: ["get", "list", "watch"]
+      # PVC management for agent workspaces
+      - apiGroups: [""]
+        resources: ["persistentvolumeclaims"]
+        verbs: ["create", "get", "list", "delete"]
+      # Events for debugging
+      - apiGroups: [""]
+        resources: ["events"]
+        verbs: ["get", "list", "watch"]
+
+  # Workflow RBAC (for Argo Workflow execution)
+  workflow:
+    # Workflows need cluster scope to manage resources across namespaces
+    namespaced: false
+    rules:
+      # Workflow execution and management
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflowtemplates", "clusterworkflowtemplates"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflows"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      # Pod management for workflow steps
+      - apiGroups: [""]
+        resources: ["pods", "pods/log", "pods/exec"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      # ConfigMap and Secret access
+      - apiGroups: [""]
+        resources: ["configmaps", "secrets"]
+        verbs: ["get", "list", "watch"]
+      # PVC management for workspaces
+      - apiGroups: [""]
+        resources: ["persistentvolumeclaims"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      # Events for logging
+      - apiGroups: [""]
+        resources: ["events"]
+        verbs: ["create", "patch"]
+      # Workflow task results (required for Argo Workflows)
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflowtaskresults"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      # Orchestrator CRDs (for creating DocsRun/CodeRun from workflows)
+      - apiGroups: ["agents.platform"]
+        resources: ["docsruns", "coderuns"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # Workflow Submitter RBAC (for orchestrator to submit workflows)
+  submitter:
+    # Submitter needs cluster scope to submit workflows across namespaces
+    namespaced: false
+    rules:
+      # Submit workflows from templates
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflows"]
+        verbs: ["create", "get", "list", "watch", "update", "patch"]
+      # Access templates
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflowtemplates", "clusterworkflowtemplates"]
+        verbs: ["get", "list"]
+      # Monitor workflow status
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflows"]
+        verbs: ["get", "list", "watch"]
+
+# Health checks
+healthCheck:
+  enabled: true
+  path: "/health"
+  port: 8080
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 60
+    timeoutSeconds: 1
+    successThreshold: 1
+    failureThreshold: 3
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    timeoutSeconds: 1
+    successThreshold: 1
+    failureThreshold: 3

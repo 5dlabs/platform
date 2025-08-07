@@ -1,0 +1,203 @@
+{{- if .Values.argo.enabled }}
+---
+# Argo Workflow Template for Project Intake
+# This template processes new project PRDs and generates TaskMaster tasks
+
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: project-intake
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: project-intake
+spec:
+  arguments:
+    parameters:
+      - name: configmap-name
+        description: "Name of the ConfigMap containing intake files"
+      - name: project-name
+        description: "Project name (auto-detected if not provided)"
+        value: ""
+      - name: repository-url
+        description: "Target repository for the generated project"
+        value: "{{ .Values.agents.morgan.defaultRepository | default "https://github.com/5dlabs/projects" }}"
+      - name: source-branch
+        description: "Source branch to work from"
+        value: "main"
+      - name: github-app
+        description: "GitHub App to use for authentication"
+        value: "{{ .Values.agents.morgan.githubApp | default "5DLabs-Morgan" }}"
+      - name: model
+        description: "AI model to use for task generation"
+        value: "{{ .Values.agents.morgan.defaultModel | default "claude-opus-4-20250514" }}"
+      - name: num-tasks
+        description: "Target number of tasks to generate"
+        value: "50"
+      - name: expand-tasks
+        description: "Whether to expand tasks with subtasks"
+        value: "true"
+      - name: analyze-complexity
+        description: "Whether to analyze task complexity"
+        value: "true"
+
+  # Service account for workflow execution
+  serviceAccountName: argo-workflow
+  
+  # Workflow timeout (2 hours for intake processing)
+  activeDeadlineSeconds: 7200
+  
+  # Main workflow entrypoint
+  entrypoint: intake-main
+  
+  templates:
+    # Main intake execution flow
+    - name: intake-main
+      steps:
+      - - name: generate-intake-config
+          template: generate-intake-config
+          arguments:
+            parameters:
+            - name: configmap-name
+              value: "{{`{{workflow.parameters.configmap-name}}`}}"
+            - name: project-name
+              value: "{{`{{workflow.parameters.project-name}}`}}"
+            - name: repository-url
+              value: "{{`{{workflow.parameters.repository-url}}`}}"
+            - name: github-app
+              value: "{{`{{workflow.parameters.github-app}}`}}"
+            - name: model
+              value: "{{`{{workflow.parameters.model}}`}}"
+            - name: num-tasks
+              value: "{{`{{workflow.parameters.num-tasks}}`}}"
+            - name: expand-tasks
+              value: "{{`{{workflow.parameters.expand-tasks}}`}}"
+            - name: analyze-complexity
+              value: "{{`{{workflow.parameters.analyze-complexity}}`}}"
+
+      - - name: run-intake
+          template: intake-container
+          arguments:
+            parameters:
+            - name: configmap-name
+              value: "{{`{{steps.generate-intake-config.outputs.parameters.configmap-name}}`}}"
+
+      - - name: cleanup-config
+          template: cleanup-intake-config
+          arguments:
+            parameters:
+            - name: configmap-name
+              value: "{{`{{steps.generate-intake-config.outputs.parameters.configmap-name}}`}}"
+
+    # Generate intake configuration
+    - name: generate-intake-config
+      inputs:
+        parameters:
+        - name: configmap-name
+        - name: project-name
+        - name: repository-url
+        - name: github-app
+        - name: model
+        - name: num-tasks
+        - name: expand-tasks
+        - name: analyze-complexity
+      outputs:
+        parameters:
+        - name: configmap-name
+          valueFrom:
+            path: /tmp/configmap-name
+      script:
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+        command: ["/bin/sh"]
+        source: |
+          #!/bin/sh
+          set -e
+          
+          # ConfigMap already created by MCP server, just pass it through
+          echo "Using ConfigMap: {{`{{inputs.parameters.configmap-name}}`}}"
+          
+          # Output the ConfigMap name for the next step
+          echo "{{`{{inputs.parameters.configmap-name}}`}}" > /tmp/configmap-name
+          echo "ConfigMap created successfully"
+
+    # Run the intake container
+    - name: intake-container
+      inputs:
+        parameters:
+        - name: configmap-name
+      container:
+        image: {{ .Values.agent.image.repository }}:{{ .Values.agent.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.agent.image.pullPolicy | default "Always" }}
+        command: ["/bin/bash"]
+        args: ["/claude-templates/intake_intake.sh"]
+        workingDir: /workspace
+        volumeMounts:
+          - name: intake-files
+            mountPath: /intake-files
+            readOnly: true
+          - name: claude-templates
+            mountPath: /claude-templates
+            readOnly: true
+          - name: agents-config
+            mountPath: /config/agents
+            readOnly: true
+        env:
+          - name: ANTHROPIC_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: agent-platform-secrets
+                key: ANTHROPIC_API_KEY
+          # GitHub App credentials - use the standardized secret name
+          # All GitHub App secrets follow the pattern: github-app-{normalized-name}
+          - name: GITHUB_APP_ID
+            valueFrom:
+              secretKeyRef:
+                name: github-app-5dlabs-morgan
+                key: app-id
+                optional: true
+          - name: GITHUB_APP_PRIVATE_KEY
+            valueFrom:
+              secretKeyRef:
+                name: github-app-5dlabs-morgan
+                key: private-key
+                optional: true
+          - name: GITHUB_APP_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                name: github-app-5dlabs-morgan
+                key: client-id
+                optional: true
+          - name: GITHUB_APP_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: github-app-5dlabs-morgan
+                key: client-secret
+                optional: true
+      volumes:
+        - name: intake-files
+          configMap:
+            name: "{{`{{inputs.parameters.configmap-name}}`}}"
+        - name: claude-templates
+          configMap:
+            name: {{ include "controller.fullname" . }}-claude-templates
+        - name: agents-config
+          configMap:
+            name: {{ include "controller.fullname" . }}-agents
+
+    # Cleanup the temporary ConfigMap
+    - name: cleanup-intake-config
+      inputs:
+        parameters:
+        - name: configmap-name
+      script:
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+        command: ["/bin/sh"]
+        source: |
+          #!/bin/sh
+          echo "Cleaning up ConfigMap: {{`{{inputs.parameters.configmap-name}}`}}"
+          kubectl delete configmap "{{`{{inputs.parameters.configmap-name}}`}}" \
+            -n {{ .Values.argo.namespace | default "argo" }} \
+            --ignore-not-found=true
+          echo "Cleanup complete"
+
+{{- end }}

@@ -1,0 +1,128 @@
+# Claude Code Project Memory
+
+## Project Information
+- **Repository**: {{repository_url}}
+- **Source Branch**: {{docs_branch}}
+- **GitHub App**: {{github_app}}
+- **Working Directory**: {{working_directory}}
+- **Implementation Target**: task {{task_id}}
+
+## Tool Capabilities
+
+See @mcp-tools.md for your available tools and usage guidelines
+
+## Project Guidelines & Standards
+
+See @coding-guidelines.md for project coding standards and best practices
+See @github-guidelines.md for git workflow and commit message standards
+
+## Current Task Documentation
+
+{{#if task_id}}
+**Your current task ({{task_id}}) documentation:**
+- See @task/task.md for requirements and description
+- See @task/acceptance-criteria.md for success criteria
+- See @task/architecture.md for technical approach and guidance
+{{else}}
+**General project documentation:**
+- See @README.md for project overview and setup instructions
+- See @.taskmaster/docs/architecture.md for system design patterns
+- See @.taskmaster/docs/prd.txt for product requirements
+{{/if}}
+
+## System Architecture & Context
+
+See @.taskmaster/docs/architecture.md for system design patterns and architectural decisions
+{{#if docsRepositoryUrl}}See @.taskmaster/docs/prd.txt for complete product requirements{{/if}}
+
+## Implementation Workflow
+
+{{#if task_id}}
+### Current Task Process
+1. **Understand**: Read @task/task.md for requirements
+2. **Plan**: Review @task/architecture.md for technical approach
+3. **Validate**: Check @task/acceptance-criteria.md for success criteria
+4. **Code**: Follow patterns in @coding-guidelines.md
+5. **Commit**: Use standards from @github-guidelines.md
+6. **Test**: Verify all acceptance criteria are met
+
+### Task Context
+- **Task ID**: {{task_id}}
+- **Repository**: {{repository_url}}
+- **Branch**: {{docs_branch}}
+- **Working Directory**: {{working_directory}}
+{{else}}
+### General Development Process
+1. **Explore**: Understand existing codebase structure
+2. **Plan**: Follow established patterns and conventions
+3. **Implement**: Adhere to @coding-guidelines.md standards
+4. **Test**: Ensure changes meet project quality standards
+5. **Commit**: Follow @github-guidelines.md workflow
+{{/if}}
+
+## Quick Command Reference
+
+### Testing & Quality
+```bash
+# Run tests (check package.json/Cargo.toml for project-specific commands)
+npm test || cargo test
+
+# Linting and formatting
+npm run lint || cargo clippy
+npm run format || cargo fmt
+
+# Build verification
+npm run build || cargo build
+```
+
+### Git Workflow
+```bash
+{{#if task_id}}
+# Commit with task-specific message (see @github-guidelines.md for details)
+git commit -m "feat(task-{{task_id}}): implement [brief description]
+
+- [specific changes made]
+- [tests added/updated]
+- [meets acceptance criteria: X, Y, Z]"
+{{else}}
+# Standard commit message (see @github-guidelines.md for format)
+git commit -m "feat: implement [brief description]"
+{{/if}}
+```
+
+## Pull Request Requirements
+
+**CRITICAL**: After completing implementation, create `PR_DESCRIPTION.md` in the working directory root with:
+
+1. Concise implementation summary (2-3 sentences)
+2. Key changes made (bullet points)
+3. Important reviewer notes
+4. Testing recommendations
+
+This file enables automatic pull request creation.
+
+## Development Tools & Patterns
+
+### Claude Code Integration
+- Use `LS` and `Glob` to explore codebase structure
+- Use `Read` to examine existing code patterns
+- Use `Grep` to find similar implementations
+- Use `Edit` for targeted changes, `MultiEdit` for related changes
+- Validate with `Bash` commands after each change
+
+### Implementation Guidelines
+{{#if task_id}}
+- Focus on current task requirements in `task/` directory
+- Follow architectural guidance provided in @task/architecture.md
+- Ensure all acceptance criteria are met before completion
+- Use established patterns from @coding-guidelines.md
+{{else}}
+- Explore existing codebase structure before making changes
+- Follow established patterns and conventions
+- Ensure changes align with project architecture
+- Maintain backward compatibility unless explicitly changing interfaces
+{{/if}}
+
+---
+
+*All referenced files (@filename) are automatically imported into Claude's context. For detailed information on any topic, refer to the specific imported files above.*

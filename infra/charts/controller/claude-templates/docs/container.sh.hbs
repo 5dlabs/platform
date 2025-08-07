@@ -1,0 +1,591 @@
+#!/bin/sh
+
+echo 'Starting documentation generation...'
+
+# Disable interactive Git prompts globally
+export GIT_TERMINAL_PROMPT=0
+export GIT_ASKPASS=/bin/true
+export SSH_ASKPASS=/bin/true
+
+# Repository URL
+REPO_URL="{{repository_url}}"
+
+# GitHub App authentication is configured via environment variables
+echo "Using GitHub App authentication (SSH not required)"
+
+# Function to generate fresh GitHub App token (defined globally for reuse)
+generate_github_token() {
+    echo "Generating fresh GitHub App token..."
+    
+    # Check if credentials are available
+    if [ -z "$GITHUB_APP_PRIVATE_KEY" ] || [ -z "$GITHUB_APP_ID" ]; then
+        echo "❌ GITHUB_APP_PRIVATE_KEY or GITHUB_APP_ID not found"
+        return 1
+    fi
+    
+    # Create temporary private key file from environment variable
+    TEMP_KEY_FILE="/tmp/github-app-key.pem"
+    echo "$GITHUB_APP_PRIVATE_KEY" > "$TEMP_KEY_FILE"
+    chmod 600 "$TEMP_KEY_FILE"
+    
+    echo "Using private key from environment variable"
+    
+    # Generate JWT token for GitHub App (fixed JWT generation for Linux containers)
+    # JWT header
+    JWT_HEADER=$(printf '{"alg":"RS256","typ":"JWT"}' | base64 -w 0 | tr '+/' '-_' | tr -d '=')
+    
+    # JWT payload with current time and expiration (10 minutes)
+    NOW=$(date +%s)
+    EXP=$((NOW + 600))
+    JWT_PAYLOAD=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' "$NOW" "$EXP" "$GITHUB_APP_ID" | base64 -w 0 | tr '+/' '-_' | tr -d '=')
+    
+    # Sign the JWT
+    JWT_SIGNATURE=$(printf '%s.%s' "$JWT_HEADER" "$JWT_PAYLOAD" | openssl dgst -sha256 -sign "$TEMP_KEY_FILE" -binary | base64 -w 0 | tr '+/' '-_' | tr -d '=')
+    JWT_TOKEN="$JWT_HEADER.$JWT_PAYLOAD.$JWT_SIGNATURE"
+    
+    if [ -z "$JWT_TOKEN" ]; then
+        echo "❌ Failed to generate JWT token"
+        exit 1
+    fi
+    
+    # Get installation ID for the repository
+    REPO_OWNER=$(echo "{{repository_url}}" | sed -E 's|https://github.com/([^/]+)/.*|\1|')
+    REPO_NAME=$(echo "{{repository_url}}" | sed -E 's|https://github.com/[^/]+/([^/]+)(\.git)?|\1|')
+    
+    echo "Getting installation ID for $REPO_OWNER/$REPO_NAME..."
+    
+    # Get the installation access token
+    INSTALLATION_RESPONSE=$(curl -s -H "Authorization: Bearer $JWT_TOKEN" \
+        -H "Accept: application/vnd.github+json" \
+        "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/installation")
+    
+    INSTALLATION_ID=$(echo "$INSTALLATION_RESPONSE" | jq -r '.id')
+    
+    if [ "$INSTALLATION_ID" = "null" ] || [ -z "$INSTALLATION_ID" ]; then
+        echo "❌ Failed to get installation ID for repository"
+        echo "Response: $INSTALLATION_RESPONSE"
+        rm -f "$TEMP_KEY_FILE"
+        exit 1
+    fi
+    
+    echo "Installation ID: $INSTALLATION_ID"
+    
+    # Export for use by hooks
+    export INSTALLATION_ID
+    
+    # Get installation access token
+    TOKEN_RESPONSE=$(curl -s -X POST \
+        -H "Authorization: Bearer $JWT_TOKEN" \
+        -H "Accept: application/vnd.github+json" \
+        "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens")
+    
+    GITHUB_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token')
+    
+    if [ "$GITHUB_TOKEN" = "null" ] || [ -z "$GITHUB_TOKEN" ]; then
+        echo "❌ Failed to get installation access token"
+        echo "Response: $TOKEN_RESPONSE"
+        rm -f "$TEMP_KEY_FILE"
+        exit 1
+    fi
+    
+    # Clean up temporary key file
+    rm -f "$TEMP_KEY_FILE"
+    
+    # Export the token for git to use
+    export GITHUB_TOKEN
+    
+    # Store token generation time for refresh checks
+    export TOKEN_GENERATED_AT=$(date +%s)
+    
+    # Configure git to use the token (use --replace-all to handle multiple existing helpers)
+    git config --global --replace-all credential.helper store
+    echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+    
+    # Also authenticate gh CLI with the token
+    echo "$GITHUB_TOKEN" | gh auth login --with-token
+    
+    echo "✓ GitHub App authenticated successfully"
+}
+
+# Function to check if token needs refresh (call before git operations)
+refresh_token_if_needed() {
+    if [ -z "$TOKEN_GENERATED_AT" ]; then
+        echo "⚠️ No token timestamp found, refreshing token..."
+        generate_github_token
+        return
+    fi
+    
+    NOW=$(date +%s)
+    TOKEN_AGE=$((NOW - TOKEN_GENERATED_AT))
+    # Refresh if token is older than 50 minutes (GitHub tokens last 1 hour, refresh at 50 min to be safe)
+    if [ $TOKEN_AGE -gt 3000 ]; then
+        echo "🔄 Token is $(($TOKEN_AGE / 60)) minutes old, refreshing..."
+        generate_github_token
+    fi
+}
+
+# Authenticate with GitHub App
+if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ]; then
+    # Initial authentication
+    generate_github_token
+    
+    # Validate authentication by testing actual GitHub operations we'll need
+    echo "🔍 Validating GitHub authentication with actual operations..."
+    REPO_OWNER=$(echo "$REPO_URL" | sed 's|https://github.com/||' | sed 's|/.*||')
+    REPO_NAME=$(echo "$REPO_URL" | sed 's|.*/||')
+    
+    # Test 1: Can we access the repository?
+    if gh api "repos/$REPO_OWNER/$REPO_NAME" > /tmp/repo_test.json 2>&1; then
+        echo "✅ Repository access confirmed"
+    else
+        echo "❌ Cannot access repository $REPO_OWNER/$REPO_NAME"
+        echo "Error: $(cat /tmp/repo_test.json)"
+        exit 1
+    fi
+    
+    # Test 2: Can we list branches (needed for PR creation)?
+    if gh api "repos/$REPO_OWNER/$REPO_NAME/branches" > /tmp/branches_test.json 2>&1; then
+        echo "✅ Can list branches"
+    else
+        echo "❌ Cannot list branches"
+        echo "Error: $(cat /tmp/branches_test.json)"
+        exit 1
+    fi
+    
+    # Test 3: Can we get app info (GitHub Apps can't access user endpoint)?
+    if gh api app > /tmp/app_test.json 2>&1; then
+        APP_NAME=$(jq -r '.name' /tmp/app_test.json 2>/dev/null || echo "unknown")
+        echo "✅ GitHub App API access confirmed: $APP_NAME"
+    else
+        echo "✅ App endpoint not accessible (normal for GitHub Apps) - using repo access as confirmation"
+    fi
+    
+    echo "✅ All GitHub authentication tests passed - proceeding with confidence"
+    
+else
+    echo "❌ GITHUB_APP_PRIVATE_KEY or GITHUB_APP_ID not found"
+    exit 1
+fi
+
+
+# Git configuration with proper GitHub App attribution
+git config --global --add safe.directory /workspace
+
+# Set GitHub App attribution based on the app name
+GITHUB_APP="{{github_app}}"
+case "$GITHUB_APP" in
+    "morgan-5dlabs")
+        GIT_AUTHOR_NAME="Morgan Agent (Claude Code)"
+        GIT_AUTHOR_EMAIL="224488090+morgan-5dlabs[bot]@users.noreply.github.com"
+        ;;
+    "5DLabs-Blaze")
+        GIT_AUTHOR_NAME="Blaze Agent (Claude Code)"
+        GIT_AUTHOR_EMAIL="224516107+5DLabs-Blaze[bot]@users.noreply.github.com"
+        ;;
+    "5DLabs-Rex")
+        GIT_AUTHOR_NAME="Rex Agent (Claude Code)"
+        GIT_AUTHOR_EMAIL="224516160+5DLabs-Rex[bot]@users.noreply.github.com"
+        ;;
+    *)
+        # Fallback for unknown apps
+        GIT_AUTHOR_NAME="AI Agent (Claude Code)"
+        GIT_AUTHOR_EMAIL="$GITHUB_APP@users.noreply.github.com"
+        ;;
+esac
+
+# Configure git with proper GitHub App attribution
+git config --global user.name "$GIT_AUTHOR_NAME"
+git config --global user.email "$GIT_AUTHOR_EMAIL"
+
+# Set environment variables for Claude Code to use
+export GIT_AUTHOR_NAME="$GIT_AUTHOR_NAME"
+export GIT_AUTHOR_EMAIL="$GIT_AUTHOR_EMAIL"
+export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
+export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
+
+echo "✓ Git configured"
+
+# Repository setup
+REPO_BRANCH="{{source_branch}}"
+echo "Repository: $REPO_URL"
+echo "Branch: $REPO_BRANCH"
+
+if [ -d "/workspace/.git" ]; then
+  echo "Repository exists, updating..."
+  cd /workspace
+  git remote set-url origin "$REPO_URL"
+  git fetch origin
+  git checkout "$REPO_BRANCH"
+  git pull origin "$REPO_BRANCH"
+else
+  echo "Setting up repository..."
+  # Clone to temp directory first, then move contents
+  TEMP_CLONE_DIR="/tmp/repo-clone"
+  rm -rf "$TEMP_CLONE_DIR"
+
+  if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$TEMP_CLONE_DIR"; then
+    echo "❌ Failed to clone repository"
+    exit 1
+  fi
+
+  # Move repository contents to workspace
+  mv "$TEMP_CLONE_DIR"/* /workspace/ 2>/dev/null || true
+  mv "$TEMP_CLONE_DIR"/.[^.]* /workspace/ 2>/dev/null || true
+  rm -rf "$TEMP_CLONE_DIR"
+  cd /workspace
+fi
+
+echo "✓ Repository ready"
+
+# Working directory setup
+WORKING_DIR="{{working_directory}}"
+if [ -n "$WORKING_DIR" ] && [ "$WORKING_DIR" != "." ]; then
+  CLAUDE_WORK_DIR="/workspace/$WORKING_DIR"
+  cd "$CLAUDE_WORK_DIR" || exit 1
+  echo "✓ Working directory: $CLAUDE_WORK_DIR"
+else
+  CLAUDE_WORK_DIR="/workspace"
+  echo "✓ Working directory: $CLAUDE_WORK_DIR"
+fi
+
+# Copy ConfigMap files
+echo "Setting up ConfigMap files..."
+if [ -d "/task-files" ]; then
+  # Copy markdown files
+  for md_file in /task-files/*.md; do
+    if [ -f "$md_file" ]; then
+      basename_file=$(basename "$md_file")
+      if [ "$basename_file" = "claude.md" ]; then
+        cp -f "$md_file" "$CLAUDE_WORK_DIR/CLAUDE.md"
+      else
+        cp -f "$md_file" "$CLAUDE_WORK_DIR/"
+      fi
+      echo "✓ Copied $basename_file"
+    fi
+  done
+
+  # Verify enterprise settings
+  if [ -f "/etc/claude-code/managed-settings.json" ]; then
+    echo "✓ Enterprise settings verified"
+    if ! jq empty /etc/claude-code/managed-settings.json 2>/dev/null; then
+      echo "❌ Invalid enterprise settings JSON"
+      exit 1
+    fi
+  else
+    echo "❌ Enterprise settings not found"
+    exit 1
+  fi
+
+  # Copy hook scripts (controller automatically includes any docs_hooks_* files)
+  for hook_file in /task-files/hooks-*.sh; do
+    if [ -f "$hook_file" ]; then
+      hook_name=$(basename "$hook_file" | sed 's/^hooks-//')
+      cp "$hook_file" "$CLAUDE_WORK_DIR/$hook_name"
+      chmod +x "$CLAUDE_WORK_DIR/$hook_name"
+      echo "✓ Copied hook: $hook_name"
+    fi
+  done
+
+else
+  echo "❌ ConfigMap not mounted at /task-files"
+  exit 1
+fi
+
+# Validate workspace
+echo "Validating workspace..."
+REQUIRED_FILES="CLAUDE.md"
+for file in $REQUIRED_FILES; do
+  if [ ! -f "$CLAUDE_WORK_DIR/$file" ]; then
+    echo "❌ Missing required file: $file"
+    exit 1
+  fi
+done
+
+# Check for .taskmaster directory
+if [ ! -d "$CLAUDE_WORK_DIR/.taskmaster" ]; then
+  echo "❌ .taskmaster directory not found"
+  exit 1
+fi
+
+# Ensure docs directory exists
+mkdir -p "$CLAUDE_WORK_DIR/.taskmaster/docs"
+
+# Handle task files - support both JSON and individual file formats
+echo "Setting up task files..."
+if [ -f "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" ]; then
+  echo "📋 Found tasks.json, generating individual task files..."
+  
+  # Use jq to extract tasks and create individual files (handle null values safely)
+  jq -r '.tasks[]? | select(.id != null) | "\(.id // "")|\(.title // "No Title")|\(.description // "")|\(.details // "")|\(.testStrategy // "")"' \
+    "$CLAUDE_WORK_DIR/.taskmaster/tasks/tasks.json" | while IFS='|' read -r task_id title description details test_strategy; do
+    
+    if [ -n "$task_id" ] && [ "$task_id" != "null" ]; then
+      task_dir="$CLAUDE_WORK_DIR/.taskmaster/docs/task-$task_id"
+      mkdir -p "$task_dir"
+      
+      # Create task.txt with formatted content (source file)
+      cat > "$task_dir/task.txt" << EOF
+# Task $task_id: $title
+
+## Description
+$description
+
+## Implementation Details
+$details
+
+## Test Strategy
+$test_strategy
+EOF
+      
+      echo "✓ Generated docs/task-$task_id/task.txt (source file for Claude)"
+    fi
+  done
+elif [ -d "$CLAUDE_WORK_DIR/.taskmaster/tasks" ] && [ "$(ls -A "$CLAUDE_WORK_DIR/.taskmaster/tasks" 2>/dev/null)" ]; then
+  echo "📋 Found individual task files, copying to docs directory..."
+  
+  # Copy individual task files from tasks/ to docs/ directory
+  for task_dir in "$CLAUDE_WORK_DIR/.taskmaster/tasks"/task-*; do
+    if [ -d "$task_dir" ]; then
+      task_name=$(basename "$task_dir")
+      target_dir="$CLAUDE_WORK_DIR/.taskmaster/docs/$task_name"
+      mkdir -p "$target_dir"
+      cp -r "$task_dir"/* "$target_dir/"
+      echo "✓ Copied $task_name to docs directory"
+    fi
+  done
+else
+  echo "❌ No task files found - expected either:"
+  echo "  - tasks.json at .taskmaster/tasks/tasks.json"
+  echo "  - Individual task directories at .taskmaster/tasks/task-*/"
+  exit 1
+fi
+
+# Verify we have task files to work with
+if [ ! -d "$CLAUDE_WORK_DIR/.taskmaster/docs" ] || [ -z "$(ls -A "$CLAUDE_WORK_DIR/.taskmaster/docs" 2>/dev/null)" ]; then
+  echo "❌ No task files available in .taskmaster/docs directory"
+  exit 1
+fi
+
+echo "✓ Workspace validated"
+
+# Environment setup
+export SERVICE_NAME="{{service_name}}"
+export SOURCE_BRANCH="{{source_branch}}"
+export WORKING_DIR="{{working_directory}}"
+export GITHUB_USER="{{github_app}}"
+export GITHUB_APP="{{github_app}}"
+
+# Start background token refresh process (every 45 minutes to stay ahead of 1-hour expiry)
+(
+    while true; do
+        sleep 2700  # 45 minutes
+        echo "[Background] Checking if token needs refresh..."
+        if [ -n "$TOKEN_GENERATED_AT" ]; then
+            NOW=$(date +%s)
+            TOKEN_AGE=$((NOW - TOKEN_GENERATED_AT))
+            echo "[Background] Token age: $(($TOKEN_AGE / 60)) minutes"
+            if [ $TOKEN_AGE -gt 2700 ]; then
+                echo "[Background] Refreshing GitHub token proactively..."
+                if [ -n "$GITHUB_APP_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ]; then
+                    generate_github_token
+                fi
+            fi
+        fi
+    done
+) &
+TOKEN_REFRESH_PID=$!
+echo "✓ Started background token refresh process (PID: $TOKEN_REFRESH_PID)"
+
+# Ensure we kill the background process on exit
+trap "kill $TOKEN_REFRESH_PID 2>/dev/null || true" EXIT
+
+# Claude execution
+echo "Starting Claude execution..."
+
+# Check if system prompt file exists and add to command if available
+CLAUDE_CMD="claude -p --output-format stream-json --verbose"
+
+# Determine the agent key from the GitHub App name
+AGENT_KEY=""
+case "{{github_app}}" in
+    "5DLabs-Morgan")
+        AGENT_KEY="morgan"
+        ;;
+    "5DLabs-Rex")
+        AGENT_KEY="rex"
+        ;;
+    "5DLabs-Blaze")
+        AGENT_KEY="blaze"
+        ;;
+    "5DLabs-Cipher")
+        AGENT_KEY="cipher"
+        ;;
+    *)
+        echo "⚠️ Unknown GitHub App: {{github_app}}"
+        ;;
+esac
+
+# Look for agent-specific system prompt file
+if [ -n "$AGENT_KEY" ] && [ -f "/task-files/agents_${AGENT_KEY}_system-prompt.md" ]; then
+    echo "✓ Found system prompt file for agent $AGENT_KEY, adding to Claude command"
+    CLAUDE_CMD="$CLAUDE_CMD --system-prompt /task-files/agents_${AGENT_KEY}_system-prompt.md"
+else
+    echo "ℹ️ No system prompt file found for agent, using defaults"
+fi
+
+# Model is set via settings.json template, not CLI flag
+
+# Safe mode toggle for debugging (prevents token consumption)
+SAFE_MODE="false"  # Set to "false" for full docs generation
+
+if [ "$SAFE_MODE" = "true" ]; then
+    echo "🛡️ SAFE MODE ENABLED - Running simple test instead of full docs generation"
+    echo "What time is it? Please answer this simple question and exit immediately." | $CLAUDE_CMD
+    CLAUDE_EXIT_CODE=$?
+    echo "Safe mode test completed with exit code: $CLAUDE_EXIT_CODE"
+    
+    # Exit successfully to prevent PR creation in safe mode
+    echo "✅ Safe mode test complete, exiting without changes"
+    exit 0
+else
+    if [ -f "prompt.md" ]; then
+        $CLAUDE_CMD "$(cat prompt.md)"
+        CLAUDE_EXIT_CODE=$?
+        echo "Claude completed with exit code: $CLAUDE_EXIT_CODE"
+    else
+        echo "❌ No prompt.md found"
+        exit 1
+    fi
+fi
+
+# PR creation
+echo "Creating pull request..."
+
+# Ensure we're in the correct working directory for git operations
+cd /workspace/{{working_directory}}
+
+# Check for documentation changes (including untracked files)
+echo "Checking for documentation changes..."
+echo "Current directory: $(pwd)"
+
+# Check for any changes in .taskmaster directory
+MODIFIED_DOCS=$(git diff HEAD -- .taskmaster/ 2>/dev/null | wc -l)
+STAGED_DOCS=$(git diff --cached HEAD -- .taskmaster/ 2>/dev/null | wc -l)
+UNTRACKED_DOCS=$(git ls-files --others --exclude-standard .taskmaster/ 2>/dev/null | wc -l)
+
+echo "Modified files: $MODIFIED_DOCS lines of diff"
+echo "Staged files: $STAGED_DOCS lines of diff"
+echo "Untracked files: $UNTRACKED_DOCS files"
+
+if [ "$MODIFIED_DOCS" -eq 0 ] && [ "$STAGED_DOCS" -eq 0 ] && [ "$UNTRACKED_DOCS" -eq 0 ]; then
+    echo "No documentation changes found in .taskmaster/"
+    echo "Checking if .taskmaster exists:"
+    ls -la .taskmaster/ 2>/dev/null || echo ".taskmaster directory not found"
+    exit 0
+fi
+
+echo "✓ Documentation changes detected, proceeding with PR creation..."
+
+# Check if we're already on an auto-save branch from the hook
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [[ "$CURRENT_BRANCH" == docs/auto-save-* ]]; then
+    echo "✓ Already on auto-save branch from hook: $CURRENT_BRANCH"
+    PR_BRANCH="$CURRENT_BRANCH"
+    SOURCE_BRANCH="main"  # Assume we branched from main originally
+else
+    # Create new PR branch if not already on one
+    SOURCE_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+    RANDOM_ID=$(date +%s | tail -c 6)
+    PR_BRANCH="docs/{{#if task_id}}task-{{task_id}}{{else}}auto-gen{{/if}}-${TIMESTAMP}-${RANDOM_ID}"
+    
+    echo "Creating branch: $PR_BRANCH"
+    if ! git checkout -b "$PR_BRANCH"; then
+        echo "❌ Failed to create branch"
+        exit 1
+    fi
+fi
+
+echo "Staging all .taskmaster changes..."
+git add .taskmaster/
+
+echo "Checking for uncommitted changes..."
+STAGED_FILES=$(git status --porcelain | grep "^[AM]" | wc -l)
+
+if [ "$STAGED_FILES" -gt 0 ]; then
+    echo "Showing what will be committed:"
+    git status --porcelain
+    
+    echo "Committing changes..."
+    if ! git commit -m "docs: auto-generate Task Master documentation{{#if task_id}} for task {{task_id}}{{/if}}"; then
+        echo "❌ Failed to commit changes"
+        echo "Git status:"
+        git status
+        exit 1
+    fi
+else
+    echo "✓ All changes already committed by auto-save hook"
+fi
+
+# Check if we need to push (there might be unpushed commits from hook)
+if git rev-list --count origin/"$PR_BRANCH"..HEAD 2>/dev/null | grep -q '^0$'; then
+    echo "✓ Branch already up to date with origin"
+else
+    echo "Pushing branch..."
+    if ! git push -u origin "$PR_BRANCH"; then
+        echo "❌ Failed to push branch"
+        echo "Retrying with verbose output..."
+        GIT_CURL_VERBOSE=1 git push -u origin "$PR_BRANCH" 2>&1
+        exit 1
+    fi
+fi
+
+echo "✓ Branch pushed successfully"
+
+# Create PR
+if command -v gh >/dev/null 2>&1; then
+    # GitHub CLI should already be authenticated from the beginning of the script
+    
+    PR_TITLE="docs: auto-generate Task Master documentation{{#if task_id}} for task {{task_id}}{{/if}}"
+    PR_BODY="Auto-generated Task Master documentation by orchestrator container script.
+
+**Working Directory:** {{working_dir}}
+**Branch:** \`$PR_BRANCH\` → \`$SOURCE_BRANCH\`
+**Timestamp:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+{{#if task_id}}**Target Task:** {{task_id}}{{/if}}
+
+🤖 Auto-generated by Container Script"
+
+    # Refresh GitHub token if needed before PR creation
+    refresh_token_if_needed
+
+    # Retry PR creation up to 3 times for transient failures
+    PR_CREATED=false
+    for attempt in 1 2 3; do
+        echo "Creating PR (attempt $attempt/3)..."
+        if gh pr create --title "$PR_TITLE" --body "$PR_BODY" --base "$SOURCE_BRANCH" --head "$PR_BRANCH"; then
+            echo "✓ Pull request created successfully"
+            PR_CREATED=true
+            break
+        else
+            echo "❌ PR creation attempt $attempt failed"
+            if [ $attempt -lt 3 ]; then
+                echo "⏳ Waiting 5 seconds before retry..."
+                sleep 5
+            fi
+        fi
+    done
+    
+    if [ "$PR_CREATED" = false ]; then
+        echo "❌ Failed to create pull request after 3 attempts"
+        echo "⚠️ Branch has been pushed, but PR creation failed"
+        # Extract owner/repo from repository URL
+        REPO_PATH=$(echo "{{repository_url}}" | sed -E 's|https://github.com/||' | sed 's|\.git$||')
+        echo "💡 You can manually create a PR at: https://github.com/$REPO_PATH/pull/new/$PR_BRANCH"
+        exit 1
+    fi
+else
+    echo "⚠️ GitHub CLI not available - create PR manually"
+fi
+
+echo "Documentation generation completed successfully!"

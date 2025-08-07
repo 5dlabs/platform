@@ -1,0 +1,42 @@
+---
+# Argo CD Application for Victoria Metrics
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: victoria-metrics
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: victoria-metrics
+    app.kubernetes.io/part-of: platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  source:
+    repoURL: https://victoriametrics.github.io/helm-charts/
+    targetRevision: 0.22.0
+    chart: victoria-metrics-single
+    helm:
+      values: |
+        # Victoria Metrics configuration
+        server:
+          persistentVolume:
+            enabled: true
+            storageClass: local-path
+          # Match Victoria Logs working configuration
+          podSecurityContext:
+            fsGroup: 2000
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: telemetry
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+      - Replace=true

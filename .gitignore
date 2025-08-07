@@ -65,7 +65,7 @@ Chart.lock
 
 # Claude configuration files
 **/CLAUDE.md
-orchestrator/target/
+controller/target/
 
 # Agent files
 agent_*.md
@@ -73,7 +73,10 @@ agent_*.md
 # cargo-dist research
 .repos/
 
+.claude/*
+
+*.private-key.pem
+
 # Task files
 # tasks.json
 # tasks/ 
-.claude/*

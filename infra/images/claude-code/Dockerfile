@@ -69,7 +69,12 @@ RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhisto
   && touch /commandhistory/.bash_history \
   && chown -R $USERNAME /commandhistory
 
-RUN curl -fsSL https://raw.githubusercontent.com/5dlabs/toolman/main/scripts/install.sh | bash -s -- --dir /usr/local/bin
+# Install toolman client globally using installer
+RUN curl --proto '=https' --tlsv1.2 -LsSf \
+    https://github.com/5dlabs/toolman/releases/download/v2.4.4/toolman-installer.sh | \
+    TOOLMAN_NO_MODIFY_PATH=1 sh && \
+    mv ~/.cargo/bin/toolman-client /usr/local/bin/toolman
+
 # Set `DEVCONTAINER` environment variable to help with orientation
 ENV DEVCONTAINER=true
 

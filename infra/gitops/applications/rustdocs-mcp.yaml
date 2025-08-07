@@ -1,0 +1,33 @@
+---
+# Argo CD Application for Rust docs MCP Server
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rustdocs-mcp
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rustdocs-mcp
+    app.kubernetes.io/part-of: platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/5dlabs/docs
+    targetRevision: main
+    path: charts/rust-docs-mcp-server
+    helm:
+      valueFiles:
+        - values.yaml
+      values: |
+        image:
+          tag: "latest"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mcp
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

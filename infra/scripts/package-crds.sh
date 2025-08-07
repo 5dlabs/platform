@@ -4,7 +4,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CHART_DIR="${SCRIPT_DIR}/../charts/orchestrator"
+CHART_DIR="${SCRIPT_DIR}/../charts/controller"
 CRDS_DIR="${CHART_DIR}/crds"
 OUTPUT_DIR="${1:-${SCRIPT_DIR}/../dist}"
 
@@ -22,15 +22,19 @@ if [[ ! -d "${CRDS_DIR}" ]]; then
     exit 1
 fi
 
-# Check if platform-crds.yaml exists
-if [[ ! -f "${CRDS_DIR}/platform-crds.yaml" ]]; then
-    echo "❌ Error: platform-crds.yaml not found at ${CRDS_DIR}/platform-crds.yaml"
-    echo "   Please ensure the combined CRDs file exists."
+# Check if individual CRD files exist
+if [[ ! -f "${CRDS_DIR}/coderun-crd.yaml" ]] || [[ ! -f "${CRDS_DIR}/docsrun-crd.yaml" ]]; then
+    echo "❌ Error: Individual CRD files not found at ${CRDS_DIR}/"
+    echo "   Expected: coderun-crd.yaml, docsrun-crd.yaml"
     exit 1
 fi
 
-# Copy the combined CRDs file
-cp "${CRDS_DIR}/platform-crds.yaml" "${OUTPUT_DIR}/"
+# Create combined CRDs file from individual files
+echo "📦 Creating combined platform-crds.yaml from individual CRDs..."
+cat "${CRDS_DIR}/coderun-crd.yaml" > "${OUTPUT_DIR}/platform-crds.yaml"
+echo "" >> "${OUTPUT_DIR}/platform-crds.yaml"
+echo "---" >> "${OUTPUT_DIR}/platform-crds.yaml"
+cat "${CRDS_DIR}/docsrun-crd.yaml" >> "${OUTPUT_DIR}/platform-crds.yaml"
 
 # Validate the CRDs
 echo "🔍 Validating CRDs..."
@@ -65,4 +69,4 @@ echo "   - docsrun-crd.yaml (individual CRD)"
 echo "   - *.sha256 (checksums)"
 echo ""
 echo "📋 Installation command for users:"
-echo "   kubectl apply -f https://github.com/5dlabs/platform/releases/download/TAG/platform-crds.yaml"
+echo "   kubectl apply -f https://github.com/5dlabs/cto/releases/download/TAG/platform-crds.yaml"

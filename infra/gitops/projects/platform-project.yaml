@@ -1,0 +1,154 @@
+---
+# Argo CD Project for Platform Infrastructure
+# This defines the security and access policies for platform applications
+
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: platform-project
+    app.kubernetes.io/part-of: platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  # Description
+  description: Platform infrastructure project for agent platform and related services
+  
+  # Source repositories that applications in this project can deploy from
+  sourceRepos:
+    - 'https://github.com/5dlabs/cto'
+    - 'https://github.com/5dlabs/docs'
+    - 'https://github.com/5dlabs/toolman'
+    - 'https://5dlabs.github.io/cto'
+    - 'https://github.com/5dlabs/*'
+    - 'https://argoproj.github.io/argo-helm'
+    - 'https://prometheus-community.github.io/helm-charts'
+    - 'https://grafana.github.io/helm-charts'
+    - 'https://open-telemetry.github.io/opentelemetry-helm-charts'
+    - 'https://victoriametrics.github.io/helm-charts/'
+    - 'https://actions-runner-controller.github.io/actions-runner-controller'
+    - 'https://twingate.github.io/helm-charts'
+    - 'https://github.com/actions/actions-runner-controller'
+  
+  # Destinations that applications in this project can deploy to
+  destinations:
+    - namespace: agent-platform
+      server: https://kubernetes.default.svc
+    - namespace: argo
+      server: https://kubernetes.default.svc
+    - namespace: argocd
+      server: https://kubernetes.default.svc
+    - namespace: monitoring
+      server: https://kubernetes.default.svc
+    - namespace: telemetry
+      server: https://kubernetes.default.svc
+    - namespace: mcp
+      server: https://kubernetes.default.svc
+    - namespace: arc-systems
+      server: https://kubernetes.default.svc
+    - namespace: arc-runners
+      server: https://kubernetes.default.svc
+    - namespace: secret-store
+      server: https://kubernetes.default.svc
+    - namespace: external-secrets
+      server: https://kubernetes.default.svc
+    - namespace: kube-system
+      server: https://kubernetes.default.svc
+    - namespace: default
+      server: https://kubernetes.default.svc
+  
+  # Cluster resource whitelist
+  clusterResourceWhitelist:
+    - group: cert-manager.io
+      kind: '*'
+    - group: ''
+      kind: Namespace
+    - group: 'rbac.authorization.k8s.io'
+      kind: ClusterRole
+    - group: 'rbac.authorization.k8s.io'
+      kind: ClusterRoleBinding
+    - group: 'apiextensions.k8s.io'
+      kind: CustomResourceDefinition
+    - group: 'admissionregistration.k8s.io'
+      kind: MutatingWebhookConfiguration
+    - group: 'admissionregistration.k8s.io'
+      kind: ValidatingWebhookConfiguration
+    - group: 'agents.platform'
+      kind: '*'
+    - group: 'actions.github.com'
+      kind: '*'
+    - group: 'external-secrets.io'
+      kind: '*'
+  
+  # Namespace resource whitelist
+  namespaceResourceWhitelist:
+    - group: ''
+      kind: '*'
+    - group: 'apps'
+      kind: '*'
+    - group: 'batch'
+      kind: '*'
+    - group: 'extensions'
+      kind: '*'
+    - group: 'networking.k8s.io'
+      kind: '*'
+    - group: 'rbac.authorization.k8s.io'
+      kind: '*'
+    - group: 'argoproj.io'
+      kind: '*'
+    - group: 'agents.platform'
+      kind: '*'
+    - group: 'monitoring.coreos.com'
+      kind: '*'
+    - group: 'cert-manager.io'
+      kind: '*'
+    - group: 'actions.github.com'
+      kind: '*'
+    - group: 'external-secrets.io'
+      kind: '*'
+  
+  # Roles for access control
+  roles:
+    - name: admin
+      description: Full admin access to platform project
+      policies:
+        - p, proj:platform:admin, applications, *, platform/*, allow
+        - p, proj:platform:admin, repositories, *, *, allow
+        - p, proj:platform:admin, clusters, *, *, allow
+      groups:
+        - platform:admins
+    
+    - name: developer
+      description: Developer access for platform project
+      policies:
+        - p, proj:platform:developer, applications, get, platform/*, allow
+        - p, proj:platform:developer, applications, sync, platform/*, allow
+        - p, proj:platform:developer, applications, action/*, platform/*, allow
+        - p, proj:platform:developer, repositories, get, *, allow
+      groups:
+        - platform:developers
+    
+    - name: cicd
+      description: CI/CD access for automated deployments
+      policies:
+        - p, proj:platform:cicd, applications, sync, platform/*, allow
+        - p, proj:platform:cicd, applications, get, platform/*, allow
+        - p, proj:platform:cicd, applications, action/*, platform/*, allow
+        - p, proj:platform:cicd, repositories, get, *, allow
+      groups:
+        - platform:cicd
+  
+  # Sync windows (optional - for maintenance windows)
+  syncWindows:
+    - kind: allow
+      schedule: '* * * * *'  # Always allow (remove or modify for maintenance windows)
+      duration: 24h
+      applications:
+        - '*'
+      manualSync: true
+      clusters:
+        - '*'
+      namespaces:
+        - '*'
