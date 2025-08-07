@@ -1,7 +1,7 @@
 ---
 # Argo CD Application for QuestDB Operator
 # Manages QuestDB time-series database instances on Kubernetes
-# Source: https://github.com/questdb/questdb-operator
+# Source: https://github.com/5dlabs/questdb-operator (fork with fixed image tag)
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -19,10 +19,10 @@ spec:
   # Project configuration
   project: platform
 
-  # Source configuration - Deploy from QuestDB operator manifests
+  # Source configuration - Deploy from our fork with the fixed image tag
   source:
-    repoURL: https://github.com/questdb/questdb-operator.git
-    targetRevision: v0.5.1  # Latest stable version
+    repoURL: https://github.com/5dlabs/questdb-operator.git
+    targetRevision: fix/v0.5.1-image-tag  # Branch with fixed v0.5.1 image tag
     path: config/default
 
     # Kustomize configuration
@@ -34,15 +34,12 @@ spec:
         app.kubernetes.io/managed-by: argocd
         app.kubernetes.io/part-of: platform
 
-      # Fix the hardcoded v0.0.0 image using JSON patch
+      # Add resource limits (no image patch needed anymore!)
       patches:
         - target:
             kind: Deployment
             name: questdb-operator-controller-manager
           patch: |
-            - op: replace
-              path: /spec/template/spec/containers/0/image
-              value: questdb/questdb-operator:v0.5.1
             - op: add
               path: /spec/template/spec/containers/0/resources
               value:
