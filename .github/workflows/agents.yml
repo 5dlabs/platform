@@ -63,8 +63,12 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Set up QEMU (multi-arch emulation)
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
-        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push base image
@@ -129,6 +133,10 @@ jobs:
             echo "🏗️ Need to build this version"
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Set up QEMU (multi-arch emulation)
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
@@ -196,6 +204,10 @@ jobs:
             echo "🏗️ Need to build this version"
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Set up QEMU (multi-arch emulation)
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
@@ -268,8 +280,12 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Set up QEMU (multi-arch emulation)
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
-        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push Cursor CLI image
@@ -337,6 +353,10 @@ jobs:
             echo "🏗️ Need to build this version"
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Set up QEMU (multi-arch emulation)
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true
@@ -431,6 +451,10 @@ jobs:
             echo "🏗️ We haven't built this version yet, will build"
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Set up QEMU (multi-arch emulation)
+        if: steps.gemini-exists.outputs.exists == 'false' || inputs.force_rebuild == true
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         if: steps.gemini-exists.outputs.exists == 'false' || inputs.force_rebuild == true
