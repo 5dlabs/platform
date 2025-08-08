@@ -10,8 +10,11 @@ on:
     - cron: '0 6 * * *'
 
   push:
+    branches:
+      - '**'
     paths:
       - 'infra/images/**'
+      - '.github/workflows/agents.yml'
 
   workflow_dispatch:
     inputs:
@@ -351,8 +354,8 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/openhands-agent:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/openhands-agent:v${{ steps.version.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
           build-args: |
             BUILDKIT_INLINE_CACHE=1
 
