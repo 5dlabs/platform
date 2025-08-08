@@ -11,6 +11,7 @@ RUN mkdir -p /workspace /home/node/.cursor && \
 WORKDIR /workspace
 
 # Install Cursor CLI (as root), then place binary in /usr/local/bin for all users
+USER root
 RUN set -eux; \
   curl https://cursor.com/install -fsS | bash; \
   export PATH="$HOME/.local/bin:$PATH"; \
