@@ -95,13 +95,16 @@ RUN ARCH=$(dpkg --print-architecture) && \
   sudo dpkg -i "git-delta_0.18.2_${ARCH}.deb" && \
   rm "git-delta_0.18.2_${ARCH}.deb"
 
-# Install OpenHands (Python 3.12 required by upstream, use system Python here)
-RUN python3 -m pip install --no-cache-dir --upgrade pip && \
-  python3 -m pip install --no-cache-dir "openhands-ai>=0.51"
+# Install OpenHands into a dedicated virtualenv to avoid PEP 668 issues
+RUN python3 -m venv /opt/openhands/.venv
+ENV VIRTUAL_ENV=/opt/openhands/.venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+RUN python -m pip install --no-cache-dir --upgrade pip && \
+  python -m pip install --no-cache-dir "openhands-ai>=0.51"
 
 # Verify OpenHands entrypoints
-RUN python3 -m openhands.cli.main --help >/dev/null 2>&1 || true
-RUN python3 -m openhands.core.main --help >/dev/null 2>&1 || true
+RUN python -m openhands.cli.main --help >/dev/null 2>&1 || true
+RUN python -m openhands.core.main --help >/dev/null 2>&1 || true
 
 # Set up non-root user
 USER node
