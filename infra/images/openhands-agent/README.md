@@ -1,10 +1,10 @@
-# OpenHands CLI Docker Image
+# OpenHands Docker Image
 
-A containerized development environment with OpenHands CLI for headless and interactive agent workflows.
+A containerized development environment with OpenHands for both headless and interactive CLI workflows.
 
 ## Features
 
-- **OpenHands CLI**: Multi-model agentic coding CLI (`python -m openhands.cli.main`)
+- **OpenHands modes**: Headless and Interactive CLI
 - **Dev Tools**: Node.js 20 via nvm, Rust toolchain, git, zsh+fzf, gh, jq, docker client
 - **Multi-arch**: linux/amd64 and linux/arm64 ready
 
@@ -14,7 +14,7 @@ A containerized development environment with OpenHands CLI for headless and inte
 docker build -t openhands-agent:latest .
 ```
 
-## Run (Headless example)
+## Run (Headless mode)
 
 ```bash
 docker run -it \
@@ -27,6 +27,19 @@ docker run -it \
   -v ~/.openhands:/.openhands \
   openhands-agent:latest \
   python -m openhands.core.main -t "write a bash script that prints hi"
+```
+
+## Run (Interactive CLI)
+
+```bash
+docker run -it \
+  -e SANDBOX_RUNTIME_CONTAINER_IMAGE=docker.all-hands.dev/all-hands-ai/runtime:0.51-nikolaik \
+  -e SANDBOX_USER_ID=$(id -u) \
+  -e SANDBOX_VOLUMES=$(pwd):/workspace:rw \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v ~/.openhands:/.openhands \
+  openhands-agent:latest \
+  python -m openhands.cli.main --override-cli-mode true
 ```
 
 ## Model Configuration

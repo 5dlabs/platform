@@ -95,12 +95,13 @@ RUN ARCH=$(dpkg --print-architecture) && \
   sudo dpkg -i "git-delta_0.18.2_${ARCH}.deb" && \
   rm "git-delta_0.18.2_${ARCH}.deb"
 
-# Install OpenHands CLI (Python 3.12 required by upstream, use system Python here)
+# Install OpenHands (Python 3.12 required by upstream, use system Python here)
 RUN python3 -m pip install --no-cache-dir --upgrade pip && \
   python3 -m pip install --no-cache-dir "openhands-ai>=0.51"
 
-# Verify OpenHands CLI
+# Verify OpenHands entrypoints
 RUN python3 -m openhands.cli.main --help >/dev/null 2>&1 || true
+RUN python3 -m openhands.core.main --help >/dev/null 2>&1 || true
 
 # Set up non-root user
 USER node
@@ -127,8 +128,8 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
   -x
 
 # Notes:
-# - Headless usage example:
-#   python -m openhands.core.main -t "write a bash script that prints hi"
+# - Headless usage:    python -m openhands.core.main -t "..."
+# - Interactive CLI:   python -m openhands.cli.main --override-cli-mode true
 # - Required env at runtime: LLM_MODEL, LLM_API_KEY; optionally SANDBOX_VOLUMES, SANDBOX_RUNTIME_CONTAINER_IMAGE
 
 
