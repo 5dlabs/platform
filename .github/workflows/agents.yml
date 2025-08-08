@@ -61,7 +61,7 @@ jobs:
           fi
 
       - name: Set up Docker Buildx
-        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push base image
@@ -131,7 +131,7 @@ jobs:
 
       - name: Build and push Claude Code image
         id: build
-        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ./infra/images/claude-code
@@ -193,12 +193,12 @@ jobs:
           fi
 
       - name: Set up Docker Buildx
-        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push Grok agent image
         id: build
-        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ./infra/images/grok-agent
