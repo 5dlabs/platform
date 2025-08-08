@@ -94,9 +94,15 @@ RUN ARCH=$(dpkg --print-architecture) && \
   sudo dpkg -i "git-delta_0.18.2_${ARCH}.deb" && \
   rm "git-delta_0.18.2_${ARCH}.deb"
 
-# Install Cursor CLI (as root to ensure it's available globally)
-RUN curl https://cursor.com/install -fsS | bash && \
-  command -v cursor-agent
+# Install Cursor CLI (as root), then place binary in /usr/local/bin for all users
+RUN set -eux; \
+  curl https://cursor.com/install -fsS | bash; \
+  export PATH="$HOME/.local/bin:$PATH"; \
+  if [ -f "$HOME/.local/bin/cursor-agent" ]; then \
+    install -m 0755 "$HOME/.local/bin/cursor-agent" /usr/local/bin/cursor-agent; \
+  fi; \
+  command -v cursor-agent; \
+  cursor-agent --help >/dev/null 2>&1 || true
 
 # Set up non-root user
 USER node
