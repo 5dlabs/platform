@@ -225,6 +225,7 @@ jobs:
 
   # Build Cursor CLI agent
   build-cursor-agent:
+    needs: build-agent-runtime-base
     runs-on: ubuntu-22.04
     permissions:
       contents: read
@@ -268,7 +269,7 @@ jobs:
 
       - name: Build and push Cursor CLI image
         id: build
-        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ./infra/images/cursor-agent
@@ -282,6 +283,7 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             BUILDKIT_INLINE_CACHE=1
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:v${{ needs.build-agent-runtime-base.outputs.tag }}
 
       - name: Set build output
         id: set-built
