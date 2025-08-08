@@ -1,4 +1,4 @@
-ARG BASE_IMAGE
+ARG BASE_IMAGE=ghcr.io/5dlabs/cto/agent-runtime-base:latest
 FROM ${BASE_IMAGE}
 
 ARG TZ
