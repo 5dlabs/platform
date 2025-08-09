@@ -147,8 +147,8 @@ jobs:
         if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./infra/images/claude-code
-          file: ./infra/images/claude-code/Dockerfile
+          context: ./infra/images/claude
+          file: ./infra/images/claude/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
