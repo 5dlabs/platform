@@ -63,9 +63,7 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Set up QEMU (multi-arch emulation)
-        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true
-        uses: docker/setup-qemu-action@v3
+      # QEMU disabled on self-hosted runners; building amd64 only for speed/stability
 
       - name: Set up Docker Buildx
         if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true
@@ -77,7 +75,7 @@ jobs:
         with:
           context: ./infra/images/runtime
           file: ./infra/images/runtime/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:latest
@@ -190,9 +188,7 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Set up QEMU (multi-arch emulation)
-        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
-        uses: docker/setup-qemu-action@v3
+      # QEMU disabled on self-hosted runners; building amd64 only for speed/stability
 
       - name: Set up Docker Buildx
         if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
@@ -204,7 +200,7 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
-          platforms: ${{ matrix.platforms }}
+          platforms: linux/amd64
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/${{ matrix.image }}:latest
