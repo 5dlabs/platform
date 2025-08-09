@@ -85,13 +85,5 @@ spec:
       jsonPointers:
         - /spec/replicas  # Allow HPA to manage replicas
 
-  # Health assessment for the operator
-  health:
-    # Custom health check for the redis operator deployment
-    - group: apps
-      kind: Deployment
-      namespace: redis-operator-staging
-      name: redisoperator
-
   # Revision history
   revisionHistoryLimit: 5
