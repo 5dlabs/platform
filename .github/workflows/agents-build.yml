@@ -1,0 +1,690 @@
+name: Agent Images
+
+# Automatically build latest agent images (Claude Code, Grok, etc.)
+# Runs daily to ensure we always have the latest versions
+# Can also be triggered manually or on agent-related changes
+
+on:
+  schedule:
+    # Daily at 6 AM UTC (off-peak)
+    - cron: '0 6 * * *'
+
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'infra/images/**'
+      - '.github/workflows/agents-build.yml'
+
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuild all agents even if versions match'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BASE: ${{ github.repository }}
+
+jobs:
+  build-agent-runtime-base:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      built: ${{ steps.set-built.outputs.built }}
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute base tag (git hash of Dockerfile)
+        id: tag
+        run: |
+          set -euo pipefail
+          HASH=$(git log -1 --format="%h" -- infra/images/runtime/Dockerfile)
+          echo "tag=$HASH" >> $GITHUB_OUTPUT
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if base image exists
+        id: check
+        run: |
+          if docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:v${{ steps.tag.outputs.tag }} > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up QEMU (multi-arch emulation)
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push base image
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true
+        uses: docker/build-push-action@v5
+        with:
+          context: ./infra/images/runtime
+          file: ./infra/images/runtime/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:v${{ steps.tag.outputs.tag }}
+          # GitHub's default docker driver on ubuntu runners doesn't support cache export.
+          # Disable cache-to and rely on registry/layer caching instead.
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
+
+      - name: Set build output
+        id: set-built
+        run: |
+          if [[ "${{ steps.check.outputs.exists }}" == "false" || "${{ inputs.force_rebuild }}" == "true" ]]; then
+            echo "built=true" >> $GITHUB_OUTPUT
+          else
+            echo "built=false" >> $GITHUB_OUTPUT
+          fi
+  # Build Claude Code agent
+  build-claude-code:
+    needs: build-agent-runtime-base
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      built: ${{ steps.set-built.outputs.built }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get Claude Code CLI version
+        id: version
+        run: |
+          CLAUDE_VERSION=$(npm view @anthropic-ai/claude-code version)
+          echo "version=$CLAUDE_VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Latest Claude Code CLI version on npm: $CLAUDE_VERSION"
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if image exists
+        id: check
+        run: |
+          echo "🔍 Checking if we have Claude Code version ${{ steps.version.outputs.version }}"
+          if docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/claude-code:v${{ steps.version.outputs.version }} > /dev/null 2>&1; then
+            echo "✅ Image already exists"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "🏗️ Need to build this version"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up QEMU (multi-arch emulation)
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Claude Code image
+        id: build
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./infra/images/claude
+          file: ./infra/images/claude/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/claude-code:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/claude-code:v${{ steps.version.outputs.version }}
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:v${{ needs.build-agent-runtime-base.outputs.tag }}
+            CLAUDE_CODE_VERSION=${{ steps.version.outputs.version }}
+
+      - name: Set build output
+        id: set-built
+        run: |
+          if [[ "${{ steps.check.outputs.exists }}" == "false" || "${{ inputs.force_rebuild }}" == "true" ]]; then
+            echo "built=true" >> $GITHUB_OUTPUT
+          else
+            echo "built=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Build Grok agent
+  build-grok-agent:
+    needs: build-agent-runtime-base
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      built: ${{ steps.set-built.outputs.built }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if we need to build
+        id: check
+        run: |
+          # For Grok, we'll use git commit hash of the image directory as version
+          VERSION=$(git log -1 --format="%h" -- infra/images/grok/)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "🔍 Grok agent version (git hash): $VERSION"
+
+          if docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/grok-agent:$VERSION > /dev/null 2>&1; then
+            echo "✅ Image already exists"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "🏗️ Need to build this version"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up QEMU (multi-arch emulation)
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Grok agent image
+        id: build
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./infra/images/grok
+          file: ./infra/images/grok/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/grok-agent:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/grok-agent:v${{ steps.check.outputs.version }}
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:v${{ needs.build-agent-runtime-base.outputs.tag }}
+
+      - name: Set build output
+        id: set-built
+        run: |
+          if [[ "${{ steps.check.outputs.exists }}" == "false" || "${{ inputs.force_rebuild }}" == "true" ]]; then
+            echo "built=true" >> $GITHUB_OUTPUT
+          else
+            echo "built=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Build Cursor CLI agent
+  build-cursor-agent:
+    needs: build-agent-runtime-base
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      built: ${{ steps.set-built.outputs.built }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine Cursor installer hash (version)
+        id: version
+        run: |
+          set -euo pipefail
+          HASH=$(curl -fsSL https://cursor.com/install | sha256sum | awk '{print $1}')
+          echo "version=$HASH" >> $GITHUB_OUTPUT
+          echo "📦 Cursor installer hash: $HASH"
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if image exists
+        id: check
+        run: |
+          echo "🔍 Checking for cursor-agent version ${{ steps.version.outputs.version }}"
+          if docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/cursor-agent:v${{ steps.version.outputs.version }} > /dev/null 2>&1; then
+            echo "✅ Image already exists"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "🏗️ Need to build this version"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up QEMU (multi-arch emulation)
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Cursor CLI image
+        id: build
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./infra/images/cursor
+          file: ./infra/images/cursor/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/cursor-agent:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/cursor-agent:v${{ steps.version.outputs.version }}
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:v${{ needs.build-agent-runtime-base.outputs.tag }}
+
+      - name: Set build output
+        id: set-built
+        run: |
+          if [[ "${{ steps.check.outputs.exists }}" == "false" || "${{ inputs.force_rebuild }}" == "true" ]]; then
+            echo "built=true" >> $GITHUB_OUTPUT
+          else
+            echo "built=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Build OpenHands CLI agent
+  build-openhands-agent:
+    needs: build-agent-runtime-base
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      built: ${{ steps.set-built.outputs.built }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get OpenHands CLI version from PyPI
+        id: version
+        run: |
+          set -euo pipefail
+          VERSION=$(curl -fsSL https://pypi.org/pypi/openhands-ai/json | jq -r .info.version)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 OpenHands CLI version on PyPI: $VERSION"
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if image exists
+        id: check
+        run: |
+          echo "🔍 Checking for openhands-agent version v${{ steps.version.outputs.version }}"
+          if docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/openhands-agent:v${{ steps.version.outputs.version }} > /dev/null 2>&1; then
+            echo "✅ Image already exists"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "🏗️ Need to build this version"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up QEMU (multi-arch emulation)
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push OpenHands CLI image
+        id: build
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./infra/images/openhands
+          file: ./infra/images/openhands/Dockerfile
+          # arm64 builds under QEMU are extremely slow due to heavy Python deps
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/openhands-agent:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/openhands-agent:v${{ steps.version.outputs.version }}
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:v${{ needs.build-agent-runtime-base.outputs.tag }}
+
+      - name: Set build output
+        id: set-built
+        run: |
+          if [[ "${{ steps.check.outputs.exists }}" == "false" || "${{ inputs.force_rebuild }}" == "true" ]]; then
+            echo "built=true" >> $GITHUB_OUTPUT
+          else
+            echo "built=false" >> $GITHUB_OUTPUT
+          fi
+
+      
+
+  # Build Gemini agent
+  build-gemini-agent:
+    needs: build-agent-runtime-base
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      built: ${{ steps.set-built.outputs.built }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get Gemini CLI version
+        id: version
+        run: |
+          VERSION=$(npm view @google/gemini-cli version)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Gemini CLI version on npm: $VERSION"
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if image exists
+        id: check
+        run: |
+          echo "🔍 Checking for gemini-agent version v${{ steps.version.outputs.version }}"
+          if docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/gemini-agent:v${{ steps.version.outputs.version }} > /dev/null 2>&1; then
+            echo "✅ Image already exists"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "🏗️ Need to build this version"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up QEMU (multi-arch emulation)
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Gemini agent image
+        id: build
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./infra/images/gemini
+          file: ./infra/images/gemini/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/gemini-agent:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/gemini-agent:v${{ steps.version.outputs.version }}
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:v${{ needs.build-agent-runtime-base.outputs.tag }}
+            CLI_VERSION=${{ steps.version.outputs.version }}
+
+      - name: Set build output
+        id: set-built
+        run: |
+          if [[ "${{ steps.check.outputs.exists }}" == "false" || "${{ inputs.force_rebuild }}" == "true" ]]; then
+            echo "built=true" >> $GITHUB_OUTPUT
+          else
+            echo "built=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Build Qwen agent
+  build-qwen-agent:
+    needs: build-agent-runtime-base
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      built: ${{ steps.set-built.outputs.built }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get Qwen Code CLI version
+        id: version
+        run: |
+          QWEN_VERSION=$(npm view @qwen-code/qwen-code version)
+          echo "version=$QWEN_VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Latest Qwen Code CLI version on npm: $QWEN_VERSION"
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if image exists
+        id: check
+        run: |
+          echo "🔍 Checking if we have Qwen Code version ${{ steps.version.outputs.version }}"
+          if docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/qwen-agent:v${{ steps.version.outputs.version }} > /dev/null 2>&1; then
+            echo "✅ Image already exists"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "🏗️ Need to build this version"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up QEMU (multi-arch emulation)
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Qwen Code image
+        id: build
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./infra/images/qwen
+          file: ./infra/images/qwen/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/qwen-agent:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/qwen-agent:v${{ steps.version.outputs.version }}
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:v${{ needs.build-agent-runtime-base.outputs.tag }}
+            QWEN_CODE_VERSION=${{ steps.version.outputs.version }}
+
+      - name: Set build output
+        id: set-built
+        run: |
+          if [[ "${{ steps.check.outputs.exists }}" == "false" || "${{ inputs.force_rebuild }}" == "true" ]]; then
+            echo "built=true" >> $GITHUB_OUTPUT
+          else
+            echo "built=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Matrix build for all agents
+  build-agents:
+    needs: build-agent-runtime-base
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: claude
+            image: claude-code
+            context: ./infra/images/claude
+            file: ./infra/images/claude/Dockerfile
+            version_type: npm
+            version_pkg: "@anthropic-ai/claude-code"
+            version_arg: CLAUDE_CODE_VERSION
+            platforms: linux/amd64,linux/arm64
+          - id: grok
+            image: grok-agent
+            context: ./infra/images/grok
+            file: ./infra/images/grok/Dockerfile
+            version_type: git_dir
+            version_dir: infra/images/grok
+            platforms: linux/amd64,linux/arm64
+          - id: cursor
+            image: cursor-agent
+            context: ./infra/images/cursor
+            file: ./infra/images/cursor/Dockerfile
+            version_type: script_hash
+            script_url: https://cursor.com/install
+            platforms: linux/amd64,linux/arm64
+          - id: openhands
+            image: openhands-agent
+            context: ./infra/images/openhands
+            file: ./infra/images/openhands/Dockerfile
+            version_type: pypi
+            pypi_pkg: openhands-ai
+            platforms: linux/amd64
+          - id: gemini
+            image: gemini-agent
+            context: ./infra/images/gemini
+            file: ./infra/images/gemini/Dockerfile
+            version_type: npm
+            version_pkg: "@google/gemini-cli"
+            version_arg: CLI_VERSION
+            platforms: linux/amd64,linux/arm64
+          - id: qwen
+            image: qwen-agent
+            context: ./infra/images/qwen
+            file: ./infra/images/qwen/Dockerfile
+            version_type: npm
+            version_pkg: "@qwen-code/qwen-code"
+            version_arg: QWEN_CODE_VERSION
+            platforms: linux/amd64,linux/arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine version
+        id: version
+        run: |
+          set -euo pipefail
+          case "${{ matrix.version_type }}" in
+            npm) VERSION=$(npm view ${{ matrix.version_pkg }} version) ;;
+            pypi) VERSION=$(curl -fsSL https://pypi.org/pypi/${{ matrix.pypi_pkg }}/json | jq -r .info.version) ;;
+            git_dir) VERSION=$(git log -1 --format="%h" -- ${{ matrix.version_dir }}/) ;;
+            script_hash) VERSION=$(curl -fsSL ${{ matrix.script_url }} | sha256sum | awk '{print $1}') ;;
+            *) VERSION=latest ;;
+          esac
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          if [ -n "${{ matrix.version_arg }}" ]; then
+            echo "arg_line=${{ matrix.version_arg }}=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "arg_line=" >> $GITHUB_OUTPUT
+          fi
+          echo "📦 ${{ matrix.id }} version: $VERSION"
+
+      - name: Check if image exists
+        id: check
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/${{ matrix.image }}:v${{ steps.version.outputs.version }}"
+          if docker manifest inspect "$IMAGE" > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up QEMU (multi-arch emulation)
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image
+        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: ${{ matrix.platforms }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/${{ matrix.image }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/${{ matrix.image }}:v${{ steps.version.outputs.version }}
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:v${{ needs.build-agent-runtime-base.outputs.tag }}
+            ${{ steps.version.outputs.arg_line }}
+
+      - name: Append summary
+        run: |
+          echo "### ${{ matrix.image }}" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ steps.check.outputs.exists }}" == "true" && "${{ inputs.force_rebuild }}" != "true" && "${{ needs.build-agent-runtime-base.outputs.built }}" != "true" ]]; then
+            echo "⏭️ No update needed (version ${{ steps.version.outputs.version }})" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ Built new version ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/${{ matrix.image }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/${{ matrix.image }}:v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+
+  # Summary job
+  summary:
+    needs: [build-agents]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate summary header
+        run: |
+          echo "## 🤖 Agent Images Update" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Results" >> $GITHUB_STEP_SUMMARY
+          echo "Each agent section above lists latest and versioned tags." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔄 **Next run**: Tomorrow at 6 AM UTC (or trigger manually)" >> $GITHUB_STEP_SUMMARY
