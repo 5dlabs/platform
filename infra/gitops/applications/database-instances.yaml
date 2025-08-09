@@ -35,10 +35,10 @@ spec:
     targetRevision: main
     path: infra/gitops/databases
 
-    # Directory configuration - Only deploy agent-docs instances
+    # Directory configuration - Deploy agent-docs and general-purpose instances
     directory:
       recurse: false  # Don't recurse into subdirectories (excludes examples/)
-      include: "agent-docs-*.yaml"  # Only files with agent-docs- prefix
+      include: "{agent-docs-*.yaml,*general.yaml}"  # agent-docs-* and *-general.yaml files
       exclude: "{README.md,*example*,*template*}"  # Exclude docs and any example/template files
 
   # Destination configuration
