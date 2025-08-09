@@ -44,9 +44,12 @@ RUN set -eux; \
     arm64) GO_ARCH=arm64 ;; \
     *) GO_ARCH=$ARCH ;; \
   esac; \
-  GO_JSON=$(curl -fsSL https://go.dev/dl/?mode=json); \
-  GO_VER=$(echo "$GO_JSON" | jq -r '[.[] | select(.stable==true)][0].version'); \
-  GO_URL=$(echo "$GO_JSON" | jq -r --arg ver "$GO_VER" --arg arch "$GO_ARCH" '.[] | select(.version==$ver) | .files[] | select(.os=="linux" and .arch==$arch and .kind=="archive") | "https://go.dev" + .url'); \
+  GO_VER=""; GO_URL=""; \
+  if curl -fsSL https://go.dev/dl/?mode=json -o /tmp/go.json; then \
+    GO_VER=$(jq -r '[.[] | select(.stable==true)][0].version' /tmp/go.json || true); \
+    GO_URL=$(jq -r --arg ver "$GO_VER" --arg arch "$GO_ARCH" '.[] | select(.version==$ver) | .files[] | select(.os=="linux" and .arch==$arch and .kind=="archive") | "https://go.dev" + .url' /tmp/go.json || true); \
+  fi; \
+  if [ -z "$GO_VER" ] || [ "$GO_VER" = "null" ]; then GO_VER=$(curl -fsSL https://go.dev/VERSION?m=text); fi; \
   if [ -z "$GO_URL" ] || [ "$GO_URL" = "null" ]; then GO_URL="https://go.dev/dl/${GO_VER}.linux-${GO_ARCH}.tar.gz"; fi; \
   curl -fsSL "$GO_URL" -o /tmp/go.tgz; \
   rm -rf /usr/local/go; \
