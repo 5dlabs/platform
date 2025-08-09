@@ -40,8 +40,8 @@ spec:
           watched_namespace: "*"
           # Pod service account
           pod_service_account_name: "postgres-pod"
-          # Enable pod antiaffinity by default
-          enable_pod_antiaffinity: true
+          # Disable pod antiaffinity for single-node clusters
+          enable_pod_antiaffinity: false
           # Enable cross namespace secret access
           enable_cross_namespace_secret: false
 
