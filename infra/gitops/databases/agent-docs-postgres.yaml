@@ -107,34 +107,23 @@ spec:
     agent_docs_db:
       defaultUsers: true
       extensions:
-        pg_stat_statements:
-          schema: "public"
-        pgcrypto:
-          schema: "public"
-        uuid-ossp:
-          schema: "public"
-        pg_trgm:           # For full-text search
-          schema: "public"
-        hstore:            # For key-value storage
-          schema: "public"
-        pgvector:          # For vector embeddings (AI/ML)
-          schema: "public"
+        pg_stat_statements: "public"
+        pgcrypto: "public"
+        uuid-ossp: "public"
+        pg_trgm: "public"           # For full-text search
+        hstore: "public"            # For key-value storage
+        pgvector: "public"          # For vector embeddings (AI/ML)
     agent_tasks_db:
       defaultUsers: true
       extensions:
-        pg_stat_statements:
-          schema: "public"
-        uuid-ossp:
-          schema: "public"
-        pgvector:          # For semantic task search
-          schema: "public"
+        pg_stat_statements: "public"
+        uuid-ossp: "public"
+        pgvector: "public"          # For semantic task search
     agent_metrics_db:
       defaultUsers: true
       extensions:
-        pg_stat_statements:
-          schema: "public"
-        timescaledb:       # For time-series metrics (if available)
-          schema: "public"
+        pg_stat_statements: "public"
+        timescaledb: "public"       # For time-series metrics (if available)
 
   # Connection pooler for handling multiple agent connections
   enableConnectionPooler: true
@@ -175,7 +164,7 @@ spec:
 
   # Maintenance windows (UTC)
   maintenanceWindows:
-    - everyday: 03:00-04:00
+    - "03:00-04:00"
 
 ---
 # Service for agent-docs to connect via pooler
