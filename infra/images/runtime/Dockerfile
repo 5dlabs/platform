@@ -53,10 +53,10 @@ RUN set -eux; \
   if [ -z "$GO_URL" ] || [ "$GO_URL" = "null" ]; then GO_URL="https://go.dev/dl/${GO_VER}.linux-${GO_ARCH}.tar.gz"; fi; \
   curl -fsSL "$GO_URL" -o /tmp/go.tgz; \
   rm -rf /usr/local/go; \
-  tar -C /usr/local -xzf /tmp/go.tgz; \
-  rm /tmp/go.tgz
+  (tar -C /usr/local -xzf /tmp/go.tgz || (apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends golang-go && ln -sfn /usr/lib/go /usr/local/go)); \
+  rm -f /tmp/go.tgz
 ENV GOROOT=/usr/local/go
-ENV PATH=$GOROOT/bin:$PATH
+ENV PATH=$GOROOT/bin:/usr/lib/go/bin:$PATH
 
 # Install Kubernetes tooling: kubectl, Helm, Argo CD CLI, talosctl
 ARG KUBECTL_VERSION
