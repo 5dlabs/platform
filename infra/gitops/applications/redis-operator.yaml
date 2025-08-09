@@ -21,7 +21,7 @@ spec:
   # Source configuration - Using Spotahome's manifests
   source:
     repoURL: https://github.com/spotahome/redis-operator
-    targetRevision: v1.3.0  # Latest stable version
+    targetRevision: v1.3.0-rc1  # Latest available version (stable v1.3.0 not yet released)
     path: manifests
 
     # Kustomize configuration to deploy the operator
