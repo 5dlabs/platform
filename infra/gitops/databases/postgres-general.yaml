@@ -13,7 +13,6 @@ spec:
   postgresql:
     version: "16"
     parameters:
-      shared_preload_libraries: "bg_mon,pg_stat_statements,pgextwlist,pg_auth_mon"
       max_connections: "200"
       shared_buffers: "256MB"
       effective_cache_size: "1GB"
