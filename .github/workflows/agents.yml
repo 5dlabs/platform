@@ -44,7 +44,7 @@ jobs:
         id: tag
         run: |
           set -euo pipefail
-          HASH=$(git log -1 --format="%h" -- infra/images/agent-runtime-base/Dockerfile)
+          HASH=$(git log -1 --format="%h" -- infra/images/runtime/Dockerfile)
           echo "tag=$HASH" >> $GITHUB_OUTPUT
 
       - name: Log in to Container Registry
@@ -75,8 +75,8 @@ jobs:
         if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true
         uses: docker/build-push-action@v5
         with:
-          context: ./infra/images/agent-runtime-base
-          file: ./infra/images/agent-runtime-base/Dockerfile
+          context: ./infra/images/runtime
+          file: ./infra/images/runtime/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
@@ -193,7 +193,7 @@ jobs:
         id: check
         run: |
           # For Grok, we'll use git commit hash of the image directory as version
-          VERSION=$(git log -1 --format="%h" -- infra/images/grok-agent/)
+          VERSION=$(git log -1 --format="%h" -- infra/images/grok/)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "🔍 Grok agent version (git hash): $VERSION"
 
@@ -218,8 +218,8 @@ jobs:
         if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./infra/images/grok-agent
-          file: ./infra/images/grok-agent/Dockerfile
+          context: ./infra/images/grok
+          file: ./infra/images/grok/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
@@ -293,8 +293,8 @@ jobs:
         if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./infra/images/cursor-agent
-          file: ./infra/images/cursor-agent/Dockerfile
+          context: ./infra/images/cursor
+          file: ./infra/images/cursor/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
@@ -368,8 +368,8 @@ jobs:
         if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./infra/images/openhands-agent
-          file: ./infra/images/openhands-agent/Dockerfile
+          context: ./infra/images/openhands
+          file: ./infra/images/openhands/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
@@ -444,8 +444,8 @@ jobs:
         if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./infra/images/gemini-agent
-          file: ./infra/images/gemini-agent/Dockerfile
+          context: ./infra/images/gemini
+          file: ./infra/images/gemini/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
