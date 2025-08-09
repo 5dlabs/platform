@@ -74,6 +74,7 @@ jobs:
           context: ./infra/images/runtime
           file: ./infra/images/runtime/Dockerfile
           platforms: linux/amd64
+          pull: true
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/runtime:latest
@@ -151,20 +152,27 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Determine version (git dir hash) and prepare build args
+      - name: Determine version (PyPI for openhands, dir-hash for others) and prepare build args
         id: version
         run: |
           set -euo pipefail
-          # Use latest commit hash touching the image context directory as image version (stable, offline)
-          VERSION=$(git log -1 --format="%h" -- ${{ matrix.context }}/)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          # For agents that accept a version build-arg, default to 'latest' to avoid network lookups in CI
-          if [ -n "${{ matrix.version_arg }}" ]; then
-            echo "arg_line=${{ matrix.version_arg }}=latest" >> $GITHUB_OUTPUT
+          if [ "${{ matrix.id }}" = "openhands" ]; then
+            VERSION=$(curl -fsSL https://pypi.org/pypi/${{ matrix.pypi_pkg }}/json | jq -r .info.version)
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "arg_line=OPENHANDS_VERSION=$VERSION" >> $GITHUB_OUTPUT
+            echo "📦 openhands PyPI version: $VERSION"
           else
-            echo "arg_line=" >> $GITHUB_OUTPUT
+            # Use latest commit hash touching the image context directory as image version (stable, offline)
+            VERSION=$(git log -1 --format="%h" -- ${{ matrix.context }}/)
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            # For agents that accept a version build-arg, default to 'latest' to avoid network lookups in CI
+            if [ -n "${{ matrix.version_arg }}" ]; then
+              echo "arg_line=${{ matrix.version_arg }}=latest" >> $GITHUB_OUTPUT
+            else
+              echo "arg_line=" >> $GITHUB_OUTPUT
+            fi
+            echo "📦 ${{ matrix.id }} version (dir hash): $VERSION"
           fi
-          echo "📦 ${{ matrix.id }} version (dir hash): $VERSION"
 
       # QEMU disabled on self-hosted runners; building amd64 only for speed/stability
 
@@ -177,13 +185,14 @@ jobs:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
           platforms: linux/amd64
+          pull: true
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/${{ matrix.image }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/${{ matrix.image }}:v${{ steps.version.outputs.version }}
           build-args: |
             BUILDKIT_INLINE_CACHE=1
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/runtime:v${{ needs.build-runtime.outputs.tag }}
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/runtime:latest
             ${{ steps.version.outputs.arg_line }}
             CACHE_BUST=${{ github.run_id }}
           cache-from: |
