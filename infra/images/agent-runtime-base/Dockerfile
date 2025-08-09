@@ -15,29 +15,32 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create non-root user 'node' to match existing agents
 RUN id -u node >/dev/null 2>&1 || (groupadd node && useradd --shell /bin/bash --create-home node --gid node)
 
-# Install Node via nvm
+# Install Node via nvm (latest LTS)
 ENV NVM_DIR=/usr/local/nvm
-ENV NODE_VERSION=20.18.0
 RUN mkdir -p $NVM_DIR \
   && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | NVM_DIR=$NVM_DIR bash \
   && . $NVM_DIR/nvm.sh \
-  && nvm install $NODE_VERSION \
-  && nvm alias default $NODE_VERSION \
-  && nvm use default
-ENV PATH=$NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
+  && nvm install --lts \
+  && nvm alias default 'lts/*' \
+  && nvm use default \
+  # Symlink Node/NPM/NPX to /usr/local/bin for global availability
+  && NODE_BIN="$(dirname \"$(readlink -f \"$(command -v node)\")\")" \
+  && ln -sf "$NODE_BIN/node" /usr/local/bin/node \
+  && ln -sf "$NODE_BIN/npm" /usr/local/bin/npm \
+  && ln -sf "$NODE_BIN/npx" /usr/local/bin/npx
 
 # Enable corepack (yarn/pnpm) for Node.js
 RUN corepack enable
 
-# Install Go
-ARG GO_VERSION=1.22.6
+# Install latest Go
 RUN ARCH=$(dpkg --print-architecture) \
   && case "$ARCH" in \
        amd64) GO_ARCH=amd64 ;; \
        arm64) GO_ARCH=arm64 ;; \
        *) GO_ARCH=$ARCH ;; \
      esac \
-  && curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -o /tmp/go.tgz \
+  && GO_VER=$(curl -fsSL https://go.dev/VERSION?m=text) \
+  && curl -fsSL "https://go.dev/dl/${GO_VER}.linux-${GO_ARCH}.tar.gz" -o /tmp/go.tgz \
   && rm -rf /usr/local/go \
   && tar -C /usr/local -xzf /tmp/go.tgz \
   && rm /tmp/go.tgz
