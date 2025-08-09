@@ -152,15 +152,8 @@ spec:
   # Pod disruption budget
   enablePodDisruptionBudget: true
 
-  # Affinity rules to spread instances
-  podAntiAffinity:
-    preferredDuringSchedulingIgnoredDuringExecution:
-      - weight: 100
-        podAffinityTerm:
-          labelSelector:
-            matchLabels:
-              cluster-name: agent-docs-postgres
-          topologyKey: kubernetes.io/hostname
+  # Affinity rules removed - single worker node cluster
+  # podAntiAffinity disabled for single-node clusters
 
   # Maintenance windows (UTC)
   maintenanceWindows:
