@@ -1,30 +1,22 @@
 ARG BASE_IMAGE=ghcr.io/5dlabs/cto/agent-runtime-base:latest
 FROM ${BASE_IMAGE}
 
+# Install Python and OpenHands CLI
 USER root
-
-# OpenHands is a Python CLI; install Python and pip
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
-    python3-venv \
   && rm -rf /var/lib/apt/lists/*
 
-USER node
+RUN pip3 install --no-cache-dir --upgrade pip && \
+    pip3 install --no-cache-dir openhands-ai
 
+# Drop privileges back to non-root user provided by base image
+USER node
 WORKDIR /workspace
 
-# Install OpenHands CLI from PyPI
-ARG OPENHANDS_VERSION=latest
-RUN python3 -m pip install --no-cache-dir --upgrade pip && \
-    if [ "${OPENHANDS_VERSION}" = "latest" ] || [ -z "${OPENHANDS_VERSION}" ]; then \
-      python3 -m pip install --no-cache-dir openhands-ai; \
-    else \
-      python3 -m pip install --no-cache-dir openhands-ai==${OPENHANDS_VERSION}; \
-    fi
-
-# Default working dir for tasks
-WORKDIR /workspace/project
+# Default entrypoint (can be overridden)
+CMD ["openhands", "--help"]
 
 FROM ubuntu:24.04
 

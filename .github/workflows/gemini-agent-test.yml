@@ -7,8 +7,8 @@ on:
         description: 'Base image tag (e.g., latest or v<hash>)'
         required: false
         default: 'latest'
-      version:
-        description: 'Gemini CLI version from npm (empty = latest)'
+      cli_version:
+        description: 'Gemini CLI version (defaults to latest)'
         required: false
         default: ''
 
@@ -50,6 +50,6 @@ jobs:
           build-args: |
             BUILDKIT_INLINE_CACHE=1
             BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:${{ inputs.base_tag }}
-            CLI_VERSION=${{ inputs.version }}
+            CLI_VERSION=${{ inputs.cli_version }}
 
-
+ 

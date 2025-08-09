@@ -7,10 +7,6 @@ on:
         description: 'Base image tag (e.g., latest or v<hash>)'
         required: false
         default: 'latest'
-      version:
-        description: 'OpenHands CLI version from PyPI (empty = latest)'
-        required: false
-        default: ''
 
 env:
   REGISTRY: ghcr.io
@@ -50,6 +46,5 @@ jobs:
           build-args: |
             BUILDKIT_INLINE_CACHE=1
             BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:${{ inputs.base_tag }}
-            OPENHANDS_VERSION=${{ inputs.version }}
 
 
