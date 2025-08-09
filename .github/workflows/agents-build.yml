@@ -149,6 +149,15 @@ jobs:
             version_arg: QWEN_CODE_VERSION
     steps:
       - uses: actions/checkout@v4
+      - name: Setup Node.js (ensure npm available in runner)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          check-latest: true
+      - name: Verify Node/npm
+        run: |
+          node -v
+          npm -v
 
       - name: Log in to Container Registry
         uses: docker/login-action@v3
