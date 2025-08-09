@@ -35,6 +35,18 @@ spec:
         app.kubernetes.io/part-of: platform
         environment: staging
 
+      # Patches to limit operator scope to staging namespaces
+      patches:
+        - target:
+            kind: Deployment
+            name: redisoperator
+          patch: |
+            - op: add
+              path: /spec/template/spec/containers/0/env/-
+              value:
+                name: WATCH_NAMESPACE
+                value: "databases-staging,redis-operator-staging"
+
   # Destination configuration - staging namespace
   destination:
     server: https://kubernetes.default.svc

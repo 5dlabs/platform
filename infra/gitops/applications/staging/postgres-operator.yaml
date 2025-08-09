@@ -21,7 +21,7 @@ spec:
 
   # Source configuration - Using Zalando's Helm chart
   source:
-    repoURL: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
+    repoURL: https://opensource.zalando.com/postgres-operator/charts
     chart: postgres-operator
     targetRevision: 1.14.0  # Latest stable version
     helm:
@@ -37,8 +37,8 @@ spec:
 
         # Resource configuration
         configKubernetes:
-          # Watch all namespaces by default
-          watched_namespace: "*"
+          # Watch only staging namespaces to avoid conflicts with production
+          watched_namespace: "databases-staging,postgres-operator-staging"
           # Pod service account
           pod_service_account_name: "postgres-pod"
           # Enable pod antiaffinity by default
