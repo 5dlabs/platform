@@ -44,6 +44,27 @@ RUN ARCH=$(dpkg --print-architecture) \
 ENV GOROOT=/usr/local/go
 ENV PATH=$GOROOT/bin:$PATH
 
+# Install Kubernetes tooling: kubectl, Helm, Argo CD CLI, talosctl
+ARG KUBECTL_VERSION
+RUN ARCH=$(dpkg --print-architecture) \
+  && case "$ARCH" in \
+       amd64) DL_ARCH=amd64 ;; \
+       arm64) DL_ARCH=arm64 ;; \
+       *) DL_ARCH=$ARCH ;; \
+     esac \
+  # kubectl
+  && K_VER="${KUBECTL_VERSION:-$(curl -fsSL https://dl.k8s.io/release/stable.txt)}" \
+  && curl -fsSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/${K_VER}/bin/linux-${DL_ARCH}/kubectl" \
+  && chmod +x /usr/local/bin/kubectl \
+  # Helm (auto-detects arch)
+  && curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash \
+  # Argo CD CLI
+  && curl -fsSL -o /usr/local/bin/argocd "https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-${DL_ARCH}" \
+  && chmod +x /usr/local/bin/argocd \
+  # talosctl
+  && curl -fsSL -o /usr/local/bin/talosctl "https://github.com/siderolabs/talos/releases/latest/download/talosctl-linux-${DL_ARCH}" \
+  && chmod +x /usr/local/bin/talosctl
+
 # Install Rust toolchain for root
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
   && . $HOME/.cargo/env \
