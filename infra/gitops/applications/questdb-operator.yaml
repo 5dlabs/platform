@@ -22,7 +22,7 @@ spec:
   # Source configuration - Deploy from 5dlabs fork with fixes
   source:
     repoURL: https://github.com/5dlabs/questdb-operator
-    targetRevision: v0.5.1  # Latest stable version with fixes
+    targetRevision: main  # Use main branch with v0.0.0 image fix
     path: config/default
 
     # Kustomize configuration
