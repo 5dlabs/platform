@@ -44,7 +44,7 @@ spec:
   # Destination configuration - staging namespace
   destination:
     server: https://kubernetes.default.svc
-    namespace: databases-staging
+    namespace: staging
 
   # Sync policy
   syncPolicy:

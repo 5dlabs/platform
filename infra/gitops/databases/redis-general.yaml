@@ -3,7 +3,7 @@ apiVersion: databases.spotahome.com/v1
 kind: RedisFailover
 metadata:
   name: redis-general
-  namespace: databases-staging
+  namespace: staging
   labels:
     team: platform
     app.kubernetes.io/name: redis-general

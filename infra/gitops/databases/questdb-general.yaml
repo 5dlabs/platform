@@ -3,7 +3,7 @@ apiVersion: crd.questdb.io/v1beta1
 kind: QuestDB
 metadata:
   name: questdb-timeseries
-  namespace: databases-staging
+  namespace: staging
   labels:
     team: platform
     app.kubernetes.io/name: questdb-timeseries

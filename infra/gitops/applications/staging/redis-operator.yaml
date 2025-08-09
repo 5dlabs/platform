@@ -45,7 +45,7 @@ spec:
               path: /spec/template/spec/containers/0/env/-
               value:
                 name: WATCH_NAMESPACE
-                value: "databases-staging,redis-operator-staging"
+                value: "staging,redis-operator-staging"
 
   # Destination configuration - staging namespace
   destination:
