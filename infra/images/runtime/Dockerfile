@@ -63,36 +63,43 @@ RUN curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key | gpg --d
   && echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /' | tee /etc/apt/sources.list.d/kubernetes.list \
   && apt-get update && apt-get install -y kubectl && rm -rf /var/lib/apt/lists/*
 
-# Install other Kubernetes tooling: Helm, Argo CD CLI, talosctl
+# Install Helm
+RUN curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# Install other Kubernetes tooling with error handling
 RUN ARCH=$(dpkg --print-architecture) \
   && case "$ARCH" in \
        amd64) DL_ARCH=amd64 ;; \
        arm64) DL_ARCH=arm64 ;; \
        *) DL_ARCH=$ARCH ;; \
      esac \
-  # Helm (auto-detects arch)
-  && curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash \
-  # Argo CD CLI
-  && curl -fsSL -o /usr/local/bin/argocd "https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-${DL_ARCH}" \
+  # Argo CD CLI with retry
+  && (curl -fsSL -o /usr/local/bin/argocd "https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-${DL_ARCH}" || \
+      (sleep 2 && curl -fsSL -o /usr/local/bin/argocd "https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-${DL_ARCH}")) \
   && chmod +x /usr/local/bin/argocd \
-  # talosctl
-  && curl -fsSL -o /usr/local/bin/talosctl "https://github.com/siderolabs/talos/releases/latest/download/talosctl-linux-${DL_ARCH}" \
+  # talosctl with retry  
+  && (curl -fsSL -o /usr/local/bin/talosctl "https://github.com/siderolabs/talos/releases/latest/download/talosctl-linux-${DL_ARCH}" || \
+      (sleep 2 && curl -fsSL -o /usr/local/bin/talosctl "https://github.com/siderolabs/talos/releases/latest/download/talosctl-linux-${DL_ARCH}")) \
   && chmod +x /usr/local/bin/talosctl \
-  # yq (YAML processor)
-  && curl -fsSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${DL_ARCH}" \
+  # yq (YAML processor) with retry
+  && (curl -fsSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${DL_ARCH}" || \
+      (sleep 2 && curl -fsSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${DL_ARCH}")) \
   && chmod +x /usr/local/bin/yq \
-  # stern (k8s logs grepper)
+  # stern (k8s logs grepper) with retry
   && STERN_TAR="stern_linux_${DL_ARCH}.tar.gz" \
-  && curl -fsSL -o "/tmp/${STERN_TAR}" "https://github.com/stern/stern/releases/latest/download/${STERN_TAR}" \
+  && (curl -fsSL -o "/tmp/${STERN_TAR}" "https://github.com/stern/stern/releases/latest/download/${STERN_TAR}" || \
+      (sleep 2 && curl -fsSL -o "/tmp/${STERN_TAR}" "https://github.com/stern/stern/releases/latest/download/${STERN_TAR}")) \
   && tar -C /usr/local/bin -xzf "/tmp/${STERN_TAR}" stern \
   && rm -f "/tmp/${STERN_TAR}" \
-  # k9s (k8s TUI)
+  # k9s (k8s TUI) with retry
   && K9S_TAR="k9s_Linux_${DL_ARCH}.tar.gz" \
-  && curl -fsSL -o "/tmp/${K9S_TAR}" "https://github.com/derailed/k9s/releases/latest/download/${K9S_TAR}" \
+  && (curl -fsSL -o "/tmp/${K9S_TAR}" "https://github.com/derailed/k9s/releases/latest/download/${K9S_TAR}" || \
+      (sleep 2 && curl -fsSL -o "/tmp/${K9S_TAR}" "https://github.com/derailed/k9s/releases/latest/download/${K9S_TAR}")) \
   && tar -C /usr/local/bin -xzf "/tmp/${K9S_TAR}" k9s \
   && rm -f "/tmp/${K9S_TAR}" \
-  # kustomize
-  && curl -fsSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash \
+  # kustomize with retry
+  && (curl -fsSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash || \
+      (sleep 2 && curl -fsSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash)) \
   && mv ./kustomize /usr/local/bin/kustomize
 
 # Install kubectx/kubens from upstream (not available via default apt)
