@@ -31,10 +31,11 @@ RUN mkdir -p $NVM_DIR \
   && NODE_BIN="$(dirname \"$(readlink -f \"$(command -v node)\")\")" \
   && ln -sf "$NODE_BIN/node" /usr/local/bin/node \
   && ln -sf "$NODE_BIN/npm" /usr/local/bin/npm \
-  && ln -sf "$NODE_BIN/npx" /usr/local/bin/npx
+  && ln -sf "$NODE_BIN/npx" /usr/local/bin/npx \
+  && if [ -f "$NODE_BIN/corepack" ]; then ln -sf "$NODE_BIN/corepack" /usr/local/bin/corepack; fi
 
-# Enable corepack (yarn/pnpm) for Node.js
-RUN corepack enable
+# Enable corepack (yarn/pnpm) for Node.js (guard if missing)
+RUN if command -v corepack >/dev/null 2>&1; then corepack enable; fi
 
 # Install latest Go
 RUN ARCH=$(dpkg --print-architecture) \
