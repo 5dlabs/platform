@@ -1,0 +1,55 @@
+name: Gemini Agent Test (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_tag:
+        description: 'Base image tag (e.g., latest or v<hash>)'
+        required: false
+        default: 'latest'
+      cli_version:
+        description: 'Gemini CLI version (defaults to latest)'
+        required: false
+        default: ''
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BASE: ${{ github.repository }}
+
+jobs:
+  build-gemini-test:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Gemini test image (amd64 only)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./infra/images/gemini-agent
+          file: ./infra/images/gemini-agent/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/gemini-agent:test
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:${{ inputs.base_tag }}
+            CLI_VERSION=${{ inputs.cli_version }}
+
+ 

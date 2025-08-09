@@ -1,22 +1,18 @@
-FROM node:18-alpine
+ARG BASE_IMAGE=ghcr.io/5dlabs/cto/agent-runtime-base:latest
+FROM ${BASE_IMAGE}
 
-# Install git and other required tools
-RUN apk add --no-cache git openssh-client bash curl jq
-
-# Set working directory
+# Ensure working directories exist (base image sets /workspace and user=node)
+USER node
 WORKDIR /workspace
 
 # Install Grok CLI globally
 RUN npm install -g @vibe-kit/grok-cli
 
-# Create directory for project files
-RUN mkdir -p /workspace/project
-
 # Copy any custom Grok configuration scripts
-COPY scripts/ /workspace/scripts/
+COPY --chown=node:node scripts/ /workspace/scripts/
 RUN chmod +x /workspace/scripts/*.sh
 
-# Set environment variables
+# Environment
 ENV NODE_ENV=production
 ENV GROK_API_KEY=""
 
