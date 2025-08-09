@@ -210,7 +210,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/${{ matrix.image }}:v${{ steps.version.outputs.version }}
           build-args: |
             BUILDKIT_INLINE_CACHE=1
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/runtime:latest
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/runtime:v${{ needs.build-runtime.outputs.tag }}
             ${{ steps.version.outputs.arg_line }}
             CACHE_BUST=${{ github.run_id }}
           cache-from: |
