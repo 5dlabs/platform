@@ -27,6 +27,9 @@ spec:
       work_mem: "4MB"
       min_wal_size: "1GB"
       max_wal_size: "4GB"
+  env:
+    - name: USE_POST_INIT_SCRIPT
+      value: "false"
   numberOfInstances: 1
   volume:
     size: 50Gi
