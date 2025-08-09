@@ -177,24 +177,12 @@ jobs:
           fi
           echo "📦 ${{ matrix.id }} version: $VERSION"
 
-      - name: Check if image exists
-        id: check
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/${{ matrix.image }}:v${{ steps.version.outputs.version }}"
-          if docker manifest inspect "$IMAGE" > /dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
       # QEMU disabled on self-hosted runners; building amd64 only for speed/stability
 
       - name: Set up Docker Buildx
-        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push image
-        if: steps.check.outputs.exists == 'false' || inputs.force_rebuild == true || needs.build-agent-runtime-base.outputs.built == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.context }}
@@ -216,11 +204,7 @@ jobs:
       - name: Append summary
         run: |
           echo "### ${{ matrix.image }}" >> $GITHUB_STEP_SUMMARY
-          if [[ "${{ steps.check.outputs.exists }}" == "true" && "${{ inputs.force_rebuild }}" != "true" && "${{ needs.build-agent-runtime-base.outputs.built }}" != "true" ]]; then
-            echo "⏭️ No update needed (version ${{ steps.version.outputs.version }})" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "✅ Built new version ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "✅ Built version ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/${{ matrix.image }}:latest" >> $GITHUB_STEP_SUMMARY
           echo "${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/${{ matrix.image }}:v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
 
