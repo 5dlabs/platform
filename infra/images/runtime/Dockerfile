@@ -66,41 +66,65 @@ RUN curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key | gpg --d
 # Install Helm
 RUN curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-# Install other Kubernetes tooling with error handling
-RUN ARCH=$(dpkg --print-architecture) \
-  && case "$ARCH" in \
-       amd64) DL_ARCH=amd64 ;; \
-       arm64) DL_ARCH=arm64 ;; \
-       *) DL_ARCH=$ARCH ;; \
-     esac \
-  # Argo CD CLI with retry
-  && (curl -fsSL -o /usr/local/bin/argocd "https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-${DL_ARCH}" || \
-      (sleep 2 && curl -fsSL -o /usr/local/bin/argocd "https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-${DL_ARCH}")) \
-  && chmod +x /usr/local/bin/argocd \
-  # talosctl with retry  
-  && (curl -fsSL -o /usr/local/bin/talosctl "https://github.com/siderolabs/talos/releases/latest/download/talosctl-linux-${DL_ARCH}" || \
-      (sleep 2 && curl -fsSL -o /usr/local/bin/talosctl "https://github.com/siderolabs/talos/releases/latest/download/talosctl-linux-${DL_ARCH}")) \
-  && chmod +x /usr/local/bin/talosctl \
-  # yq (YAML processor) with retry
-  && (curl -fsSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${DL_ARCH}" || \
-      (sleep 2 && curl -fsSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${DL_ARCH}")) \
-  && chmod +x /usr/local/bin/yq \
-  # stern (k8s logs grepper) with retry
-  && STERN_TAR="stern_linux_${DL_ARCH}.tar.gz" \
-  && (curl -fsSL -o "/tmp/${STERN_TAR}" "https://github.com/stern/stern/releases/latest/download/${STERN_TAR}" || \
-      (sleep 2 && curl -fsSL -o "/tmp/${STERN_TAR}" "https://github.com/stern/stern/releases/latest/download/${STERN_TAR}")) \
-  && tar -C /usr/local/bin -xzf "/tmp/${STERN_TAR}" stern \
-  && rm -f "/tmp/${STERN_TAR}" \
-  # k9s (k8s TUI) with retry
-  && K9S_TAR="k9s_Linux_${DL_ARCH}.tar.gz" \
-  && (curl -fsSL -o "/tmp/${K9S_TAR}" "https://github.com/derailed/k9s/releases/latest/download/${K9S_TAR}" || \
-      (sleep 2 && curl -fsSL -o "/tmp/${K9S_TAR}" "https://github.com/derailed/k9s/releases/latest/download/${K9S_TAR}")) \
-  && tar -C /usr/local/bin -xzf "/tmp/${K9S_TAR}" k9s \
-  && rm -f "/tmp/${K9S_TAR}" \
-  # kustomize with retry
-  && (curl -fsSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash || \
-      (sleep 2 && curl -fsSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash)) \
-  && mv ./kustomize /usr/local/bin/kustomize
+# Set architecture variables
+ENV DL_ARCH_AMD64=amd64
+ENV DL_ARCH_ARM64=arm64
+
+# Install Argo CD CLI
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in amd64) DL_ARCH=amd64 ;; arm64) DL_ARCH=arm64 ;; *) DL_ARCH=$ARCH ;; esac && \
+    for i in 1 2 3; do \
+        curl -fsSL -o /usr/local/bin/argocd "https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-${DL_ARCH}" && \
+        chmod +x /usr/local/bin/argocd && break || \
+        (echo "Attempt $i failed, retrying..." && sleep 5); \
+    done
+
+# Install talosctl
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in amd64) DL_ARCH=amd64 ;; arm64) DL_ARCH=arm64 ;; *) DL_ARCH=$ARCH ;; esac && \
+    for i in 1 2 3; do \
+        curl -fsSL -o /usr/local/bin/talosctl "https://github.com/siderolabs/talos/releases/latest/download/talosctl-linux-${DL_ARCH}" && \
+        chmod +x /usr/local/bin/talosctl && break || \
+        (echo "Attempt $i failed, retrying..." && sleep 5); \
+    done
+
+# Install yq  
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in amd64) DL_ARCH=amd64 ;; arm64) DL_ARCH=arm64 ;; *) DL_ARCH=$ARCH ;; esac && \
+    for i in 1 2 3; do \
+        curl -fsSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${DL_ARCH}" && \
+        chmod +x /usr/local/bin/yq && break || \
+        (echo "Attempt $i failed, retrying..." && sleep 5); \
+    done
+
+# Install stern
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in amd64) DL_ARCH=amd64 ;; arm64) DL_ARCH=arm64 ;; *) DL_ARCH=$ARCH ;; esac && \
+    STERN_TAR="stern_linux_${DL_ARCH}.tar.gz" && \
+    for i in 1 2 3; do \
+        curl -fsSL -o "/tmp/${STERN_TAR}" "https://github.com/stern/stern/releases/latest/download/${STERN_TAR}" && \
+        tar -C /usr/local/bin -xzf "/tmp/${STERN_TAR}" stern && \
+        rm -f "/tmp/${STERN_TAR}" && break || \
+        (echo "Attempt $i failed, retrying..." && sleep 5); \
+    done
+
+# Install k9s
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in amd64) DL_ARCH=amd64 ;; arm64) DL_ARCH=arm64 ;; *) DL_ARCH=$ARCH ;; esac && \
+    K9S_TAR="k9s_Linux_${DL_ARCH}.tar.gz" && \
+    for i in 1 2 3; do \
+        curl -fsSL -o "/tmp/${K9S_TAR}" "https://github.com/derailed/k9s/releases/latest/download/${K9S_TAR}" && \
+        tar -C /usr/local/bin -xzf "/tmp/${K9S_TAR}" k9s && \
+        rm -f "/tmp/${K9S_TAR}" && break || \
+        (echo "Attempt $i failed, retrying..." && sleep 5); \
+    done
+
+# Install kustomize
+RUN for i in 1 2 3; do \
+        curl -fsSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash && \
+        mv ./kustomize /usr/local/bin/kustomize && break || \
+        (echo "Attempt $i failed, retrying..." && sleep 5); \
+    done
 
 # Install kubectx/kubens from upstream (not available via default apt)
 RUN git clone --depth=1 https://github.com/ahmetb/kubectx /opt/kubectx \
