@@ -18,20 +18,16 @@ spec:
   # Project configuration
   project: platform
 
-  # Source configuration - Using Spotahome's manifests
+  # Source configuration - Using Spotahome's raw manifests
   source:
     repoURL: https://github.com/spotahome/redis-operator
     targetRevision: v1.3.0-rc1  # Latest available version (stable v1.3.0 not yet released)
     path: manifests
 
-    # Kustomize configuration to deploy the operator
-    kustomize:
-      namespace: redis-operator
-
-      # Optional: Add resource customizations
-      commonLabels:
-        app.kubernetes.io/managed-by: argocd
-        app.kubernetes.io/part-of: platform
+    # Directory configuration - use raw manifests without kustomize
+    directory:
+      recurse: false
+      include: "*.yaml"
 
   # Destination configuration
   destination:
