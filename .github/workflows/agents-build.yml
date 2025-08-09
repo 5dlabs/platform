@@ -30,7 +30,7 @@ env:
 
 jobs:
   build-agent-runtime-base:
-    runs-on: ubuntu-22.04
+    runs-on: [k8s-runner]
     permissions:
       contents: read
       packages: write
@@ -82,10 +82,10 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:v${{ steps.tag.outputs.tag }}
-          # GitHub's default docker driver on ubuntu runners doesn't support cache export.
-          # Disable cache-to and rely on registry/layer caching instead.
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
+          cache-from: |
+            type=local,src=/cache/buildx/base
+          cache-to: |
+            type=local,dest=/cache/buildx/base,mode=max
 
       - name: Set build output
         id: set-built
@@ -98,7 +98,7 @@ jobs:
 
   build-agents:
     needs: build-agent-runtime-base
-    runs-on: ubuntu-22.04
+    runs-on: [k8s-runner]
     permissions:
       contents: read
       packages: write
@@ -213,6 +213,10 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
             BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:v${{ needs.build-agent-runtime-base.outputs.tag }}
             ${{ steps.version.outputs.arg_line }}
+          cache-from: |
+            type=local,src=/cache/buildx/${{ matrix.id }}
+          cache-to: |
+            type=local,dest=/cache/buildx/${{ matrix.id }},mode=max
 
       - name: Append summary
         run: |
