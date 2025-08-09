@@ -82,8 +82,10 @@ RUN ARCH=$(dpkg --print-architecture) \
   && curl -fsSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${DL_ARCH}" \
   && chmod +x /usr/local/bin/yq \
   # stern (k8s logs grepper)
-  && curl -fsSL -o /usr/local/bin/stern "https://github.com/stern/stern/releases/latest/download/stern_linux_${DL_ARCH}" \
-  && chmod +x /usr/local/bin/stern \
+  && STERN_TAR="stern_linux_${DL_ARCH}.tar.gz" \
+  && curl -fsSL -o "/tmp/${STERN_TAR}" "https://github.com/stern/stern/releases/latest/download/${STERN_TAR}" \
+  && tar -C /usr/local/bin -xzf "/tmp/${STERN_TAR}" stern \
+  && rm -f "/tmp/${STERN_TAR}" \
   # k9s (k8s TUI)
   && K9S_TAR="k9s_Linux_${DL_ARCH}.tar.gz" \
   && curl -fsSL -o "/tmp/${K9S_TAR}" "https://github.com/derailed/k9s/releases/latest/download/${K9S_TAR}" \
