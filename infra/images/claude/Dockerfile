@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ghcr.io/5dlabs/cto/agent-runtime-base:latest
+ARG BASE_IMAGE=ghcr.io/5dlabs/cto/runtime:latest
 FROM ${BASE_IMAGE}
 
 ARG TZ
@@ -11,6 +11,6 @@ RUN mkdir -p /workspace /home/node/.claude && \
 WORKDIR /workspace
 USER node
 
-# Install Claude
-ARG CLAUDE_CODE_VERSION=latest
-RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
+# Install Claude (generic VERSION only)
+ARG VERSION=latest
+RUN npm install -g @anthropic-ai/claude-code@${VERSION}

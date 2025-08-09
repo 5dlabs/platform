@@ -49,6 +49,15 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && ln -sf /usr/bin/clang-15 /usr/bin/clang \
     && ln -sf /usr/bin/clang++-15 /usr/bin/clang++
 
+# Install Node.js + npm (v20) for npm-based tooling used in CI
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends nodejs \
+    && npm -v && node -v \
+    && corepack enable || true
+
 # Install mold linker (fastest linker for Rust)
 RUN --mount=type=cache,target=/tmp/downloads \
     cd /tmp/downloads && \
