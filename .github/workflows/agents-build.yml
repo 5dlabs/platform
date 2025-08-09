@@ -39,6 +39,11 @@ jobs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
+      - name: Setup Node.js (for npm version resolution)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          check-latest: true
 
       - name: Compute base tag (git hash of Dockerfile)
         id: tag
@@ -111,28 +116,24 @@ jobs:
             version_type: npm
             version_pkg: "@anthropic-ai/claude-code"
             version_arg: CLAUDE_CODE_VERSION
-            platforms: linux/amd64,linux/arm64
           - id: grok
             image: grok-agent
             context: ./infra/images/grok
             file: ./infra/images/grok/Dockerfile
             version_type: git_dir
             version_dir: infra/images/grok
-            platforms: linux/amd64,linux/arm64
           - id: cursor
             image: cursor-agent
             context: ./infra/images/cursor
             file: ./infra/images/cursor/Dockerfile
             version_type: script_hash
             script_url: https://cursor.com/install
-            platforms: linux/amd64,linux/arm64
           - id: openhands
             image: openhands-agent
             context: ./infra/images/openhands
             file: ./infra/images/openhands/Dockerfile
             version_type: pypi
             pypi_pkg: openhands-ai
-            platforms: linux/amd64
           - id: gemini
             image: gemini-agent
             context: ./infra/images/gemini
@@ -140,7 +141,6 @@ jobs:
             version_type: npm
             version_pkg: "@google/gemini-cli"
             version_arg: CLI_VERSION
-            platforms: linux/amd64,linux/arm64
           - id: qwen
             image: qwen-agent
             context: ./infra/images/qwen
@@ -148,7 +148,6 @@ jobs:
             version_type: npm
             version_pkg: "@qwen-code/qwen-code"
             version_arg: QWEN_CODE_VERSION
-            platforms: linux/amd64,linux/arm64
     steps:
       - uses: actions/checkout@v4
 
