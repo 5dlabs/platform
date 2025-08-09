@@ -54,11 +54,9 @@ spec:
           default_cpu_limit: "1"
           default_memory_limit: "500Mi"
 
-          # Min and max resource boundaries
+          # Min resource boundaries
           min_cpu_limit: "250m"
           min_memory_limit: "250Mi"
-          max_cpu_limit: "4"
-          max_memory_limit: "4Gi"
 
         # Teams API configuration (disabled by default)
         configTeamsApi:
