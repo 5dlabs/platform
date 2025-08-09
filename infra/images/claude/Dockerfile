@@ -11,8 +11,6 @@ RUN mkdir -p /workspace /home/node/.claude && \
 WORKDIR /workspace
 USER node
 
-# Install Claude (supports generic VERSION with fallback to CLAUDE_CODE_VERSION)
+# Install Claude (generic VERSION only)
 ARG VERSION=latest
-ARG CLAUDE_CODE_VERSION
-RUN VER=${CLAUDE_CODE_VERSION:-$VERSION} \
-  && npm install -g @anthropic-ai/claude-code@"${VER}"
+RUN npm install -g @anthropic-ai/claude-code@${VERSION}

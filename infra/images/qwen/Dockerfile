@@ -4,13 +4,11 @@ FROM ${BASE_IMAGE}
 # Install as non-root user
 USER node
 
-# Allow version override via build-arg (supports generic VERSION)
+# Allow version override via build-arg (generic VERSION only)
 ARG VERSION=latest
-ARG QWEN_CODE_VERSION
 
 # Install Qwen Code CLI globally
-RUN VER=${QWEN_CODE_VERSION:-$VERSION} \
-  && npm install -g @qwen-code/qwen-code@"${VER}"
+RUN npm install -g @qwen-code/qwen-code@${VERSION}
 
 # Set working directory
 WORKDIR /workspace
