@@ -119,8 +119,8 @@ jobs:
             image: grok
             context: ./infra/images/grok
             file: ./infra/images/grok/Dockerfile
-            version_type: git_dir
-            version_dir: infra/images/grok
+            version_type: npm
+            version_pkg: "@vibe-kit/grok-cli"
           - id: cursor
             image: cursor
             context: ./infra/images/cursor
