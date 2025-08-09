@@ -103,39 +103,39 @@ jobs:
       matrix:
         include:
           - id: claude
-            image: claude-code
+            image: claude
             context: ./infra/images/claude
             file: ./infra/images/claude/Dockerfile
             version_type: npm
             version_pkg: "@anthropic-ai/claude-code"
             version_arg: CLAUDE_CODE_VERSION
           - id: grok
-            image: grok-agent
+            image: grok
             context: ./infra/images/grok
             file: ./infra/images/grok/Dockerfile
             version_type: git_dir
             version_dir: infra/images/grok
           - id: cursor
-            image: cursor-agent
+            image: cursor
             context: ./infra/images/cursor
             file: ./infra/images/cursor/Dockerfile
             version_type: script_hash
             script_url: https://cursor.com/install
           - id: openhands
-            image: openhands-agent
+            image: openhands
             context: ./infra/images/openhands
             file: ./infra/images/openhands/Dockerfile
             version_type: pypi
             pypi_pkg: openhands-ai
           - id: gemini
-            image: gemini-agent
+            image: gemini
             context: ./infra/images/gemini
             file: ./infra/images/gemini/Dockerfile
             version_type: npm
             version_pkg: "@google/gemini-cli"
             version_arg: CLI_VERSION
           - id: qwen
-            image: qwen-agent
+            image: qwen
             context: ./infra/images/qwen
             file: ./infra/images/qwen/Dockerfile
             version_type: npm
