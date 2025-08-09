@@ -95,13 +95,7 @@ jobs:
           else
             echo "built=false" >> $GITHUB_OUTPUT
           fi
-      
 
-  # (Removed) Legacy per-agent jobs replaced by matrix-based build
-
-  # (Removed) Legacy per-agent jobs replaced by matrix-based build
-
-  # Matrix build for all agents
   build-agents:
     needs: build-agent-runtime-base
     runs-on: ubuntu-22.04
