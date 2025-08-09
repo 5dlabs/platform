@@ -319,6 +319,7 @@ jobs:
   build-openhands-agent:
     needs: build-agent-runtime-base
     runs-on: ubuntu-22.04
+    timeout-minutes: 90
     permissions:
       contents: read
       packages: write
@@ -370,7 +371,8 @@ jobs:
         with:
           context: ./infra/images/openhands
           file: ./infra/images/openhands/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          # arm64 builds under QEMU are extremely slow due to heavy Python deps
+          platforms: linux/amd64
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/openhands-agent:latest
