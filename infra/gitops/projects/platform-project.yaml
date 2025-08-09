@@ -106,6 +106,8 @@ spec:
     # Database operator cluster resources
     - group: 'scheduling.k8s.io'
       kind: '*'
+    - group: 'acid.zalan.do'
+      kind: '*'
 
   # Namespace resource whitelist
   namespaceResourceWhitelist:
