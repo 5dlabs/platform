@@ -1,3 +1,4 @@
+---
 apiVersion: crd.questdb.io/v1beta1
 kind: QuestDB
 metadata:

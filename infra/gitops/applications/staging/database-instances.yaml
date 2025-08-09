@@ -5,7 +5,7 @@
 # DEPLOYS:
 # - postgres-general.yaml - PostgreSQL cluster with pgvector support
 # - redis-general.yaml - General-purpose Redis cluster
-# - redis-cache.yaml - Cache-specific Redis cluster  
+# - redis-cache.yaml - Cache-specific Redis cluster
 # - questdb-general.yaml - QuestDB instance for time-series data
 # - agent-docs-*.yaml - Service-specific database instances
 #
