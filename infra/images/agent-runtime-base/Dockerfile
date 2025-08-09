@@ -36,18 +36,21 @@ RUN mkdir -p $NVM_DIR \
 # Enable corepack (yarn/pnpm) for Node.js (guard if missing)
 RUN if command -v corepack >/dev/null 2>&1; then corepack enable; fi
 
-# Install latest Go
-RUN ARCH=$(dpkg --print-architecture) \
-  && case "$ARCH" in \
-       amd64) GO_ARCH=amd64 ;; \
-       arm64) GO_ARCH=arm64 ;; \
-       *) GO_ARCH=$ARCH ;; \
-     esac \
-  && GO_VER=$(curl -fsSL https://go.dev/VERSION?m=text) \
-  && curl -fsSL "https://go.dev/dl/${GO_VER}.linux-${GO_ARCH}.tar.gz" -o /tmp/go.tgz \
-  && rm -rf /usr/local/go \
-  && tar -C /usr/local -xzf /tmp/go.tgz \
-  && rm /tmp/go.tgz
+# Install latest stable Go (robust arch/version selection)
+RUN set -eux; \
+  ARCH=$(dpkg --print-architecture); \
+  case "$ARCH" in \
+    amd64) GO_ARCH=amd64 ;; \
+    arm64) GO_ARCH=arm64 ;; \
+    *) GO_ARCH=$ARCH ;; \
+  esac; \
+  GO_JSON=$(curl -fsSL https://go.dev/dl/?mode=json); \
+  GO_VER=$(echo "$GO_JSON" | jq -r '[.[] | select(.stable==true)][0].version'); \
+  GO_URL=$(echo "$GO_JSON" | jq -r --arg ver "$GO_VER" --arg arch "$GO_ARCH" '.[] | select(.version==$ver) | .files[] | select(.os=="linux" and .arch==$arch and .kind=="archive") | "https://go.dev" + .url'); \
+  curl -fsSL "$GO_URL" -o /tmp/go.tgz; \
+  rm -rf /usr/local/go; \
+  tar -C /usr/local -xzf /tmp/go.tgz; \
+  rm /tmp/go.tgz
 ENV GOROOT=/usr/local/go
 ENV PATH=$GOROOT/bin:$PATH
 
