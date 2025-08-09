@@ -58,18 +58,18 @@ RUN set -eux; \
 ENV GOROOT=/usr/local/go
 ENV PATH=$GOROOT/bin:/usr/lib/go/bin:$PATH
 
-# Install Kubernetes tooling: kubectl, Helm, Argo CD CLI, talosctl
-ARG KUBECTL_VERSION
+# Install kubectl via apt repository (more reliable than direct download)
+RUN curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg \
+  && echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /' | tee /etc/apt/sources.list.d/kubernetes.list \
+  && apt-get update && apt-get install -y kubectl && rm -rf /var/lib/apt/lists/*
+
+# Install other Kubernetes tooling: Helm, Argo CD CLI, talosctl
 RUN ARCH=$(dpkg --print-architecture) \
   && case "$ARCH" in \
        amd64) DL_ARCH=amd64 ;; \
        arm64) DL_ARCH=arm64 ;; \
        *) DL_ARCH=$ARCH ;; \
      esac \
-  # kubectl
-  && K_VER="${KUBECTL_VERSION:-$(curl -fsSL https://dl.k8s.io/release/stable.txt)}" \
-  && curl -fsSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/${K_VER}/bin/linux-${DL_ARCH}/kubectl" \
-  && chmod +x /usr/local/bin/kubectl \
   # Helm (auto-detects arch)
   && curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash \
   # Argo CD CLI
