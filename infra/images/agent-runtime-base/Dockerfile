@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   git procps sudo fzf zsh man-db unzip gnupg2 gh iproute2 dnsutils jq \
   netcat-openbsd ca-certificates curl wget docker.io postgresql-client \
   redis-tools tree build-essential pkg-config libssl-dev lldb lld clang \
+  python3 python3-venv python3-pip python-is-python3 \
   && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user 'node' to match existing agents
@@ -24,6 +25,24 @@ RUN mkdir -p $NVM_DIR \
   && nvm alias default $NODE_VERSION \
   && nvm use default
 ENV PATH=$NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
+
+# Enable corepack (yarn/pnpm) for Node.js
+RUN corepack enable
+
+# Install Go
+ARG GO_VERSION=1.22.6
+RUN ARCH=$(dpkg --print-architecture) \
+  && case "$ARCH" in \
+       amd64) GO_ARCH=amd64 ;; \
+       arm64) GO_ARCH=arm64 ;; \
+       *) GO_ARCH=$ARCH ;; \
+     esac \
+  && curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -o /tmp/go.tgz \
+  && rm -rf /usr/local/go \
+  && tar -C /usr/local -xzf /tmp/go.tgz \
+  && rm /tmp/go.tgz
+ENV GOROOT=/usr/local/go
+ENV PATH=$GOROOT/bin:$PATH
 
 # Install Rust toolchain for root
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
@@ -62,6 +81,11 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --de
 # Global npm config and PATH
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV PATH=$PATH:/usr/local/share/npm-global/bin:/home/node/.cargo/bin
+
+# Go environment for non-root user
+ENV GOPATH=/home/node/go
+ENV PATH=$PATH:$GOPATH/bin:$GOROOT/bin
+RUN mkdir -p "$GOPATH" && mkdir -p "$GOPATH/bin"
 
 # Zsh and prompt setup
 ENV SHELL=/bin/zsh
