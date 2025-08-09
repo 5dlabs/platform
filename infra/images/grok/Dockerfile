@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ghcr.io/5dlabs/cto/agent-runtime-base:latest
+ARG BASE_IMAGE=ghcr.io/5dlabs/cto/runtime:latest
 FROM ${BASE_IMAGE}
 
 # Ensure working directories exist (base image sets /workspace and user=node)

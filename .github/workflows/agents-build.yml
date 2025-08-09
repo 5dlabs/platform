@@ -76,8 +76,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:v${{ steps.tag.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/runtime:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/runtime:v${{ steps.tag.outputs.tag }}
           cache-from: |
             type=local,src=/cache/buildx/base
           cache-to: |
@@ -183,7 +183,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/${{ matrix.image }}:v${{ steps.version.outputs.version }}
           build-args: |
             BUILDKIT_INLINE_CACHE=1
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:v${{ needs.build-agent-runtime-base.outputs.tag }}
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/runtime:v${{ needs.build-agent-runtime-base.outputs.tag }}
             ${{ steps.version.outputs.arg_line }}
             CACHE_BUST=${{ github.run_id }}
           cache-from: |
