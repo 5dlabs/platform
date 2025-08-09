@@ -37,8 +37,8 @@ spec:
 
         # Resource configuration
         configKubernetes:
-          # Watch only staging namespaces to avoid conflicts with production
-          watched_namespace: "staging,postgres-operator-staging"
+          # Watch only staging namespace to avoid conflicts with production
+          watched_namespace: "staging"
           # Pod service account
           pod_service_account_name: "postgres-pod"
           # Enable pod antiaffinity by default
