@@ -1,3 +1,4 @@
+## CI trigger: no-op change to run Agent Images workflow
 FROM ubuntu:24.04
 
 ARG TZ
