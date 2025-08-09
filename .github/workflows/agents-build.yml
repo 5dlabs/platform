@@ -173,16 +173,12 @@ jobs:
           if [ "${{ matrix.version_type }}" = "npm" ]; then
             VERSION=$(npm view ${{ matrix.version_pkg }} version || echo "latest")
             echo "version=$VERSION" >> $GITHUB_OUTPUT
-            if [ -n "${{ matrix.version_arg }}" ]; then
-              echo "arg_line=${{ matrix.version_arg }}=$VERSION" >> $GITHUB_OUTPUT
-            else
-              echo "arg_line=" >> $GITHUB_OUTPUT
-            fi
+            echo "arg_line=VERSION=$VERSION" >> $GITHUB_OUTPUT
             echo "📦 ${{ matrix.id }} npm version: $VERSION"
           elif [ "${{ matrix.id }}" = "openhands" ]; then
             VERSION=$(curl -fsSL https://pypi.org/pypi/${{ matrix.pypi_pkg }}/json | jq -r .info.version)
             echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "arg_line=OPENHANDS_VERSION=$VERSION" >> $GITHUB_OUTPUT
+            echo "arg_line=VERSION=$VERSION" >> $GITHUB_OUTPUT
             echo "📦 openhands PyPI version: $VERSION"
           else
             # Use latest commit hash touching the image context directory as image version (stable, offline)

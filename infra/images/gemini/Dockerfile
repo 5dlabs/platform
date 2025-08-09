@@ -18,9 +18,11 @@ USER node
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV PATH=$PATH:/usr/local/share/npm-global/bin
 
-# Install Gemini CLI from npm (version is provided at build time)
-ARG CLI_VERSION=latest
-RUN npm install -g @google/gemini-cli@${CLI_VERSION} \
+# Install Gemini CLI from npm (supports generic VERSION with fallback to CLI_VERSION)
+ARG VERSION=latest
+ARG CLI_VERSION
+RUN VER=${CLI_VERSION:-$VERSION} \
+  && npm install -g @google/gemini-cli@"${VER}" \
   && npm cache clean --force
 
 # Default entrypoint

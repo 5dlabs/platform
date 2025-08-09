@@ -4,14 +4,14 @@ FROM ${BASE_IMAGE}
 USER root
 
 # Install OpenHands into a dedicated virtualenv to avoid PEP 668 issues
-ARG OPENHANDS_VERSION=latest
+ARG VERSION=latest
 RUN python3 -m venv /opt/openhands/.venv \
   && . /opt/openhands/.venv/bin/activate \
   && pip install --no-cache-dir --upgrade pip \
-  && if [ "$OPENHANDS_VERSION" = "latest" ]; then \
+  && if [ "$VERSION" = "latest" ]; then \
        pip install --no-cache-dir openhands-ai; \
      else \
-       pip install --no-cache-dir "openhands-ai==${OPENHANDS_VERSION}"; \
+       pip install --no-cache-dir "openhands-ai==${VERSION}"; \
      fi
 
 # Make venv available on PATH for all users

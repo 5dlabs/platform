@@ -5,8 +5,9 @@ FROM ${BASE_IMAGE}
 USER node
 WORKDIR /workspace
 
-# Install Grok CLI globally
-RUN npm install -g @vibe-kit/grok-cli
+# Install Grok CLI globally (supports generic VERSION but defaults to latest)
+ARG VERSION=latest
+RUN npm install -g @vibe-kit/grok-cli@"${VERSION}"
 
 # Copy any custom Grok configuration scripts
 COPY --chown=node:node scripts/ /workspace/scripts/
