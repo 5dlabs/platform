@@ -11,7 +11,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   redis-tools tree build-essential pkg-config libssl-dev lldb lld clang \
   python3 python3-venv python3-pip python-is-python3 \
   strace lsof htop psmisc ripgrep fd-find bat httpie openssl \
-  kubectx kubens \
   && rm -rf /var/lib/apt/lists/* \
   && update-alternatives --install /usr/local/bin/fd fd /usr/bin/fdfind 10 \
   && update-alternatives --install /usr/local/bin/bat bat /usr/bin/batcat 10
@@ -86,6 +85,11 @@ RUN ARCH=$(dpkg --print-architecture) \
   # kustomize
   && curl -fsSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash \
   && mv ./kustomize /usr/local/bin/kustomize
+
+# Install kubectx/kubens from upstream (not available via default apt)
+RUN git clone --depth=1 https://github.com/ahmetb/kubectx /opt/kubectx \
+  && ln -sf /opt/kubectx/kubectx /usr/local/bin/kubectx \
+  && ln -sf /opt/kubectx/kubens /usr/local/bin/kubens
 
 # Install Rust toolchain for root
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
