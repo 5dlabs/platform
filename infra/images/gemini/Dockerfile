@@ -20,8 +20,9 @@ ENV PATH=$PATH:/usr/local/share/npm-global/bin
 
 # Install Gemini CLI from npm (generic VERSION only)
 ARG VERSION=latest
-RUN npm install -g @google/gemini-cli@${VERSION} \
-  && npm cache clean --force
+RUN export PATH=/usr/local/bin:$PATH && \
+    npm install -g @google/gemini-cli@${VERSION} && \
+    npm cache clean --force
 
 # Default entrypoint
 CMD ["gemini"]
