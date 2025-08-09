@@ -8,8 +8,7 @@ USER node
 ARG VERSION=latest
 
 # Install Qwen Code CLI globally
-RUN export PATH=/usr/local/bin:$PATH && \
-    npm install -g @qwen-code/qwen-code@${VERSION}
+RUN npm install -g @qwen-code/qwen-code@${VERSION}
 
 # Set working directory
 WORKDIR /workspace

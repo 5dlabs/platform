@@ -24,21 +24,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # Create non-root user 'node' to match existing agents
 RUN id -u node >/dev/null 2>&1 || (groupadd node && useradd --shell /bin/bash --create-home node --gid node)
 
-# Install Node via nvm (latest LTS)
-ENV NVM_DIR=/usr/local/nvm
+# Install Node.js directly (not via nvm) for better compatibility
 RUN --mount=type=cache,target=/root/.cache \
-  mkdir -p $NVM_DIR \
-  && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | NVM_DIR=$NVM_DIR bash \
-  && . $NVM_DIR/nvm.sh \
-  && nvm install --lts \
-  && nvm alias default 'lts/*' \
-  && nvm use default \
-  # Symlink Node/NPM/NPX to /usr/local/bin for global availability
-  && NODE_BIN="$(dirname \"$(readlink -f \"$(command -v node)\")\")" \
-  && ln -sf "$NODE_BIN/node" /usr/local/bin/node \
-  && ln -sf "$NODE_BIN/npm" /usr/local/bin/npm \
-  && ln -sf "$NODE_BIN/npx" /usr/local/bin/npx \
-  && if [ -f "$NODE_BIN/corepack" ]; then ln -sf "$NODE_BIN/corepack" /usr/local/bin/corepack; fi
+  curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
+  && apt-get install -y nodejs \
+  && npm install -g npm@latest \
+  && rm -rf /var/lib/apt/lists/*
 
 # Enable corepack (yarn/pnpm) for Node.js (guard if missing)
 RUN if command -v corepack >/dev/null 2>&1; then corepack enable; fi

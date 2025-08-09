@@ -13,5 +13,4 @@ USER node
 
 # Install Claude (generic VERSION only)
 ARG VERSION=latest
-RUN export PATH=/usr/local/bin:$PATH && \
-    npm install -g @anthropic-ai/claude-code@${VERSION}
+RUN npm install -g @anthropic-ai/claude-code@${VERSION}
