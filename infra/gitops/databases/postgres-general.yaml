@@ -12,12 +12,19 @@ spec:
   teamId: platform
   postgresql:
     version: "16"
-    # Minimal parameters - no problematic extensions
     parameters:
       max_connections: "200"
       shared_buffers: "256MB"
       effective_cache_size: "1GB"
       maintenance_work_mem: "64MB"
+      checkpoint_completion_target: "0.9"
+      wal_buffers: "16MB"
+      default_statistics_target: "100"
+      random_page_cost: "1.1"
+      effective_io_concurrency: "200"
+      work_mem: "4MB"
+      min_wal_size: "1GB"
+      max_wal_size: "4GB"
   numberOfInstances: 1
   volume:
     size: 50Gi
@@ -29,7 +36,6 @@ spec:
     limits:
       memory: 4Gi
       cpu: 2000m
-  # Simple user configuration
   users:
     admin:
       - SUPERUSER
@@ -46,9 +52,55 @@ spec:
       - CREATEDB
       - NOCREATEROLE
       - NOREPLICATION
+    readonly:
+      - NOSUPERUSER
+      - INHERIT
+      - NOCREATEDB
+      - NOCREATEROLE
+      - NOREPLICATION
   databases:
     app_db: app_user
     general_db: admin
     vector_db: vector_user     # Dedicated database for vector operations
-  # Disable connection pooler to avoid complications
-  enableConnectionPooler: false
+    metrics_db: admin
+  preparedDatabases:
+    app_db:
+      defaultUsers: true
+      extensions:
+        pg_stat_statements: "public"
+        uuid-ossp: "public"
+    general_db:
+      defaultUsers: true
+      extensions:
+        hstore: "public"
+        pg_stat_statements: "public"
+        pg_trgm: "public"
+        pgcrypto: "public"
+        uuid-ossp: "public"
+    vector_db:
+      defaultUsers: true
+      extensions:
+        vector: "public"           # Enable pgvector extension
+        pg_stat_statements: "public"
+        uuid-ossp: "public"
+        pg_trgm: "public"          # Useful for text similarity with vectors
+        pgcrypto: "public"
+    metrics_db:
+      defaultUsers: true
+      extensions:
+        pg_stat_statements: "public"
+  enableConnectionPooler: true
+  connectionPooler:
+    numberOfInstances: 1
+    mode: "transaction"
+    schema: "pooler"
+    user: "pooler"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 100Mi
+      limits:
+        cpu: 500m
+        memory: 500Mi
+  maintenanceWindows:
+    - "03:00-04:00"
