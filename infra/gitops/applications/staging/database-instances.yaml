@@ -38,7 +38,7 @@ spec:
     # Directory configuration - Deploy all production database instances
     directory:
       recurse: false  # Don't recurse into subdirectories (excludes examples/)
-      include: "{agent-docs-*.yaml,*general.yaml,*cache.yaml}"  # All production instances
+      include: "{*general.yaml,*cache.yaml}"  # Only staging-specific instances
       exclude: "{README.md,*example*,*template*,*dev*,*test*}"  # Exclude docs and test files
 
   # Destination configuration - staging namespace
