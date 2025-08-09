@@ -1,15 +1,14 @@
 ---
-# App of Apps Pattern for Platform Infrastructure (Staging)
-# This staging application manages all staging platform applications
-# Deploys from the develop branch for safe testing of changes
+# Staging App-of-Apps - Deploys staging applications from develop branch
+# This allows testing changes in develop before they reach production (main)
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: platform-apps-staging
+  name: app-of-apps-staging
   namespace: argocd
   labels:
-    app.kubernetes.io/name: platform-apps-staging
+    app.kubernetes.io/name: app-of-apps-staging
     app.kubernetes.io/part-of: platform
     environment: staging
   finalizers:
@@ -18,42 +17,37 @@ spec:
   # Project configuration
   project: platform
 
-  # Source configuration - Deploy from develop branch
+  # Source configuration - Deploy any staging applications from develop branch
   source:
     repoURL: https://github.com/5dlabs/cto
-    targetRevision: develop  # Use develop branch for staging
-    path: infra/gitops
+    targetRevision: develop  # Track develop branch for staging deployments
+    path: infra/gitops/applications/staging
 
-    # Directory configuration - Only staging applications
+    # Directory configuration - Deploy whatever staging apps exist
     directory:
-      recurse: true
-      include: "applications/staging/*.yaml"  # Only staging applications
-      exclude: "*.md"
+      recurse: false  # Only files in staging directory
+      include: "*.yaml"  # Any YAML files
+      exclude: "{README.md,*example*,*template*,*test*}"  # Exclude docs and templates
 
   # Destination configuration
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
 
-  # Sync policy - Manual sync for staging control
+  # Sync policy - Manual sync for safety
   syncPolicy:
-    # Manual sync for staging - allows controlled testing
-    # automated:
-    #   prune: true
-    #   selfHeal: true
-    #   allowEmpty: false
-
+    # No automated sync - manual control for staging deployments
     syncOptions:
       - CreateNamespace=true
       - PrunePropagationPolicy=foreground
-      - PruneLast=true
+      - RespectIgnoreDifferences=true
 
     retry:
-      limit: 5
+      limit: 3
       backoff:
-        duration: 5s
+        duration: 10s
         factor: 2
-        maxDuration: 3m
+        maxDuration: 1m
 
   # Revision history
   revisionHistoryLimit: 10

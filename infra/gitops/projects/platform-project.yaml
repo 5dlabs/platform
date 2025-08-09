@@ -71,6 +71,15 @@ spec:
       server: https://kubernetes.default.svc
     - namespace: databases
       server: https://kubernetes.default.svc
+    # Staging database namespaces
+    - namespace: staging
+      server: https://kubernetes.default.svc
+    - namespace: postgres-operator-staging
+      server: https://kubernetes.default.svc
+    - namespace: redis-operator-staging
+      server: https://kubernetes.default.svc
+    - namespace: questdb-operator-staging
+      server: https://kubernetes.default.svc
 
   # Cluster resource whitelist
   clusterResourceWhitelist:
@@ -93,6 +102,9 @@ spec:
     - group: 'actions.github.com'
       kind: '*'
     - group: 'external-secrets.io'
+      kind: '*'
+    # Database operator cluster resources
+    - group: 'scheduling.k8s.io'
       kind: '*'
 
   # Namespace resource whitelist
@@ -120,6 +132,13 @@ spec:
     - group: 'actions.github.com'
       kind: '*'
     - group: 'external-secrets.io'
+      kind: '*'
+    # Database operator CRDs
+    - group: 'acid.zalan.do'
+      kind: '*'
+    - group: 'databases.spotahome.com'
+      kind: '*'
+    - group: 'crd.questdb.io'
       kind: '*'
 
   # Roles for access control
