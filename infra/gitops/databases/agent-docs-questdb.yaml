@@ -102,16 +102,8 @@ spec:
       fsGroup: 1000
       runAsNonRoot: true
 
-    # Affinity rules for better performance
-    affinity:
-      podAntiAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app.kubernetes.io/name: agent-docs-questdb
-              topologyKey: kubernetes.io/hostname
+    # Affinity rules removed - single worker node cluster
+    # affinity disabled for single-node clusters
 
     # Liveness and readiness probes
     livenessProbe:
