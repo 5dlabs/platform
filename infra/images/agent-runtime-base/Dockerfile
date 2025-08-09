@@ -10,7 +10,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   netcat-openbsd ca-certificates curl wget docker.io postgresql-client \
   redis-tools tree build-essential pkg-config libssl-dev lldb lld clang \
   python3 python3-venv python3-pip python-is-python3 \
-  && rm -rf /var/lib/apt/lists/*
+  strace lsof htop psmisc ripgrep fd-find bat httpie openssl \
+  kubectx kubens \
+  && rm -rf /var/lib/apt/lists/* \
+  && update-alternatives --install /usr/local/bin/fd fd /usr/bin/fdfind 10 \
+  && update-alternatives --install /usr/local/bin/bat bat /usr/bin/batcat 10
 
 # Create non-root user 'node' to match existing agents
 RUN id -u node >/dev/null 2>&1 || (groupadd node && useradd --shell /bin/bash --create-home node --gid node)
@@ -66,7 +70,21 @@ RUN ARCH=$(dpkg --print-architecture) \
   && chmod +x /usr/local/bin/argocd \
   # talosctl
   && curl -fsSL -o /usr/local/bin/talosctl "https://github.com/siderolabs/talos/releases/latest/download/talosctl-linux-${DL_ARCH}" \
-  && chmod +x /usr/local/bin/talosctl
+  && chmod +x /usr/local/bin/talosctl \
+  # yq (YAML processor)
+  && curl -fsSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${DL_ARCH}" \
+  && chmod +x /usr/local/bin/yq \
+  # stern (k8s logs grepper)
+  && curl -fsSL -o /usr/local/bin/stern "https://github.com/stern/stern/releases/latest/download/stern_linux_${DL_ARCH}" \
+  && chmod +x /usr/local/bin/stern \
+  # k9s (k8s TUI)
+  && K9S_TAR="k9s_Linux_${DL_ARCH}.tar.gz" \
+  && curl -fsSL -o "/tmp/${K9S_TAR}" "https://github.com/derailed/k9s/releases/latest/download/${K9S_TAR}" \
+  && tar -C /usr/local/bin -xzf "/tmp/${K9S_TAR}" k9s \
+  && rm -f "/tmp/${K9S_TAR}" \
+  # kustomize
+  && curl -fsSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash \
+  && mv ./kustomize /usr/local/bin/kustomize
 
 # Install Rust toolchain for root
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
