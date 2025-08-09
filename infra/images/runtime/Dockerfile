@@ -63,8 +63,20 @@ RUN curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key | gpg --d
   && echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /' | tee /etc/apt/sources.list.d/kubernetes.list \
   && apt-get update && apt-get install -y kubectl && rm -rf /var/lib/apt/lists/*
 
-# Install Helm
-RUN curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+# Install Helm via direct download (script was failing on arm64)
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in amd64) DL_ARCH=amd64 ;; arm64) DL_ARCH=arm64 ;; *) DL_ARCH=$ARCH ;; esac && \
+    HELM_VERSION=$(curl -s https://api.github.com/repos/helm/helm/releases/latest | jq -r '.tag_name') && \
+    HELM_TAR="helm-${HELM_VERSION}-linux-${DL_ARCH}.tar.gz" && \
+    for i in 1 2 3; do \
+        curl -fsSL -o "/tmp/${HELM_TAR}" "https://get.helm.sh/${HELM_TAR}" && \
+        tar -C /tmp -xzf "/tmp/${HELM_TAR}" && \
+        mv "/tmp/linux-${DL_ARCH}/helm" /usr/local/bin/helm && \
+        chmod +x /usr/local/bin/helm && \
+        rm -f "/tmp/${HELM_TAR}" "/tmp/linux-${DL_ARCH}" && \
+        helm version && break || \
+        (echo "Attempt $i failed, retrying..." && sleep 5); \
+    done
 
 # Set architecture variables
 ENV DL_ARCH_AMD64=amd64
