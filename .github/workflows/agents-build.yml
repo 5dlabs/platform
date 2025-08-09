@@ -185,6 +185,7 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
             BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/agent-runtime-base:v${{ needs.build-agent-runtime-base.outputs.tag }}
             ${{ steps.version.outputs.arg_line }}
+            CACHE_BUST=${{ github.run_id }}
           cache-from: |
             type=local,src=/cache/buildx/${{ matrix.id }}
           cache-to: |
