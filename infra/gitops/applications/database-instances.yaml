@@ -3,16 +3,12 @@
 # Manages actual database clusters (PostgreSQL, Redis, QuestDB) for platform services
 #
 # DEPLOYS:
-# - agent-docs-postgres.yaml - PostgreSQL cluster for agent-docs service
-# - agent-docs-redis.yaml - Redis cluster for agent-docs service
-# - agent-docs-questdb.yaml - QuestDB instance for agent-docs metrics
+# - All .yaml files in infra/gitops/databases/ directory
+# - Simply add a new database .yaml file to deploy it automatically
 #
 # EXCLUDES:
 # - examples/ subdirectory (development and production templates)
 # - README.md documentation file
-#
-# NOTE: Only deploys resources with 'agent-docs-' prefix to ensure
-# example and template files are never accidentally deployed
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -35,11 +31,10 @@ spec:
     targetRevision: main
     path: infra/gitops/databases
 
-    # Directory configuration - Only deploy agent-docs instances
+    # Directory configuration - Deploy all database instances
     directory:
       recurse: false  # Don't recurse into subdirectories (excludes examples/)
-      include: "agent-docs-*.yaml"  # Only files with agent-docs- prefix
-      exclude: "{README.md,*example*,*template*}"  # Exclude docs and any example/template files
+      exclude: "{README.md,examples/**}"  # Only exclude docs and examples directory
 
   # Destination configuration
   destination:

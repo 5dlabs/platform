@@ -1,9 +1,8 @@
----
 apiVersion: databases.spotahome.com/v1
 kind: RedisFailover
 metadata:
   name: redis-general
-  namespace: staging
+  namespace: databases
   labels:
     team: platform
     app.kubernetes.io/name: redis-general
@@ -64,3 +63,4 @@ spec:
           resources:
             requests:
               storage: 20Gi
+

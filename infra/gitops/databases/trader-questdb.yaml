@@ -1,11 +1,12 @@
+---
 apiVersion: crd.questdb.io/v1beta1
 kind: QuestDB
 metadata:
-  name: questdb-timeseries
+  name: trader-questdb
   namespace: databases
   labels:
     team: platform
-    app.kubernetes.io/name: questdb-timeseries
+    app.kubernetes.io/name: trader-questdb
     app.kubernetes.io/component: timeseries
 spec:
   image: questdb/questdb:7.3.10
@@ -24,4 +25,3 @@ spec:
     http.enabled: "true"
     pg.enabled: "true"
     line.tcp.enabled: "true"
-

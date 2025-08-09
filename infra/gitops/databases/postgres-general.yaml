@@ -1,9 +1,8 @@
----
 apiVersion: acid.zalan.do/v1
 kind: postgresql
 metadata:
   name: postgres-general
-  namespace: staging
+  namespace: databases
   labels:
     team: platform
     app.kubernetes.io/name: postgres-general
@@ -13,8 +12,7 @@ spec:
   postgresql:
     version: "16"
     parameters:
-      # Load pgvector extension - required for vector operations
-      shared_preload_libraries: "bg_mon,pg_stat_statements,pgextwlist,pg_auth_mon,timescaledb,pgvector"
+      shared_preload_libraries: "bg_mon,pg_stat_statements,pgextwlist,pg_auth_mon"
       max_connections: "200"
       shared_buffers: "256MB"
       effective_cache_size: "1GB"
@@ -48,12 +46,6 @@ spec:
       - CREATEDB
       - NOCREATEROLE
       - NOREPLICATION
-    vector_user:
-      - NOSUPERUSER
-      - INHERIT
-      - CREATEDB
-      - NOCREATEROLE
-      - NOREPLICATION
     readonly:
       - NOSUPERUSER
       - INHERIT
@@ -63,7 +55,6 @@ spec:
   databases:
     app_db: app_user
     general_db: admin
-    vector_db: vector_user     # Dedicated database for vector operations
     metrics_db: admin
   preparedDatabases:
     app_db:
@@ -79,14 +70,6 @@ spec:
         pg_trgm: "public"
         pgcrypto: "public"
         uuid-ossp: "public"
-    vector_db:
-      defaultUsers: true
-      extensions:
-        vector: "public"           # Enable pgvector extension
-        pg_stat_statements: "public"
-        uuid-ossp: "public"
-        pg_trgm: "public"          # Useful for text similarity with vectors
-        pgcrypto: "public"
     metrics_db:
       defaultUsers: true
       extensions:
@@ -106,3 +89,4 @@ spec:
         memory: 500Mi
   maintenanceWindows:
     - "03:00-04:00"
+

@@ -9,7 +9,7 @@ on:
         type: string
   push:
     branches:
-      - argo
+      - feature/*
 
 env:
   REGISTRY: ghcr.io
